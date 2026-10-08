@@ -8,12 +8,12 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "postinstall": "prisma generate --config prisma7.config.ts",
-    "db:generate": "prisma generate --config prisma7.config.ts",
-    "db:migrate": "prisma migrate dev --config prisma7.config.ts",
-    "db:deploy": "prisma migrate deploy --config prisma7.config.ts",
-    "db:seed": "prisma db seed --config prisma7.config.ts",
-    "db:studio": "prisma studio --config prisma7.config.ts"
+    "postinstall": "prisma generate",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
