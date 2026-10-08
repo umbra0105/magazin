@@ -11,19 +11,19 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 ---
 
 ## FAZA 0 — Decizii și pregătire · ~2 zile
-- [ ] Răspunde la cele 7 întrebări rămase din `01-arhitectura-si-decizii.md` §7
-- [ ] **Completează `10-decizii-deschise.md`** — cel puțin toate întrebările marcate 🔴
-- [ ] ⚠️ **Primul magazin e al tău.** Fazele 18, 19 și 21 (instalator, extensii, împachetare) se fac DUPĂ lansarea magazinului tău, nu înainte. Vezi nota de strategie de la finalul fișierului.
-- [ ] Confirmă convenția de prețuri: **brut, cu TVA inclus, `int` în bani** (documentat în CLAUDE.md)
-- [ ] Definește grupurile de clienți și procentele (ex. Standard 0%, Partener 15%, Client fidel 5%)
-- [ ] Deschide conturi de test: Netopia, EuPlătesc, **wootPRO**, Sameday, Oblio
-- [ ] Creează cont Bunny Stream pentru tutoriale video (poți amâna — driverul `local` funcționează pe localhost)
-- [ ] **Cere VPS cu IP fix** — obligatoriu pentru whitelist-ul eMAG
-- [ ] Întrebările pentru contabil din `10-decizii-deschise.md` §I
-- [ ] Cumpără domeniul pentru instalarea de test
-- [ ] Alege 3-5 magazine de referință pentru UX
-- [ ] **Exportă produsele din site-ul existent** și verifică ce coloane obții
-- [ ] Pregătește 20 de produse reale pentru datele demo
+- [x] Răspunde la cele 7 întrebări rămase din `01-arhitectura-si-decizii.md` §7 (rezolvate; deciziile sunt în `10`, Partea I)
+- [x] **Completează `10-decizii-deschise.md`** — cel puțin toate întrebările marcate 🔴 (nu mai există nicio decizie 🔴 deschisă; Partea I e integral ✅)
+- [x] ⚠️ **Primul magazin e al tău.** Fazele 18, 19 și 21 (instalator, extensii, împachetare) se fac DUPĂ lansarea magazinului tău, nu înainte. Vezi nota de strategie de la finalul fișierului.
+- [x] Confirmă convenția de prețuri: **brut, cu TVA inclus, `int` în bani** (documentat în CLAUDE.md)
+- [ ] Definește grupurile de clienți și procentele (ex. Standard 0%, Partener 15%, Client fidel 5%) _(necesar în Faza 15; se introduc din admin, deci pot fi alese oricând până atunci)_
+- [ ] Deschide conturi de test: Netopia, EuPlătesc, **wootPRO**, Sameday, Oblio _(necesare pe parcurs: Netopia + EuPlătesc în Faza 10; wootPRO + Sameday în Faza 12; Oblio în Faza 13)_
+- [ ] Creează cont Bunny Stream pentru tutoriale video (poți amâna — driverul `local` funcționează pe localhost) _(necesar în Faza 14b; doar pentru producție)_
+- [ ] **Cere VPS cu IP fix** — obligatoriu pentru whitelist-ul eMAG _(necesar înainte de Faza 21; whitelist-ul eMAG se folosește în Faza 22b)_
+- [ ] Întrebările pentru contabil din `10-decizii-deschise.md` Partea III (cele 11) _(necesare cel târziu în Faza 13; #2 TVA ideal înainte de Faza 4, #11 înainte de Faza 14b, #8–#10 înainte de Faza 15b)_
+- [ ] Cumpără domeniul pentru instalarea de test _(necesar în Faza 10 pentru webhook-urile de plată în sandbox, dacă nu folosești un tunel; cel târziu Faza 21)_
+- [ ] Alege 3-5 magazine de referință pentru UX _(necesar în Faza 6)_
+- [ ] **Exportă produsele din site-ul existent** și verifică ce coloane obții _(necesar în Faza 4, la punctul de import CSV)_
+- [ ] Pregătește 20 de produse reale pentru datele demo _(necesar în Faza 4, la testarea importului; cel târziu Faza 7)_
 
 ## FAZA 1 — Fundație · ~3-4 zile
 - [x] Monorepo pnpm + Turborepo conform `01` §2
