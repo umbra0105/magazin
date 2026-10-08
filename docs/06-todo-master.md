@@ -35,7 +35,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] GitHub Actions: lint, typecheck, test, build
 - [x] Logger Pino cu requestId (Sentry mutat în Faza 2, vezi primul punct de acolo)
 - [x] `/api/health` care verifică DB + Redis
-- [ ] `CLAUDE.md` scris (fișierul 07)
+- [x] `CLAUDE.md` scris (fișierul 07)
 - [x] Fișier de versiune `packages/config/version.ts`
 
 ## FAZA 2 — Bază de date, setări, autentificare · ~4-5 zile
