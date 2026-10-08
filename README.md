@@ -47,6 +47,13 @@ Pasul 4 e necesar doar pentru `pnpm test:e2e`. Fără el, restul funcționează.
 Toate valorile din `.env.example` sunt pentru dezvoltare locală, inclusiv `APP_KEY`.
 Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 
+> ⚠️ **`APP_KEY` — păstreaz-o separat și în siguranță.** Din ea se derivă cheia care criptează
+> credențialele integrărilor (plăți, curieri, facturare) salvate în baza de date. **Dacă pierzi
+> sau schimbi `APP_KEY`, toate credențialele salvate devin ilizibile** și trebuie reintroduse
+> manual din admin. Fă-i backup într-un loc separat de backup-ul bazei de date (un manager de
+> parole sau un seif), nu o pune în repo și nu o trimite pe email sau chat. Pe mașina de
+> producție, `APP_KEY` din `.env` trebuie să rămână aceeași la fiecare repornire și actualizare.
+
 ## Comenzi
 
 | Comandă                 | Ce face                                                  |

@@ -36,6 +36,26 @@ describe("logger", () => {
   });
 });
 
+describe("logger: câmpuri de cost și credențiale", () => {
+  it("ascunde costPrice, costPriceDate și credentials, inclusiv imbricate în linii de comandă", () => {
+    const { lines, logger } = capture();
+    logger.info(
+      {
+        variant: { sku: "A1", costPrice: 11111, costPriceDate: "2026-10-01" },
+        order: { lines: [{ sku: "A1", costNet: 22222 }] },
+        integration: { provider: "netopia", credentials: "v1:aaaa:bbbb:cccc" },
+        costPrice: 33333,
+      },
+      "test",
+    );
+    const serialized = JSON.stringify(lines[0]);
+    for (const secret of ["11111", "2026-10-01", "22222", "v1:aaaa", "33333"]) {
+      expect(serialized).not.toContain(secret);
+    }
+    expect(serialized).toContain('"sku":"A1"');
+  });
+});
+
 describe("resolveRequestId", () => {
   it("păstrează un id valid primit de la client", () => {
     expect(resolveRequestId("abc-12345678")).toBe("abc-12345678");

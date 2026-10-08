@@ -1,22 +1,28 @@
 import pino, { type DestinationStream, type Logger } from "pino";
 import { getRequestContext } from "./request-context";
 
-/** Câmpuri care nu apar niciodată în loguri (secrete, sesiuni, date de plată). */
-export const REDACT_PATHS = [
+/**
+ * Câmpuri care nu apar niciodată în loguri: secrete, sesiuni, date de plată, credențiale de
+ * integrare și prețul de achiziție (`costPrice` e doar pentru admin, vezi CLAUDE.md).
+ * Fiecare nume e acoperit la adâncimile 0-3 (ex. `order.lines.costPrice` → `*.*.costPrice`).
+ * Pino nu are wildcard recursiv; un array se numără ca un nivel (`lines[0]` → `*`).
+ */
+const SENSITIVE_FIELDS = [
   "password",
-  "*.password",
   "token",
-  "*.token",
   "apiKey",
-  "*.apiKey",
   "secret",
-  "*.secret",
   "credentials",
-  "*.credentials",
   "authorization",
-  "*.authorization",
   "cookie",
-  "*.cookie",
+  "APP_KEY",
+  "costPrice",
+  "costPriceDate",
+  "costNet",
+];
+
+export const REDACT_PATHS = [
+  ...SENSITIVE_FIELDS.flatMap((field) => [field, `*.${field}`, `*.*.${field}`, `*.*.*.${field}`]),
   'headers["authorization"]',
   'headers["cookie"]',
 ];
