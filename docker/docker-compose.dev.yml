@@ -32,7 +32,9 @@ services:
       retries: 10
 
   minio:
-    image: cgr.dev/chainguard/minio:latest
+    # Fixat prin digest (MinIO RELEASE.2026-09-22T19-25-18Z). Chainguard publică gratuit doar
+    # `latest`. Aplicația vorbește S3 generic, deci furnizorul se schimbă doar din .env.
+    image: cgr.dev/chainguard/minio@sha256:59667194421209c2c1eacbe761e24787e047985c5dfa96b15da9b59fe9b55cd0
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
