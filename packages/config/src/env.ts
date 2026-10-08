@@ -9,15 +9,16 @@ const baseSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_URL: z.url({ error: "APP_URL trebuie să fie un URL complet, ex. https://magazin.ro" }),
   // Cheia de criptare a credențialelor de integrare (AES-256-GCM): 32 de octeți, base64.
-  APP_KEY: z
-    .string()
-    .refine((value) => Buffer.from(value, "base64").length === 32, {
-      error: "APP_KEY trebuie să fie 32 de octeți codați base64 (generează cu: openssl rand -base64 32)",
-    }),
+  APP_KEY: z.string().refine((value) => Buffer.from(value, "base64").length === 32, {
+    error:
+      "APP_KEY trebuie să fie 32 de octeți codați base64 (generează cu: openssl rand -base64 32)",
+  }),
   DATABASE_URL: z
     .string()
     .regex(/^postgres(ql)?:\/\//, { error: "DATABASE_URL trebuie să înceapă cu postgresql://" }),
-  REDIS_URL: z.string().regex(/^rediss?:\/\//, { error: "REDIS_URL trebuie să înceapă cu redis://" }),
+  REDIS_URL: z
+    .string()
+    .regex(/^rediss?:\/\//, { error: "REDIS_URL trebuie să înceapă cu redis://" }),
   SENTRY_DSN: z.url().optional(),
 });
 

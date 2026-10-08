@@ -1,3 +1,7 @@
 packages:
   - apps/*
   - packages/*
+
+# Scripturi de build respinse explicit (binarele native vin prin pachete prebuilt)
+allowBuilds:
+  unrs-resolver: false

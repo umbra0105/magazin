@@ -1,12 +1,14 @@
 # Platformă eCommerce white-label
 
 ## Ce construim
+
 Platformă de eCommerce în Next.js, cu storefront public și panou de administrare
 complet, livrată ca PACHET INSTALABIL: o instalare = un magazin. Același cod rulează
 pe mai multe instalări; branding, conținut și integrări diferă prin setări. Piața
 țintă: România.
 
 ## Stack
+
 - Node.js 24 LTS, pnpm
 - Next.js 15 App Router, TypeScript strict, React Server Components
 - PostgreSQL + Prisma, Redis (cache/sesiuni/cozi), BullMQ
@@ -16,6 +18,7 @@ pe mai multe instalări; branding, conținut și integrări diferă prin setări
 - Docker Compose pentru dezvoltare locală
 
 ## Structura
+
 - `apps/web` — aplicația Next.js: `(storefront)`, `(admin)`, `api`
 - `packages/db` — Prisma schema, migrații, seed
 - `packages/core` — logica de business (services, use-cases). **Fără React aici.**
@@ -28,8 +31,10 @@ pe mai multe instalări; branding, conținut și integrări diferă prin setări
 ## Reguli obligatorii
 
 ### Configurabilitate (white-label) — regula #1 a proiectului
+
 Acesta e un PACHET INSTALABIL: o instalare = un magazin. NU e multi-tenant, deci nu
 există `tenantId`. În schimb:
+
 - **Nimic hardcodat.** Numele magazinului, logo-ul, culorile, datele firmei, cotele
   de TVA, textele legale, expeditorul de email — toate vin din tabelele `Setting`
   și `Branding`, editabile din admin.
@@ -45,6 +50,7 @@ există `tenantId`. În schimb:
   `/extensions`. **Niciodată prin modificarea core-ului.**
 
 ### Prețuri (citește docs/09-preturi-si-parteneri.md)
+
 - Prețurile se stochează BRUT, cu TVA inclus, ca `int` în bani. `19900` = 199,00 lei.
   Ce tastează adminul e ce vede clientul. TVA-ul se EXTRAGE din brut pentru factură.
 - Un singur preț public pentru toți. Clienții dintr-un grup cu discount (Partener,
@@ -58,6 +64,7 @@ există `tenantId`. În schimb:
   cu excepția cupoanelor marcate `notForDiscountedGroups`.
 
 ### Stoc — model WooCommerce
+
 - Setare globală `inventory.manageStock` (implicit ON) = valoarea implicită pentru
   produsele noi. Bifă per produs `manageStock` care o suprascrie. La produse cu
   variante, bifa poate coborî și la nivel de variantă.
@@ -68,6 +75,7 @@ există `tenantId`. În schimb:
   zero decrement. Ramură explicită în cod — NU simula cu o cantitate mare.
 
 ### Produse digitale (docs/11-produse-digitale.md)
+
 - Coșul poate fi fizic, digital sau MIXT. Transportul se calculează doar pe liniile
   fizice. Coș 100% digital = fără pas de livrare, fără ramburs.
 - Accesul se acordă prin `DigitalEntitlement` la confirmarea plății și se revocă
@@ -76,6 +84,7 @@ există `tenantId`. În schimb:
   Termenilor, neprebifată, obligatorie, și se salvează pe comandă.
 
 ### Loialitate și vouchere (docs/14-loializare-si-vouchere.md)
+
 - Punctele se țin într-un registru imutabil (LoyaltyTransaction). Soldul se
   RECALCULEAZĂ din tranzacții, nu se editează direct niciodată.
 - Reducerea din puncte intră ULTIMA în lanțul de reduceri, după cupon.
@@ -83,6 +92,7 @@ există `tenantId`. În schimb:
   ramburs. Nu intră în motorul de prețuri și nu reduce baza de TVA.
 
 ### Nișa: echipamente pentru piscine (docs/15-specific-nisa-piscine.md)
+
 - Produsele sunt grele și voluminoase. Costul de transport se calculează pe
   greutatea volumetrică ((L×l×h)/5000) sau pe cea reală, care e mai mare.
 - Produsele `oversized` nu pot merge la easybox — ascunde opțiunea automat.
@@ -92,10 +102,12 @@ există `tenantId`. În schimb:
   pe interval (slider), nu doar pe valoare exactă.
 
 ### Canale de vânzare (docs/12-emag-marketplace.md)
+
 - `Order.channelId` și `ChannelListing` există din Faza 4, chiar dacă eMAG vine
   mai târziu. `ean` și `warrantyMonths` sunt obligatorii pe variantă.
 
 ### Bani și taxe
+
 - Sumele sunt `int` în bani (minor units). `1999` = 19,99 RON. Niciodată `float`.
 - Folosește helperul `Money` din `packages/shared`. Rotunjirea se face pe linia de
   comandă, o singură dată (vezi „Prețuri"), nu pe total.
@@ -103,12 +115,14 @@ există `tenantId`. În schimb:
   retroactiv. Cotele vin din setări, nu sunt hardcodate.
 
 ### Comenzi
+
 - Trei câmpuri de status separate: `status`, `paymentStatus`, `fulfillmentStatus`.
 - Tranzițiile sunt validate de un state machine explicit. Fără `order.status = x` direct.
 - Comanda păstrează un snapshot imutabil (produs, preț, TVA, adrese).
 - Orice acțiune pe comandă scrie un `OrderEvent`.
 
 ### Cod
+
 - TypeScript strict. Fără `any`, fără `@ts-ignore` fără explicație în comentariu.
 - Validare Zod la marginea sistemului: formulare, API, webhook-uri, variabile de mediu.
 - Logica de business în `packages/core`, apelabilă din server action, API, worker și test.
@@ -120,6 +134,7 @@ există `tenantId`. În schimb:
 - Side-effects (email, AWB, factură) prin queue, niciodată sincron în tranzacție.
 
 ### Comenzi utile
+
 - `pnpm dev` — pornește aplicația
 - `pnpm db:migrate` / `pnpm db:seed` / `pnpm db:studio`
 - `pnpm test` / `pnpm test:e2e`
@@ -127,12 +142,15 @@ există `tenantId`. În schimb:
 - `docker compose -f docker/docker-compose.dev.yml up -d`
 
 ### Definiția de „gata"
+
 Un task e gata când: typecheck trece, lint trece, testele trec, funcționează manual
 în browser (verificat de utilizator), are audit log dacă e acțiune de admin,
 commit-ul e făcut, și `docs/06-todo-master.md` e bifat.
 
 ### Protocol de raportare — OBLIGATORIU
+
 Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
+
 - Nu începe niciun punct din TODO fără anunțul **🟢 ÎNCEP** (ce faci, ce fișiere
   atingi, cât durează). Marchează punctul cu `[~]`.
 - Nu termina niciun punct fără anunțul **✅ GATA**, care include OBLIGATORIU
@@ -147,6 +165,7 @@ Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
 - Un commit per punct terminat. Fără commit-uri uriașe la final de zi.
 
 ## Ce să NU faci
+
 - Nu instala librării grele fără să întrebi.
 - Nu schimba schema Prisma fără migrație.
 - Nu scrie logică de business în componente React.

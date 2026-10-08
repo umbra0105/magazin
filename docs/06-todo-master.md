@@ -29,14 +29,14 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Monorepo pnpm + Turborepo conform `01` §2
 - [x] Next.js 15, TypeScript strict, Tailwind, shadcn/ui
 - [x] `docker-compose.dev.yml`: postgres, redis, minio, mailpit
-- [~] Schema de env cu Zod — app refuză să pornească fără variabile
-- [ ] ESLint, Prettier, Husky, lint-staged, commitlint
+- [x] Schema de env cu Zod — app refuză să pornească fără variabile
+- [~] ESLint, Prettier, Husky, lint-staged, commitlint
 - [ ] Vitest + Playwright configurate, teste de smoke
 - [ ] GitHub Actions: lint, typecheck, test, build
 - [ ] Logger Pino cu requestId + Sentry opțional (DSN din setări)
 - [ ] `/api/health` care verifică DB + Redis
 - [ ] `CLAUDE.md` scris (fișierul 07)
-- [ ] Fișier de versiune `packages/config/version.ts`
+- [x] Fișier de versiune `packages/config/version.ts`
 
 ## FAZA 2 — Bază de date, setări, autentificare · ~4-5 zile
 - [ ] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
