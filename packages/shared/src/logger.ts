@@ -1,26 +1,12 @@
 import pino, { type DestinationStream, type Logger } from "pino";
+import { REDACTED, SENSITIVE_FIELDS } from "./redact";
 import { getRequestContext } from "./request-context";
 
 /**
- * Câmpuri care nu apar niciodată în loguri: secrete, sesiuni, date de plată, credențiale de
- * integrare și prețul de achiziție (`costPrice` e doar pentru admin, vezi CLAUDE.md).
- * Fiecare nume e acoperit la adâncimile 0-3 (ex. `order.lines.costPrice` → `*.*.costPrice`).
- * Pino nu are wildcard recursiv; un array se numără ca un nivel (`lines[0]` → `*`).
+ * Lista câmpurilor sensibile e în `redact.ts` (comună cu jurnalul de audit). Pino nu are wildcard
+ * recursiv, deci fiecare nume e acoperit la adâncimile 0-3 (ex. `order.lines.costPrice` →
+ * `*.*.costPrice`); un array se numără ca un nivel (`lines[0]` → `*`).
  */
-const SENSITIVE_FIELDS = [
-  "password",
-  "token",
-  "apiKey",
-  "secret",
-  "credentials",
-  "authorization",
-  "cookie",
-  "APP_KEY",
-  "costPrice",
-  "costPriceDate",
-  "costNet",
-];
-
 export const REDACT_PATHS = [
   ...SENSITIVE_FIELDS.flatMap((field) => [field, `*.${field}`, `*.*.${field}`, `*.*.*.${field}`]),
   'headers["authorization"]',
@@ -37,7 +23,7 @@ export function createLogger(options: LoggerOptions = {}): Logger {
   return pino(
     {
       level,
-      redact: { paths: REDACT_PATHS, censor: "[ascuns]" },
+      redact: { paths: REDACT_PATHS, censor: REDACTED },
       // Fiecare linie de log primește automat requestId-ul cererii curente, dacă există.
       mixin: () => getRequestContext() ?? {},
     },

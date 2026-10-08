@@ -43,13 +43,14 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 ## FAZA 2 — Bază de date, setări, autentificare · ~4-5 zile
 - [x] **Sentry** (`@sentry/nextjs`) activat doar dacă există DSN, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`; requestId ca tag. Decizie utilizator: amânat din Faza 1, se face aici o singură dată, după Service de setări
 - [x] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
+- [~] `auditLog()` doar de adăugare (trigger în DB), cu mascarea secretelor, și wrapper pentru server actions de admin
 - [x] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
 - [ ] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
 - [x] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
 - [ ] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id)
 - [ ] Rate limiting Redis pe rutele sensibile
 - [ ] RBAC: permisiuni ca string-uri, roluri implicite, `can()` + `withPermission()`
-- [~] Feature flags cu helper `isEnabled()`
+- [x] Feature flags cu helper `isEnabled()`
 - [ ] Layout admin: sidebar, topbar, breadcrumbs, guard
 - [ ] Seed de bază (roluri, setări implicite, un admin)
 
@@ -119,6 +120,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Pagini brand și colecție
 - [ ] Breadcrumbs + structured data
 - [ ] ISR + `revalidateTag` la salvarea produsului
+- [ ] ⚠️ **Rutele funcționalităților opționale** (`requireFeature`, `apps/web/src/lib/features.ts`) citesc flag-ul la fiecare cerere, deci ruta devine **dinamică**. Alege conștient: pagina rămâne dinamică sau flag-ul se citește la build/ISR. În ambele cazuri, **paginile din cache trebuie invalidate (`revalidateTag`/`revalidatePath`) când se schimbă un flag**, altfel o pagină oprită rămâne servită din cache
 
 ## FAZA 8 — Motor de prețuri și coș · ~5-6 zile ⚠️
 - [ ] **Motor de prețuri** (`09-preturi-si-parteneri.md` §3): preț brut → salePrice → preț de grup (`none` / `discount` / `cost_plus`; extinderea vine în Faza 15) → cupon → puncte → total linie → extragere TVA
@@ -275,6 +277,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] **Generator de pagini legale precompletate cu datele firmei** (pentru instalator)
 - [ ] Formular de contact cu anti-spam
 - [ ] Banner de cookie-uri care **blochează efectiv scripturile** + Consent Mode v2
+- [ ] ⚠️ **Blog, FAQ și paginile din CMS în spatele flag-urilor** (`requireFeature`): gardarea face ruta dinamică; la schimbarea unui flag din admin invalidează cache-ul paginilor afectate (și meniul/sitemap-ul care îl listează), altfel o funcție oprită rămâne vizibilă din cache
 
 ## FAZA 17 — Promoții, recenzii, marketing, SEO · ~6-8 zile
 - [ ] Schema Discount + motor de reguli (teste scrise întâi)

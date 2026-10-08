@@ -18,7 +18,6 @@ model User {
   sessions      Session[]
   accounts      Account[]
   roles         UserRole[]
-  auditLogs     AuditLog[]
 
   @@unique([email])
   @@map("user")
@@ -129,17 +128,20 @@ model Integration {
   @@map("integration")
 }
 
+/// Jurnal DOAR DE ADĂUGARE: triggerele din migrația audit_log_append_only resping UPDATE/DELETE/TRUNCATE.
+/// `actorId` nu e cheie străină: jurnalul trebuie să supraviețuiască ștergerii utilizatorului,
+/// iar un ON DELETE SET NULL ar fi un UPDATE. `actorLabel` = emailul actorului la momentul acțiunii.
 model AuditLog {
-  id        String   @id @default(cuid())
-  actorId   String?
-  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
-  action    String
-  entity    String
-  entityId  String?
-  before    Json?
-  after     Json?
-  requestId String?
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorLabel String?
+  action     String
+  entity     String
+  entityId   String?
+  before     Json?
+  after      Json?
+  requestId  String?
+  createdAt  DateTime @default(now())
 
   @@index([entity, entityId])
   @@index([actorId])
