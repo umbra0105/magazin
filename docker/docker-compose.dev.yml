@@ -2,7 +2,8 @@ name: ecom-dev
 
 services:
   postgres:
-    image: postgres:16
+    # Fixat: PostgreSQL 16.15 (tag + digest)
+    image: postgres:16.15@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d
     restart: unless-stopped
     environment:
       POSTGRES_USER: ecom
@@ -19,7 +20,8 @@ services:
       retries: 10
 
   redis:
-    image: redis:7
+    # Fixat: Redis 7.4.11 (tag + digest)
+    image: redis:7.4.11@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -52,7 +54,8 @@ services:
       retries: 10
 
   mailpit:
-    image: axllent/mailpit:latest
+    # Fixat: Mailpit v1.31.4 (tag + digest)
+    image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
     restart: unless-stopped
     ports:
       - "1025:1025" # SMTP

@@ -1,10 +1,10 @@
 # Jurnal de progres
 
 ## 2026-10-08 · Sesiunea 1 · Faza 1 (Fundație)
-**Terminat (confirmat de utilizator):** punctele 1-10 din 11
-**În lucru:** punctul 11 — verificare finală (făcută, așteaptă confirmarea utilizatorului)
+**Terminat (confirmat de utilizator):** punctele 1-11 din 11 (Faza 1 completă, verificată cap-coadă de utilizator)
+**În lucru:** —
 **Blocat:** —
-**Stare fază:** 🏁 Faza 1 terminată, în așteptarea verificării cap-coadă a utilizatorului
+**Stare fază:** 🏁 Faza 1 TERMINATĂ și confirmată. Conectarea la GitHub: se face împreună cu utilizatorul, cu un ghid separat, după ultimul commit al fazei
 
 **Ce funcționează acum:**
 - Monorepo pnpm + Turborepo, git inițializat (ramura `main`), 9 pachete-schelet în `packages/`
@@ -24,15 +24,17 @@
 - `output: "standalone"` doar când `NEXT_OUTPUT=standalone` (Dockerfile, Faza 23): pe Windows eșuează cu EPERM la symlink
 - MinIO în dev: `cgr.dev/chainguard/minio` (`minio/minio` a dispărut de pe Docker Hub, quay.io dă 401). Chainguard publică gratuit doar `latest`, deci imaginea e fixată prin DIGEST (`RELEASE.2026-09-22T19-25-18Z`)
 - **Storage-ul de producție se decide la Faza 3 (Media).** Aplicația vorbește S3 generic (endpoint, regiune, bucket, chei din `.env`, path-style configurabil), fără cod specific MinIO, ca furnizorul să se schimbe fără modificări în cod. Candidați: Cloudflare R2, alt S3 gestionat, MinIO self-hosted
-- `pnpm install` a generat `AGENTS.md` (din pachetul turbo); păstrat în repo, nu e folosit de proiect
+- `AGENTS.md` este generat de `turbo` (vezi „Rezolvat după verificarea finală")
 
 **Ce a rămas deschis din Faza 1:**
 - **Sentry** → primul punct din Faza 2 (decizia utilizatorului). Fără el, "Logger Pino + Sentry" din Promptul 1 e acoperit doar pe jumătate de logger
 - **GitHub / CI:** workflow-ul nu a rulat niciodată pe GitHub (nu există remote). Se conectează la finalul fazei (decizia utilizatorului). La primul run pot apărea probleme cu `pnpm/action-setup@v4` + pnpm 12 sau cu instalarea Playwright
-- **Imagini Docker nefixate complet:** `axllent/mailpit:latest` e pe `latest`; `postgres:16` și `redis:7` sunt fixate doar pe versiune majoră. MinIO e fixat prin digest. De fixat înainte de prima instalare reală
 - **E2E subțire:** un singur test (homepage). `/api/health` e acoperit de testul de integrare, nu de E2E
-- **Fără `.gitattributes`:** Git avertizează LF→CRLF pe Windows; inofensiv acum
-- **`AGENTS.md`** generat de `turbo` rămâne în repo, neutilizat
+
+**Rezolvat după verificarea finală (la cererea utilizatorului):**
+- Imagini Docker fixate pe versiune exactă + digest: `postgres:16.15`, `redis:7.4.11`, `axllent/mailpit:v1.31.4`, MinIO (digest). CI folosește aceleași versiuni (`postgres:16.15`, `redis:7.4.11`)
+- `.gitattributes` adăugat (LF în repo, `.sh` mereu LF, `.bat`/`.ps1` CRLF). Repo-ul era deja în LF, deci fără modificări în fișierele existente
+- `AGENTS.md` PĂSTRAT (decizie Claude, comunicată utilizatorului): nu dublează `CLAUDE.md`. Este un bloc gestionat de `turbo`, cu instrucțiuni despre citirea documentației versiunii instalate de Turborepo. Turbo îl re-adaugă la fiecare invocare detectată ca agent AI, deci ștergerea ar crea modificări necomise recurente. Dezactivare posibilă cu `"agentGuidance": false` în `turbo.json` — doar la cererea utilizatorului
 
 **Datorie tehnică (pentru fazele următoare):**
 - Culorile implicite din `globals.css` sunt fallback; în Faza 2 vin din `Branding`
