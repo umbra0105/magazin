@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * Valori implicite NEUTRE. În Faza 2 tokens-urile vin din tabela Branding,
+ * injectate server-side în layout; aceste valori sunt doar fallback.
+ */
+:root {
+  --color-bg: oklch(1 0 0);
+  --color-fg: oklch(0.2 0 0);
+  --color-muted: oklch(0.55 0 0);
+  --color-border: oklch(0.9 0 0);
+  --color-primary: oklch(0.3 0 0);
+  --color-primary-fg: oklch(1 0 0);
+  --color-accent: oklch(0.5 0 0);
+  --color-success: oklch(0.6 0.12 150);
+  --color-danger: oklch(0.55 0.2 27);
+  --radius: 0.5rem;
+  --font-heading: ui-sans-serif, system-ui, sans-serif;
+  --font-body: ui-sans-serif, system-ui, sans-serif;
+  --container-width: 80rem;
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-fg);
+  --color-muted-foreground: var(--color-muted);
+  --color-border: var(--color-border);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-fg);
+  --color-accent: var(--color-accent);
+  --color-success: var(--color-success);
+  --color-danger: var(--color-danger);
+  --radius-md: var(--radius);
+  --font-sans: var(--font-body);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-body);
+}
