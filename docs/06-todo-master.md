@@ -27,8 +27,8 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 
 ## FAZA 1 — Fundație · ~3-4 zile
 - [x] Monorepo pnpm + Turborepo conform `01` §2
-- [~] Next.js 15, TypeScript strict, Tailwind, shadcn/ui
-- [ ] `docker-compose.dev.yml`: postgres, redis, minio, mailpit
+- [x] Next.js 15, TypeScript strict, Tailwind, shadcn/ui
+- [~] `docker-compose.dev.yml`: postgres, redis, minio, mailpit
 - [ ] Schema de env cu Zod — app refuză să pornească fără variabile
 - [ ] ESLint, Prettier, Husky, lint-staged, commitlint
 - [ ] Vitest + Playwright configurate, teste de smoke
