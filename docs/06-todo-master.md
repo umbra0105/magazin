@@ -33,12 +33,13 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] ESLint, Prettier, Husky, lint-staged, commitlint
 - [x] Vitest + Playwright configurate, teste de smoke
 - [ ] GitHub Actions: lint, typecheck, test, build
-- [~] Logger Pino cu requestId + Sentry opțional (DSN din setări)
-- [ ] `/api/health` care verifică DB + Redis
+- [x] Logger Pino cu requestId (Sentry mutat în Faza 2, vezi primul punct de acolo)
+- [~] `/api/health` care verifică DB + Redis
 - [ ] `CLAUDE.md` scris (fișierul 07)
 - [x] Fișier de versiune `packages/config/version.ts`
 
 ## FAZA 2 — Bază de date, setări, autentificare · ~4-5 zile
+- [ ] **Sentry** (`@sentry/nextjs`) activat doar dacă există DSN, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`; requestId ca tag. Decizie utilizator: amânat din Faza 1, se face aici o singură dată, după Service de setări
 - [ ] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
 - [ ] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
 - [ ] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
