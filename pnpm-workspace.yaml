@@ -5,3 +5,7 @@ packages:
 # Scripturi de build respinse explicit (binarele native vin prin pachete prebuilt)
 allowBuilds:
   unrs-resolver: false
+  # Prisma 7 (aprobat de utilizator): postinstall descarcă/pregătește motoarele CLI
+  prisma: true
+  "@prisma/engines": true
+  esbuild: false

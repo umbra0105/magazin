@@ -74,6 +74,9 @@ jobs:
       - name: Teste unitare
         run: pnpm test
 
+      - name: Migrații DB (Postgres de test)
+        run: pnpm --filter @ecom/db db:deploy
+
       - name: Teste de integrare (Postgres + Redis)
         run: pnpm test:integration
 
