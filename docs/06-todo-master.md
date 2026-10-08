@@ -30,8 +30,8 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Next.js 15, TypeScript strict, Tailwind, shadcn/ui
 - [x] `docker-compose.dev.yml`: postgres, redis, minio, mailpit
 - [x] Schema de env cu Zod — app refuză să pornească fără variabile
-- [~] ESLint, Prettier, Husky, lint-staged, commitlint
-- [ ] Vitest + Playwright configurate, teste de smoke
+- [x] ESLint, Prettier, Husky, lint-staged, commitlint
+- [~] Vitest + Playwright configurate, teste de smoke
 - [ ] GitHub Actions: lint, typecheck, test, build
 - [ ] Logger Pino cu requestId + Sentry opțional (DSN din setări)
 - [ ] `/api/health` care verifică DB + Redis

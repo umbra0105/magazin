@@ -14,13 +14,16 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^10.0.1",
     "@next/eslint-plugin-next": "^16.4.0",
+    "@playwright/test": "^1.63.0",
     "eslint": "^10.12.0",
     "eslint-config-next": "^15.5.27",
     "husky": "^9.1.7",
@@ -28,7 +31,8 @@
     "prettier": "^3.9.9",
     "turbo": "^2.5.0",
     "typescript": "~5.9.0",
-    "typescript-eslint": "^8.71.1"
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
   },
   "lint-staged": {
     "*.{ts,tsx,mjs,js}": [
