@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 // Next citește .env doar din folderul aplicației; .env-ul proiectului e în rădăcina repo-ului.
 try {
@@ -13,8 +14,13 @@ const nextConfig: NextConfig = {
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   reactStrictMode: true,
   // Pachetele workspace sunt livrate ca TypeScript sursă.
-  transpilePackages: ["@ecom/shared", "@ecom/config", "@ecom/core"],
+  transpilePackages: ["@ecom/shared", "@ecom/config", "@ecom/core", "@ecom/db"],
   serverExternalPackages: ["pg", "ioredis", "pino"],
 };
 
-export default nextConfig;
+// Fără org/project/authToken: nu urcă source maps și nu contactează Sentry la build.
+// DSN-ul vine la runtime din Setting, nu din config.
+export default withSentryConfig(nextConfig, {
+  silent: !process.env["CI"],
+  telemetry: false,
+});

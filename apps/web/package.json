@@ -13,9 +13,12 @@
   "dependencies": {
     "@ecom/config": "workspace:*",
     "@ecom/core": "workspace:*",
+    "@ecom/db": "workspace:*",
     "@ecom/shared": "workspace:*",
+    "@sentry/nextjs": "11.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "ioredis": "^6.0.0",
     "lucide-react": "^0.468.0",
     "next": "^15.5.0",
     "react": "^19.0.0",

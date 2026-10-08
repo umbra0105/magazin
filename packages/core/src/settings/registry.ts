@@ -58,6 +58,13 @@ export const settingGroups = {
     salUrl: z.string().default(""),
     odrUrl: z.string().default(""),
   },
+  monitoring: {
+    /** DSN Sentry. Gol = Sentry complet inactiv. Nu e secret (se trimite și în browser). */
+    sentryDsn: z
+      .string()
+      .refine((v) => v === "" || /^https?:\/\/\S+$/.test(v), "DSN invalid")
+      .default(""),
+  },
   appearance: {
     headerVariant: z.string().default("default"),
     footerVariant: z.string().default("default"),
