@@ -45,11 +45,11 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
 - [x] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
 - [ ] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
-- [~] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
+- [x] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
 - [ ] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id)
 - [ ] Rate limiting Redis pe rutele sensibile
 - [ ] RBAC: permisiuni ca string-uri, roluri implicite, `can()` + `withPermission()`
-- [ ] Feature flags cu helper `isEnabled()`
+- [~] Feature flags cu helper `isEnabled()`
 - [ ] Layout admin: sidebar, topbar, breadcrumbs, guard
 - [ ] Seed de bază (roluri, setări implicite, un admin)
 

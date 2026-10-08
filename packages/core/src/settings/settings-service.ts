@@ -1,4 +1,5 @@
-import { ValidationError, getLogger } from "@ecom/shared";
+import { ValidationError } from "@ecom/shared";
+import { invalidateCache, readThrough, type KeyValueCache } from "../cache/read-through";
 import {
   getSettingSchema,
   listSettingKeys,
@@ -16,11 +17,7 @@ export interface SettingsStore {
 }
 
 /** Ce îi trebuie serviciului de la Redis (satisfăcut de ioredis). */
-export interface SettingsCache {
-  get(key: string): Promise<string | null>;
-  set(key: string, value: string, mode: "EX", seconds: number): Promise<unknown>;
-  del(key: string): Promise<unknown>;
-}
+export type SettingsCache = KeyValueCache;
 
 export const SETTINGS_CACHE_KEY = "ecom:settings:v1";
 export const SETTINGS_CACHE_TTL_SECONDS = 300;
@@ -95,11 +92,7 @@ export class SettingsService {
   }
 
   async invalidate(): Promise<void> {
-    try {
-      await this.cache.del(SETTINGS_CACHE_KEY);
-    } catch (error) {
-      getLogger().warn({ err: error }, "invalidarea cache-ului de setări a eșuat");
-    }
+    await invalidateCache(this.cache, SETTINGS_CACHE_KEY, "setări");
   }
 
   /**
@@ -120,27 +113,19 @@ export class SettingsService {
   }
 
   /** Harta `cheie → valoare stocată`, din Redis; la lipsă sau Redis picat, din DB. */
-  private async loadMap(): Promise<Record<string, unknown>> {
-    try {
-      const cached = await this.cache.get(SETTINGS_CACHE_KEY);
-      if (cached) return JSON.parse(cached) as Record<string, unknown>;
-    } catch (error) {
-      getLogger().warn({ err: error }, "citirea cache-ului de setări a eșuat, citesc din DB");
-    }
-    const rows = await this.store.loadAll();
-    const known = new Set<string>(listSettingKeys().map((k) => k.key));
-    const map: Record<string, unknown> = {};
-    for (const row of rows) if (known.has(row.key)) map[row.key] = row.value;
-    try {
-      await this.cache.set(
-        SETTINGS_CACHE_KEY,
-        JSON.stringify(map),
-        "EX",
-        SETTINGS_CACHE_TTL_SECONDS,
-      );
-    } catch (error) {
-      getLogger().warn({ err: error }, "scrierea cache-ului de setări a eșuat");
-    }
-    return map;
+  private loadMap(): Promise<Record<string, unknown>> {
+    return readThrough({
+      cache: this.cache,
+      key: SETTINGS_CACHE_KEY,
+      ttlSeconds: SETTINGS_CACHE_TTL_SECONDS,
+      label: "setări",
+      load: async () => {
+        const rows = await this.store.loadAll();
+        const known = new Set<string>(listSettingKeys().map((k) => k.key));
+        const map: Record<string, unknown> = {};
+        for (const row of rows) if (known.has(row.key)) map[row.key] = row.value;
+        return map;
+      },
+    });
   }
 }
