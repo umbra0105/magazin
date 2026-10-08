@@ -1,8 +1,8 @@
 # Jurnal de progres
 
 ## 2026-10-08 · Sesiunea 1 · Faza 1 (Fundație)
-**Terminat (confirmat de utilizator):** punctele 1-7 din 11 (monorepo; Next.js + Tailwind + shadcn/ui; docker compose dev; schema de env; ESLint/Prettier/Husky/commitlint; Vitest + Playwright; logger Pino cu requestId)
-**În lucru:** punctul 8 — `/api/health` (DB + Redis)
+**Terminat (confirmat de utilizator):** punctele 1-8 din 11 (monorepo; Next.js + Tailwind + shadcn/ui; docker compose dev; schema de env; ESLint/Prettier/Husky/commitlint; Vitest + Playwright; logger Pino cu requestId; `/api/health`)
+**În lucru:** punctul 9 — GitHub Actions (cu Postgres + Redis și test de integrare pentru health)
 **Blocat:** —
 
 **Ce funcționează acum:**
@@ -14,6 +14,8 @@
 - **Sentry → Faza 2 (decizie EXPLICITĂ a utilizatorului, opțiunea B).** Punct separat la începutul Fazei 2 în `06-todo-master.md`, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`, ca să nu se facă munca de două ori. Istoric: inițial am amânat Sentry din inițiativa mea, fără o alegere explicită a utilizatorului, iar jurnalul a fost corectat; apoi utilizatorul a ales explicit B.
 - **Regulă de lucru (utilizator):** când e nevoie de o decizie → 🛑 STOP și așteptare de răspuns explicit la întrebarea respectivă. Un „ok" general la plan NU înseamnă acceptarea valorilor implicite propuse. Orice decizie luată de Claude se notează aici ca atare.
 - Dependențe aprobate de utilizator pentru punctul 8: `pg` și `ioredis`
+- **CI (punctul 9) — decizie EXPLICITĂ a utilizatorului, opțiunea A:** workflow-ul GitHub Actions include servicii Postgres și Redis și un test de integrare pentru `/api/health`
+- `/api/health`: răspunsul public are doar starea și latența, erorile tehnice merg în loguri; `.env` din rădăcină se încarcă din `next.config.ts` cu `process.loadEnvFile` (Next îl caută doar în `apps/web`)
 - ESLint/Next: regulile Next.js erau active, dar avertismentul „Next.js plugin was not detected" apărea fiindcă detectorul Next caută în `apps/web`. Regulile au fost mutate în `apps/web/eslint.config.mjs` (extinde configul din rădăcină); avertismentul a dispărut
 - Logger Pino: `requestId` prin `AsyncLocalStorage`; partea sigură pentru Edge (`resolveRequestId`) e în fișier separat, importat din `@ecom/shared/request-id`
 - Playwright: browserul se descarcă la punctul 6. Descărcarea mea nu a ajuns pe mașina utilizatorului, care a rulat el `playwright install chromium`; pasul intră în README (punctul 10)
@@ -28,5 +30,5 @@
 - Docs/07 (secțiunea CLAUDE.md) e învechită (zice „multi-tenant"); `CLAUDE.md` din rădăcină e cel corect
 - Prompturile din docs/07 mai amintesc „tenant" (ex. Promptul 4); de ignorat, regula e fără `tenantId`
 
-**De unde reiau:** punctul 8 din Faza 1 — `/api/health` (`pg` + `ioredis` aprobate)
+**De unde reiau:** punctul 9 din Faza 1 — `.github/workflows/ci.yml`
 **Comandă de pornire:** `docker compose -f docker/docker-compose.dev.yml up -d && pnpm dev`

@@ -11,12 +11,14 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "vitest run",
+    "test": "vitest run --project unit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:integration": "vitest run --project integration",
+    "lint:root": "eslint e2e vitest.config.mts playwright.config.ts eslint.config.mjs commitlint.config.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",

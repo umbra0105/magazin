@@ -32,9 +32,9 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Schema de env cu Zod — app refuză să pornească fără variabile
 - [x] ESLint, Prettier, Husky, lint-staged, commitlint
 - [x] Vitest + Playwright configurate, teste de smoke
-- [ ] GitHub Actions: lint, typecheck, test, build
+- [~] GitHub Actions: lint, typecheck, test, build
 - [x] Logger Pino cu requestId (Sentry mutat în Faza 2, vezi primul punct de acolo)
-- [~] `/api/health` care verifică DB + Redis
+- [x] `/api/health` care verifică DB + Redis
 - [ ] `CLAUDE.md` scris (fișierul 07)
 - [x] Fișier de versiune `packages/config/version.ts`
 
