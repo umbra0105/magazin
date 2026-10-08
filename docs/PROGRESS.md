@@ -1,8 +1,8 @@
 # Jurnal de progres
 
 ## 2026-10-08 · Sesiunea 1 · Faza 1 (Fundație)
-**Terminat (confirmat de utilizator):** punctele 1-8 din 11 (monorepo; Next.js + Tailwind + shadcn/ui; docker compose dev; schema de env; ESLint/Prettier/Husky/commitlint; Vitest + Playwright; logger Pino cu requestId; `/api/health`)
-**În lucru:** punctul 9 — GitHub Actions (cu Postgres + Redis și test de integrare pentru health)
+**Terminat (confirmat de utilizator):** punctele 1-9 din 11 (monorepo; Next.js + Tailwind + shadcn/ui; docker compose dev; schema de env; ESLint/Prettier/Husky/commitlint; Vitest + Playwright; logger Pino cu requestId; `/api/health`; GitHub Actions)
+**În lucru:** punctul 10 — README (făcut și comis, așteaptă confirmarea utilizatorului)
 **Blocat:** —
 
 **Ce funcționează acum:**
@@ -30,5 +30,8 @@
 - Docs/07 (secțiunea CLAUDE.md) e învechită (zice „multi-tenant"); `CLAUDE.md` din rădăcină e cel corect
 - Prompturile din docs/07 mai amintesc „tenant" (ex. Promptul 4); de ignorat, regula e fără `tenantId`
 
-**De unde reiau:** punctul 9 din Faza 1 — `.github/workflows/ci.yml`
+- Workflow-ul CI nu a rulat încă pe GitHub (proiectul nu are remote). **GitHub se conectează la finalul fazei** (decizia utilizatorului); la primul run pot apărea probleme cu `pnpm/action-setup@v4` + pnpm 12 sau cu timpul de instalare Playwright
+- README verificat pe o clonă curată (install → lint → typecheck → teste unitare + integrare → build)
+
+**De unde reiau:** punctul 11 din Faza 1 — verificare finală, actualizare TODO/PROGRESS, 🏁 FAZĂ TERMINATĂ
 **Comandă de pornire:** `docker compose -f docker/docker-compose.dev.yml up -d && pnpm dev`
