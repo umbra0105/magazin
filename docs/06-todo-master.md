@@ -31,9 +31,9 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] `docker-compose.dev.yml`: postgres, redis, minio, mailpit
 - [x] Schema de env cu Zod — app refuză să pornească fără variabile
 - [x] ESLint, Prettier, Husky, lint-staged, commitlint
-- [~] Vitest + Playwright configurate, teste de smoke
+- [x] Vitest + Playwright configurate, teste de smoke
 - [ ] GitHub Actions: lint, typecheck, test, build
-- [ ] Logger Pino cu requestId + Sentry opțional (DSN din setări)
+- [~] Logger Pino cu requestId + Sentry opțional (DSN din setări)
 - [ ] `/api/health` care verifică DB + Redis
 - [ ] `CLAUDE.md` scris (fișierul 07)
 - [x] Fișier de versiune `packages/config/version.ts`

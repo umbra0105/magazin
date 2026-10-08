@@ -8,5 +8,15 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint ."
+  },
+  "dependencies": {
+    "pino": "^10.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./request-id": "./src/request-id.ts"
   }
 }
