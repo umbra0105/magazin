@@ -27,7 +27,8 @@ UserRole          userId, roleId
 Session           userId, token, ip, userAgent, expiresAt
 Customer          userId?, email, phone, firstName, lastName, groupId,
                   acceptsMarketing, totalSpent, ordersCount, notes, tags
-CustomerGroup     name, slug, discountPercent, isDefault, stacksWithSalePrice,
+CustomerGroup     name, slug, pricingType(none|discount|cost_plus),
+                  discountBps?, markupBps?, isDefault, stacksWithSalePrice,
                   earnsLoyaltyPoints, freeShippingThreshold?, minOrderValue?,
                   color, isActive
                   → detalii în 09-preturi-si-parteneri.md
@@ -45,9 +46,12 @@ Product           slug, title, subtitle, description(rich), status(draft|active|
                   excludeFromGroupDiscount, warrantyMonths,
                   publishedAt, sortOrder, metadata(JSON)
 ProductVariant    productId, sku, ean, barcode, manufacturerPartNumber, manufacturerName,
-                  price, compareAtPrice, costPrice,
+                  price, compareAtPrice,
+                  costPrice(NET, fără TVA, DOAR admin), costPriceDate,
                   weight, dimensions, position, isDefault
                   (price = BRUT, cu TVA inclus, int în bani)
+CostPriceHistory  variantId, costPrice, effectiveDate, source(manual|import), importId?, createdAt
+                  (doar admin; costPrice nu apare în API public, snapshot, feed-uri sau loguri)
 ProductOption     productId, name("Mărime"), position
 OptionValue       optionId, value("42"), position
 VariantOptionValue variantId, optionValueId
@@ -129,12 +133,14 @@ Order             number, channelId, externalId, externalData, customerId?, emai
                   subtotal, discountTotal, shippingTotal, taxTotal, grandTotal,
                   shippingAddress(JSON snapshot), billingAddress(JSON snapshot),
                   shippingMethod, paymentMethod, couponCode, customerNote, adminNote,
-                  customerGroupId, groupDiscountPercent, groupDiscountAmount,
+                  customerGroupId, groupPricingType, groupDiscountBps?, groupMarkupBps?,
+                  groupAdvantageAmount,
                   digitalConsentAt, digitalConsentText,
                   installationRequested, installationNote, installationStatus,
                   ipAddress, userAgent, source(web|admin|emag|api), placedAt, cancelledAt
 OrderLine         orderId, variantId?, productSnapshot(JSON), sku, title, variantTitle,
                   quantity, unitPrice, discountAmount, taxRate, taxAmount, lineTotal, imageUrl
+                  (productSnapshot NU conține costPrice)
 OrderEvent        orderId, type, message, data(JSON), userId?, createdAt   ← timeline
 Payment           orderId, provider, providerRef, amount, currency, status,
                   method, cardLast4, rawPayload(JSON), idempotencyKey, capturedAt
@@ -358,7 +364,7 @@ Vânzări (zi/lună/produs/categorie/brand/canal/județ) · profit dacă ai cost
 ```
 General        nume magazin, date firmă (CUI, Reg.Com, sediu, capital), contact, program
 Regional       monedă, limbă, fus orar, format dată, unități
-Taxe           clase de TVA, cote, prețuri cu/fără TVA, regim B2B
+Taxe           clase de TVA și cote (implicit o singură cotă, 21%)
 Livrare        zone, metode, tarife, praguri, taxă ramburs, depozite
 Plăți          metode active, ordine, chei API, mod test/live, taxe suplimentare
 Checkout       câmpuri obligatorii, guest checkout on/off, acorduri, politici

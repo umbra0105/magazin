@@ -1,7 +1,7 @@
 # 07 — Prompturi pentru Claude Code
 
 > **Revizuit** după deciziile confirmate: pachet instalabil (nu multi-tenant),
-> B2C + B2B mixt, Netopia/EuPlătesc + Sameday/FAN + Oblio/SmartBill.
+> B2C cu grupuri de clienți (fără modul B2B clasic), Netopia/EuPlătesc + wootPRO/Sameday + SmartBill.
 > Ordinea prompturilor corespunde fazelor din `06-todo-master.md`.
 
 ## Cum lucrezi (citește o dată, contează mai mult decât prompturile)
@@ -17,161 +17,12 @@
 
 ---
 
-## `CLAUDE.md` — pune-l în rădăcina proiectului
+## `CLAUDE.md` — sursa de adevăr e fișierul din rădăcina proiectului
 
-```markdown
-# Platformă eCommerce white-label
-
-## Ce construim
-Platformă de eCommerce multi-tenant în Next.js, cu storefront public și panou de
-administrare complet. Un singur cod, mai multe magazine (branding, domeniu, conținut
-și integrări diferite per client). Piața țintă: România.
-
-## Stack
-- Node.js 24 LTS, pnpm
-- Next.js 15 App Router, TypeScript strict, React Server Components
-- PostgreSQL + Prisma, Redis (cache/sesiuni/cozi), BullMQ
-- Tailwind CSS + shadcn/ui, React Hook Form + Zod
-- S3-compatible storage (MinIO local), React Email
-- Vitest (unit/integrare) + Playwright (E2E)
-- Docker Compose pentru dezvoltare locală
-
-## Structura
-- `apps/web` — aplicația Next.js: `(storefront)`, `(admin)`, `api`
-- `packages/db` — Prisma schema, migrații, seed
-- `packages/core` — logica de business (services, use-cases). **Fără React aici.**
-- `packages/ui` — design system
-- `packages/integrations` — adaptoare externe (plăți, curieri, facturare)
-- `packages/jobs` — workers BullMQ
-- `packages/shared` — tipuri, utils, erori
-- `docs/` — specificațiile proiectului. Citește-le înainte de a lucra la o zonă nouă.
-
-## Reguli obligatorii
-
-### Configurabilitate (white-label) — regula #1 a proiectului
-Acesta e un PACHET INSTALABIL: o instalare = un magazin. NU e multi-tenant, deci nu
-există `tenantId`. În schimb:
-- **Nimic hardcodat.** Numele magazinului, logo-ul, culorile, datele firmei, cotele
-  de TVA, textele legale, expeditorul de email — toate vin din tabelele `Setting`
-  și `Branding`, editabile din admin.
-- Dacă scrii o culoare, un text de brand sau o valoare de business direct în cod,
-  e un bug. Culorile vin din CSS variables generate din `Branding`.
-- `.env` conține DOAR secrete și conexiuni (DB, Redis, APP_KEY, APP_URL, storage).
-  Restul e în baza de date.
-- Funcționalitățile opționale (B2B, blog, recenzii, multi-depozit) sunt în spatele
-  unui feature flag. `isEnabled('blog')` ascunde meniul, ruta ȘI codul.
-- Accesul la date stă în servicii în `packages/core`, nu împrăștiat în componente.
-- Personalizările pentru un client se fac prin setări, temă, blocuri CMS sau
-  `/extensions`. **Niciodată prin modificarea core-ului.**
-
-### Prețuri (citește docs/09-preturi-si-parteneri.md)
-- Prețurile se stochează BRUT, cu TVA inclus, ca `int` în bani. `19900` = 199,00 lei.
-  Ce tastează adminul e ce vede clientul. TVA-ul se EXTRAGE din brut pentru factură.
-- Un singur preț public pentru toți. Clienții dintr-un grup cu discount (Partener,
-  Client fidel) văd același preț minus procentul grupului.
-- Nu există comutator „cu/fără TVA" și nu există prețuri ascunse.
-- Rotunjirea se face pe LINIE de comandă, o singură dată. Totalul e suma liniilor.
-- Un singur motor de prețuri în packages/core/pricing, apelat din PLP, PDP, coș,
-  checkout și factură. Niciun calcul de preț duplicat altundeva.
-- Discountul de grup NU se cumulează implicit cu prețul promoțional (se ia cel mai
-  mic), decât dacă grupul are `stacksWithSalePrice = true`. Cuponul SE cumulează,
-  cu excepția cupoanelor marcate `notForDiscountedGroups`.
-
-### Stoc — model WooCommerce
-- Setare globală `inventory.manageStock` (implicit ON) = valoarea implicită pentru
-  produsele noi. Bifă per produs `manageStock` care o suprascrie. La produse cu
-  variante, bifa poate coborî și la nivel de variantă.
-- `manageStock = true`: cantități reale, rezervare la inițierea plății cu expirare
-  15 minute, decrement la confirmare, alerte de stoc mic, istoric de mișcări.
-- `manageStock = false`: disponibilitatea e un simplu dropdown `stockStatus`
-  (în stoc / stoc epuizat / la comandă). ZERO InventoryItem, zero rezervări,
-  zero decrement. Ramură explicită în cod — NU simula cu o cantitate mare.
-
-### Produse digitale (docs/11-produse-digitale.md)
-- Coșul poate fi fizic, digital sau MIXT. Transportul se calculează doar pe liniile
-  fizice. Coș 100% digital = fără pas de livrare, fără ramburs.
-- Accesul se acordă prin `DigitalEntitlement` la confirmarea plății și se revocă
-  la rambursare. Linkurile sunt semnate, cu expirare scurtă — niciodată permanente.
-- Bifa legală de renunțare la dreptul de retragere e SEPARATĂ de acceptarea
-  Termenilor, neprebifată, obligatorie, și se salvează pe comandă.
-
-### Loialitate și vouchere (docs/14-loializare-si-vouchere.md)
-- Punctele se țin într-un registru imutabil (LoyaltyTransaction). Soldul se
-  RECALCULEAZĂ din tranzacții, nu se editează direct niciodată.
-- Reducerea din puncte intră ULTIMA în lanțul de reduceri, după cupon.
-- ⚠️ Voucherul cadou NU e o reducere. E o METODĂ DE PLATĂ, alături de card și
-  ramburs. Nu intră în motorul de prețuri și nu reduce baza de TVA.
-
-### Nișa: echipamente pentru piscine (docs/15-specific-nisa-piscine.md)
-- Produsele sunt grele și voluminoase. Costul de transport se calculează pe
-  greutatea volumetrică ((L×l×h)/5000) sau pe cea reală, care e mai mare.
-- Produsele `oversized` nu pot merge la easybox — ascunde opțiunea automat.
-- Pompele de căldură și dezumidificatoarele au nevoie de etichetă energetică
-  afișată înainte de finalizarea comenzii, nu doar în specificații.
-- Atributele tehnice sunt numerice, cu unitate de măsură, și trebuie filtrabile
-  pe interval (slider), nu doar pe valoare exactă.
-
-### Canale de vânzare (docs/12-emag-marketplace.md)
-- `Order.channelId` și `ChannelListing` există din Faza 4, chiar dacă eMAG vine
-  mai târziu. `ean` și `warrantyMonths` sunt obligatorii pe variantă.
-
-### Bani și taxe
-- Sumele sunt `int` în bani (minor units). `1999` = 19,99 RON. Niciodată `float`.
-- Folosește helperul `Money` din `packages/shared`. Rotunjire doar la afișare.
-- TVA-ul se stochează pe linia de comandă (rată + valoare) și nu se recalculează
-  retroactiv. Cotele vin din setări, nu sunt hardcodate.
-
-### Comenzi
-- Trei câmpuri de status separate: `status`, `paymentStatus`, `fulfillmentStatus`.
-- Tranzițiile sunt validate de un state machine explicit. Fără `order.status = x` direct.
-- Comanda păstrează un snapshot imutabil (produs, preț, TVA, adrese).
-- Orice acțiune pe comandă scrie un `OrderEvent`.
-
-### Cod
-- TypeScript strict. Fără `any`, fără `@ts-ignore` fără explicație în comentariu.
-- Validare Zod la marginea sistemului: formulare, API, webhook-uri, variabile de mediu.
-- Logica de business în `packages/core`, apelabilă din server action, API, worker și test.
-- Erori tipate (`DomainError`, `ValidationError`, `IntegrationError`) cu cod stabil.
-- Server Components implicit; `"use client"` doar unde e strict necesar.
-- Fără culori hardcodate în componente — doar CSS variables din tokens de temă.
-- Toate scrierile din admin trec prin `auditLog()`.
-- Webhook-urile: verificare semnătură + idempotență, întotdeauna.
-- Side-effects (email, AWB, factură) prin queue, niciodată sincron în tranzacție.
-
-### Comenzi utile
-- `pnpm dev` — pornește aplicația
-- `pnpm db:migrate` / `pnpm db:seed` / `pnpm db:studio`
-- `pnpm test` / `pnpm test:e2e`
-- `pnpm lint` / `pnpm typecheck`
-- `docker compose -f docker/docker-compose.dev.yml up -d`
-
-### Definiția de „gata"
-Un task e gata când: typecheck trece, lint trece, testele trec, funcționează manual
-în browser (verificat de utilizator), are audit log dacă e acțiune de admin,
-commit-ul e făcut, și `docs/06-todo-master.md` e bifat.
-
-### Protocol de raportare — OBLIGATORIU
-Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
-- Nu începe niciun punct din TODO fără anunțul **🟢 ÎNCEP** (ce faci, ce fișiere
-  atingi, cât durează). Marchează punctul cu `[~]`.
-- Nu termina niciun punct fără anunțul **✅ GATA**, care include OBLIGATORIU
-  secțiunea „👉 VERIFICĂ TU" cu pași concreți de testat în browser.
-  Marchează `[x]` doar după ce utilizatorul confirmă.
-- La finalul unei faze: **🏁 FAZĂ TERMINATĂ**, cu rezumat în limbaj de om și
-  verificare cap-coadă.
-- Când ai nevoie de o decizie: **🛑 STOP**, marchează `[!]` și OPREȘTE-TE. Nu ghici.
-- Un singur `[~]` poate exista în tot fișierul TODO la un moment dat.
-- La finalul fiecărei sesiuni, actualizează `docs/PROGRESS.md` în formatul din §4
-  al protocolului.
-- Un commit per punct terminat. Fără commit-uri uriașe la final de zi.
-
-## Ce să NU faci
-- Nu instala librării grele fără să întrebi.
-- Nu schimba schema Prisma fără migrație.
-- Nu scrie logică de business în componente React.
-- Nu adăuga microservicii, GraphQL sau abstractizări „pentru viitor".
-- Nu genera sute de fișiere deodată. Lucrează incremental, cu commit-uri.
-```
+> Fișierul `CLAUDE.md` din rădăcina repo-ului este **singura sursă de adevăr** pentru regulile
+> proiectului (prețuri, stoc, fiscal, loialitate, cod, protocol de raportare). Această secțiune
+> conținea o copie care s-a desincronizat de el (zicea „multi-tenant" și nu avea regulile noi
+> de prețuri). Nu mai ținem o a doua copie aici: citește și editează doar `CLAUDE.md` din rădăcină.
 
 ---
 
@@ -304,6 +155,7 @@ Adaugă și:
 - `Product.manageStock` (bool) + `Product.stockStatus` (enum: instock | outofstock |
   onbackorder) + setare globală `inventory.manageStock` ca implicit — model WooCommerce
 - `Product.excludeFromGroupDiscount`, `Category.excludeFromGroupDiscount`
+- `ProductVariant.costPrice` (int, în bani, FĂRĂ TVA, prețul de achiziție NIR) și `costPriceDate`, plus tabela `CostPriceHistory`. ⚠️ DOAR admin: niciodată în API public, props către componente client, feed-uri, `OrderLine.productSnapshot` sau loguri (adaugă `costPrice` la câmpurile mascate din logger). Permisiuni `products.cost.view` / `products.cost.edit`; câmpurile apar în tab-ul „Prețuri" doar cu permisiune. Importul NIR vine în Faza 15 (Promptul 21)
 - `ProductVariant.ean`, `Product.warrantyMonths` (obligatorii pentru eMAG mai târziu)
 - Specificul nișei (docs/15-specific-nisa-piscine.md): `weight`, `dimensions`,
   `shippingClass` (standard|oversized|pallet|freight), `requiresPalletDelivery`,
@@ -428,7 +280,7 @@ Implementează paginile de catalog conform docs/03-frontend.md §2.
 Implementează coșul și motorul de prețuri.
 
 Motor de prețuri în packages/core/pricing, ordine deterministă:
-preț de bază → listă de prețuri (grup de client) → promoții automate → cupon → TVA
+preț de bază → promoție → preț de grup (extins în Promptul 21) → cupon → puncte → TVA
 Funcție pură, ușor de testat. Scrie testele ÎNAINTE de implementare, acoperind:
 reduceri procentuale și fixe, praguri, cumulare, prioritate, rotunjiri, TVA
 inclus vs exclus, transport gratuit peste prag.
@@ -469,6 +321,8 @@ UI checkout: o pagină cu pași accordion, conform docs/03-frontend.md §2.
 - Facturare pe persoană juridică cu validare CUI
 - Salvare progresivă (localStorage + server), fără pierderi la refresh
 - Recalculare dinamică a metodelor disponibile
+- Vânzare DOAR în România, pentru orice produs: validează pe server țara adresei de livrare și de facturare față de setarea regional.allowedCountries (implicit ["RO"])
+- Ramburs: limită de valoare configurabilă din setări, 10.000 lei pentru persoane fizice și 5.000 lei pentru persoane juridice (persoană juridică = CUI la facturare SAU grup cost_plus). Peste limită, metoda se ascunde, cu explicație
 
 PlaceOrderUseCase în packages/core/checkout:
 - Revalidează TOT pe server (nu te încrede în client)
@@ -568,20 +422,35 @@ Implementează livrarea și AWB-urile.
 - Mapare între județele/localitățile noastre și nomenclatorul curierului
 ```
 
-### Prompt 16 — Facturare și e-Factura
+### Prompt 16 — Facturare și e-Factura (SmartBill)
 ```
-Implementează facturarea, conform docs/05-integrari-romania.md §2.
+Implementează facturarea, conform docs/05-integrari-romania.md §2 și docs/10 Partea I
+(„Fiscal, facturare și plăți").
 
-- Interfață InvoiceProvider: issue, storno, getPdf, getStatus
-- Implementează OBLIO cu e-Factura inclusă. SmartBill vine ulterior prin
-  aceeași interfață InvoiceProvider — nu îl implementa acum.
-- Schema Invoice cu serie, număr, tip, providerRef, pdfUrl, xmlUrl, efacturaStatus
-- Emitere automată la paymentStatus = paid, prin queue (nu bloca comanda dacă eșuează)
-- Storno automat la rambursare
+⚠️ ÎNAINTE DE A SCRIE COD: citește documentația curentă a API-ului SmartBill. Nu te baza
+pe ce știi din training. Utilizatorul trebuie să fi verificat cu SmartBill că abonamentul
+include acces API (docs/10 Partea II #9). Dacă nu a confirmat, 🛑 STOP.
+
+- Interfață InvoiceProvider: issue, issueProforma, storno (total și parțial), getPdf, getStatus
+- Implementează SMARTBILL, cu e-Factura inclusă. Oblio poate veni mai târziu prin aceeași
+  interfață — nu îl implementa acum.
+- Seria și numărul le definește SmartBill: NU construi numerotare locală. Stochează
+  providerRef, seria și numărul returnate.
+- Schema Invoice: tip (proforma | invoice | storno), serie, număr, providerRef, pdfUrl,
+  xmlUrl, efacturaStatus
+- Momentul emiterii depinde de metoda de plată:
+  · card: factura la plata confirmată
+  · transfer bancar: proformă la plasarea comenzii, apoi factură după ce adminul confirmă plata
+  · ramburs: factura la plasarea comenzii; storno dacă coletul se întoarce. Plata se
+    consideră încasată când curierul virează banii (reconciliere în admin)
+- Emitere prin queue (nu bloca comanda dacă eșuează)
+- Storno automat la anulare, refuz ramburs și rambursare; STORNO PARȚIAL la retur parțial
+- Pe factură: la Partener (cost_plus) apare doar prețul unitar încasat, fără linie
+  specială; la Fidel/VIP reducerea apare explicit
 - Facturi descărcabile în admin și în contul clientului
 - Status e-Factura vizibil în admin, cu buton de re-trimitere
-- Setări: date firmă, serie facturi, TVA implicit, cont bancar
-- Cotele de TVA configurabile din admin, nu hardcodate
+- Setări: date firmă, TVA (cota standard din setări, implicit 21%), cont bancar. Fără serie locală
+- Fără taxare inversă intracomunitară și fără OSS (vânzare doar în România)
 - Retry cu backoff dacă furnizorul e indisponibil; alertă în admin după 3 eșecuri
 ```
 
@@ -676,51 +545,105 @@ Headers de securitate: CSP strict, HSTS, X-Frame-Options, Referrer-Policy,
 Permissions-Policy. Verifică pe securityheaders.com.
 ```
 
-### Prompt 21 — Grupuri de clienți și prețuri de partener
+### Prompt 21 — Grupuri de clienți, prețuri de partener și prețuri NIR
 ```
-Implementează grupurile de clienți cu discount procentual, conform
-docs/09-preturi-si-parteneri.md. Este o funcționalitate mică — NU construi
-modul B2B, liste de prețuri, tranșe de cantitate sau conturi de firmă.
+Implementează grupurile de clienți cu trei tipuri de preț și importul prețurilor de
+achiziție, conform docs/09-preturi-si-parteneri.md (citește-l integral) și docs/10
+Partea I. NU construi modul B2B, liste de prețuri per client, tranșe de cantitate,
+conturi de firmă multi-utilizator sau prețuri pe categorie/produs per grup.
+
+ÎNAINTE DE A ÎNCEPE: utilizatorul trebuie să-ți fi dat un fișier exemplu de export
+SmartBill („lista de mișcări produse"). Fără el nu poți fixa formatul importului NIR.
+Dacă nu l-ai primit, 🛑 STOP.
 
 Schema:
-- CustomerGroup: name, slug, discountPercent, isDefault, stacksWithSalePrice,
-  freeShippingThreshold?, minOrderValue?, color, isActive
+- CustomerGroup: name, slug, pricingType ('none' | 'discount' | 'cost_plus'),
+  discountBps? (pentru discount), markupBps? (pentru cost_plus), isDefault,
+  stacksWithSalePrice (doar la discount), earnsLoyaltyPoints, freeShippingThreshold?,
+  minOrderValue?, color, isActive. Procentele sunt int în puncte de bază (500 = 5,00%),
+  NICIODATĂ float.
 - Customer.groupId
-- Product.excludeFromGroupDiscount, Category.excludeFromGroupDiscount
-- Order: customerGroupId, groupDiscountPercent, groupDiscountAmount (snapshot)
+- Product.excludeFromGroupDiscount, Category.excludeFromGroupDiscount (se aplică AMBELOR
+  tipuri: produsul exclus costă prețul public pentru toți)
+- ProductVariant.costPrice și costPriceDate + CostPriceHistory (existente din Faza 4,
+  Promptul 5)
+- Order (snapshot): customerGroupId, groupPricingType, groupDiscountBps?, groupMarkupBps?,
+  groupAdvantageAmount
 
-Extinde motorul de prețuri din packages/core/pricing cu ordinea din §3:
-  price → salePrice → discount de grup → cupon → total linie → extragere TVA
-Discountul de grup se sare dacă produsul sau categoria e exclusă.
-DECIS: cumularea cu salePrice e controlată de group.stacksWithSalePrice, IMPLICIT
-FALSE — se ia prețul cel mai mic, nu se cumulează.
-DECIS: cuponul SE cumulează cu discountul de grup, cu excepția cupoanelor care au
-flag-ul `notForDiscountedGroups` bifat.
-DECIS: atribuirea în grup se face MANUAL de admin. Fără regulă automată de promovare.
+Motorul de prețuri din packages/core/pricing, ordinea din docs/09 §3:
+  price → salePrice → preț de grup → cupon → puncte → total linie → extragere TVA
+- none: prețul public curent.
+- discount: min(price × (1 − discountBps/10000), prețul public curent). Dacă
+  group.stacksWithSalePrice și există salePrice: salePrice × (1 − discountBps/10000).
+  DECIS: stacksWithSalePrice e IMPLICIT FALSE (se ia prețul cel mai mic).
+- cost_plus: pret_brut = costNet × (10000 + markupBps) × (10000 + vatBps) / 10000²,
+  cu costNet = costPrice (NET, fără TVA) și vatBps din cota produsului (cota standard
+  din setări, implicit 21%). Rezultat = MIN(pret_brut, prețul public curent, inclusiv
+  promoția). PLAFON: partenerul nu plătește niciodată mai mult decât oricine altcineva.
+  Produs fără costPrice → prețul public (și apare în raportul „fără preț NIR").
+- Rotunjirea: o SINGURĂ dată, pe linia de comandă, din valoarea exactă × cantitate.
+  unitPrice (rotunjit) e informativ; lineTotal e cel care contează.
+- Produs sau categorie cu excludeFromGroupDiscount → prețul public curent.
+- DECIS: cuponul SE cumulează cu prețul de grup, cu excepția cupoanelor cu flag-ul
+  notForDiscountedGroups, care blochează orice grup cu pricingType ≠ none.
+- DECIS: atribuirea în grup se face MANUAL de admin. Fără regulă automată de promovare.
+- Punctele de loialitate: Standard, Fidel și VIP acumulează, Partenerii NU
+  (earnsLoyaltyPoints = false). Discountul Fidel/VIP se cumulează cu punctele.
 
-SCRIE TESTELE ÎNTÂI, conform §6:
-- preț corect pentru vizitator, client standard, partener, produs exclus
-- produs cu promoție + partener, ambele variante de cumulare
-- cupon peste discountul de grup
+⚠️ costPrice și costPriceDate sunt DOAR pentru admin: niciodată în API public, în props
+către componente client, în JSON-ul storefront-ului, în feed-uri, în emailuri, în
+OrderLine.productSnapshot sau în loguri. Vizibile doar cu products.cost.view; editabile
+cu products.cost.edit. Scrie un test care verifică absența lor din răspunsurile publice.
+
+SCRIE TESTELE ÎNTÂI, conform docs/09 §7:
+- preț corect pentru vizitator, client standard, Fidel, VIP, Partener, produs exclus
+- discount: promoție + grup, ambele variante de cumulare
+- cost_plus: costNet 100,00 · adaos 12% · TVA 21% → 135,52 lei; plafon față de prețul
+  public și față de prețul promoțional; produs fără costPrice → preț public; schimbarea
+  costPrice în sus și în jos; cantitate 7 cu fracțiune de ban rotunjită o singură dată
+- cupon peste prețul de grup; cupon notForDiscountedGroups blocat pentru toate grupurile
+  speciale
 - rotunjire: coș cu 3 produse × cantitate 3 → total coș = total comandă = total factură
-- extragere TVA din brut la 21% și la 11%
-- schimbarea grupului după comandă nu modifică comanda veche
+- extragere TVA din brut la cota din setări și la o a doua cotă de test (dovadă că
+  nu e hardcodat)
+- schimbarea grupului sau a procentului după comandă nu modifică comanda veche
 - client fără grup → primește grupul implicit
 
 Storefront:
-- prețul de partener afișat cu prețul standard tăiat dedesubt și badge
-  „Preț partener −X%", identic pe PLP și pe PDP
-- în coș și checkout: linie separată „Reducere partener (−X%): −Y lei"
-- NU adăuga comutator cu/fără TVA. Prețurile sunt mereu cu TVA inclus.
+- Fidel/VIP: preț redus + „Preț standard" tăiat + badge „Preț client fidel −X%"
+- Partener: preț de partener + „Preț standard" tăiat + badge „Preț partener" (doar dacă
+  e mai mic decât cel public; altfel preț simplu). Identic pe PLP și PDP
+- Coș/checkout: linie „Reducere client fidel (−X%): −Y lei" la Fidel/VIP; linie
+  informativă „Avantaj partener: −Y lei" la Partener
+- Pe factură: Fidel/VIP — reducere explicită; Partener — doar prețul unitar încasat
+- Prețul unui partener este per client: NU poate sta în paginile cu cache ISR. Calculează-l
+  separat, dinamic, pentru clientul logat. Coșurile se revalidează la fiecare afișare
+- NU adăuga comutator cu/fără TVA. Prețurile sunt mereu cu TVA inclus
 
 Admin:
-- Setări → Grupuri de clienți: CRUD complet
-- Grupul „Standard" cu 0% creat la instalare, neștergibil
-- Coloană „Grup" cu badge colorat în lista de clienți + filtru
-- Dropdown de grup în fișa clientului + atribuire în masă din listă
-- Bifă „Exclude din discountul de grup" pe produs și pe categorie
-- Raport: vânzări per grup + total discount acordat pe perioadă
+- Setări → Grupuri de clienți: CRUD cu selector de tip + procentul relevant
+- Grupul „Client standard" (none) creat la instalare, neștergibil. Celelalte cinci grupuri
+  (Fidel 5%, VIP 7%, Partener 1/2/3 cu 12% / 17% / 21%) sunt un SEED SPECIFIC
+  MAGAZINULUI, nu default de pachet
+- Coloană „Grup" cu badge colorat în lista de clienți + filtru; dropdown de grup în fișa
+  clientului + atribuire în masă din listă
+- Bifă „Exclude din prețul de grup" pe produs și pe categorie
 - Orice schimbare de grup scrie în auditLog
+- Raport: vânzări per grup + total avantaj acordat pe perioadă
+
+IMPORT PREȚURI NIR (docs/09 §4):
+- Upload fișier exportat din SmartBill → dry-run cu previzualizare → confirmare →
+  procesare în queue
+- Potrivire pe SKU de variantă; per produs se ia intrarea cu cea mai recentă dată;
+  se actualizează costPrice + costPriceDate DOAR dacă data e mai nouă; prețul poate
+  scădea sau crește (câștigă cel mai recent)
+- Fiecare actualizare scrie în CostPriceHistory; importul e repetabil fără dubluri
+- Raport descărcabil: actualizate · neschimbate · coduri necunoscute · rânduri invalide
+- Permisiune dedicată + auditLog pe fiecare import
+- Indicator și filtru „produse fără preț NIR" în dashboard și în lista de produse
+- Testele importului: cea mai recentă dată câștigă, același fișier de două ori nu schimbă
+  nimic, coduri necunoscute raportate, preț care scade se actualizează
+```
 
 ### Prompt 21b — Instalator și neutralitate white-label 🔑
 ```
@@ -735,8 +658,8 @@ Pași:
    Afișare verde/roșu; nu se trece mai departe cu roșu.
 2. Configurare DB: host, port, user, parolă, nume + buton „Testează conexiunea"
    → rulare migrații cu bară de progres.
-3. Magazin: nume, URL, monedă, limbă, fus orar, cotă TVA implicită,
-   afișare prețuri cu/fără TVA.
+3. Magazin: nume, URL, monedă, limbă, fus orar, cotă TVA standard (implicit 21%),
+   țări permise la vânzare (implicit RO). Fără comutator cu/fără TVA.
 4. Firmă: denumire, formă juridică, CUI, Reg. Com., sediu, capital social,
    email, telefon, IBAN, bancă.
 5. Cont administrator cu cerințe de complexitate a parolei.
@@ -822,7 +745,9 @@ Checkout mixt (§7) — tratează TOATE cazurile:
 - coș 100% digital: fără pas de livrare, fără adresă de livrare, ramburs ascuns
 - coș mixt: transport calculat DOAR pe liniile fizice; pragul de transport gratuit
   se calculează tot doar din valoarea fizică
-- comandă mixtă plătită ramburs: digitalul se eliberează la confirmarea încasării
+- comandă mixtă plătită ramburs: 🟡 DECIZIE DESCHISĂ a utilizatorului (docs/10 Partea I):
+  eliberare la livrare confirmată (recomandare) sau la virarea banilor de către curier.
+  NU implementa această ramură până nu primești decizia
 - fulfillmentStatus suportă partially_fulfilled (digital livrat, fizic încă nu)
 
 LEGAL (§5) — obligatoriu, nu opțional:
@@ -832,8 +757,10 @@ LEGAL (§5) — obligatoriu, nu opțional:
 - reia acordul în emailul de confirmare
 - blochează plasarea comenzii dacă bifa lipsește
 
-TVA: în Val 1 restricționează vânzarea de produse digitale la adrese de facturare
-din România (fără OSS). Mesaj clar dacă țara e alta.
+TVA: cota unică 21% din setări, ca la toate produsele. Vânzarea e restricționată la România
+pentru ORICE produs (setarea regional.allowedCountries, aplicată în checkout, Faza 9); nu
+implementa aici o restricție separată pentru digital, doar verifică că funcționează și pentru
+coș 100% digital. Fără OSS.
 
 Admin: tab „Conținut digital" pe produs, module ordonabile, marcare preview gratuit,
 listă entitlements per comandă și per client, acțiuni de resetare contor /
@@ -865,7 +792,7 @@ Marketplace API. Detaliile (versiuni, câmpuri, termene, penalizări) se schimb�
 - Confirmare automată a comenzilor + alertă dacă una rămâne neconfirmată
 - Mapare de statusuri în ambele sensuri, explicită și testată
 - Generare AWB și comunicare către eMAG
-- Încărcare automată a facturii după emiterea în Oblio, cu retry
+- Încărcare automată a facturii după emiterea în SmartBill, cu retry
 - Import și procesare retururi
 - Admin „Canale": status oferte, erori de validare per produs, log de sincronizare,
   buton de sincronizare manuală
@@ -887,13 +814,27 @@ nu scrie niciodată direct în `balance`. Altfel nu vei putea depana niciodată
 
 Acumulare: 1 punct la fiecare 100 lei, calculat pe subtotalul DUPĂ toate reducerile,
 FĂRĂ transport, cu `floor` (199 lei = 1 punct, nu 2).
+Acumulează Standard, Fidel și VIP; Partenerii NU (CustomerGroup.earnsLoyaltyPoints = false).
+Discountul Fidel/VIP se cumulează cu punctele.
 Acordare: la expirarea ferestrei de retur (14 zile de la livrare), cu status
 „în așteptare" vizibil în contul clientului până atunci. Cron zilnic.
 Expirare: 12 luni, cu email de avertizare cu 30 de zile înainte.
-Răscumpărare: intră ULTIMA în lanțul de reduceri, după cupon. Limită implicită
-de 30% din valoarea comenzii, configurabilă. Minim 10 puncte.
+Răscumpărare: intră ULTIMA în lanțul de reduceri, după cupon. FĂRĂ plafon procentual
+implicit (adminul poate seta unul din setări, dacă vrea mai târziu). Minim 10 puncte.
+Transportul se plătește mereu în bani.
+⚠️ REGULA DURĂ (decizia utilizatorului): suma de plătit în bani trebuie să fie cel puțin
+  max(costul transportului, loyalty.minCashAmount), unde minCashAmount e configurabil,
+  implicit 100 bani = 1 leu (se aplică la comenzi fără transport: ridicare personală, doar
+  digital). Punctele aplicabile ≤ total comandă − acest minim. Comanda de 0 lei NU poate
+  apărea, deci NU există ramura paymentMethod = 'loyalty_points' și nici factură de 0 lei.
+  Regula nu se poate dezactiva; sliderul din checkout se oprește la maximul permis.
+🟡 Înainte de a trece reducerea din puncte pe factură: răspunsul contabilului la „TVA pe 100
+  sau pe 90?" (docs/10 Partea I). Dacă nu l-ai primit, 🛑 STOP.
 
 Tratează EXPLICIT toate cazurile din §5 — scrie testele întâi:
+- regula dură: cu transport de 300 lei și comandă de 1.000 lei, punctele aplicabile ≤ 700
+  lei; fără transport, minimul în bani = minCashAmount; comanda de 0 lei nu poate fi
+  produsă niciodată (nici cu plafonul procentual dezactivat); nu există plată 'loyalty_points'
 - comandă anulată: punctele acordate se revocă, cele folosite se întorc în cont
 - retur parțial: revocare proporțională pe liniile returnate
 - retur după ce punctele au fost deja cheltuite: permite sold negativ, blochează
@@ -919,6 +860,9 @@ Nu reduce baza de TVA. Se aplică și pe transport. Se cumulează cu orice reduc
 
 Soldul rămâne pe cod: voucher de 500 folosit la o comandă de 300 → rămân 200 lei
 utilizabili ulterior.
+🟡 Rămâne deschis cu contabilul (docs/10 Partea I): voucher cumpărat (plată anticipată) vs cod
+de reducere gratuit, termenul legal minim de valabilitate și tratamentul voucherului care
+acoperă integral o comandă. Până atunci voucherul rămâne METODĂ DE PLATĂ.
 
 Emitere: din admin (valoare, destinatar, mesaj, expirare, email cu design) și ca
 produs vândut pe site (valori fixe sau la alegere; codul se generează și se trimite

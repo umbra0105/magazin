@@ -4,8 +4,8 @@ Plan complet de arhitectură, liste, TODO și prompturi pentru Claude Code.
 
 **Model:** pachet instalabil — o instalare = un magazin, branding 100% din panoul de admin.
 **Piață:** România. **Nișă:** echipamente și accesorii pentru piscine. **Produse:** fizice + digitale (tutoriale video).
-**Prețuri:** un preț public unic, **cu TVA inclus**, identic pentru toți. Clienții marcați ca *Partener* sau *Client fidel* văd același preț minus X%. Niciun preț nu se ascunde.
-**Integrări:** Netopia + EuPlătesc · wootPRO + Sameday · Oblio · Bunny Stream · eMAG (ulterior).
+**Prețuri:** un preț public unic, **cu TVA inclus (21%, o singură cotă)**, identic pentru toți. Trei tipuri de grup: *standard*; *Client fidel/VIP* (același preț minus 5% / 7%); *Partener 1/2/3* (preț de achiziție + adaos 12% / 17% / 21%, plafonat la prețul public). Procentele sunt editabile din admin. Niciun preț nu se ascunde. Vânzare doar în România.
+**Integrări:** Netopia + EuPlătesc · wootPRO + Sameday · SmartBill · Bunny Stream · eMAG (ulterior).
 
 ## Fișiere
 
@@ -79,15 +79,15 @@ Nu o schimba. Fiecare pas depinde direct de cel dinainte.
 
 | | Zile de lucru |
 |---|---|
-| MVP vandabil, fizic + digital (Fazele 0-15) | ~70-82 |
+| MVP vandabil, fizic + digital (Fazele 0-15) | ~72-84 |
 | + Specificul nișei: transport greu, etichetă energetică, filtre tehnice | +6 |
 | + Loialitate și vouchere (Faza 15b) | +6,5 |
 | + Funcționalități de nișă (transport, documente, fișă explodată) | +6,5-8 |
 | + Pachet distribuibil (instalator, extensii, împachetare) | +14-16 |
 | + CMS, marketing, SEO, rapoarte | +17-20 |
-| **Complet, fără eMAG** | **~120-139** |
+| **Complet, fără eMAG** | **~122-141** |
 | + eMAG Marketplace | +8-12 |
-| **Total** | **~128-151** |
+| **Total** | **~130-153** |
 
 ## ⚠️ Ordinea de lucru confirmată
 

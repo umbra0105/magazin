@@ -17,8 +17,8 @@ Ambele confirmate. Ambele ating **motorul de prețuri și plasarea comenzii**, d
 | Valoare punct | **1 punct = 1 leu** (cashback 1%) |
 | Moment de acordare | **Automat, la expirarea ferestrei de retur** (14 zile de la livrare) |
 | Expirare | **12 luni**, cu email de avertizare cu 30 de zile înainte |
-| Limită de utilizare | **Fără limită** — clientul poate acoperi integral comanda |
-| Grupul Partener | **Nu acumulează puncte deloc** — are deja prețuri preferențiale |
+| Plafon de utilizare | **Fără plafon procentual** (configurabil din admin, dacă vrei mai târziu), dar cu **regula dură** din §2.A: suma plătită în bani acoperă cel puțin transportul |
+| Grupuri | **Standard, Fidel și VIP acumulează; Partener 1/2/3 NU** — au deja prețuri preferențiale. Discountul Fidel/VIP se **cumulează** cu punctele |
 
 ### De ce acordare automată, nu manuală cu revocare
 
@@ -32,12 +32,12 @@ Ai propus și varianta „acordăm la livrare și retragem manual dacă face ret
 
 Clientul vede punctele ca „în așteptare" din momentul livrării, cu data la care devin disponibile. Psihologic funcționează la fel de bine.
 
-### ⚠️ Utilizare nelimitată — patru cazuri care trebuie tratate explicit
+### ⚠️ Utilizare fără plafon procentual — patru cazuri tratate explicit
 
-Ai ales să nu pui limită. E o decizie comercială validă la 1%, dar deschide patru situații care **trebuie rezolvate în cod**, altfel se sparge ceva:
+Ai ales să nu pui plafon procentual (configurabil din admin, dacă vrei mai târziu). E o decizie comercială validă la 1%, dar deschide patru situații care **trebuie rezolvate în cod**, altfel se sparge ceva:
 
-**A. Comandă de 0 lei.** Dacă punctele acoperă tot, procesatorul de plăți nu poate procesa 0 lei. Ai nevoie de o ramură separată: comanda trece direct în `paid`, fără gateway, cu `paymentMethod = 'loyalty_points'`.
-*Necesar în cod. Fără asta, checkout-ul crapă la primul client care încearcă.*
+**A. Comandă de 0 lei — nu poate apărea.** ✅ **Regula dură (decizia utilizatorului):** suma de plătit în bani nu poate fi mai mică decât **costul transportului**. La comenzi fără transport (ridicare personală, doar digital) se aplică un **minim configurabil, implicit 1 leu** (`minCashAmount`). Punctele aplicabile se limitează automat la `total − max(transport, minCashAmount)`.
+*Consecințe:* procesatorul de plăți nu primește niciodată 0 lei, nu există ramura `paymentMethod = 'loyalty_points'`, iar factura nu are valoare zero. Sliderul din checkout se oprește la maximul permis.
 
 **B. Transportul.** La echipamente de piscină, transportul unei pompe de căldură poate fi 150-400 de lei. Dacă punctele acoperă și transportul, plătești curierul din buzunar.
 *Recomandare: punctele se aplică **doar pe produse**, nu pe transport. Configurabil, dar implicit așa. Clientul plătește transportul cu bani.*
@@ -45,7 +45,7 @@ Ai ales să nu pui limită. E o decizie comercială validă la 1%, dar deschide 
 **C. Acumulare pe comenzi plătite cu puncte.** Dacă un client cumpără de 500 de lei folosind 500 de puncte și primește 5 puncte noi, ai creat o buclă.
 *Recomandare: punctele se acumulează **doar pe suma plătită efectiv cu bani**. Comandă de 0 lei = 0 puncte noi.*
 
-**D. Factura de 0 lei.** Contabil, o factură cu valoare zero e problematică. **Am adăugat asta la lista de întrebări pentru contabil** (fișierul 10). Posibil să fie nevoie să impui totuși un minim de plată în bani — întreabă înainte de a implementa.
+**D. Factura de 0 lei.** ✅ Rezolvat prin regula de la A: o comandă cu produse are întotdeauna o parte plătită în bani, deci factura nu are valoare zero. (Întrebarea 10 din fișierul 10 a fost închisă prin această decizie de produs.)
 
 ### Partener: nu acumulează, dar ce face cu punctele existente?
 
@@ -61,12 +61,13 @@ LoyaltySettings          (în Setting, grup „loyalty")
   grantOn                'order_paid' | 'return_window_closed'
   returnWindowDays       14
   expiryMonths           12
-  maxRedeemPercent       100    ← fără limită, conform deciziei
+  maxRedeemPercent       null   ← fără plafon procentual (configurabil din admin)
   redeemAppliesToShipping  false ← punctele nu acoperă transportul
   earnOnDiscountedItems  bool
   earnOnShipping         false
   earnOnlyOnCashPaid     true   ← nu acumulezi puncte pe partea plătită cu puncte
   minRedeemPoints        10
+  minCashAmount          100    ← minim în bani (1 leu) când comanda nu are transport
 
 LoyaltyAccount
   customerId
@@ -93,13 +94,22 @@ puncte = floor(bază / earnRatePerCurrency)
 ```
 `floor`, nu rotunjire — 199 lei = 1 punct, nu 2.
 
-**Acumularea se face doar dacă `CustomerGroup.earnsLoyaltyPoints = true`.** Pentru grupul Partener e `false`.
+**Acumularea se face doar dacă `CustomerGroup.earnsLoyaltyPoints = true`.** Pentru Partener 1/2/3 e `false`; Standard, Fidel și VIP acumulează.
 
 **Răscumpărarea** intră ca ultima reducere, după cupon, și se aplică **doar pe valoarea produselor**, nu pe transport:
 ```
-preț → salePrice → discount de grup → cupon → PUNCTE → total
+preț → salePrice → preț de grup → cupon → PUNCTE → total
 ```
 Reducerea din puncte se afișează ca linie separată în coș, checkout și factură. Din perspectivă contabilă e o reducere comercială — **confirmă cu contabilul cum se trece pe factură**.
+
+> 🟡 **Deschis (`10`, Partea I):** contabilul a spus „linie de discount, nu afectează baza de TVA", ambiguu. Întrebare trimisă: la 100 lei cu 10 lei plătiți în puncte, TVA se calculează pe 100 sau pe 90? Nu implementa reducerea din puncte pe factură până nu primești răspunsul.
+
+**Regula dură a sumei în bani** (se aplică după toate reducerile și înainte de plată):
+```
+minim în bani = max(costul transportului, minCashAmount)
+puncte aplicabile ≤ total comandă − minim în bani
+```
+Dacă adminul setează un plafon procentual, se aplică și acela (cel mai restrictiv câștigă). Regula dură nu se poate dezactiva.
 
 ## 5. Cazuri de tratat (aici apar bug-urile)
 
@@ -109,7 +119,7 @@ Reducerea din puncte se afișează ca linie separată în coș, checkout și fac
 | Retur parțial | Se revocă proporțional punctele acumulate pe liniile returnate |
 | Retur după ce clientul a cheltuit deja punctele | Soldul poate deveni negativ. *Recomandare: permite sold negativ, blochează răscumpărarea până se acoperă* |
 | Comandă plătită parțial cu puncte, apoi rambursată | Rambursezi **doar banii**, punctele se întorc ca puncte. Nu converti puncte în bani niciodată |
-| **Comandă acoperită integral din puncte** | Ramură separată: fără gateway de plată, status `paid` direct, `paymentMethod = 'loyalty_points'`. Transportul rămâne de plătit cu bani |
+| **Client vrea să acopere totul cu puncte** | Punctele se limitează la maximul permis de regula dură; restul se plătește în bani (gateway sau ramburs). Comanda de 0 lei nu poate apărea |
 | Client promovat la Partener | Păstrează soldul și îl poate folosi, dar nu mai acumulează |
 | Guest checkout | Fără puncte. Afișează „Creează cont și primești X puncte" — e un motiv bun de înregistrare |
 | Puncte expirate în timp ce comanda e în curs | Blochează expirarea punctelor rezervate într-o comandă activă |
@@ -117,7 +127,7 @@ Reducerea din puncte se afișează ca linie separată în coș, checkout și fac
 ## 6. Interfață
 
 **Cont client**: sold, puncte în așteptare cu data la care devin disponibile, istoric complet, data de expirare a următorului lot, cât valorează în lei.
-**Coș/checkout**: „Ai 47 de puncte (47 lei). Folosește-le?" cu slider sau câmp de cantitate. Fără limită pe valoarea produselor; transportul rămâne de plătit cu bani.
+**Coș/checkout**: „Ai 47 de puncte (47 lei). Folosește-le?" cu slider sau câmp de cantitate. Fără plafon procentual; transportul rămâne de plătit cu bani, iar sliderul se oprește la maximul permis de regula dură.
 **Pagina de produs**: „Primești 12 puncte la această achiziție" — crește conversia.
 **Admin**: sold per client, ajustare manuală cu motiv obligatoriu, istoric, raport de datorie totală în puncte (cât „datorezi" clienților).
 
@@ -179,6 +189,8 @@ Total de plată: 1.850 lei
   - De plătit cu cardul: 1.350 lei
 ```
 
+> 🟡 **Deschis (`10`, Partea I):** contabilul a spus „reducere din comandă", dar proiectul tratează voucherul ca **metodă de plată**. Rămâne metodă de plată până lămurește contabilul diferența dintre **voucher cumpărat** (plată anticipată) și **cod de reducere gratuit**. Termenul legal minim de valabilitate: contabilul se interesează. Un voucher poate acoperi integral o comandă; regula „în bani ≥ transport" privește punctele, nu voucherele, iar tratamentul plății fără gateway se stabilește odată cu acest răspuns.
+
 ## 5. Emitere
 - **Din admin**: creezi un voucher cu valoare, destinatar, mesaj, expirare. Se trimite pe email cu design.
 - **Vândut ca produs pe site**: produs de tip special, cu valoare la alegere sau valori fixe (200/500/1000 lei). La confirmarea plății se generează codul și se trimite pe email destinatarului, cu mesajul cumpărătorului.
@@ -194,7 +206,7 @@ Listă cu status, sold, valoare inițială, cine l-a folosit și când. Anulare 
 |---|---|
 | Puncte de loialitate | ~4 |
 | Vouchere cu sold | ~2 |
-| Ramura de comandă 0 lei + reguli de acumulare | ~0,5 |
+| Regula dură a sumei în bani + reguli de acumulare | ~0,5 |
 | **Total** | **~6,5 zile** |
 
 Ambele se fac într-o fază proprie, **după ce comenzile și plățile funcționează complet** (adică după Faza 13). Nu le construi mai devreme — depind de fluxul de comandă, retur și rambursare.

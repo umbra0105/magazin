@@ -79,7 +79,7 @@ Legendă prioritate: **[MVP]** = fără asta nu poți vinde · **[Val 1]** = în
 - [V1] Preferințe de comunicare (newsletter, SMS) + dezabonare
 - [V1] Export date personale + ștergere cont (GDPR)
 - [V2] Puncte de loialitate / cashback
-- [V1] **Grup de client cu discount procentual** (Partener, Client fidel) — vezi `09`
+- [V1] **Grupuri de clienți cu trei tipuri de preț** (standard · discount Fidel/VIP · cost + adaos Partener 1/2/3) — vezi `09`
 - [V2] Plată la termen prin ordin de plată, cu limită de credit
 - [V2] Alertă „anunță-mă când revine în stoc"
 
@@ -136,9 +136,10 @@ Detaliat în fișierul 04. Pe scurt: Dashboard · Comenzi · Clienți · Produse
 
 ## A10. Grupuri de clienți și prețuri de partener
 Vezi `09-preturi-si-parteneri.md`. Pe scurt: un preț public unic, cu TVA inclus, identic
-pentru toți · clienții marcați ca Partener sau Client fidel văd același preț minus X% ·
-niciun preț nu se ascunde · regulă configurabilă de cumulare cu promoțiile publice ·
-produse și categorii excludabile din discount · atribuire de grup în masă din admin.
+pentru toți · Client fidel/VIP văd același preț minus un procent · Partenerii văd prețul de achiziție + adaos,
+plafonat la prețul public · niciun preț nu se ascunde · regulă configurabilă de cumulare cu promoțiile publice ·
+produse și categorii excludabile din prețul de grup · atribuire de grup în masă din admin · import săptămânal
+al prețurilor de achiziție (NIR) din SmartBill.
 
 ---
 
@@ -175,7 +176,7 @@ produse și categorii excludabile din discount · atribuire de grup în masă di
 - [ ] Instalare blocată permanent după setup (`/install` → 404)
 
 ## B4. Comerț — logica critică
-- [ ] **Motor de prețuri**: preț de bază → listă de prețuri (grup client) → promoții → cupon → TVA. Ordine deterministă și testată.
+- [ ] **Motor de prețuri**: preț de bază → promoții → preț de grup (none/discount/cost_plus) → cupon → puncte → TVA. Ordine deterministă și testată.
 - [ ] **Motor de TVA**: cote configurabile per produs, TVA extras din prețul brut, rotunjire pe linie
 - [ ] **Motor de transport**: zone (județ/localitate), praguri de greutate/valoare, gratuit peste X, transport per produs, ramburs
 - [ ] **Motor de promoții**: reguli, condiții, cumulare, prioritate, excludere
@@ -187,7 +188,7 @@ produse și categorii excludabile din discount · atribuire de grup în masă di
 ## B5. Conturi și servicii externe (le deschizi TU, nu se scriu în cod)
 - [ ] Procesator de plăți: cont + contract + chei test și live + webhook URL declarat
 - [ ] Cont curier (Sameday / FAN / Cargus / DPD) + credențiale API + contract
-- [ ] Furnizor de facturare (Oblio / SmartBill / FGO) + cont + serie facturi
+- [ ] Furnizor de facturare: **SmartBill** (principal; Oblio posibil mai târziu) + cont cu acces API (seria o definește SmartBill)
 - [ ] **e-Factura ANAF**: certificat digital calificat + înrolare SPV + aplicație OAuth
 - [ ] Domeniu + DNS + certificat SSL
 - [ ] Serviciu de email tranzacțional + **SPF, DKIM, DMARC configurate** (altfel ajungi în spam)

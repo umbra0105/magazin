@@ -53,15 +53,40 @@ există `tenantId`. În schimb:
 
 - Prețurile se stochează BRUT, cu TVA inclus, ca `int` în bani. `19900` = 199,00 lei.
   Ce tastează adminul e ce vede clientul. TVA-ul se EXTRAGE din brut pentru factură.
-- Un singur preț public pentru toți. Clienții dintr-un grup cu discount (Partener,
-  Client fidel) văd același preț minus procentul grupului.
+- Un singur preț public pentru toți. Grupurile de clienți au `pricingType`:
+  `none` (Client standard: prețul public), `discount` (Client fidel 5%, VIP 7%:
+  prețul public minus procentul) și `cost_plus` (Partener 1/2/3, adaos 12/17/21%).
+  Procentele sunt editabile din admin; atribuirea în grup e manuală.
+- `cost_plus`: `pret_brut = costNet × (1 + adaos) × (1 + TVA)`, unde `costNet` e
+  `costPrice` (prețul NIR, FĂRĂ TVA, cel mai recent preț de intrare). Partenerul
+  plătește MINIMUL dintre acest preț și prețul public curent (inclusiv promoția).
+  Produs fără `costPrice` → prețul public. Procentele sunt `int` în puncte de bază.
+- ⚠️ `costPrice`/`costPriceDate` și `CostPriceHistory` sunt DOAR pentru admin:
+  niciodată în API public, props către componente client, storefront, feed-uri,
+  `OrderLine.productSnapshot` sau loguri. Vizibile doar cu `products.cost.view`.
 - Nu există comutator „cu/fără TVA" și nu există prețuri ascunse.
 - Rotunjirea se face pe LINIE de comandă, o singură dată. Totalul e suma liniilor.
 - Un singur motor de prețuri în packages/core/pricing, apelat din PLP, PDP, coș,
   checkout și factură. Niciun calcul de preț duplicat altundeva.
-- Discountul de grup NU se cumulează implicit cu prețul promoțional (se ia cel mai
-  mic), decât dacă grupul are `stacksWithSalePrice = true`. Cuponul SE cumulează,
-  cu excepția cupoanelor marcate `notForDiscountedGroups`.
+- Discountul de grup (`discount`) NU se cumulează implicit cu prețul promoțional (se
+  ia cel mai mic), decât dacă grupul are `stacksWithSalePrice = true`. Cuponul SE
+  cumulează, cu excepția cupoanelor marcate `notForDiscountedGroups` (care blochează
+  orice grup cu `pricingType ≠ none`). `excludeFromGroupDiscount` se aplică ambelor tipuri.
+
+### Fiscal, facturare și plăți (docs/10-decizii-deschise.md, Partea I)
+
+- TVA: o singură cotă, 21%, pentru toate produsele (și digitale), din setarea
+  `tax.standardRate`. Niciodată hardcodată; `TaxClass`/`TaxRate` rămân generice.
+- Vânzare DOAR în România, pentru orice produs (`regional.allowedCountries`, implicit
+  `["RO"]`). Fără OSS și fără taxare inversă în Val 1.
+- Facturare: SmartBill (principal, prin `InvoiceProvider`; Oblio posibil mai târziu).
+  Seria și numărul le definește SmartBill; e-Factura o transmite SmartBill.
+  Emitere: card = la plata confirmată; transfer bancar = proformă, apoi factură după
+  confirmarea adminului; ramburs = la plasare, cu storno dacă se întoarce; retur
+  parțial = storno parțial. Înainte de Faza 13 citește documentația API SmartBill.
+- Ramburs: limită 10.000 lei persoane fizice, 5.000 lei persoane juridice (CUI la
+  facturare sau grup `cost_plus`), ambele configurabile în setări. Peste limită, metoda
+  se ascunde.
 
 ### Stoc — model WooCommerce
 
@@ -87,7 +112,12 @@ există `tenantId`. În schimb:
 
 - Punctele se țin într-un registru imutabil (LoyaltyTransaction). Soldul se
   RECALCULEAZĂ din tranzacții, nu se editează direct niciodată.
-- Reducerea din puncte intră ULTIMA în lanțul de reduceri, după cupon.
+- Reducerea din puncte intră ULTIMA în lanțul de reduceri, după cupon. Fără plafon
+  procentual implicit (configurabil din admin). Transportul se plătește mereu în bani.
+- ⚠️ Regula dură: suma de plătit în bani ≥ max(cost transport, `minCashAmount`, implicit
+  1 leu). Comanda de 0 lei nu poate apărea; NU există ramură `loyalty_points`.
+- Standard, Fidel și VIP acumulează puncte (discountul Fidel/VIP se cumulează cu ele);
+  Partenerii NU (`earnsLoyaltyPoints = false`).
 - ⚠️ Voucherul cadou NU e o reducere. E o METODĂ DE PLATĂ, alături de card și
   ramburs. Nu intră în motorul de prețuri și nu reduce baza de TVA.
 

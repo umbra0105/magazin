@@ -63,7 +63,7 @@ Câmpurile marcate ⚠️ le adaugi în Faza 4, chiar dacă nu le folosești în
 - **Comenzi**: le tragi periodic prin API. Trebuie **confirmate/preluate** într-un interval, altfel primești penalizări.
 - **Statusuri eMAG** diferă de ale tale — ai nevoie de o mapare explicită în ambele sensuri.
 - **AWB**: fie îl generezi prin eMAG (cu curierii lor), fie prin curierul tău și le comunici numărul.
-- **Factura** trebuie încărcată la eMAG pentru fiecare comandă (PDF sau URL). Oblio poate genera, tu trebuie să o urci.
+- **Factura** trebuie încărcată la eMAG pentru fiecare comandă (PDF sau URL). SmartBill poate genera, tu trebuie să o urci.
 - **Retururi (RMA)** vin tot prin API și trebuie procesate.
 - **Comision** per categorie, reținut de eMAG. Reconcilierea o faci lunar.
 

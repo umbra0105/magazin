@@ -60,7 +60,7 @@ Prima impresie a produsului tău. Trebuie să dureze sub 5 minute.
 2. Bază de date host, port, user, parolă, nume DB → buton „Testează conexiunea"
                 → rulează migrațiile cu progres vizibil
 3. Magazin      nume, URL, monedă (RON), limbă (RO), fus orar (Europe/Bucharest),
-                cotă TVA implicită, prețuri afișate cu/fără TVA
+                cotă TVA standard (implicit 21%), țări permise la vânzare (implicit RO)
 4. Firmă        denumire, formă juridică, CUI, Reg. Com., sediu, capital social,
                 email, telefon, IBAN, bancă
                 → folosite automat în footer, facturi, emailuri, pagini legale

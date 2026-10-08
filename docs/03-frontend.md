@@ -115,7 +115,7 @@ Recomandare: **o singură pagină, cu pași accordion** (rate de conversie mai b
 Reguli:
 - Salvare progresivă în `localStorage` + server (nu pierde datele la refresh)
 - Validare inline, mesaje clare, fără reload
-- Metodele de plată/livrare se recalculează dinamic (ex: ramburs indisponibil peste 5.000 lei)
+- Metodele de plată/livrare se recalculează dinamic (ex: ramburs indisponibil peste limită: 10.000 lei persoane fizice, 5.000 lei persoane juridice, configurabile)
 - Buton dezactivat + spinner + **protecție la dublu-click** (idempotency key)
 - Fără header/footer complet — checkout „curat", doar logo + indicator de securitate
 - Tracking evenimente: `begin_checkout`, `add_shipping_info`, `add_payment_info`, `purchase`

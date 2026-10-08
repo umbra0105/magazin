@@ -133,12 +133,8 @@ Pentru comenzile mixte, produsele fizice își păstrează dreptul de retur de 1
 
 ## 6. TVA la produse digitale
 
-- Vânzare către consumatori **din România**: cota standard românească, ca la orice altceva. Simplu.
-- Vânzare către consumatori **din alte state UE**: serviciile prestate electronic se taxează cu **TVA din țara cumpărătorului**, peste plafonul de 10.000 EUR/an pe total vânzări la distanță în UE. Sub plafon poți aplica TVA din RO. Peste → înregistrare **OSS**.
-- Dacă vinzi în UE, ai nevoie de: detectarea țării cumpărătorului, **două dovezi independente** de localizare (IP + adresă de facturare + prefix telefonic), cote de TVA per țară, raportare OSS.
-
-**Recomandarea mea**: în Val 1, **limitează vânzarea produselor digitale la România** (validare pe țara de facturare). Adaugă OSS doar când chiar vinzi în afară. Altfel intri într-un hățiș fiscal pentru zero venit.
-→ **Confirmă cu contabilul** — e întrebarea 8 din lista de mai jos.
+✅ **Decis (contabil + utilizator):** produsele digitale au **aceeași cotă unică de 21%** ca restul produselor. Vânzarea se face **DOAR în România, pentru orice produs** (nu doar cele digitale), prin setarea `regional.allowedCountries` (implicit `["RO"]`), verificată pe server la adresa de facturare și de livrare. OSS și taxarea din alte state UE **nu se construiesc în Val 1**.
+(Răspunsul contabilului: întrebarea 11 din `10`, Partea III.)
 
 ---
 
@@ -148,9 +144,9 @@ Pentru comenzile mixte, produsele fizice își păstrează dreptul de retur de 1
 |---|---|
 | Coș doar digital | Fără pas de livrare, fără adresă de livrare, doar adresă de facturare. Ramburs ascuns. |
 | Coș doar fizic | Fluxul normal |
-| Coș mixt | Transport calculat **doar pe liniile fizice**. Adresă de livrare obligatorie. Ramburs disponibil, dar produsul digital se livrează abia la confirmarea încasării |
+| Coș mixt | Transport calculat **doar pe liniile fizice**. Adresă de livrare obligatorie. Ramburs disponibil, dar produsul digital se livrează abia la confirmarea încasării *(🟡 momentul exact — la livrare confirmată sau la virament — e o decizie deschisă, vezi `10` Partea I)* |
 | Prag de transport gratuit | Se calculează **doar din valoarea produselor fizice** (altfel cumperi un curs de 300 lei și primești transport gratuit la o șurubelniță) |
-| Comandă mixtă plătită cu ramburs | Digitalul se eliberează la confirmarea plății de la curier, nu la plasare. Explică asta clientului în checkout. |
+| Comandă mixtă plătită cu ramburs | Digitalul NU se eliberează la plasare. 🟡 **Deschis:** recomandarea e eliberarea la **livrare confirmată**, nu la virament (decizia utilizatorului în așteptare, `10` Partea I). Explică regula clientului în checkout. |
 | Rambursare parțială | Doar linia rambursată își pierde entitlement-ul |
 
 `fulfillmentStatus` trebuie să suporte `partially_fulfilled`: digitalul livrat, fizicul încă nu.

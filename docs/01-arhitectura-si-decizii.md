@@ -52,7 +52,7 @@ Nu adăuga `tenantId`. Dar **ține tot accesul la date în `packages/core`**, î
 | Search | Postgres FTS + `pg_trgm` → Meilisearch peste ~5.000 produse | Meilisearch opțional, activabil din setări |
 | Plăți | **Netopia + EuPlătesc** | Confirmat |
 | Curieri | **Sameday + FAN Courier** | Confirmat |
-| Facturare | **Oblio + SmartBill** (cu e-Factura) | Confirmat |
+| Facturare | **SmartBill** (cu e-Factura); Oblio posibil mai târziu | Confirmat |
 | Erori | **Sentry** (opțional, DSN din setări) | |
 | Teste | **Vitest** + **Playwright** | |
 | Distribuție | **Docker Compose** | Vezi fișierul 08 |
@@ -85,7 +85,7 @@ ecom-package/
 │  ├─ integrations/
 │  │  ├─ payments/{netopia,euplatesc,bank-transfer,cod}/
 │  │  ├─ shipping/{sameday,fancourier}/
-│  │  ├─ invoicing/{oblio,smartbill}/
+│  │  ├─ invoicing/{smartbill,oblio}/
 │  ├─ jobs/                       # workers BullMQ
 │  ├─ config/                     # env schema (Zod), constante, versiune pachet
 │  ├─ extensions/                 # registry de hooks + override-uri (vezi fișier 08)
@@ -115,8 +115,8 @@ ecom-package/
 | `NODE_ENV` | SMTP / provider email + expeditor |
 | `STORAGE_DRIVER` (local\|s3) + credențiale | Chei Netopia/EuPlătesc (criptate) |
 | `SENTRY_DSN` (opțional) | Chei Sameday/FAN (criptate) |
-| | Chei Oblio/SmartBill (criptate) |
-| | TVA, monedă, limbă, fus orar |
+| | Chei SmartBill (criptate) |
+| | TVA (cota standard, implicit 21%), monedă, limbă, fus orar, țări permise la vânzare |
 | | Metode de plată și livrare active |
 | | Texte legale, meniuri, pagini |
 | | Feature flags (blog on/off, B2B on/off, recenzii on/off) |
@@ -149,7 +149,7 @@ FEATURES = {
   loyaltyPoints: false,
   marketplaceSync: false,
   guestCheckout: true,
-  customerGroups: true,    // discount procentual pe grupuri (Partener, Client fidel)
+  customerGroups: true,    // grupuri de clienți: none | discount | cost_plus (vezi 09)
 }
 ```
 Helper `isEnabled('blog')` folosit în UI, în rute și în API. Un flag stins înseamnă: meniu ascuns în admin, rută care dă 404, cod care nu se încarcă.
@@ -194,6 +194,6 @@ Deciziile deja luate:
 - ✅ Model: pachet instalabil, o instalare = un magazin
 - ✅ Prețuri afișate **cu TVA inclus**, identice pentru toți
 - ✅ Fără prețuri ascunse: vizitatorul vede prețul complet
-- ✅ Grupuri de clienți cu discount procentual (Partener, Client fidel) — vezi `09`
+- ✅ Grupuri de clienți cu trei tipuri de preț (standard, discount Fidel/VIP, cost + adaos Partener 1/2/3) — vezi `09`
 - ✅ **Fără modul B2B clasic** (fără liste de prețuri, tranșe, conturi de firmă multi-utilizator)
-- ✅ Integrări: Netopia / EuPlătesc · Sameday / FAN Courier · Oblio / SmartBill
+- ✅ Integrări: Netopia / EuPlătesc · Sameday / FAN Courier · SmartBill (Oblio posibil mai târziu)

@@ -30,11 +30,11 @@
 - [ ] Preț pe unitate de măsură (lei/kg, lei/l) unde legea o cere
 
 ### 1.4 TVA
-- [ ] Cota standard: **21%** (crescută de la 19% în august 2025) — **confirmă valoarea curentă**
-- [ ] Cotă redusă: **11%** pentru categoriile aplicabile — confirmă lista
+- [x] Cota: **21%**, o singură cotă pentru toate produsele (confirmat de contabil); configurabilă din admin, nu hardcodată
+- [x] Cota redusă (11%) **nu se folosește**: contabilul a confirmat o singură cotă
 - [ ] Cotele trebuie să fie **configurabile din admin**, nu hardcodate. Vei mai avea schimbări.
-- [ ] Regim intracomunitar B2B (taxare inversă cu VIES valid) — doar dacă vinzi către firme din UE
-- [ ] OSS dacă vinzi în alte state UE peste plafon
+- [x] Regim intracomunitar B2B (VIES): **nu în Val 1**, vânzare doar în România
+- [x] OSS: **nu în Val 1**, vânzare doar în România
 
 ### 1.5 GPSR (Regulamentul general privind siguranța produselor, din dec. 2024)
 - [ ] Pe fiecare produs: numele și datele de contact ale **producătorului** și, dacă e din afara UE, ale **persoanei responsabile din UE**
@@ -75,14 +75,16 @@ Situația cunoscută:
 
 | Furnizor | Observații |
 |---|---|
-| **Oblio** | API modern, documentație bună, e-Factura inclusă, cel mai prietenos pentru dezvoltatori |
-| **SmartBill** | Cel mai răspândit, contabilii îl cunosc, API decent |
+| **SmartBill** | ✅ **Ales ca furnizor principal.** Cel mai răspândit, contabilii îl cunosc, API decent, e-Factura inclusă. Seria și numărul facturii le definește SmartBill |
+| **Oblio** | API modern, documentație bună, e-Factura inclusă. Posibil mai târziu, prin aceeași interfață |
 | **FGO** | Ieftin, API simplu |
 | **Facturis / Keez** | Alternative viabile |
 
 Astfel emiți factura printr-un apel API, iar furnizorul se ocupă de XML + SPV + statusuri. Îți rămâne doar: stochează `providerRef`, `pdfUrl`, `efacturaStatus` și afișează-le în admin și în contul clientului.
 
-Lasă o interfață `InvoiceProvider` ca să poți adăuga mai târziu și integrarea directă ANAF pentru clienții care o cer.
+Lasă o interfață `InvoiceProvider` ca să poți adăuga mai târziu Oblio sau integrarea directă ANAF.
+
+> ✅ **Decis: SmartBill** (propus de Claude, confirmat de utilizator). Înainte de Faza 13: se citește documentația API curentă a SmartBill și utilizatorul verifică, cu SmartBill, că abonamentul include acces API. Regulile de emitere pe metodă de plată (card, OP cu proformă, ramburs, storno parțial) sunt în `10`, Partea I.
 
 ---
 
@@ -95,7 +97,7 @@ Lasă o interfață `InvoiceProvider` ca să poți adăuga mai târziu și integ
 | **PayU România** | Parte din grup internațional, API bun. |
 | **Stripe** | Cel mai bun DX, dar comisioane mai mari și mai puțin „localizat". Bun pentru clienți cu vânzări externe. |
 | **Twispay / Libra PayZone** | Alternative. |
-| **Ramburs (COD)** | **Obligatoriu în RO** — încă o parte semnificativă din comenzi. Taxă separată, limită de valoare, rată de refuz mai mare. |
+| **Ramburs (COD)** | **Obligatoriu în RO** — încă o parte semnificativă din comenzi. Taxă separată, limită de valoare (implicit 10.000 lei persoane fizice, 5.000 lei persoane juridice; configurabile), rată de refuz mai mare. |
 | **Transfer bancar / OP** | Necesar pentru clienții persoană juridică. Comandă în așteptare până la confirmarea încasării. Emite proformă. |
 | **Rate / BNPL** | TBI Pay, PayPo, Mokka — cresc AOV-ul semnificativ pe coșuri mari. |
 | **Apple Pay / Google Pay** | Prin procesator, dacă îl suportă. |

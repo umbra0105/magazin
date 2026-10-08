@@ -3,8 +3,8 @@
 Model: **pachet instalabil, o instalare = un magazin** · Piață: **România, B2C**
 Produse: **fizice + digitale (tutoriale video)** · Canale: **site propriu + eMAG (ulterior)**
 Nișă: **echipamente pentru piscine** — produse grele, tehnice, sezoniere (vezi `15`)
-Prețuri: **cu TVA inclus, identice pentru toți** + grupuri cu discount procentual (Partener, Client fidel)
-Integrări confirmate: **Netopia + EuPlătesc** · **wootPRO + Sameday direct** · **Oblio** (SmartBill ulterior) · **Bunny Stream**
+Prețuri: **cu TVA inclus (21%, o singură cotă), identice pentru toți** + grupuri de clienți cu trei tipuri de preț: `none` (standard), `discount` (Fidel 5%, VIP 7%), `cost_plus` (Partener 1/2/3: preț NIR + adaos 12% / 17% / 21%, plafonat la prețul public). Vânzare doar în România
+Integrări confirmate: **Netopia + EuPlătesc** · **wootPRO + Sameday direct** · **SmartBill** (Oblio posibil mai târziu) · **Bunny Stream**
 
 Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesiunile de Claude Code.
 
@@ -15,11 +15,13 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] **Completează `10-decizii-deschise.md`** — cel puțin toate întrebările marcate 🔴 (nu mai există nicio decizie 🔴 deschisă; Partea I e integral ✅)
 - [x] ⚠️ **Primul magazin e al tău.** Fazele 18, 19 și 21 (instalator, extensii, împachetare) se fac DUPĂ lansarea magazinului tău, nu înainte. Vezi nota de strategie de la finalul fișierului.
 - [x] Confirmă convenția de prețuri: **brut, cu TVA inclus, `int` în bani** (documentat în CLAUDE.md)
-- [ ] Definește grupurile de clienți și procentele (ex. Standard 0%, Partener 15%, Client fidel 5%) _(necesar în Faza 15; se introduc din admin, deci pot fi alese oricând până atunci)_
-- [ ] Deschide conturi de test: Netopia, EuPlătesc, **wootPRO**, Sameday, Oblio _(necesare pe parcurs: Netopia + EuPlătesc în Faza 10; wootPRO + Sameday în Faza 12; Oblio în Faza 13)_
+- [x] Definește grupurile de clienți și procentele: Client standard (`none`), Client fidel 5% și Client VIP 7% (`discount`), Partener 1/2/3 cu adaos 12% / 17% / 21% (`cost_plus`). Valori inițiale, editabile din admin
+- [ ] Deschide conturi de test: Netopia, EuPlătesc, **wootPRO**, Sameday, **SmartBill** _(necesare pe parcurs: Netopia + EuPlătesc în Faza 10; wootPRO + Sameday în Faza 12; SmartBill în Faza 13)_
+- [ ] **Verifică cu SmartBill că abonamentul tău include acces API** _(necesar înainte de Faza 13; fără acces API nu putem emite facturi din magazin)_
+- [ ] **Furnizează un fișier exemplu de export SmartBill** („lista de mișcări produse", cu preț și dată de intrare) _(necesar înainte de Faza 15, pentru formatul importului de prețuri NIR)_
 - [ ] Creează cont Bunny Stream pentru tutoriale video (poți amâna — driverul `local` funcționează pe localhost) _(necesar în Faza 14b; doar pentru producție)_
 - [ ] **Cere VPS cu IP fix** — obligatoriu pentru whitelist-ul eMAG _(necesar înainte de Faza 21; whitelist-ul eMAG se folosește în Faza 22b)_
-- [ ] Întrebările pentru contabil din `10-decizii-deschise.md` Partea III (cele 11) _(necesare cel târziu în Faza 13; #2 TVA ideal înainte de Faza 4, #11 înainte de Faza 14b, #8–#10 înainte de Faza 15b)_
+- [x] Întrebările pentru contabil din `10-decizii-deschise.md` Partea III (acum 14): răspunsurile primite sunt în `10`. **Rămân 🟡 deschise** #8 (voucher), #9 (TVA pe puncte) și valabilitatea voucherelor, de rezolvat până la Faza 15b; plus decizia despre digitalul din comanda mixtă cu ramburs, până la Faza 14b
 - [ ] Cumpără domeniul pentru instalarea de test _(necesar în Faza 10 pentru webhook-urile de plată în sandbox, dacă nu folosești un tunel; cel târziu Faza 21)_
 - [ ] Alege 3-5 magazine de referință pentru UX _(necesar în Faza 6)_
 - [ ] **Exportă produsele din site-ul existent** și verifică ce coloane obții _(necesar în Faza 4, la punctul de import CSV)_
@@ -42,6 +44,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] **Sentry** (`@sentry/nextjs`) activat doar dacă există DSN, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`; requestId ca tag. Decizie utilizator: amânat din Faza 1, se face aici o singură dată, după Service de setări
 - [ ] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
 - [ ] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
+- [ ] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
 - [ ] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
 - [ ] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id)
 - [ ] Rate limiting Redis pe rutele sensibile
@@ -59,6 +62,8 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 ## FAZA 4 — Catalog: model și admin · ~8-10 zile
 - [ ] Schema: Product, Variant, Option, OptionValue, Category, Brand, Collection, Attribute, Media, ProductRelation, PriceHistory, TaxClass, TaxRate
 - [ ] Câmp `excludeFromGroupDiscount` pe produs și pe categorie
+- [ ] **`costPrice` (int, bani, FĂRĂ TVA) și `costPriceDate` pe variantă** + tabela `CostPriceHistory` (`09` §1). **Doar în admin**: nu apar în API public, props către componente client, feed-uri, `OrderLine.productSnapshot` sau loguri (adaugă `costPrice` în lista de câmpuri mascate din logger); permisiuni `products.cost.view` / `products.cost.edit`
+- [ ] Câmpurile de cost în tab-ul „Prețuri" al editorului de produs, vizibile doar cu permisiune (importul NIR vine în Faza 15)
 - [ ] **Clase de transport**: `weight`, `dimensions`, `shippingClass` (**doar `standard` / `oversized`**) — prețul vine din API-ul curierului (`15` §1)
 - [ ] Bifa `requiresInstallation` pe produs (`15` §4)
 - [ ] **Tab „Documente" pe produs** (`ProductDocument`: etichetă energetică, fișă tehnică, manual, CE) + `energyClass` și `eprelUrl` (`15` §2)
@@ -116,9 +121,9 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] ISR + `revalidateTag` la salvarea produsului
 
 ## FAZA 8 — Motor de prețuri și coș · ~5-6 zile ⚠️
-- [ ] **Motor de prețuri** (`09-preturi-si-parteneri.md` §3): preț brut → salePrice → discount de grup → cupon → total linie → extragere TVA
+- [ ] **Motor de prețuri** (`09-preturi-si-parteneri.md` §3): preț brut → salePrice → preț de grup (`none` / `discount` / `cost_plus`; extinderea vine în Faza 15) → cupon → puncte → total linie → extragere TVA
 - [ ] Extragere TVA din brut, rotunjire pe linie, o singură dată
-- [ ] **Testele scrise ÎNAINTE de implementare**: cumulare promoție + grup, produse excluse, cupon peste discount, rotunjiri, cote 21% și 11%
+- [ ] **Testele scrise ÎNAINTE de implementare**: cumulare promoție + grup, produse excluse, cupon peste discount, rotunjiri, cota standard din setări plus o a doua cotă de test (dovadă că nu e hardcodat)
 - [ ] Coș în DB + coș de guest cu token în cookie, merge la login
 - [ ] Cart drawer + pagină `/cos`
 - [ ] Validare la fiecare afișare (produs activ, preț actual, stoc)
@@ -142,6 +147,8 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] `PlaceOrderUseCase`: tranzacție atomică, snapshot, rezervare stoc, numerotare, idempotency key
 - [ ] State machine cu 3 statusuri și tranziții validate, scrie `OrderEvent`
 - [ ] Confirmare + `/comanda/urmarire` pentru guest
+- [ ] **Vânzare doar în România, pentru orice produs**: țările permise vin din `regional.allowedCountries` (implicit `["RO"]`), verificate pe server la adresa de livrare și de facturare, cu mesaj clar
+- [ ] **Limite de ramburs, configurabile în setări**: `payment.cod.maxAmountIndividual` (implicit 10.000 lei) și `payment.cod.maxAmountCompany` (implicit 5.000 lei). „Persoană juridică" = CUI la facturare **sau** grup `cost_plus`. Peste limită, metoda se ascunde și se explică de ce
 - [ ] Ramburs + transfer bancar funcționale cap-coadă
 - [ ] E2E Playwright: cumpărare completă ca guest
 
@@ -176,19 +183,23 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] ⚠️ NU construi integrare Cargus separată — Sameday a achiziționat Cargus în august 2026, sistemele se unifică
 - [ ] Mapare județe/localități către nomenclatoarele curierilor
 - [ ] Admin: generare AWB individual și în masă, etichete PDF + ZPL, AWB de retur
-- [ ] Ramburs transmis către curier + reconciliere
+- [ ] Ramburs transmis către curier + reconciliere (plata se consideră încasată când curierul virează banii; ecran de reconciliere în admin, `10` Partea I)
 - [ ] Cron la 10 min de sincronizare status → email automat la expediere și livrare
 - [ ] Circuit breaker: curier picat ≠ comandă pierdută
 
-## FAZA 13 — Facturare și e-Factura (Oblio / SmartBill) · ~4-5 zile
-- [ ] Interfață `InvoiceProvider`
-- [ ] **Oblio**: emitere, storno, PDF, status e-Factura (SmartBill ulterior, prin aceeași interfață)
-- [ ] Emitere automată la `paymentStatus = paid`, prin queue, cu retry
-- [ ] **Proformă** pentru plăți prin transfer bancar
-- [ ] Storno automat la rambursare
-- [ ] Facturi în admin și în contul clientului
-- [ ] Setări: date firmă, serie facturi, TVA implicit, cont bancar
-- [ ] Taxare inversă intracomunitară cu validare VIES
+## FAZA 13 — Facturare și e-Factura (SmartBill) · ~4-5 zile
+- [ ] **Înainte de a începe:** citește documentația API curentă a SmartBill; utilizatorul a confirmat cu SmartBill că abonamentul include acces API (`10` Partea II #9)
+- [ ] Interfață `InvoiceProvider` (SmartBill primul; Oblio posibil mai târziu prin aceeași interfață)
+- [ ] **SmartBill**: emitere, storno (total și parțial), proformă, PDF, status e-Factura. Seria și numărul le definește SmartBill (fără numerotare locală); e-Factura o transmite SmartBill automat
+- [ ] **Momentul emiterii, după metoda de plată** (`10` Partea I):
+  - card: factura la plata confirmată
+  - transfer bancar: proformă la plasare, apoi factură după ce adminul confirmă plata
+  - ramburs: factura la plasarea comenzii, cu storno dacă se întoarce; „încasat" la virarea banilor de către curier (reconciliere în admin, Faza 12)
+- [ ] Emitere prin queue, cu retry; o factură care eșuează NU blochează comanda
+- [ ] Storno automat la anulare, refuz ramburs și rambursare; **storno parțial la retur parțial**
+- [ ] Facturi în admin și în contul clientului; `efacturaStatus` vizibil, cu buton de retrimitere
+- [ ] Setări: date firmă, TVA (cota standard din setări, implicit 21%), cont bancar
+- [ ] ~~Taxare inversă intracomunitară cu validare VIES~~ **nu în Val 1** (vânzare doar în România)
 - [ ] Alertă în admin după 3 eșecuri de emitere
 
 ## FAZA 14 — Cont client și retururi · ~4-5 zile
@@ -201,6 +212,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Emailuri la fiecare tranziție + raport de motive
 
 ## FAZA 14b — Produse digitale · ~5-6 zile
+- [ ] 🟡 **Decizie deschisă a utilizatorului, înainte de a începe:** în comanda mixtă plătită cu ramburs, produsul digital se eliberează la **livrare confirmată** (recomandare) sau la virarea banilor? (`10` Partea I)
 - [ ] Schema: DigitalProduct, DigitalAsset, DigitalEntitlement, DigitalAccessLog (`11` §2)
 - [ ] Interfața `MediaDeliveryProvider` cu 3 drivere: `local` (dezvoltare), `bunny` (video în producție), `s3` (fișiere)
 - [ ] Upload video în background cu progres și transcodare
@@ -214,27 +226,32 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Admin: resetare contor descărcări, prelungire acces, revocare, log de accesări
 - [ ] Test: comandă mixtă → digitalul livrat instant, fizicul rămâne `partially_fulfilled`
 
-## FAZA 15 — Grupuri de clienți și prețuri de partener · ~2-3 zile
-- [ ] Schema: CustomerGroup + `Customer.groupId` + `excludeFromGroupDiscount` pe produs și categorie
-- [ ] Snapshot pe comandă: `customerGroupId`, `groupDiscountPercent`, `groupDiscountAmount`
-- [ ] Extinderea motorului de prețuri cu discountul de grup (teste scrise întâi)
-- [ ] Regula de cumulare cu promoțiile, controlată de `stacksWithSalePrice`
-- [ ] Afișare în storefront: preț de partener + preț standard tăiat + badge, identic pe PLP și PDP
-- [ ] Linie separată de reducere în coș, checkout și factură
-- [ ] Admin: CRUD grupuri, grup „Standard" neștergibil, badge și filtru în lista de clienți
+## FAZA 15 — Grupuri de clienți, prețuri de partener și prețuri NIR · ~4-5 zile
+- [ ] **Înainte de a începe:** primești de la utilizator un fișier exemplu de export SmartBill (`10` Partea II #10)
+- [ ] Schema: `CustomerGroup` cu `pricingType` (`none` | `discount` | `cost_plus`), `discountBps`, `markupBps` (întregi în puncte de bază) + `Customer.groupId` + `excludeFromGroupDiscount` pe produs și categorie (se aplică ambelor tipuri)
+- [ ] Snapshot pe comandă: `customerGroupId`, `groupPricingType`, `groupDiscountBps` / `groupMarkupBps`, `groupAdvantageAmount`
+- [ ] Extinderea motorului de prețuri cu cele trei tipuri (teste scrise întâi, `09` §7): `discount` = prețul public minus procentul; `cost_plus` = `costNet × (1 + adaos) × (1 + TVA)`, **plafonat la prețul public curent**; fără preț NIR → preț public
+- [ ] Regula de cumulare cu promoțiile pentru `discount`, controlată de `stacksWithSalePrice` (implicit nu se cumulează)
+- [ ] Afișare în storefront: prețul de grup + „Preț standard" tăiat + badge, identic pe PLP și PDP; prețul de partener se calculează dinamic, în afara cache-ului ISR
+- [ ] Coș și checkout: linie de reducere (Fidel/VIP) sau linie informativă „Avantaj partener"; pe factură doar prețul unitar încasat
+- [ ] Admin: CRUD grupuri (selector de tip + procent), grupul „Client standard" neștergibil, badge și filtru în lista de clienți
+- [ ] **Seed specific magazinului** (nu default de pachet): Client fidel 5%, Client VIP 7%, Partener 1/2/3 la 12% / 17% / 21%; Partenerii cu `earnsLoyaltyPoints = false`
 - [ ] Atribuire de grup în masă + audit log
-- [ ] Raport: vânzări per grup, total discount acordat
+- [ ] **Import prețuri NIR din SmartBill** (`09` §4): upload, dry-run, potrivire pe SKU, cea mai recentă dată per produs, actualizare doar dacă data e mai nouă, istoric în `CostPriceHistory`, raport cu coduri necunoscute, repetabil fără dubluri, `auditLog()`
+- [ ] Indicator și filtru „produse fără preț NIR" în admin
+- [ ] Raport: vânzări per grup, total avantaj acordat
 - [ ] (opțional) Promovare automată în „Client fidel" după X lei sau N comenzi
 
 ## FAZA 15b — Puncte de loialitate și vouchere · ~6 zile
 Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și retururile funcționează complet.**
-- [ ] Setări de loialitate: rată de acumulare, valoare punct, moment de acordare, expirare, limită de utilizare
+- [ ] Setări de loialitate: rată de acumulare, valoare punct, moment de acordare, expirare, plafon procentual de utilizare (implicit **fără plafon**, configurabil), minim în bani când nu există transport (`minCashAmount`, implicit 1 leu)
 - [ ] Schema: LoyaltyAccount, LoyaltyTransaction (registru imutabil — soldul se recalculează, nu se editează)
 - [ ] Acumulare: 1 punct la 100 lei, pe subtotalul după reduceri, fără transport, cu `floor`
-- [ ] `CustomerGroup.earnsLoyaltyPoints` — **fals pentru grupul Partener**
+- [ ] `CustomerGroup.earnsLoyaltyPoints` — **fals pentru Partener 1/2/3**; Standard, Fidel și VIP acumulează, iar discountul Fidel/VIP se cumulează cu punctele
 - [ ] Acordare la expirarea ferestrei de retur, cu status „în așteptare” vizibil în cont
-- [ ] Răscumpărare ca ultimă reducere, **fără limită pe produse**, dar **punctele nu acoperă transportul**
-- [ ] ⚠️ **Ramură de comandă 0 lei**: fără gateway de plată, status `paid` direct, `paymentMethod = 'loyalty_points'`
+- [ ] Răscumpărare ca ultimă reducere, **fără plafon procentual**, dar **punctele nu acoperă transportul**
+- [ ] ⚠️ **Regula dură a sumei în bani**: suma de plătit în bani ≥ `max(cost transport, minCashAmount)`; punctele aplicabile ≤ total − acel minim (`14` §2.A). **Comanda de 0 lei nu poate apărea; nu există ramura `loyalty_points`.** Sliderul din checkout se oprește la maximul permis
+- [ ] 🟡 Înainte de reducerea din puncte pe factură: răspunsul contabilului la „TVA pe 100 sau pe 90?" (`10`, Partea I)
 - [ ] Acumulare doar pe suma plătită efectiv cu bani (fără buclă de puncte pe puncte)
 - [ ] Client promovat la Partener: păstrează soldul, nu mai acumulează
 - [ ] Expirare la 12 luni, cu email de avertizare cu 30 de zile înainte
@@ -243,6 +260,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Admin: sold per client, ajustare cu motiv obligatoriu, raport de datorie în puncte
 - [ ] Schema: Voucher, VoucherTransaction, **cu sold rămas** (nu cod cu o singură utilizare)
 - [ ] ⚠️ Voucherul intră la **PLATĂ**, nu în lanțul de reduceri. Nu reduce baza de TVA
+- [ ] 🟡 Rămâne deschis cu contabilul: voucher cumpărat (plată anticipată) vs cod de reducere gratuit; termenul legal minim de valabilitate; tratamentul voucherului care acoperă integral o comandă (`10`, Partea I)
 - [ ] Emitere din admin + vânzare ca produs pe site, cu mesaj personalizat pe email
 - [ ] Admin: listă, anulare, ajustare cu audit, **raport de datorie în vouchere**
 

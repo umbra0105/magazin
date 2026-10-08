@@ -53,10 +53,10 @@ Fiecare fază are mai multe sesiuni. Estimările sunt orientative — unele vor 
 | **11** Admin comenzi | 3 | 13 | Procesezi o comandă din admin, cap-coadă |
 | **11** Emailuri | 2 | 14 | Primești emailurile în Mailpit |
 | **12** AWB | 3 | 15 | Generezi un AWB și descarci eticheta |
-| **13** Facturare | 2-3 | 16 | Emiți o factură în Oblio, o descarci în PDF |
+| **13** Facturare | 2-3 | 16 | Emiți o factură în SmartBill, o descarci în PDF |
 | **14** Cont și retururi | 3 | 17 | Clientul își vede comenzile, cere retur |
 | **14b** Produse digitale | 3 | 21d | Cumperi un tutorial, îl vizionezi din cont |
-| **15** Grupuri de clienți | 2 | 21 | Un client Partener vede prețuri reduse |
+| **15** Grupuri de clienți și prețuri NIR | 4 | 21 | Un Partener vede prețul cost + adaos, plafonat la cel public; imporți prețurile NIR din SmartBill |
 | **15b** Loialitate | 3 | 21f | Primești puncte, le folosești, voucherele funcționează |
 | **16** CMS | 3-4 | 18 | Construiești homepage-ul din blocuri, din admin |
 | **17** Marketing și SEO | 3 | 19, 20 | Cupoane, recenzii, sitemap, structured data |

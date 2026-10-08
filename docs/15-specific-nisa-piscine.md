@@ -208,7 +208,7 @@ Vânzările vor fi concentrate în martie-august, cu vârf în mai-iunie.
 
 ## 7. Clienții „Partener" se potrivesc perfect
 
-Piscinierii, constructorii și firmele de service cumpără repetat. Grupul „Partener" cu discount procentual e exact instrumentul potrivit, fără B2B complicat.
+Piscinierii, constructorii și firmele de service cumpără repetat. Grupurile „Partener 1/2/3" (prețul de achiziție + adaos, plafonat la prețul public) sunt exact instrumentul potrivit, fără B2B complicat.
 
 Ieftin și util în plus:
 - **Comandă repetată** din istoric („comandă din nou") — ~0,5 zile
