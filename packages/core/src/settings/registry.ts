@@ -66,6 +66,20 @@ export const settingGroups = {
     customerSessionDays: z.number().int().min(1).max(365).default(30),
     /** Sesiunile conturilor cu acces la admin sunt mai scurte. */
     adminSessionHours: z.number().int().min(1).max(168).default(8),
+    loginMaxAttempts: z.number().int().min(1).max(100).default(5),
+    loginWindowMinutes: z.number().int().min(1).max(1440).default(15),
+    registerMaxAttempts: z.number().int().min(1).max(100).default(5),
+    registerWindowMinutes: z.number().int().min(1).max(1440).default(60),
+    passwordResetMaxAttempts: z.number().int().min(1).max(100).default(5),
+    passwordResetWindowMinutes: z.number().int().min(1).max(1440).default(60),
+    /** Eșecuri de login (pe email) după care contul se blochează temporar. */
+    lockoutThreshold: z.number().int().min(3).max(100).default(10),
+    lockoutMinutes: z.number().int().min(1).max(1440).default(15),
+    /**
+     * Câte proxy-uri de încredere sunt în fața aplicației. 0 = niciunul: headerul X-Forwarded-For
+     * se ignoră (altfel orice client și-ar putea alege IP-ul și ar ocoli limitele).
+     */
+    trustedProxyHops: z.number().int().min(0).max(5).default(0),
   },
   monitoring: {
     /** DSN Sentry. Gol = Sentry complet inactiv. Nu e secret (se trimite și în browser). */

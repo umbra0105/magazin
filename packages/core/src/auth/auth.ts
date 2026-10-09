@@ -1,8 +1,10 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import type { PrismaClient } from "@ecom/db";
 import type { SettingGroupValue } from "../settings";
+import { RateLimitedError, type AuthGuard } from "./auth-guard";
+import { resolveClientIp } from "./client-ip";
 import { hashPassword, verifyPassword } from "./password";
 import type { AuthSecondaryStorage } from "./redis-storage";
 
@@ -21,11 +23,33 @@ export interface CreateAuthDeps {
   secret: string;
   isProduction: boolean;
   settings: AuthSettings;
+  guard: AuthGuard;
+  /** Apelat când un cont tocmai a fost blocat (audit, alertă). Nu primește parole. */
+  onAccountLocked?: (data: { email: string; lockoutMinutes: number }) => Promise<void> | void;
   /** Trimiterea emailurilor (coadă) se leagă în punctul de emailuri; până atunci lipsește. */
   email?: AuthEmailSender;
 }
 
 const DAY_SECONDS = 24 * 60 * 60;
+
+/** Același răspuns pentru email inexistent, parolă greșită și cont blocat (fără enumerare). */
+const invalidCredentials = () =>
+  new APIError("UNAUTHORIZED", {
+    code: "INVALID_EMAIL_OR_PASSWORD",
+    message: "Invalid email or password",
+  });
+
+const tooManyRequests = (error: RateLimitedError) =>
+  new APIError(
+    "TOO_MANY_REQUESTS",
+    { code: error.code, message: error.message },
+    { "Retry-After": String(error.retryAfterSeconds) },
+  );
+
+const emailOf = (body: unknown): string | null => {
+  const email = (body as { email?: unknown } | null)?.email;
+  return typeof email === "string" && email.length > 0 ? email : null;
+};
 
 /**
  * Instanța Better Auth. Politica de securitate stă aici, într-un singur loc:
@@ -72,12 +96,56 @@ export function createAuth(deps: CreateAuthDeps) {
     },
     rateLimit: { enabled: false },
     hooks: {
-      // La schimbarea parolei se închid mereu celelalte sesiuni, indiferent ce trimite clientul.
       before: createAuthMiddleware(async (ctx) => {
+        // La schimbarea parolei se închid mereu celelalte sesiuni, indiferent ce trimite clientul.
         if (ctx.path === "/change-password") {
           return { context: { ...ctx, body: { ...ctx.body, revokeOtherSessions: true } } };
         }
+        const email = emailOf(ctx.body);
+        if (!email) return undefined;
+        const ip = resolveClientIp(ctx.headers ?? ctx.request?.headers, settings.trustedProxyHops);
+        try {
+          if (ctx.path === "/sign-in/email") {
+            await deps.guard.checkLogin(email, ip);
+            if ((await deps.guard.lockRemainingSeconds(email)) > 0) {
+              // Cont blocat: se parcurge aceeași muncă (hash) și se întoarce același răspuns ca la
+              // parolă greșită, ca blocarea să nu se vadă din exterior nici după timp, nici după mesaj.
+              const password = (ctx.body as { password?: unknown }).password;
+              await hashPassword(typeof password === "string" ? password : "");
+              throw invalidCredentials();
+            }
+          } else if (ctx.path === "/sign-up/email") {
+            await deps.guard.checkRegister(email, ip);
+          } else if (
+            ctx.path === "/request-password-reset" ||
+            ctx.path === "/send-verification-email"
+          ) {
+            await deps.guard.checkPasswordReset(email, ip);
+          }
+        } catch (error) {
+          if (error instanceof RateLimitedError) throw tooManyRequests(error);
+          throw error;
+        }
         return undefined;
+      }),
+      after: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/sign-in/email") return;
+        const email = emailOf(ctx.body);
+        if (!email) return;
+        const returned = ctx.context.returned;
+        if (isAPIError(returned)) {
+          // Contează doar credențialele greșite; limitările (429) și "email neverificat" (parola era
+          // corectă) nu sunt eșecuri de parolă.
+          if (
+            (returned.body as { code?: string } | undefined)?.code !== "INVALID_EMAIL_OR_PASSWORD"
+          )
+            return;
+          if (await deps.guard.recordLoginFailure(email)) {
+            await deps.onAccountLocked?.({ email, lockoutMinutes: settings.lockoutMinutes });
+          }
+        } else if (ctx.context.newSession) {
+          await deps.guard.recordLoginSuccess(email);
+        }
       }),
     },
   });

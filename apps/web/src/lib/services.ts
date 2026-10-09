@@ -1,7 +1,13 @@
 import { Redis } from "ioredis";
 import { loadEnv } from "@ecom/config";
 import {
+  AuditService,
+  AuthGuard,
   BrandingService,
+  MemoryCounterStore,
+  RedisCounterStore,
+  ResilientCounterStore,
+  createPrismaAuditStore,
   createAuth,
   createRedisSecondaryStorage,
   deriveKey,
@@ -13,12 +19,14 @@ import {
   createPrismaSettingsStore,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
+import { getLogger } from "@ecom/shared";
 
 const globalForServices = globalThis as unknown as {
   __ecomRedis?: Redis;
   __ecomSettings?: SettingsService;
   __ecomFeatureFlags?: FeatureFlagService;
   __ecomBranding?: BrandingService;
+  __ecomAuthMemory?: MemoryCounterStore;
   __ecomAuth?: { auth: Auth; fingerprint: string };
 };
 
@@ -64,6 +72,19 @@ export function getBranding(): BrandingService {
   return globalForServices.__ecomBranding;
 }
 
+/**
+ * Contoarele din memorie se păstrează între reconstruirile instanței Better Auth (la schimbarea
+ * setărilor), ca limitele și blocările puse cât Redis era căzut să nu se piardă în același proces.
+ */
+function getCounterStore(): ResilientCounterStore {
+  globalForServices.__ecomAuthMemory ??= new MemoryCounterStore();
+  return new ResilientCounterStore(
+    new RedisCounterStore(getRedis()),
+    globalForServices.__ecomAuthMemory,
+    getLogger(),
+  );
+}
+
 const AUTH_SECRET_LABEL = "ecom/auth-secret/v1";
 
 /**
@@ -84,6 +105,20 @@ export async function getAuth(): Promise<Auth> {
     secret: deriveKey(env.APP_KEY, AUTH_SECRET_LABEL).toString("base64"),
     isProduction: env.NODE_ENV === "production",
     settings,
+    guard: new AuthGuard(getCounterStore(), settings),
+    onAccountLocked: async ({ email, lockoutMinutes }) => {
+      // Se auditează doar conturile reale; jurnalul nu e vizibil din exterior, deci nu dă indicii.
+      const user = await getDb().user.findUnique({ where: { email: email.trim().toLowerCase() } });
+      if (!user) return;
+      await new AuditService(createPrismaAuditStore(getDb())).record({
+        actorId: "system",
+        actorLabel: "system",
+        action: "auth.account_locked",
+        entity: "user",
+        entityId: user.id,
+        after: { lockoutMinutes },
+      });
+    },
   });
   globalForServices.__ecomAuth = { auth, fingerprint };
   return auth;

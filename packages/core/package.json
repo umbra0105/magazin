@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "db:seed": "tsx scripts/seed.ts",
     "db:seed:store": "tsx scripts/seed-store.ts",
-    "dev:preset": "tsx scripts/dev-apply-preset.ts"
+    "dev:preset": "tsx scripts/dev-apply-preset.ts",
+    "admin:unlock": "tsx scripts/admin-unlock.ts"
   },
   "dependencies": {
     "@ecom/db": "workspace:*",

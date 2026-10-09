@@ -23,7 +23,8 @@
     "db:seed": "pnpm --filter @ecom/db db:seed",
     "db:studio": "pnpm --filter @ecom/db db:studio",
     "db:seed:store": "pnpm --filter @ecom/core db:seed:store",
-    "dev:preset": "pnpm --filter @ecom/core dev:preset"
+    "dev:preset": "pnpm --filter @ecom/core dev:preset",
+    "admin:unlock": "pnpm --filter @ecom/core admin:unlock"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",

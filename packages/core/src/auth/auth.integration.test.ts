@@ -2,7 +2,10 @@ import { randomBytes } from "node:crypto";
 import { Redis } from "ioredis";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
+import { authSettings } from "../test-utils/auth-settings";
 import { createAuth, type AuthSettings } from "./auth";
+import { AuthGuard } from "./auth-guard";
+import { MemoryCounterStore } from "./counter-store";
 import { createRedisSecondaryStorage } from "./redis-storage";
 
 const db = getDb();
@@ -10,21 +13,16 @@ const redis = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379");
 const RUN = randomBytes(4).toString("hex");
 const emails: string[] = [];
 
-const settings: AuthSettings = {
-  requireEmailVerification: false,
-  minPasswordLength: 12,
-  customerSessionDays: 30,
-  adminSessionHours: 8,
-};
-
 function makeAuth(overrides: Partial<AuthSettings> = {}) {
+  const settings = authSettings({ requireEmailVerification: false, ...overrides });
   return createAuth({
+    guard: new AuthGuard(new MemoryCounterStore(), settings),
     db,
     secondaryStorage: createRedisSecondaryStorage(redis),
     appUrl: "http://localhost:3000",
     secret: randomBytes(32).toString("base64"),
     isProduction: false,
-    settings: { ...settings, ...overrides },
+    settings,
   });
 }
 
