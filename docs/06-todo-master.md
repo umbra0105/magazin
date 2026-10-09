@@ -46,7 +46,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] `auditLog()` doar de adăugare (trigger în DB), cu mascarea secretelor, și wrapper pentru server actions de admin
 - [x] Design tokens din `Branding`: validare strictă Zod, fonturi locale (`next/font`), verificare contrast WCAG AA, CSS servit fără flash de temă greșită, 3 presets
 - [x] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
-- [ ] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
+- [x] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
 - [x] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
 - [ ] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id)
 - [ ] Rate limiting Redis pe rutele sensibile
@@ -55,7 +55,6 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Layout admin: sidebar, topbar, breadcrumbs, guard
 - [x] Seed de bază (roluri, setări implicite, un admin)
 - [x] (8b) Bază de date separată pentru testele de integrare: `ecom_test` creată și migrată automat, Redis pe alt index, gardă care refuză bazele fără "test" în nume, aceeași bază în CI
-- [~] (A) Tokenii de design vizibili în pagina principală (placeholder): titlu în fontul de titlu, culorile și raza din temă
 
 ## FAZA 3 — Media · ~2-3 zile
 - [ ] Adaptor de storage comutabil: disk local ↔ S3-compatible (din setări)
