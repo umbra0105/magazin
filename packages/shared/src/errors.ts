@@ -17,3 +17,17 @@ export class ValidationError extends DomainError {
     super("VALIDATION_ERROR", message, details);
   }
 }
+
+/** Nu există utilizator autentificat (sesiune lipsă sau expirată). */
+export class UnauthenticatedError extends DomainError {
+  constructor(message = "Autentificarea este necesară") {
+    super("AUTH_UNAUTHENTICATED", message);
+  }
+}
+
+/** Utilizatorul e autentificat, dar nu are permisiunea cerută. */
+export class ForbiddenError extends DomainError {
+  constructor(permission: string) {
+    super("AUTH_FORBIDDEN", "Nu ai permisiunea necesară pentru această acțiune", { permission });
+  }
+}

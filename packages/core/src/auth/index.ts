@@ -4,3 +4,4 @@ export * from "./auth";
 export * from "./counter-store";
 export * from "./client-ip";
 export * from "./auth-guard";
+export * from "./session-policy";
