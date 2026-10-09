@@ -12,7 +12,8 @@
     "db:seed:store": "tsx scripts/seed-store.ts",
     "dev:preset": "tsx scripts/dev-apply-preset.ts",
     "admin:unlock": "tsx scripts/admin-unlock.ts",
-    "rbac:revoke": "tsx scripts/rbac-revoke.ts"
+    "rbac:revoke": "tsx scripts/rbac-revoke.ts",
+    "admin:create": "tsx scripts/admin-create.ts"
   },
   "dependencies": {
     "@ecom/db": "workspace:*",

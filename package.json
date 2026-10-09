@@ -25,7 +25,8 @@
     "db:seed:store": "pnpm --filter @ecom/core db:seed:store",
     "dev:preset": "pnpm --filter @ecom/core dev:preset",
     "admin:unlock": "pnpm --filter @ecom/core admin:unlock",
-    "rbac:revoke": "pnpm --filter @ecom/core rbac:revoke"
+    "rbac:revoke": "pnpm --filter @ecom/core rbac:revoke",
+    "admin:create": "pnpm --filter @ecom/core admin:create"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",

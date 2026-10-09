@@ -5,11 +5,17 @@ import { describe, expect, it } from "vitest";
 
 const CORE = fileURLToPath(new URL("../../", import.meta.url));
 
+/**
+ * Scripturi care NU sunt seed și manipulează o parolă tastată de om. Au garanții proprii în
+ * `test/support/admin-create-security.test.ts` (fără echo, fără argumente/env/pipe, fără parolă implicită).
+ */
+const NOT_SEED = new Set(["admin-create.ts"]);
+
 function seedFiles(): string[] {
   const dirs = [join(CORE, "scripts"), join(CORE, "src", "seed")];
   return dirs.flatMap((dir) =>
     readdirSync(dir)
-      .filter((name) => name.endsWith(".ts") && !/\.test\.ts$/.test(name))
+      .filter((name) => name.endsWith(".ts") && !/\.test\.ts$/.test(name) && !NOT_SEED.has(name))
       .map((name) => join(dir, name)),
   );
 }
