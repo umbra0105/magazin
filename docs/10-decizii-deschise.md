@@ -37,6 +37,7 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | ✅ | Discountul de grup (`discount`) **NU se cumulează** cu promoția publică (se ia prețul cel mai mic), decât dacă `stacksWithSalePrice` e bifat pe grup. La `cost_plus` se ia oricum minimul |
 | ✅ | Cuponul **SE cumulează** cu prețul de grup, cu excepția cupoanelor marcate `notForDiscountedGroups` (care blochează orice grup cu `pricingType ≠ none`) |
 | ✅ | Atribuirea în grup se face **manual** de admin, individual sau în masă. Fără promovare automată |
+| ✅ | **Prețul de achiziție (`products.cost.view`) îl văd rolurile Owner, Admin, Manager și Contabil.** Editor, Suport și Depozit nu. Editarea (`products.cost.edit`): doar Owner și Admin. Maparea e în `packages/core/src/rbac/catalog.ts` |
 | ✅ | **Fără modul B2B clasic**: fără liste de prețuri per client, fără tranșe de cantitate, fără comutator cu/fără TVA, fără conturi de firmă multi-utilizator |
 | ✅ | Facturarea pe firmă (CUI) la checkout rămâne disponibilă **oricui** |
 

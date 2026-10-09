@@ -395,11 +395,13 @@ Vezi `09-preturi-si-parteneri.md` §5.
 |---|---|
 | **Owner** | Tot, inclusiv setări de sistem, actualizări și integrări |
 | **Admin** | Tot, mai puțin actualizări de sistem și chei de integrare |
-| **Manager** | Comenzi, produse, clienți, reduceri, rapoarte |
+| **Manager** | Comenzi, produse (inclusiv prețul de achiziție, `products.cost.view`), clienți, reduceri, rapoarte |
 | **Editor conținut** | CMS, blog, SEO, media |
 | **Suport clienți** | Vede comenzi și clienți, poate anula/rambursa până la o limită |
 | **Depozit** | Comenzi (doar fulfillment), stoc, AWB — fără prețuri și date financiare |
 | **Contabil** | Rapoarte, facturi, export — doar citire |
+
+**Prețul de achiziție (`products.cost.view`)** îl văd doar Owner, Admin, Manager și Contabil; Editor, Suport și Depozit nu. Maparea completă rol → permisiuni este în `packages/core/src/rbac/catalog.ts` (sursa de adevăr pentru seed).
 
 Permisiuni ca string-uri: `orders.read`, `orders.write`, `companies.approve`, `pricelists.write`, `orders.refund`, `orders.cancel`, `products.write`, `inventory.write`, `customers.read_pii`, `settings.write`, `integrations.write`, `users.manage`, `reports.financial`. Verificare **pe server**, la fiecare acțiune.
 

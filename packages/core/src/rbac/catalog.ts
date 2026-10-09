@@ -65,7 +65,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
   {
     key: "manager",
     name: "Manager",
-    description: "Comenzi, produse, clienți, reduceri, rapoarte (fără prețul de achiziție)",
+    description: "Comenzi, produse (inclusiv prețul de achiziție), clienți, reduceri, rapoarte",
     permissions: [
       "orders.read",
       "orders.write",
@@ -75,6 +75,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "products.read",
       "products.write",
       "products.archive",
+      "products.cost.view",
       "inventory.read",
       "inventory.write",
       "customers.read",

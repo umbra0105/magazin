@@ -63,7 +63,7 @@ describe("seed de bază (Postgres real, în tranzacție anulată)", () => {
     expect(out.afterSecond).toEqual(out.afterFirst);
   });
 
-  it("are products.cost.view (nu la Manager), toate flag-urile oprite, TVA 21% și țara RO", async () => {
+  it("are products.cost.view (Owner, Admin, Manager, Contabil), toate flag-urile oprite, TVA 21% și țara RO", async () => {
     const out = await inRolledBackTransaction(db, async (tx) => {
       await emptyConfigTables(tx);
       await runBaseSeed(tx);
@@ -85,7 +85,7 @@ describe("seed de bază (Postgres real, în tranzacție anulată)", () => {
         ).value,
       };
     });
-    expect(out.costViewRoles).toEqual(["accountant", "admin", "owner"]);
+    expect(out.costViewRoles).toEqual(["accountant", "admin", "manager", "owner"]);
     expect(out.ownerPermissions).toBe(PERMISSION_KEYS.length);
     expect(out.enabledFlags).toBe(0);
     expect(out.tax).toBe(21);
@@ -116,6 +116,35 @@ describe("seed de bază (Postgres real, în tranzacție anulată)", () => {
     expect(out.preset).toBe("bold");
     const supportDefault = DEFAULT_ROLES.find((r) => r.key === "support")?.permissions.length ?? 0;
     expect(out.supportLinks).toBe(supportDefault + 1);
+  });
+
+  it("aplică o permisiune nouă pe un rol existent, fără să scoată sau să schimbe altceva", async () => {
+    const out = await inRolledBackTransaction(db, async (tx) => {
+      await emptyConfigTables(tx);
+      await runBaseSeed(tx);
+      // Simulează o bază seed-uită înainte de modificarea mapării: Manager fără cost.view.
+      const manager = await tx.role.findUniqueOrThrow({ where: { key: "manager" } });
+      const costView = await tx.permission.findUniqueOrThrow({
+        where: { key: "products.cost.view" },
+      });
+      await tx.rolePermission.delete({
+        where: { roleId_permissionId: { roleId: manager.id, permissionId: costView.id } },
+      });
+      const total = await tx.rolePermission.count();
+      const before = await tx.rolePermission.count({ where: { roleId: manager.id } });
+
+      const result = await runBaseSeed(tx);
+      return {
+        added: result.rolePermissions,
+        total: await tx.rolePermission.count(),
+        expectedTotal: total + 1,
+        managerBefore: before,
+        managerAfter: await tx.rolePermission.count({ where: { roleId: manager.id } }),
+      };
+    });
+    expect(out.added).toBe(1);
+    expect(out.total).toBe(out.expectedTotal);
+    expect(out.managerAfter).toBe(out.managerBefore + 1);
   });
 
   it("nu creează utilizatori, conturi sau parole", async () => {

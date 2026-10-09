@@ -73,7 +73,7 @@ Order (snapshot)
 `costPrice` și `CostPriceHistory` sunt **doar pentru admin**:
 - nu apar în API public, în props trimise către componente client, în JSON-ul storefront-ului, în feed-uri (Google Merchant, Facebook), în emailuri sau în loguri (cheia se adaugă în lista de câmpuri mascate a loggerului, în Faza 4);
 - `OrderLine.productSnapshot` **nu include** `costPrice`. Dacă vor fi rapoarte de profit, se adaugă o coloană separată, vizibilă doar în admin;
-- vizibil doar cu permisiunea `products.cost.view`, editabil cu `products.cost.edit`.
+- vizibil doar cu permisiunea `products.cost.view`, editabil cu `products.cost.edit`. În rolurile implicite, `products.cost.view` o au **Owner, Admin, Manager și Contabil**; Editor, Suport și Depozit nu o au. `products.cost.edit` o au doar Owner și Admin (`packages/core/src/rbac/catalog.ts`).
 
 ---
 
