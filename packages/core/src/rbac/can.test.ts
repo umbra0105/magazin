@@ -35,7 +35,15 @@ describe("can(): fiecare rol are acces exact la ce trebuie", () => {
     expect(can(support, "products.archive")).toBe(false);
     expect(can(support, "products.write")).toBe(false);
     expect(can(support, "settings.write")).toBe(false);
-    expect(can(support, "orders.refund")).toBe(true);
+    expect(can(support, "orders.cancel")).toBe(true);
+  });
+
+  it("rambursarea: doar Manager, Admin și Owner; Suportul nu, până există limita de rambursare", () => {
+    const allowed = DEFAULT_ROLES.filter((r) => can(subjectFor([r.key]), "orders.refund")).map(
+      (r) => r.key,
+    );
+    expect(allowed.sort()).toEqual(["admin", "manager", "owner"]);
+    expect(can(subjectFor(["support"]), "orders.refund")).toBe(false);
   });
 
   it("Depozit nu rambursează și nu vede prețul de achiziție; Contabil nu modifică comenzi", () => {
@@ -59,7 +67,7 @@ describe("can(): fiecare rol are acces exact la ce trebuie", () => {
 
   it("roluri multiple se adună", () => {
     const both = subjectFor(["support", "editor"]);
-    expect(can(both, "orders.refund")).toBe(true);
+    expect(can(both, "orders.cancel")).toBe(true);
     expect(can(both, "content.write")).toBe(true);
     expect(can(both, "products.archive")).toBe(false);
   });

@@ -397,7 +397,7 @@ Vezi `09-preturi-si-parteneri.md` §5.
 | **Admin** | Tot, mai puțin actualizări de sistem și chei de integrare |
 | **Manager** | Comenzi, produse (inclusiv prețul de achiziție, `products.cost.view`), clienți, reduceri, rapoarte |
 | **Editor conținut** | CMS, blog, SEO, media |
-| **Suport clienți** | Vede comenzi și clienți, poate anula/rambursa până la o limită |
+| **Suport clienți** | Vede comenzi și clienți, poate anula comenzi. **Rambursarea (`orders.refund`) rămâne la Manager, Admin și Owner până există o limită de rambursare** (decizie utilizator) |
 | **Depozit** | Comenzi (doar fulfillment), stoc, AWB — fără prețuri și date financiare |
 | **Contabil** | Rapoarte, facturi, export — doar citire |
 
@@ -416,7 +416,7 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `orders.read` — Vede comenzile | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ |
 | `orders.write` — Modifică comenzile | ✓ | ✓ | ✓ |  |  |  |  |
 | `orders.cancel` — Anulează comenzi | ✓ | ✓ | ✓ |  | ✓ |  |  |
-| `orders.refund` — Rambursează comenzi | ✓ | ✓ | ✓ |  | ✓ |  |  |
+| `orders.refund` — Rambursează comenzi | ✓ | ✓ | ✓ |  |  |  |  |
 | `orders.fulfill` — Pregătește și expediază comenzi (fulfillment, AWB) | ✓ | ✓ | ✓ |  |  | ✓ |  |
 | `products.read` — Vede produsele | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |
 | `products.write` — Creează și modifică produse | ✓ | ✓ | ✓ |  |  |  |  |

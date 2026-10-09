@@ -3,3 +3,4 @@ export * from "./can";
 export * from "./permission-service";
 export * from "./resolve-subject";
 export * from "./matrix";
+export * from "./revoke";

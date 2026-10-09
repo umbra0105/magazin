@@ -97,12 +97,12 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
   {
     key: "support",
     name: "Suport clienți",
-    description: "Vede comenzi și clienți, poate anula și rambursa",
+    description:
+      "Vede comenzi și clienți, poate anula comenzi (rambursarea: până există limita de rambursare)",
     permissions: [
       "admin.access",
       "orders.read",
       "orders.cancel",
-      "orders.refund",
       "customers.read",
       "customers.read_pii",
     ],

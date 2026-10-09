@@ -68,6 +68,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Bibliotecă media în admin: grid, foldere, căutare, alt-text, selector reutilizabil
 
 ## FAZA 4 — Catalog: model și admin · ~8-10 zile
+- [ ] ⚠️ **Permisiune separată pentru conținutul produsului** (ex. `products.content.write`): rolul Editor trebuie să poată edita descrierea și SEO-ul unui produs FĂRĂ să poată schimba prețuri, stoc sau costuri. De decis numele și maparea pe roluri (decizie utilizator); `products.write` rămâne pentru prețuri/variante. Actualizează catalogul RBAC, matricea din `docs/04` și testele
 - [ ] Schema: Product, Variant, Option, OptionValue, Category, Brand, Collection, Attribute, Media, ProductRelation, PriceHistory, TaxClass, TaxRate
 - [ ] Câmp `excludeFromGroupDiscount` pe produs și pe categorie
 - [ ] **`costPrice` (int, bani, FĂRĂ TVA) și `costPriceDate` pe variantă** + tabela `CostPriceHistory` (`09` §1). **Doar în admin**: nu apar în API public, props către componente client, feed-uri, `OrderLine.productSnapshot` sau loguri (adaugă `costPrice` în lista de câmpuri mascate din logger); permisiuni `products.cost.view` / `products.cost.edit`
@@ -274,6 +275,8 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Admin: listă, anulare, ajustare cu audit, **raport de datorie în vouchere**
 
 ## FAZA 16 — CMS și conținut · ~6-7 zile
+- [ ] ⚠️ **Utilizatori și roluri în admin (`users.manage`) — reguli anti-escaladare de privilegii** (decizie utilizator): un utilizator nu poate acorda un rol sau o permisiune pe care nu o are; doar Owner atribuie sau retrage rolul Owner; un Admin nu își poate modifica propriul rol și nici pe cel al Owner-ului; **test explicit pentru escaladare de privilegii**. Verificarea stă în `packages/core`, nu în UI
+- [ ] ⚠️ **Rambursare pentru Suport: limita de rambursare** — până atunci `orders.refund` nu e la Suport (Faza 11, ecranul de comenzi/rambursări)
 - [ ] Schema: Page, Menu, Banner, BlogPost, Faq, Redirect, SeoMeta, BlockPreset
 - [ ] Sistem de blocuri cu registry, schema Zod per bloc, formular de editare
 - [ ] Editor de pagini drag & drop cu preview live
