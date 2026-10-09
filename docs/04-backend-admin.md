@@ -403,7 +403,50 @@ Vezi `09-preturi-si-parteneri.md` §5.
 
 **Prețul de achiziție (`products.cost.view`)** îl văd doar Owner, Admin, Manager și Contabil; Editor, Suport și Depozit nu. Maparea completă rol → permisiuni este în `packages/core/src/rbac/catalog.ts` (sursa de adevăr pentru seed).
 
-Permisiuni ca string-uri: `orders.read`, `orders.write`, `companies.approve`, `pricelists.write`, `orders.refund`, `orders.cancel`, `products.write`, `inventory.write`, `customers.read_pii`, `settings.write`, `integrations.write`, `users.manage`, `reports.financial`. Verificare **pe server**, la fiecare acțiune.
+**Accesul în admin** cere permisiunea explicită `admin.access`. O au cele 7 roluri de sistem (Owner o are implicit, ca pe toate). Un rol fără `admin.access` (de ex. un rol personalizat) și un client fără roluri NU intră în `/admin`, iar `can()` e fals pentru orice altă permisiune fără ea.
+
+### Matricea rol × permisiune
+
+Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul de mai jos diferă de catalog (`pnpm test`). Pentru a-l regenera după o modificare în catalog, copiază rezultatul din testul `rbac/matrix.test.ts`.
+
+<!-- rbac-matrix:start -->
+| Permisiune | Owner | Admin | Manager | Editor conținut | Suport clienți | Depozit | Contabil |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `admin.access` — Intră în zona de administrare (/admin) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `orders.read` — Vede comenzile | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ |
+| `orders.write` — Modifică comenzile | ✓ | ✓ | ✓ |  |  |  |  |
+| `orders.cancel` — Anulează comenzi | ✓ | ✓ | ✓ |  | ✓ |  |  |
+| `orders.refund` — Rambursează comenzi | ✓ | ✓ | ✓ |  | ✓ |  |  |
+| `orders.fulfill` — Pregătește și expediază comenzi (fulfillment, AWB) | ✓ | ✓ | ✓ |  |  | ✓ |  |
+| `products.read` — Vede produsele | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |
+| `products.write` — Creează și modifică produse | ✓ | ✓ | ✓ |  |  |  |  |
+| `products.archive` — Arhivează și șterge produse | ✓ | ✓ | ✓ |  |  |  |  |
+| `products.cost.view` — Vede prețul de achiziție (NIR) al produselor | ✓ | ✓ | ✓ |  |  |  | ✓ |
+| `products.cost.edit` — Modifică prețul de achiziție (NIR) al produselor | ✓ | ✓ |  |  |  |  |  |
+| `inventory.read` — Vede stocul | ✓ | ✓ | ✓ |  |  | ✓ |  |
+| `inventory.write` — Modifică stocul | ✓ | ✓ | ✓ |  |  | ✓ |  |
+| `customers.read` — Vede clienții | ✓ | ✓ | ✓ |  | ✓ |  |  |
+| `customers.read_pii` — Vede datele personale ale clienților | ✓ | ✓ | ✓ |  | ✓ |  |  |
+| `customers.write` — Modifică clienții | ✓ | ✓ | ✓ |  |  |  |  |
+| `customers.groups.manage` — Gestionează grupurile de clienți | ✓ | ✓ |  |  |  |  |  |
+| `discounts.read` — Vede reducerile și cupoanele | ✓ | ✓ | ✓ |  |  |  |  |
+| `discounts.write` — Creează și modifică reduceri și cupoane | ✓ | ✓ | ✓ |  |  |  |  |
+| `content.read` — Vede conținutul (CMS, blog, SEO) | ✓ | ✓ |  | ✓ |  |  |  |
+| `content.write` — Editează conținutul (CMS, blog, SEO) | ✓ | ✓ |  | ✓ |  |  |  |
+| `media.write` — Încarcă și șterge fișiere media | ✓ | ✓ |  | ✓ |  |  |  |
+| `invoices.read` — Vede facturile | ✓ | ✓ |  |  |  |  | ✓ |
+| `invoices.write` — Emite și stornează facturi | ✓ | ✓ |  |  |  |  |  |
+| `reports.read` — Vede rapoartele operaționale | ✓ | ✓ | ✓ |  |  |  | ✓ |
+| `reports.financial` — Vede rapoartele financiare | ✓ | ✓ |  |  |  |  | ✓ |
+| `settings.read` — Vede setările | ✓ | ✓ |  |  |  |  |  |
+| `settings.write` — Modifică setările | ✓ | ✓ |  |  |  |  |  |
+| `integrations.write` — Modifică integrările și cheile lor | ✓ |  |  |  |  |  |  |
+| `users.manage` — Gestionează utilizatorii și rolurile | ✓ | ✓ |  |  |  |  |  |
+| `audit.read` — Vede jurnalul de audit | ✓ | ✓ |  |  |  |  |  |
+| `system.update` — Actualizează sistemul și rulează mentenanță | ✓ |  |  |  |  |  |  |
+<!-- rbac-matrix:end -->
+
+Permisiuni ca string-uri: `admin.access`, `orders.read`, `orders.write`, `companies.approve`, `pricelists.write`, `orders.refund`, `orders.cancel`, `products.write`, `inventory.write`, `customers.read_pii`, `settings.write`, `integrations.write`, `users.manage`, `reports.financial`. Verificare **pe server**, la fiecare acțiune.
 
 ---
 

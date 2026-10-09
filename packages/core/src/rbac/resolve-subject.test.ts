@@ -10,7 +10,7 @@ const admin: PermissionSubject = {
   userId: "a",
   email: "a@test.invalid",
   roles: ["support"],
-  permissions: new Set(["orders.read"]),
+  permissions: new Set(["admin.access", "orders.read"]),
 };
 const customer: PermissionSubject = { ...admin, userId: "c", roles: [], permissions: new Set() };
 
@@ -46,6 +46,12 @@ describe("resolveSubject", () => {
 
   it("un client (fără roluri) NU e afectat de limita de admin", async () => {
     const r = await resolveSubject(deps(customer), { userId: "c", createdAt: hoursAgo(200) });
+    expect(r.status).toBe("ok");
+  });
+
+  it("un rol fără admin.access nu e cont de admin: limita scurtă nu i se aplică", async () => {
+    const noAccess: PermissionSubject = { ...admin, permissions: new Set(["orders.read"]) };
+    const r = await resolveSubject(deps(noAccess), { userId: "a", createdAt: hoursAgo(200) });
     expect(r.status).toBe("ok");
   });
 

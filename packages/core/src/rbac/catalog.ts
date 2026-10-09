@@ -4,6 +4,7 @@
  * Un magazin poate adăuga roluri proprii din admin; rolurile de sistem de mai jos nu se șterg.
  */
 export const PERMISSIONS = {
+  "admin.access": "Intră în zona de administrare (/admin)",
   "orders.read": "Vede comenzile",
   "orders.write": "Modifică comenzile",
   "orders.cancel": "Anulează comenzi",
@@ -67,6 +68,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
     name: "Manager",
     description: "Comenzi, produse (inclusiv prețul de achiziție), clienți, reduceri, rapoarte",
     permissions: [
+      "admin.access",
       "orders.read",
       "orders.write",
       "orders.cancel",
@@ -90,13 +92,14 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
     key: "editor",
     name: "Editor conținut",
     description: "CMS, blog, SEO, media",
-    permissions: ["content.read", "content.write", "media.write", "products.read"],
+    permissions: ["admin.access", "content.read", "content.write", "media.write", "products.read"],
   },
   {
     key: "support",
     name: "Suport clienți",
     description: "Vede comenzi și clienți, poate anula și rambursa",
     permissions: [
+      "admin.access",
       "orders.read",
       "orders.cancel",
       "orders.refund",
@@ -109,6 +112,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
     name: "Depozit",
     description: "Comenzi (doar fulfillment), stoc, AWB — fără prețuri și date financiare",
     permissions: [
+      "admin.access",
       "orders.read",
       "orders.fulfill",
       "inventory.read",
@@ -121,6 +125,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
     name: "Contabil",
     description: "Rapoarte, facturi, export — doar citire",
     permissions: [
+      "admin.access",
       "reports.read",
       "reports.financial",
       "invoices.read",

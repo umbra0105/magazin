@@ -3,7 +3,7 @@ import { getDb } from "@ecom/db";
 import { runBaseSeed } from "../seed/base-seed";
 import { inRolledBackTransaction as rolledBack } from "../test-utils/rollback";
 import { PermissionService } from "./permission-service";
-import { can } from "./can";
+import { can, hasAdminAccess } from "./can";
 import { resolveSubject } from "./resolve-subject";
 
 const db = getDb();
@@ -50,6 +50,39 @@ describe("PermissionService pe baza de test", () => {
     await withUser([], async (service, id) => {
       const subject = await service.loadSubject(id);
       expect(subject?.roles).toEqual([]);
+      expect(can(subject, "orders.read")).toBe(false);
+    });
+  });
+
+  it("toate cele 7 roluri de sistem intră în admin (admin.access vine din seed)", async () => {
+    for (const key of [
+      "owner",
+      "admin",
+      "manager",
+      "editor",
+      "support",
+      "warehouse",
+      "accountant",
+    ]) {
+      await withUser([key], async (service, id) => {
+        expect(hasAdminAccess(await service.loadSubject(id)), key).toBe(true);
+      });
+    }
+  });
+
+  it("un rol personalizat FĂRĂ admin.access nu intră în admin, deși are alte permisiuni", async () => {
+    await rolledBack(db, async (tx) => {
+      await runBaseSeed(tx);
+      const user = await tx.user.create({
+        data: { id: "rbac-u2", name: "Test", email: "rbac-u2@test.invalid" },
+      });
+      const role = await tx.role.create({ data: { key: "doar-comenzi", name: "Doar comenzi" } });
+      const orders = await tx.permission.findUniqueOrThrow({ where: { key: "orders.read" } });
+      await tx.rolePermission.create({ data: { roleId: role.id, permissionId: orders.id } });
+      await tx.userRole.create({ data: { userId: user.id, roleId: role.id } });
+      const subject = await new PermissionService(tx).loadSubject(user.id);
+      expect(subject?.permissions.has("orders.read")).toBe(true);
+      expect(hasAdminAccess(subject)).toBe(false);
       expect(can(subject, "orders.read")).toBe(false);
     });
   });

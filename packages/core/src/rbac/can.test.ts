@@ -82,6 +82,50 @@ describe("can(): fiecare rol are acces exact la ce trebuie", () => {
   });
 });
 
+describe("admin.access: poarta către admin", () => {
+  const custom = (permissions: string[]): PermissionSubject => ({
+    userId: "custom",
+    email: "custom@test.invalid",
+    roles: ["rol-personalizat"],
+    permissions: new Set(permissions),
+  });
+
+  it("un utilizator cu un rol FĂRĂ admin.access nu intră în admin și nu poate nimic", () => {
+    const subject = custom(["orders.read", "orders.write", "products.archive", "settings.write"]);
+    expect(hasAdminAccess(subject)).toBe(false);
+    for (const permission of PERMISSION_KEYS.filter((p) => p !== "admin.access")) {
+      expect(can(subject, permission), permission).toBe(false);
+    }
+  });
+
+  it("același rol, după ce primește admin.access, intră și poate doar ce are", () => {
+    const subject = custom(["admin.access", "orders.read"]);
+    expect(hasAdminAccess(subject)).toBe(true);
+    expect(can(subject, "admin.access")).toBe(true);
+    expect(can(subject, "orders.read")).toBe(true);
+    expect(can(subject, "orders.write")).toBe(false);
+  });
+
+  it("clientul fără roluri nu intră, chiar dacă i s-ar fi atașat admin.access fără rol", () => {
+    const customer: PermissionSubject = {
+      userId: "c",
+      email: "c@test.invalid",
+      roles: [],
+      permissions: new Set(["admin.access"]),
+    };
+    expect(hasAdminAccess(customer)).toBe(false);
+    expect(can(customer, "admin.access")).toBe(false);
+  });
+
+  it("withPermission refuză cu ForbiddenError un rol fără admin.access, chiar cu permisiunea cerută", async () => {
+    const action = createWithPermission({ getSubject: async () => custom(["orders.read"]) })(
+      "orders.read",
+      async () => "ok",
+    );
+    await expect(action(undefined)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});
+
 describe("assertCan()", () => {
   it("aruncă UnauthenticatedError fără utilizator și ForbiddenError cu permisiunea cerută", () => {
     expect(() => assertCan(null, "orders.read")).toThrow(UnauthenticatedError);

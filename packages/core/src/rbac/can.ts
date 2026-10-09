@@ -13,11 +13,16 @@ export interface PermissionSubject {
   permissions: ReadonlySet<string>;
 }
 
-/** Accesul în zona de admin: cel puțin un rol. Clienții nu au roluri. */
+/**
+ * Accesul în zona de admin cere permisiunea explicită `admin.access` (Owner o are implicit) și cel
+ * puțin un rol. Un rol fără `admin.access` și un client fără roluri nu intră în admin.
+ */
 export function hasAdminAccess(subject: PermissionSubject | null): subject is PermissionSubject {
-  return subject !== null && subject.roles.length > 0;
+  if (subject === null || subject.roles.length === 0) return false;
+  return subject.roles.includes(OWNER_ROLE_KEY) || subject.permissions.has("admin.access");
 }
 
+/** Fără `admin.access` nicio altă permisiune nu contează: ea e poarta către toate acțiunile de admin. */
 export function can(subject: PermissionSubject | null, permission: PermissionKey): boolean {
   if (!hasAdminAccess(subject)) return false;
   return subject.roles.includes(OWNER_ROLE_KEY) || subject.permissions.has(permission);
