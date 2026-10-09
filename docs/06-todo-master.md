@@ -55,6 +55,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Layout admin: sidebar, topbar, breadcrumbs, guard
 - [x] Seed de bază (roluri, setări implicite, un admin)
 - [x] (8b) Bază de date separată pentru testele de integrare: `ecom_test` creată și migrată automat, Redis pe alt index, gardă care refuză bazele fără "test" în nume, aceeași bază în CI
+- [~] (10) Teste rămase pentru Promptul 2: setări, flag-uri, criptare, audit append-only, branding (ruta /theme.css, golden-uri, fallback-uri)
 
 ## FAZA 3 — Media · ~2-3 zile
 - [ ] Adaptor de storage comutabil: disk local ↔ S3-compatible (din setări)
@@ -342,14 +343,14 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 
 ## FAZA 22 — Testare finală și lansare · ~4-5 zile
 - [ ] E2E complet: guest cu ramburs · logat cu card sandbox · client partener cu discount · cu cupon · retur · admin creează produs → apare în storefront · AWB + factură
-- [ ] Teste unitare: pricing, TVA, promoții, discount de grup, transport, state machines, stoc
-- [ ] Teste de concurență și de idempotență
+ unitare: pricing, TVA, promoții, discount de grup, transport, state machines, stoc
+ de concurență și de idempotență
 - [ ] **Comandă reală** cu card real → livrare → retur → rambursare
 - [ ] Verificare emailuri (SPF/DKIM/DMARC, nu ajung în spam)
 - [ ] Checklist legal complet din `05-integrari-romania.md` §9
 - [ ] ⚠️ **Pentru avocat:** `audit_log.actorLabel` conține emailul unei persoane, iar jurnalul nu se poate șterge (trigger în DB). Verifică compatibilitatea cu dreptul la ștergere din GDPR (temei legal, termen de păstrare, anonimizare, ce se răspunde la o cerere de ștergere) și documentează decizia în politica de confidențialitate
 - [ ] Verificare cu contabilul: TVA, facturi, e-Factura, proforme
-- [ ] Teste pe iOS Safari, Android Chrome, desktop
+ pe iOS Safari, Android Chrome, desktop
 - [ ] Search Console + sitemap + Merchant Center
 - [ ] Instruirea clientului + video de onboarding
 - [ ] Plan de rollback

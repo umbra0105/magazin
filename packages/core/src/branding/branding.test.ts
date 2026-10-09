@@ -232,3 +232,60 @@ describe("BrandingService", () => {
     expect((await s.getConfig()).preset).toBe("editorial");
   });
 });
+
+describe("renderThemeCss: referință și caractere permise", () => {
+  it("CSS-ul presetului Minimal este exact cel de referință (golden)", () => {
+    expect(renderThemeCss(configFromPreset("minimal"))).toBe(
+      "html:root{--color-bg:#ffffff;--color-fg:#1a1a1a;--color-muted:#595959;--color-border:#e5e5e5;" +
+        "--color-primary:#1f1f1f;--color-primary-fg:#ffffff;--color-accent:#2563eb;" +
+        "--color-success:#15803d;--color-danger:#b91c1c;--radius:0.5rem;" +
+        "--font-heading:var(--font-inter), ui-sans-serif, system-ui, sans-serif;" +
+        "--font-body:var(--font-inter), ui-sans-serif, system-ui, sans-serif}",
+    );
+  });
+
+  it("toate presetele (cu și fără dark mode) produc doar caractere dintr-o listă permisă", () => {
+    const allowed = /^[A-Za-z0-9#:;,.()@{}\s-]+$/;
+    for (const key of PRESET_KEYS) {
+      for (const darkMode of [false, true]) {
+        const css = renderThemeCss({ ...configFromPreset(key), darkMode });
+        expect(css, `${key} dark=${darkMode}`).toMatch(allowed);
+        for (const forbidden of ["url(", "@import", "expression", "<", ">", "\\", '"', "'", "/*"]) {
+          expect(css, `${key}: ${forbidden}`).not.toContain(forbidden);
+        }
+      }
+    }
+  });
+
+  it("acoladele sunt echilibrate și există un singur bloc :root (două cu dark mode)", () => {
+    for (const key of PRESET_KEYS) {
+      for (const darkMode of [false, true]) {
+        const css = renderThemeCss({ ...configFromPreset(key), darkMode });
+        expect(css.split("{").length).toBe(css.split("}").length);
+        expect(css.split("html:root").length - 1).toBe(darkMode ? 2 : 1);
+      }
+    }
+  });
+});
+
+describe("contrast: praguri exacte și erori de validare", () => {
+  it("raportul exact 4.5 trece, imediat sub 4.5 nu", () => {
+    const base = configFromPreset("minimal");
+    // #767676 pe alb = 4.54 (trece); #777777 pe alb = 4.48 (pică).
+    base.colors.light.muted = "#767676";
+    expect(checkContrast(base)).toEqual([]);
+    base.colors.light.muted = "#777777";
+    expect(checkContrast(base).map((w) => w.foreground)).toEqual(["muted"]);
+  });
+
+  it("save respinge input invalid cu ValidationError care indică calea câmpului", async () => {
+    const f = fakes();
+    const service = new BrandingService(f.store, f.cache);
+    const input = configFromPreset("bold");
+    input.colors.light.accent = "albastru";
+    await expect(service.save(input)).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+      details: { issues: [expect.objectContaining({ path: ["colors", "light", "accent"] })] },
+    });
+  });
+});

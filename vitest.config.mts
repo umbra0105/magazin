@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import { integrationEnv } from "./test/support/test-env";
 
@@ -16,6 +17,8 @@ if (testEnv.DATABASE_URL) process.env["TEST_DATABASE_URL"] = testEnv.DATABASE_UR
 if (testEnv.REDIS_URL) process.env["TEST_REDIS_URL"] = testEnv.REDIS_URL;
 
 export default defineConfig({
+  // Aliasul `@/` din apps/web (tsconfig paths), ca testele să poată importa rutele aplicației.
+  resolve: { alias: { "@": fileURLToPath(new URL("./apps/web/src", import.meta.url)) } },
   test: {
     projects: [
       {
