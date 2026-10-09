@@ -58,7 +58,8 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Legarea `withAudit` la scrierile existente din admin (`SettingsService.set`, `FeatureFlagService.setEnabled`, `BrandingService.save`, `IntegrationService.save`)
 - [x] Seed de bază: roluri, permisiuni, setări implicite, flag-uri oprite, branding implicit (idempotent). **Contul de administrator NU e aici: se mută în Promptul 3 (autentificare), fără parolă implicită**
 - [x] (8b) Bază de date separată pentru testele de integrare: `ecom_test` creată și migrată automat, Redis pe alt index, gardă care refuză bazele fără "test" în nume, aceeași bază în CI
-- [~] (10) Teste rămase pentru Promptul 2: setări, flag-uri, criptare, audit append-only, branding (ruta /theme.css, golden-uri, fallback-uri)
+- [x] (10) Teste rămase pentru Promptul 2: setări, flag-uri, criptare, audit append-only, branding (ruta /theme.css, golden-uri, fallback-uri)
+- [~] (10b) Testele unitare nu pot atinge baza reală: setupFile cu URL-uri invalide și blocarea conexiunilor, plus test de arhitectură pe importuri
 
 ## FAZA 3 — Media · ~2-3 zile
 - [ ] Adaptor de storage comutabil: disk local ↔ S3-compatible (din setări)

@@ -28,6 +28,8 @@ export default defineConfig({
           include: ["packages/**/*.test.ts", "apps/**/*.test.ts", "test/**/*.test.ts"],
           exclude: ["**/*.integration.test.ts", "**/node_modules/**"],
           environment: "node",
+          // Fără acces la baza reală, Redis sau rețea (vezi test/support/unit-guard.ts).
+          setupFiles: ["./test/support/unit-guard.ts"],
         },
       },
       {
