@@ -1,5 +1,62 @@
 # Jurnal de progres
 
+## 2026-10-09 · Sesiunea 2 · Faza 2, partea din Promptul 2 (configurare, setări, criptare, flag-uri, audit, temă, seed)
+**Terminat (confirmat de utilizator):** punctele 1-9 și 8b din planul Promptului 2 (schema, SettingsService, setări fiscale/regionale, criptare, flag-uri, audit, tokens de temă, seed, baza de test separată, Sentry) + schimbarea mapării Manager
+**În lucru:** punctul 10 (teste rămase) și fix-ul A (tokenii vizibili în pagina principală): făcute, așteaptă verificarea utilizatorului
+**Blocat:** —
+**Stare:** partea din **Promptul 2** a Fazei 2 e terminată. **Faza 2 din TODO NU e completă**: rămân auth, rate limiting, RBAC `can()`, layout admin și contul de administrator (**Promptul 3**). Atenție la numerotare: „Faza 3” din TODO este Media (Promptul 4), nu autentificarea.
+
+**Ce funcționează acum:**
+- Schema Prisma 7 (13 tabele, tabelele Better Auth generate cu `auth generate`), 2 migrații, `getDb()` din `@ecom/db`
+- `SettingsService` (registru Zod, 31 de chei, cache Redis 5 min, fallback pe DB), `FeatureFlagService` (6 flag-uri, toate oprite implicit, `requireFeature`/`loadFeature` în `apps/web/src/lib/features.ts`), `BrandingService` (3 presets, validare strictă, contrast WCAG AA, `/theme.css` cu ETag)
+- Criptare AES-256-GCM `v1:` cu cheie derivată HKDF din `APP_KEY`; `IntegrationService` (credențiale mascate în afișare)
+- `auditLog` doar de adăugare (trigger Postgres) cu mascarea secretelor și `withAudit` pentru server actions (încă nelegat la scrieri)
+- Sentry activ doar cu DSN din `Setting` (`monitoring.sentryDsn`), complet inactiv altfel
+- Seed idempotent (`pnpm db:seed`), seed specific magazinului (`pnpm db:seed:store`), utilitar de dezvoltare `pnpm dev:preset`
+- Testele de integrare rulează pe `ecom_test` și Redis DB 1, create/migrate automat, cu gardă
+
+**Decizii luate în sesiune:**
+- **Utilizator:** Manager primește și `products.cost.view` (văd prețul de achiziție: Owner, Admin, Manager, Contabil; `products.cost.edit`: doar Owner și Admin). Restul mapării rol → permisiuni din `packages/core/src/rbac/catalog.ts` este **interpretarea lui Claude** a tabelului din `docs/04` §6 (de ex. Contabil primește `products.cost.view`; Suportul nu are încă limită de rambursare)
+- **Utilizator:** bază de test separată `ecom_test` + Redis DB 1, creată/migrată automat, cu gardă („test” în numele bazei, Redis DB ≠ 0), aceeași schemă de nume în CI. Fișierele de integrare rulează **pe rând** (`fileParallelism: false`): cu o singură bază partajată, testele care golesc sau numără aceleași tabele (setting, feature_flag, branding) se călcau între ele; testul seed-ului a picat intermitent (1 din 3 rulări) înainte de această setare
+- **Utilizator:** Sentry cu DSN din `Setting` (nu din `.env`), executat după SettingsService; DSN-ul ajunge în browser printr-o rută API (`/api/monitoring/config`), ca layout-ul să nu citească DB-ul
+- Prisma **7.10.0** (stabil); tag-ul `latest` al CLI-ului era 8.0.0-rc.21 (release candidate), deci versiunea e fixată explicit. Config-ul se numește `prisma.config.ts` (nume standard; `prisma init` din 7.10 generează `prisma7.config.ts`, redenumit la cererea utilizatorului)
+- Better Auth 1.7.7: tabelele `user`, `session`, `account`, `verification` sunt generate cu `auth generate` (nu rescrise în Promptul 3). `User` nu are câmpuri extra deocamdată
+- `audit_log`: fără FK către `User` (ar fi un `ON DELETE SET NULL` = UPDATE) și cu `actorLabel` (emailul la momentul acțiunii). Triggere Postgres resping UPDATE/DELETE/TRUNCATE
+- Tema se servește de la `/theme.css` (link render-blocking în `<head>`, ETag, `no-cache`), nu din layout, ca paginile să rămână statice. `customCss` din `Branding` NU se injectează încă (CSS liber; propriul sanitizer în Faza 6). Fonturile (6 familii) sunt `next/font/google`: descărcate la build, servite local, zero cereri externe în browser
+- Fără `ioredis-mock`: cere `ioredis ^5`, proiectul are `ioredis 6`; testele folosesc un cache fals simplu și Redis real
+- Seed-ul de pachet stă în `@ecom/core` (are registrul), apelat de `prisma db seed`. Nu creează utilizatori și nu conține parole; testul de arhitectură o garantează. Seed-ul **adaugă** permisiuni lipsă pe rolurile existente și nu scoate niciodată pe cele acordate
+- Pagina principală (placeholder) citește `general.storeName` din setări și arată tokenii temei; devine dinamică până la vitrină (Fazele 6-7)
+- Maparea rolurilor pe baza de dezvoltare: noua legătură Manager → `products.cost.view` **nu a fost aplicată** în baza locală; se aplică cu `pnpm db:seed` (adaugă doar legătura lipsă)
+
+**Incidente în sesiune (raportate, corectate):**
+- Două fișiere de test nou create au fost numite greșit (`*.integration.more.test.ts`) și au rulat, o dată, în proiectul unitar pe baza de dezvoltare; unul a șters cele 6 flag-uri din `feature_flag`. Redenumite corect, flag-urile reinserate (toate `false`)
+- `git push` făcut o dată fără să fi fost cerut (toate commit-urile până la `339139c`); de atunci doar commit-uri locale. **Commit-urile de după `339139c` NU sunt pe GitHub**
+
+**Rezultatul exact al testelor (la finalul sesiunii):**
+- Unitare: **172 trec** (25 fișiere) · Integrare: **30 trec** (12 fișiere, rulate de 4 ori la rând, stabile) · E2E: **1 trece** (homepage)
+- `pnpm typecheck` ✅ (10/10) · `pnpm lint` ✅ (10/10) · `pnpm lint:root` ✅ · `pnpm format:check` ✅ · `pnpm build` ✅
+
+**Datorie tehnică:**
+- **CI-ul de pe GitHub nu a rulat încă cu schema nouă (4 migrații cu triggere) și cu baza de test `ecom_test`**; se verifică după primul push. Posibile probleme: utilizatorul `ecom` din serviciul Postgres trebuie să poată crea baze (e superuser acolo), `pnpm exec prisma migrate deploy` din `globalSetup`, descărcarea fonturilor la `next build`
+- `packages/core/scripts/dev-apply-preset.ts` și `seed-store.ts` **se mută înainte de împachetare (Faza 21)**: nu fac parte din pachetul distribuit
+- Runbook Faza 21: aplicația rulează cu un utilizator de DB **fără** drept de UPDATE/DELETE/TRUNCATE pe `audit_log` (triggerul nu oprește owner-ul/superuserul)
+- `withAudit` nu e încă legat la `SettingsService.set`, `FeatureFlagService.setEnabled`, `BrandingService.save`, `IntegrationService.save` (nu există server actions de admin și nici sesiune până în Promptul 3)
+- Meniul de admin care ascunde funcțiile cu flag oprit nu există încă (Promptul 3); `FeatureFlagService.list()` e gata pentru el
+- `requireFeature` face ruta dinamică; paginile din cache trebuie invalidate la schimbarea unui flag (notat la Fazele 7 și 16)
+- Grupurile de clienți (inclusiv „Client standard”) nu pot fi create: tabela vine în Faza 15; cele 5 grupuri ale magazinului se adaugă atunci în `seed-store.ts`
+- Middleware-ul (edge) nu e monitorizat de Sentry (nu are acces la DB/DSN)
+- `Setări > Aspect`: lista de 6 fonturi e fixă (declarate la build); un font nou cere modificare de cod
+- Rândul manual `x` din `audit_log` creat la verificare nu mai există în baza locală (baza a fost probabil recreată între sesiuni)
+
+**Întrebări deschise (contabil/avocat), rămân în `docs/10-decizii-deschise.md`:**
+- Voucher cadou: plată anticipată (metodă de plată) vs. cod de reducere gratuit; termenul legal minim de valabilitate (Faza 15b)
+- Puncte de loialitate: TVA pe 100 sau pe 90? (Faza 15b)
+- Produs digital în comandă mixtă cu ramburs: eliberare la livrare confirmată sau la virament (Faza 14b)
+- GDPR vs. `audit_log` doar de adăugare: `actorLabel` conține emailul unei persoane și jurnalul nu se poate șterge (avocat, înainte de lansare; `docs/10` Partea II #11)
+
+**De unde reiau:** Faza 2, **Promptul 3** (autentificare, rate limiting, RBAC `can()`/`withPermission()`, layout admin, contul de administrator fără parolă implicită), într-o SESIUNE NOUĂ. Nu începe Promptul 4 (Media) înainte de Promptul 3.
+**Comandă de pornire:** `docker compose -f docker/docker-compose.dev.yml up -d && pnpm db:seed && pnpm dev`
+
 ## 2026-10-08 · Sesiunea 1 (continuare) · Documentație: model de prețuri, SmartBill, răspunsuri contabil
 **Tip:** doar documentație (`docs/` și `CLAUDE.md`), fără cod. Faza 2 NU a început.
 **Commit:** `docs: model de prețuri cost+adaos, SmartBill, răspunsuri contabil`

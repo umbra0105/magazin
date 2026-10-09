@@ -41,6 +41,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Fișier de versiune `packages/config/version.ts`
 
 ## FAZA 2 — Bază de date, setări, autentificare · ~4-5 zile
+> **Stare:** partea din **Promptul 2** (configurare, setări, criptare, flag-uri, audit, temă, seed, teste) e făcută. Rămân punctele nebifate de mai jos, care țin de **Promptul 3** (autentificare, rate limiting, RBAC, layout admin, contul de administrator). Atenție: în `07-prompturi-claude-code.md`, Promptul 3 aparține tot acestei faze din TODO; „Faza 3” din TODO este Media (Promptul 4).
 - [x] **Sentry** (`@sentry/nextjs`) activat doar dacă există DSN, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`; requestId ca tag. Decizie utilizator: amânat din Faza 1, se face aici o singură dată, după Service de setări
 - [x] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
 - [x] `auditLog()` doar de adăugare (trigger în DB), cu mascarea secretelor, și wrapper pentru server actions de admin
@@ -52,8 +53,10 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Rate limiting Redis pe rutele sensibile
 - [ ] RBAC: permisiuni ca string-uri, roluri implicite, `can()` + `withPermission()`
 - [x] Feature flags cu helper `isEnabled()`
-- [ ] Layout admin: sidebar, topbar, breadcrumbs, guard
-- [x] Seed de bază (roluri, setări implicite, un admin)
+- [ ] Layout admin: sidebar, topbar, breadcrumbs, guard (meniul ascunde funcțiile cu flag oprit: `FeatureFlagService.list()` e gata)
+- [ ] **Contul de administrator** (creat la instalare/prin comandă, fără parolă implicită în cod sau seed) și atribuirea rolului Owner
+- [ ] Legarea `withAudit` la scrierile existente din admin (`SettingsService.set`, `FeatureFlagService.setEnabled`, `BrandingService.save`, `IntegrationService.save`)
+- [x] Seed de bază: roluri, permisiuni, setări implicite, flag-uri oprite, branding implicit (idempotent). **Contul de administrator NU e aici: se mută în Promptul 3 (autentificare), fără parolă implicită**
 - [x] (8b) Bază de date separată pentru testele de integrare: `ecom_test` creată și migrată automat, Redis pe alt index, gardă care refuză bazele fără "test" în nume, aceeași bază în CI
 - [~] (10) Teste rămase pentru Promptul 2: setări, flag-uri, criptare, audit append-only, branding (ruta /theme.css, golden-uri, fallback-uri)
 
