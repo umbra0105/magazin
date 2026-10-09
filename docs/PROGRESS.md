@@ -2,7 +2,7 @@
 
 ## 2026-10-09 · Sesiunea 2 · Faza 2, partea din Promptul 2 (configurare, setări, criptare, flag-uri, audit, temă, seed)
 **Terminat (confirmat de utilizator):** punctele 1-10 și 8b din planul Promptului 2 (schema, SettingsService, setări fiscale/regionale, criptare, flag-uri, audit, tokens de temă, seed, baza de test separată, Sentry, testele rămase) + schimbarea mapării Manager + fix-ul A (tokenii vizibili în pagina principală)
-**În lucru:** punctul 10b (izolarea testelor unitare de baza reală), făcut în ultimul commit, **așteaptă verificarea utilizatorului**; singurul `[~]` din TODO
+**În lucru:** — (punctul 10b, izolarea testelor unitare de baza reală, a fost confirmat `[x]` de utilizator; în TODO nu mai există `[~]`)
 **Blocat:** —
 **Stare:** partea din **Promptul 2** a Fazei 2 e terminată. **Faza 2 din TODO NU e completă**: rămân auth, rate limiting, RBAC `can()`, layout admin și contul de administrator (**Promptul 3**). Atenție la numerotare: „Faza 3” din TODO este Media (Promptul 4), nu autentificarea.
 
