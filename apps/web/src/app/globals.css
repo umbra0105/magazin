@@ -2,8 +2,8 @@
 @import "tw-animate-css";
 
 /*
- * Valori implicite NEUTRE. În Faza 2 tokens-urile vin din tabela Branding,
- * injectate server-side în layout; aceste valori sunt doar fallback.
+ * Valori implicite NEUTRE, doar fallback (de ex. dacă /theme.css nu se poate încărca).
+ * Tokens-urile reale vin din tabela Branding, servite de /theme.css (apps/web/src/app/theme.css).
  */
 :root {
   --color-bg: oklch(1 0 0);

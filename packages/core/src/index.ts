@@ -4,3 +4,4 @@ export * from "./crypto";
 export * from "./integrations";
 export * from "./features";
 export * from "./audit";
+export * from "./branding";

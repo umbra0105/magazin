@@ -1,8 +1,10 @@
 import { Redis } from "ioredis";
 import { loadEnv } from "@ecom/config";
 import {
+  BrandingService,
   FeatureFlagService,
   SettingsService,
+  createPrismaBrandingStore,
   createPrismaFeatureFlagStore,
   createPrismaSettingsStore,
 } from "@ecom/core";
@@ -12,6 +14,7 @@ const globalForServices = globalThis as unknown as {
   __ecomRedis?: Redis;
   __ecomSettings?: SettingsService;
   __ecomFeatureFlags?: FeatureFlagService;
+  __ecomBranding?: BrandingService;
 };
 
 /** Un singur client Redis per proces (reutilizat la hot reload în dev). */
@@ -44,4 +47,14 @@ export function getFeatureFlags(): FeatureFlagService {
     );
   }
   return globalForServices.__ecomFeatureFlags;
+}
+
+export function getBranding(): BrandingService {
+  if (!globalForServices.__ecomBranding) {
+    globalForServices.__ecomBranding = new BrandingService(
+      createPrismaBrandingStore(getDb()),
+      getRedis(),
+    );
+  }
+  return globalForServices.__ecomBranding;
 }

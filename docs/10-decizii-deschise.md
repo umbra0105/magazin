@@ -114,6 +114,7 @@ Nu mai sunt decizii de luat. Astea sunt verificări externe — nu ține de cod,
 | 2 | ~~Cotele de TVA curente~~ ✅ **Răspuns: 21% pentru toate produsele** (vezi Partea I) | Contabil | Faza 0 |
 | 3 | **Obligațiile de etichetare energetică** — ce categorii din portofoliul tău intră și ce se cere exact | Consultant / ANPC | Înainte de lansare |
 | 4 | **Textele legale generate** — revizuite și adaptate | Avocat | Înainte de lansare |
+| 11 | **Jurnalul de audit vs. dreptul la ștergere (GDPR).** `audit_log.actorLabel` conține emailul unei persoane, iar jurnalul e doar de adăugare (trigger în DB, nu se poate șterge). Verifică temeiul legal, termenul de păstrare și ce se răspunde la o cerere de ștergere | Avocat | Înainte de lansare |
 | 5 | **Cele 14 întrebări de mai jos**: 11 au răspuns, 2 rămân 🟡 (#8, #9), #10 e rezolvată prin decizie de produs | Contabil | Faza 0 și Faza 13 |
 | 6 | **Suport pentru plăți recurente / tokenizare card** — cere-l explicit în contract, chiar dacă abonamentele vin în Val 2 | Netopia / EuPlătesc | La semnarea contractului |
 | 7 | **VPS cu IP fix** — obligatoriu pentru whitelist-ul eMAG | Furnizor VPS | Înainte de Faza 21 |

@@ -43,7 +43,8 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 ## FAZA 2 — Bază de date, setări, autentificare · ~4-5 zile
 - [x] **Sentry** (`@sentry/nextjs`) activat doar dacă există DSN, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`; requestId ca tag. Decizie utilizator: amânat din Faza 1, se face aici o singură dată, după Service de setări
 - [x] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
-- [~] `auditLog()` doar de adăugare (trigger în DB), cu mascarea secretelor, și wrapper pentru server actions de admin
+- [x] `auditLog()` doar de adăugare (trigger în DB), cu mascarea secretelor, și wrapper pentru server actions de admin
+- [~] Design tokens din `Branding`: validare strictă Zod, fonturi locale (`next/font`), verificare contrast WCAG AA, CSS servit fără flash de temă greșită, 3 presets
 - [x] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
 - [ ] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
 - [x] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
@@ -330,6 +331,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] `docker-compose.prod.yml`: app, worker, postgres, redis, caddy
 - [ ] Caddyfile cu SSL automat, HTTP/2, compresie, headers
 - [ ] `install.sh`, `update.sh`, `backup.sh` testate pe un VPS curat
+- [ ] ⚠️ **Runbook: utilizator de DB al aplicației FĂRĂ drept de `UPDATE`/`DELETE`/`TRUNCATE` pe `audit_log`** (nu owner al tabelei). Triggerul din migrație nu oprește owner-ul/superuserul; migrațiile rulează cu alt utilizator decât aplicația
 - [ ] Backup zilnic off-site + **restore testat**
 - [ ] Uptime monitoring + alerte
 - [ ] Documentația de livrat: README, MANUAL-ADMIN, CHANGELOG, RUNBOOK, EXTENSIONS, LEGAL
@@ -343,6 +345,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] **Comandă reală** cu card real → livrare → retur → rambursare
 - [ ] Verificare emailuri (SPF/DKIM/DMARC, nu ajung în spam)
 - [ ] Checklist legal complet din `05-integrari-romania.md` §9
+- [ ] ⚠️ **Pentru avocat:** `audit_log.actorLabel` conține emailul unei persoane, iar jurnalul nu se poate șterge (trigger în DB). Verifică compatibilitatea cu dreptul la ștergere din GDPR (temei legal, termen de păstrare, anonimizare, ce se răspunde la o cerere de ștergere) și documentează decizia în politica de confidențialitate
 - [ ] Verificare cu contabilul: TVA, facturi, e-Factura, proforme
 - [ ] Teste pe iOS Safari, Android Chrome, desktop
 - [ ] Search Console + sitemap + Merchant Center
