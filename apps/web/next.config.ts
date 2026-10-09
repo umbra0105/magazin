@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Pachetele workspace sunt livrate ca TypeScript sursă.
   transpilePackages: ["@ecom/shared", "@ecom/config", "@ecom/core", "@ecom/db"],
-  serverExternalPackages: ["pg", "ioredis", "pino"],
+  serverExternalPackages: ["pg", "ioredis", "pino", "@node-rs/argon2"],
 };
 
 // Fără org/project/authToken: nu urcă source maps și nu contactează Sentry la build.

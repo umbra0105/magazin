@@ -7,3 +7,4 @@ export * from "./audit";
 export * from "./branding";
 export * from "./rbac";
 export * from "./seed/base-seed";
+export * from "./auth";

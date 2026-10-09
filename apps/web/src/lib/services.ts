@@ -2,6 +2,10 @@ import { Redis } from "ioredis";
 import { loadEnv } from "@ecom/config";
 import {
   BrandingService,
+  createAuth,
+  createRedisSecondaryStorage,
+  deriveKey,
+  type Auth,
   FeatureFlagService,
   SettingsService,
   createPrismaBrandingStore,
@@ -15,6 +19,7 @@ const globalForServices = globalThis as unknown as {
   __ecomSettings?: SettingsService;
   __ecomFeatureFlags?: FeatureFlagService;
   __ecomBranding?: BrandingService;
+  __ecomAuth?: { auth: Auth; fingerprint: string };
 };
 
 /** Un singur client Redis per proces (reutilizat la hot reload în dev). */
@@ -57,4 +62,29 @@ export function getBranding(): BrandingService {
     );
   }
   return globalForServices.__ecomBranding;
+}
+
+const AUTH_SECRET_LABEL = "ecom/auth-secret/v1";
+
+/**
+ * Instanța Better Auth. Politica (sesiuni, parole, verificare email) vine din setările `auth.*`;
+ * dacă se schimbă, instanța se reconstruiește la următoarea cerere (setările sunt în cache Redis).
+ */
+export async function getAuth(): Promise<Auth> {
+  const settings = await getSettings().getGroup("auth");
+  const fingerprint = JSON.stringify(settings);
+  const cached = globalForServices.__ecomAuth;
+  if (cached && cached.fingerprint === fingerprint) return cached.auth;
+
+  const env = loadEnv();
+  const auth = createAuth({
+    db: getDb(),
+    secondaryStorage: createRedisSecondaryStorage(getRedis()),
+    appUrl: env.APP_URL,
+    secret: deriveKey(env.APP_KEY, AUTH_SECRET_LABEL).toString("base64"),
+    isProduction: env.NODE_ENV === "production",
+    settings,
+  });
+  globalForServices.__ecomAuth = { auth, fingerprint };
+  return auth;
 }

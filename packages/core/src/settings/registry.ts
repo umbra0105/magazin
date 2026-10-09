@@ -58,6 +58,15 @@ export const settingGroups = {
     salUrl: z.string().default(""),
     odrUrl: z.string().default(""),
   },
+  auth: {
+    /** Clienții trebuie să-și verifice emailul. Oprit = magazin fără SMTP nu își blochează înregistrările. */
+    requireEmailVerification: z.boolean().default(true),
+    /** Lungime minimă a parolei; fără reguli de compoziție. Nu poate coborî sub 12. */
+    minPasswordLength: z.number().int().min(12).max(128).default(12),
+    customerSessionDays: z.number().int().min(1).max(365).default(30),
+    /** Sesiunile conturilor cu acces la admin sunt mai scurte. */
+    adminSessionHours: z.number().int().min(1).max(168).default(8),
+  },
   monitoring: {
     /** DSN Sentry. Gol = Sentry complet inactiv. Nu e secret (se trimite și în browser). */
     sentryDsn: z
