@@ -49,9 +49,9 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
 - [x] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
 - [x] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
-- [~] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id)
+- [ ] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id) — _în curs, pe bucăți: gata (confirmat) Better Auth + argon2id și rate limiting + blocare; rămân contul de admin CLI, paginile de autentificare, emailurile_
 - [ ] Rate limiting Redis pe rutele sensibile
-- [ ] RBAC: permisiuni ca string-uri, roluri implicite, `can()` + `withPermission()`
+- [~] RBAC: permisiuni ca string-uri, roluri implicite, `can()` + `withPermission()`
 - [x] Feature flags cu helper `isEnabled()`
 - [ ] Layout admin: sidebar, topbar, breadcrumbs, guard (meniul ascunde funcțiile cu flag oprit: `FeatureFlagService.list()` e gata)
 - [ ] **Contul de administrator** (creat la instalare/prin comandă, fără parolă implicită în cod sau seed) și atribuirea rolului Owner
@@ -305,6 +305,8 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Creare cont administrator, alegere temă, upload logo
 - [ ] Generare pagini legale + meniuri + date demo opționale
 - [ ] Blocare permanentă `/install` după instalare
+- [ ] ⚠️ **Pachetul cu Caddy setează `auth.trustedProxyHops=1` în configurația implicită** (seed/instalator). Fără asta, IP-ul clientului nu e citit și limita de login/înregistrare rămâne doar pe email
+- [ ] ⚠️ **Redis din pachetul de producție cu persistență (AOF)** (`appendonly yes`): blocările de cont și limitele stau în Redis și nu trebuie să se piardă la repornire
 - [ ] Checklist de onboarding în dashboard
 - [ ] Editor de temă în admin cu preview live
 - [ ] CSS custom + scripturi custom din setări
@@ -340,6 +342,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] ⚠️ **`packages/core/scripts/seed-store.ts` (seed specific magazinului) și `dev-apply-preset.ts` NU intră în pachetul distribuit**: se mută în instalarea magazinului (sau în `/extensions`) înainte de împachetare
 - [ ] ⚠️ **Runbook: utilizator de DB al aplicației FĂRĂ drept de `UPDATE`/`DELETE`/`TRUNCATE` pe `audit_log`** (nu owner al tabelei). Triggerul din migrație nu oprește owner-ul/superuserul; migrațiile rulează cu alt utilizator decât aplicația
 - [ ] ⚠️ **Autentificare în doi pași (TOTP) pentru conturile admin** (nu e în Promptul 3; decizie utilizator)
+- [ ] ⚠️ **Runbook: `auth.trustedProxyHops=1` când aplicația stă în spatele Caddy** (verifică în Setări; `0` = limita de IP e oprită) și **Redis cu AOF activ** (`appendonly yes`, volum persistent), pentru blocările de cont și limite
 - [ ] Backup zilnic off-site + **restore testat**
 - [ ] Uptime monitoring + alerte
 - [ ] Documentația de livrat: README, MANUAL-ADMIN, CHANGELOG, RUNBOOK, EXTENSIONS, LEGAL
