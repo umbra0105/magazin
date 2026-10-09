@@ -49,9 +49,9 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
 - [x] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
 - [x] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
-- [ ] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id) — _în curs, pe bucăți: gata (confirmat) Better Auth + argon2id și rate limiting + blocare; rămân contul de admin CLI, paginile de autentificare, emailurile_
+- [~] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id) — _în curs, pe bucăți: gata Better Auth + argon2id, rate limiting + blocare, middleware `/admin` `/cont`; rămân contul de admin CLI, paginile de autentificare, emailurile_
 - [ ] Rate limiting Redis pe rutele sensibile
-- [~] RBAC: permisiuni ca string-uri, roluri implicite, `can()` + `withPermission()`
+- [x] RBAC: permisiuni ca string-uri (inclusiv `admin.access`), roluri implicite, `can()` + `withPermission()`, matrice rol × permisiune în `docs/04` §6
 - [x] Feature flags cu helper `isEnabled()`
 - [ ] Layout admin: sidebar, topbar, breadcrumbs, guard (meniul ascunde funcțiile cu flag oprit: `FeatureFlagService.list()` e gata)
 - [ ] **Contul de administrator** (creat la instalare/prin comandă, fără parolă implicită în cod sau seed) și atribuirea rolului Owner
