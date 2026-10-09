@@ -1,8 +1,8 @@
 # Jurnal de progres
 
 ## 2026-10-09 · Sesiunea 2 · Faza 2, partea din Promptul 2 (configurare, setări, criptare, flag-uri, audit, temă, seed)
-**Terminat (confirmat de utilizator):** punctele 1-9 și 8b din planul Promptului 2 (schema, SettingsService, setări fiscale/regionale, criptare, flag-uri, audit, tokens de temă, seed, baza de test separată, Sentry) + schimbarea mapării Manager
-**În lucru:** punctul 10 (teste rămase) și fix-ul A (tokenii vizibili în pagina principală): făcute, așteaptă verificarea utilizatorului
+**Terminat (confirmat de utilizator):** punctele 1-10 și 8b din planul Promptului 2 (schema, SettingsService, setări fiscale/regionale, criptare, flag-uri, audit, tokens de temă, seed, baza de test separată, Sentry, testele rămase) + schimbarea mapării Manager + fix-ul A (tokenii vizibili în pagina principală)
+**În lucru:** punctul 10b (izolarea testelor unitare de baza reală), făcut în ultimul commit, **așteaptă verificarea utilizatorului**; singurul `[~]` din TODO
 **Blocat:** —
 **Stare:** partea din **Promptul 2** a Fazei 2 e terminată. **Faza 2 din TODO NU e completă**: rămân auth, rate limiting, RBAC `can()`, layout admin și contul de administrator (**Promptul 3**). Atenție la numerotare: „Faza 3” din TODO este Media (Promptul 4), nu autentificarea.
 
@@ -26,14 +26,15 @@
 - Fără `ioredis-mock`: cere `ioredis ^5`, proiectul are `ioredis 6`; testele folosesc un cache fals simplu și Redis real
 - Seed-ul de pachet stă în `@ecom/core` (are registrul), apelat de `prisma db seed`. Nu creează utilizatori și nu conține parole; testul de arhitectură o garantează. Seed-ul **adaugă** permisiuni lipsă pe rolurile existente și nu scoate niciodată pe cele acordate
 - Pagina principală (placeholder) citește `general.storeName` din setări și arată tokenii temei; devine dinamică până la vitrină (Fazele 6-7)
+- **10b (după incidentul de mai jos):** proiectul unitar nu poate atinge baza reală. `test/support/unit-guard.ts` (setupFile) pune `DATABASE_URL`/`REDIS_URL` pe domenii `.invalid` și face ca orice conectare TCP să arunce; `test/support/unit-isolation.test.ts` pică dacă un `*.test.ts` care nu e `*.integration.test.ts` importă `@ecom/db`, `ioredis`, `pg`, `@prisma/*`, clientul Prisma generat sau `lib/services` (`import type` permis; două excepții explicite). Verificat pe cazul vechi: cu numele greșit, testul de arhitectură pică și proiectul unitar nu conectează la bază (baza de dezvoltare neschimbată)
 - Maparea rolurilor pe baza de dezvoltare: noua legătură Manager → `products.cost.view` **nu a fost aplicată** în baza locală; se aplică cu `pnpm db:seed` (adaugă doar legătura lipsă)
 
 **Incidente în sesiune (raportate, corectate):**
-- Două fișiere de test nou create au fost numite greșit (`*.integration.more.test.ts`) și au rulat, o dată, în proiectul unitar pe baza de dezvoltare; unul a șters cele 6 flag-uri din `feature_flag`. Redenumite corect, flag-urile reinserate (toate `false`)
+- Două fișiere de test nou create au fost numite greșit (`*.integration.more.test.ts`) și au rulat, o dată, în proiectul unitar pe baza de dezvoltare; unul a șters cele 6 flag-uri din `feature_flag`. Redenumite corect, flag-urile reinserate (toate `false`). Nu se mai poate repeta: vezi 10b
 - `git push` făcut o dată fără să fi fost cerut (toate commit-urile până la `339139c`); de atunci doar commit-uri locale. **Commit-urile de după `339139c` NU sunt pe GitHub**
 
 **Rezultatul exact al testelor (la finalul sesiunii):**
-- Unitare: **172 trec** (25 fișiere) · Integrare: **30 trec** (12 fișiere, rulate de 4 ori la rând, stabile) · E2E: **1 trece** (homepage)
+- Unitare: **179 trec** (27 fișiere) · Integrare: **30 trec** (12 fișiere, stabile la rulări repetate) · E2E: **1 trece** (homepage)
 - `pnpm typecheck` ✅ (10/10) · `pnpm lint` ✅ (10/10) · `pnpm lint:root` ✅ · `pnpm format:check` ✅ · `pnpm build` ✅
 
 **Datorie tehnică:**
