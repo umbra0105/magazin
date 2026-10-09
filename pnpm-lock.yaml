@@ -307,6 +307,9 @@ importers:
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
 
   packages/db:
     dependencies:
@@ -7179,6 +7182,7 @@ snapshots:
       - '@babel/core'
       - '@types/node'
       - babel-plugin-macros
+    optional: true
 
   node-exports-info@1.6.2:
     dependencies:
@@ -8031,6 +8035,7 @@ snapshots:
       '@types/node': 24.19.1
     transitivePeerDependencies:
       - msw
+    optional: true
 
   web-vitals@6.2.3: {}
 

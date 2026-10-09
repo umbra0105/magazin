@@ -5,3 +5,5 @@ export * from "./integrations";
 export * from "./features";
 export * from "./audit";
 export * from "./branding";
+export * from "./rbac";
+export * from "./seed/base-seed";

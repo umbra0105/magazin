@@ -56,17 +56,24 @@ Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 
 ## Comenzi
 
-| Comandă                 | Ce face                                                  |
-| ----------------------- | -------------------------------------------------------- |
-| `pnpm dev`              | pornește aplicația (Next.js, port 3000)                  |
-| `pnpm build`            | build de producție                                       |
-| `pnpm lint`             | ESLint pe toate pachetele                                |
-| `pnpm lint:root`        | ESLint pe fișierele de config și pe `e2e/`               |
-| `pnpm format`           | formatează cu Prettier (`format:check` doar verifică)    |
-| `pnpm typecheck`        | TypeScript strict pe toate pachetele                     |
-| `pnpm test`             | teste unitare (Vitest)                                   |
-| `pnpm test:integration` | teste de integrare; cer serviciile Docker pornite        |
-| `pnpm test:e2e`         | teste end-to-end (Playwright); pornesc singure aplicația |
+| Comandă                 | Ce face                                                                     |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `pnpm dev`              | pornește aplicația (Next.js, port 3000)                                     |
+| `pnpm build`            | build de producție                                                          |
+| `pnpm lint`             | ESLint pe toate pachetele                                                   |
+| `pnpm lint:root`        | ESLint pe fișierele de config și pe `e2e/`                                  |
+| `pnpm format`           | formatează cu Prettier (`format:check` doar verifică)                       |
+| `pnpm typecheck`        | TypeScript strict pe toate pachetele                                        |
+| `pnpm test`             | teste unitare (Vitest)                                                      |
+| `pnpm test:integration` | teste de integrare; cer serviciile Docker pornite                           |
+| `pnpm test:e2e`         | teste end-to-end (Playwright); pornesc singure aplicația                    |
+| `pnpm db:migrate`       | aplică migrațiile pe baza de date locală                                    |
+| `pnpm db:seed`          | seed de pachet: roluri, permisiuni, setări, flag-uri (idempotent)           |
+| `pnpm db:seed:store`    | seed specific magazinului (rulat doar de proprietar)                        |
+| `pnpm dev:preset`       | doar dev: aplică un preset de temă (`minimal`/`bold`/`editorial`, `--dark`) |
+
+> `pnpm test:integration` șterge din baza locală setările, flag-urile și brandingul (testele își pregătesc
+> singure datele). După ele rulează din nou `pnpm db:seed` (e idempotent) ca să le recapeți.
 
 Serviciile Docker:
 

@@ -7,7 +7,10 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:seed:store": "tsx scripts/seed-store.ts",
+    "dev:preset": "tsx scripts/dev-apply-preset.ts"
   },
   "dependencies": {
     "@ecom/db": "workspace:*",
@@ -18,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.19.1",
-    "@types/pg": "^8.23.1"
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15"
   }
 }

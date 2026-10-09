@@ -2,29 +2,10 @@ import { afterAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
 import { AuditService } from "./audit-service";
 import { createPrismaAuditStore } from "./prisma-store";
+import { inRolledBackTransaction as rolledBack, type TestTx } from "../test-utils/rollback";
 
 const db = getDb();
-
-class Rollback extends Error {}
-
-/**
- * Rulează `fn` într-o tranzacție care se anulează MEREU: jurnalul e doar de adăugare, deci
- * testele nu pot (și nu trebuie să) lase rânduri în urmă.
- */
-async function inRolledBackTransaction<T>(
-  fn: (tx: Parameters<Parameters<typeof db.$transaction>[0]>[0]) => Promise<T>,
-): Promise<T> {
-  let result: T | undefined;
-  await db
-    .$transaction(async (tx) => {
-      result = await fn(tx);
-      throw new Rollback();
-    })
-    .catch((error: unknown) => {
-      if (!(error instanceof Rollback)) throw error;
-    });
-  return result as T;
-}
+const inRolledBackTransaction = <T>(fn: (tx: TestTx) => Promise<T>) => rolledBack(db, fn);
 
 async function errorOf(promise: Promise<unknown>): Promise<string> {
   try {
@@ -64,7 +45,7 @@ describe("audit_log în Postgres", () => {
   });
 
   it("Postgres respinge UPDATE, DELETE și TRUNCATE pe audit_log", async () => {
-    const seed = (tx: Parameters<Parameters<typeof db.$transaction>[0]>[0]) =>
+    const seed = (tx: TestTx) =>
       new AuditService(createPrismaAuditStore(tx)).record({
         actorId: "u-int-2",
         actorLabel: null,

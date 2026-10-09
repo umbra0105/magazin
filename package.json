@@ -21,7 +21,9 @@
     "lint:root": "eslint e2e vitest.config.mts playwright.config.ts eslint.config.mjs commitlint.config.mjs",
     "db:migrate": "pnpm --filter @ecom/db db:migrate",
     "db:seed": "pnpm --filter @ecom/db db:seed",
-    "db:studio": "pnpm --filter @ecom/db db:studio"
+    "db:studio": "pnpm --filter @ecom/db db:studio",
+    "db:seed:store": "pnpm --filter @ecom/core db:seed:store",
+    "dev:preset": "pnpm --filter @ecom/core dev:preset"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",

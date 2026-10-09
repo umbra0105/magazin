@@ -12,7 +12,8 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
-    seed: "tsx prisma/seed.ts",
+    // Logica seed-ului stă în @ecom/core (are registrul de setări, flag-uri și presets).
+    seed: "tsx ../core/scripts/seed.ts",
   },
   datasource: {
     url: process.env["DATABASE_URL"],

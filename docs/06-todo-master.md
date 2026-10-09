@@ -44,7 +44,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] **Sentry** (`@sentry/nextjs`) activat doar dacă există DSN, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`; requestId ca tag. Decizie utilizator: amânat din Faza 1, se face aici o singură dată, după Service de setări
 - [x] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
 - [x] `auditLog()` doar de adăugare (trigger în DB), cu mascarea secretelor, și wrapper pentru server actions de admin
-- [~] Design tokens din `Branding`: validare strictă Zod, fonturi locale (`next/font`), verificare contrast WCAG AA, CSS servit fără flash de temă greșită, 3 presets
+- [x] Design tokens din `Branding`: validare strictă Zod, fonturi locale (`next/font`), verificare contrast WCAG AA, CSS servit fără flash de temă greșită, 3 presets
 - [x] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
 - [ ] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
 - [x] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
@@ -53,7 +53,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] RBAC: permisiuni ca string-uri, roluri implicite, `can()` + `withPermission()`
 - [x] Feature flags cu helper `isEnabled()`
 - [ ] Layout admin: sidebar, topbar, breadcrumbs, guard
-- [ ] Seed de bază (roluri, setări implicite, un admin)
+- [~] Seed de bază (roluri, setări implicite, un admin)
 
 ## FAZA 3 — Media · ~2-3 zile
 - [ ] Adaptor de storage comutabil: disk local ↔ S3-compatible (din setări)
@@ -331,6 +331,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] `docker-compose.prod.yml`: app, worker, postgres, redis, caddy
 - [ ] Caddyfile cu SSL automat, HTTP/2, compresie, headers
 - [ ] `install.sh`, `update.sh`, `backup.sh` testate pe un VPS curat
+- [ ] ⚠️ **`packages/core/scripts/seed-store.ts` (seed specific magazinului) și `dev-apply-preset.ts` NU intră în pachetul distribuit**: se mută în instalarea magazinului (sau în `/extensions`) înainte de împachetare
 - [ ] ⚠️ **Runbook: utilizator de DB al aplicației FĂRĂ drept de `UPDATE`/`DELETE`/`TRUNCATE` pe `audit_log`** (nu owner al tabelei). Triggerul din migrație nu oprește owner-ul/superuserul; migrațiile rulează cu alt utilizator decât aplicația
 - [ ] Backup zilnic off-site + **restore testat**
 - [ ] Uptime monitoring + alerte
