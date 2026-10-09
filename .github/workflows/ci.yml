@@ -44,6 +44,10 @@ jobs:
       APP_KEY: Y2ktb25seS1hcHAta2V5LTMyLWJ5dGVzLWxvbmctISE=
       DATABASE_URL: postgresql://ecom:ecom_ci@localhost:5432/ecom
       REDIS_URL: redis://localhost:6379
+      # Testele de integrare rulează pe o bază și un DB Redis separate (aceleași ca local: ecom_test, DB 1).
+      # Baza se creează și se migrează automat de globalSetup; refuză orice bază fără "test" în nume.
+      TEST_DATABASE_URL: postgresql://ecom:ecom_ci@localhost:5432/ecom_test
+      TEST_REDIS_URL: redis://localhost:6379/1
       STORAGE_DRIVER: local
 
     steps:
@@ -74,7 +78,7 @@ jobs:
       - name: Teste unitare
         run: pnpm test
 
-      - name: Migrații DB (Postgres de test)
+      - name: Migrații DB (baza aplicației, pentru build și E2E)
         run: pnpm --filter @ecom/db db:deploy
 
       - name: Teste de integrare (Postgres + Redis)

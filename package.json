@@ -18,7 +18,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:integration": "vitest run --project integration",
-    "lint:root": "eslint e2e vitest.config.mts playwright.config.ts eslint.config.mjs commitlint.config.mjs",
+    "lint:root": "eslint e2e test vitest.config.mts playwright.config.ts eslint.config.mjs commitlint.config.mjs",
     "db:migrate": "pnpm --filter @ecom/db db:migrate",
     "db:seed": "pnpm --filter @ecom/db db:seed",
     "db:studio": "pnpm --filter @ecom/db db:studio",

@@ -72,8 +72,19 @@ Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 | `pnpm db:seed:store`    | seed specific magazinului (rulat doar de proprietar)                        |
 | `pnpm dev:preset`       | doar dev: aplică un preset de temă (`minimal`/`bold`/`editorial`, `--dark`) |
 
-> `pnpm test:integration` șterge din baza locală setările, flag-urile și brandingul (testele își pregătesc
-> singure datele). După ele rulează din nou `pnpm db:seed` (e idempotent) ca să le recapeți.
+### Testele de integrare au baza lor
+
+`pnpm test:integration` **nu atinge datele de dezvoltare** (seed, setări, comenzi de test). Rulează pe:
+
+- o bază Postgres separată în același server, `<nume>_test` (implicit `ecom_test`), **creată și migrată automat**
+  la prima rulare și la fiecare rulare ulterioară (`prisma migrate deploy`);
+- Redis DB `1` (dezvoltarea folosește DB `0`).
+
+Poți indica alte baze cu `TEST_DATABASE_URL` și `TEST_REDIS_URL` (vezi `.env.example`). **Gardă:** testele
+refuză să pornească dacă numele bazei nu conține „test” sau dacă Redis e pe DB `0`, deci nu pot șterge din
+neatenție date reale. Fișierele de integrare rulează pe rând (o singură bază partajată). Ca să resetezi
+baza de test: `docker exec ecom-dev-postgres-1 psql -U ecom -d postgres -c "DROP DATABASE ecom_test"`
+(se recreează la următoarea rulare). Pe CI se folosește aceeași schemă de nume (`ecom_test`, Redis DB `1`).
 
 Serviciile Docker:
 
