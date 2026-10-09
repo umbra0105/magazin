@@ -55,6 +55,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Layout admin: sidebar, topbar, breadcrumbs, guard
 - [x] Seed de bază (roluri, setări implicite, un admin)
 - [x] (8b) Bază de date separată pentru testele de integrare: `ecom_test` creată și migrată automat, Redis pe alt index, gardă care refuză bazele fără "test" în nume, aceeași bază în CI
+- [~] (A) Tokenii de design vizibili în pagina principală (placeholder): titlu în fontul de titlu, culorile și raza din temă
 
 ## FAZA 3 — Media · ~2-3 zile
 - [ ] Adaptor de storage comutabil: disk local ↔ S3-compatible (din setări)
