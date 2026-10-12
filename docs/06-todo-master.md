@@ -41,7 +41,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Fișier de versiune `packages/config/version.ts`
 
 ## FAZA 2 — Bază de date, setări, autentificare · ~4-5 zile
-> **Stare:** FAZA 2 COMPLETĂ (Promptul 2 + Promptul 3): setări, criptare, flag-uri, audit, temă, seed, autentificare, rate limiting, RBAC, layout admin, contul de administrator, emailuri și `withAudit` pe scrieri. Verificare manuală: `docs/FAZA-2-verificare-manuala.md`. Atenție: în `07-prompturi-claude-code.md`, Promptul 3 aparține tot acestei faze din TODO; „Faza 3” din TODO este Media (Promptul 4).
+> **Stare:** FAZA 2 TERMINATĂ ȘI VERIFICATĂ (🏁 confirmată de utilizator) (Promptul 2 + Promptul 3): setări, criptare, flag-uri, audit, temă, seed, autentificare, rate limiting, RBAC, layout admin, contul de administrator, emailuri și `withAudit` pe scrieri. Verificare manuală: `docs/FAZA-2-verificare-manuala.md`. Atenție: în `07-prompturi-claude-code.md`, Promptul 3 aparține tot acestei faze din TODO; „Faza 3” din TODO este Media (Promptul 4).
 - [x] **Sentry** (`@sentry/nextjs`) activat doar dacă există DSN, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`; requestId ca tag. Decizie utilizator: amânat din Faza 1, se face aici o singură dată, după Service de setări
 - [x] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
 - [x] `auditLog()` doar de adăugare (trigger în DB), cu mascarea secretelor, și wrapper pentru server actions de admin
@@ -60,6 +60,8 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] (8b) Bază de date separată pentru testele de integrare: `ecom_test` creată și migrată automat, Redis pe alt index, gardă care refuză bazele fără "test" în nume, aceeași bază în CI
 - [x] (10) Teste rămase pentru Promptul 2: setări, flag-uri, criptare, audit append-only, branding (ruta /theme.css, golden-uri, fallback-uri)
 - [x] (10b) Testele unitare nu pot atinge baza reală: setupFile cu URL-uri invalide și blocarea conexiunilor, plus test de arhitectură pe importuri
+- [x] (11) Verificare manuală cap-coadă Faza 2 (`docs/FAZA-2-verificare-manuala.md`), cu `pnpm dev:age-session` pentru expirarea sesiunii de admin — confirmată de utilizator
+- [x] (12) Închiderea Fazei 2: TODO, PROGRESS, `docs/FAZA-2-ce-functioneaza.md` — 🏁 confirmată de utilizator
 
 ## FAZA 3 — Media · ~2-3 zile
 - [ ] Adaptor de storage comutabil: disk local ↔ S3-compatible (din setări)

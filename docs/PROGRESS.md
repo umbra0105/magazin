@@ -1,11 +1,12 @@
 # Jurnal de progres
 
-## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — terminat, așteaptă verificarea 🏁
+## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — TERMINATĂ ȘI VERIFICATĂ 🏁
 **Terminat (confirmat de utilizator):** `withAudit` pe scrierile din admin (punctul 9); layout admin (guard `admin.access` + `adminSessionHours`, meniu pe permisiuni/flag-uri, dark mode); Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
-**În lucru:** — (punctele 1-10 confirmate; 11-12 livrate, așteaptă verificarea utilizatorului)
+**În lucru:** —
 **Blocat:** —
-**Rămâne din Promptul 3:** doar confirmarea 🏁 Faza 2 de către utilizator (`docs/FAZA-2-verificare-manuala.md`)
-**Stare:** CI verde pe `d132d38`; `main` împins la `749f19c`. Rezumat pentru oameni: `docs/FAZA-2-ce-functioneaza.md`
+**Rămâne din Promptul 3:** nimic; punctele 1-12 confirmate de utilizator, inclusiv lista manuală `docs/FAZA-2-verificare-manuala.md`
+**Stare:** FAZA 2 TERMINATĂ ȘI VERIFICATĂ (🏁 confirmată). Datoria tehnică rămâne într-un singur loc, mai jos. Rezumat pentru oameni: `docs/FAZA-2-ce-functioneaza.md`
+**De unde reiau:** Faza 3 — Media (SESIUNE NOUĂ, Promptul 4); nu se începe în această sesiune
 
 **Decizii în sesiune:**
 - **Utilizator:** Suport NU are `orders.refund` (până există limita de rambursare); scoaterea din baze existente cu `pnpm rbac:revoke <rol> <permisiune> [--apply]` (seed-ul nu scoate niciodată permisiuni)
