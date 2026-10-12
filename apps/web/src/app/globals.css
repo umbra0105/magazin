@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Clasele Tailwind folosite în componentele din @ecom/ui. */
+@source "../../../../packages/ui/src";
+
 /*
  * Valori implicite NEUTRE, doar fallback (de ex. dacă /theme.css nu se poate încărca).
  * Tokens-urile reale vin din tabela Branding, servite de /theme.css (apps/web/src/app/theme.css).

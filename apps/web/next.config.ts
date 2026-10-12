@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   reactStrictMode: true,
   // Pachetele workspace sunt livrate ca TypeScript sursă.
-  transpilePackages: ["@ecom/shared", "@ecom/config", "@ecom/core", "@ecom/db"],
+  transpilePackages: ["@ecom/shared", "@ecom/config", "@ecom/core", "@ecom/db", "@ecom/ui"],
   serverExternalPackages: ["pg", "ioredis", "pino", "@node-rs/argon2"],
 };
 

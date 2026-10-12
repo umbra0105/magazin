@@ -8,5 +8,19 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint ."
+  },
+  "dependencies": {
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "0.468.0",
+    "tailwind-merge": "3.7.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "react": "19.3.0",
+    "typescript": "5.9.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
   }
 }
