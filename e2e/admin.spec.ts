@@ -296,8 +296,13 @@ test.describe("zona de admin", () => {
     );
     expect(overflow).toBe(false);
 
-    await page.getByRole("button", { name: "Deschide meniul" }).click();
-    await expect(sidebar(page).getByRole("link", { name: "Comenzi" })).toBeVisible();
+    // Un clic dat înainte de hidratare se pierde: repetăm clicul până apare meniul.
+    await expect(async () => {
+      await page.getByRole("button", { name: "Deschide meniul" }).click();
+      await expect(sidebar(page).getByRole("link", { name: "Comenzi" })).toBeVisible({
+        timeout: 2_000,
+      });
+    }).toPass({ timeout: 15_000 });
     await page.keyboard.press("Escape");
     await expect(sidebar(page).getByRole("link", { name: "Comenzi" })).toBeHidden();
   });

@@ -1,5 +1,15 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "NODE_ENV",
+    "APP_URL",
+    "APP_KEY",
+    "DATABASE_URL",
+    "REDIS_URL",
+    "STORAGE_DRIVER",
+    "TEST_DATABASE_URL",
+    "TEST_REDIS_URL"
+  ],
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": [".next/**", "dist/**"] },
     "dev": { "cache": false, "persistent": true },
