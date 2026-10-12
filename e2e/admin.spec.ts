@@ -227,6 +227,38 @@ test.describe("zona de admin", () => {
     await expect.poll(bg).toBe(light);
   });
 
+  test("dark mode: după „Întunecat” și reîncărcare nu apare nicio eroare de hidratare în consolă", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    await login(page, owner);
+
+    const problems: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error" || message.type() === "warning") {
+        problems.push(message.text());
+      }
+    });
+    page.on("pageerror", (error) => problems.push(error.message));
+
+    await page.goto("/admin");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Meniul utilizatorului" }).click();
+    await page.getByRole("button", { name: "Întunecat" }).click();
+    await expect(page.locator("#admin-theme-dark")).toHaveAttribute("media", "all");
+
+    problems.length = 0; // ne interesează doar încărcarea de după alegere
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("#admin-theme-dark")).toHaveAttribute("media", "all");
+    await expect(page.getByRole("heading", { level: 1, name: "Panou de control" })).toBeVisible();
+
+    const hydration = problems.filter((text) => /hydrat|didn't match|did not match/i.test(text));
+    expect(hydration).toEqual([]);
+  });
+
   test("dark mode cu localStorage blocat: pagina se încarcă, iar alegerea merge pe pagina curentă", async ({
     page,
     request,

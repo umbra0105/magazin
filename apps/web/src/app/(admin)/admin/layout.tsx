@@ -71,12 +71,20 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <>
       {/* Paletele pentru alegerea Luminos/Întunecat/Sistem; vin după /theme.css din <head>. */}
       {/* eslint-disable @next/next/no-css-tags -- foi generate dinamic de rute, nu fișiere din bundle */}
-      <link id={THEME_LIGHT_LINK_ID} rel="stylesheet" href="/theme-light.css" media="not all" />
+      {/* suppressHydrationWarning: scriptul de mai jos le schimbă `media` ÎNAINTE de hidratare, intenționat. */}
+      <link
+        id={THEME_LIGHT_LINK_ID}
+        rel="stylesheet"
+        href="/theme-light.css"
+        media="not all"
+        suppressHydrationWarning
+      />
       <link
         id={THEME_DARK_LINK_ID}
         rel="stylesheet"
         href="/theme-dark.css"
         media="(prefers-color-scheme: dark)"
+        suppressHydrationWarning
       />
       {/* eslint-enable @next/next/no-css-tags */}
       <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
