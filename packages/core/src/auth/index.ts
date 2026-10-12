@@ -6,3 +6,4 @@ export * from "./client-ip";
 export * from "./auth-guard";
 export * from "./session-policy";
 export * from "./create-admin";
+export * from "./set-password";

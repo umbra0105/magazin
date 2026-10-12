@@ -24,9 +24,11 @@
     "db:studio": "pnpm --filter @ecom/db db:studio",
     "db:seed:store": "pnpm --filter @ecom/core db:seed:store",
     "dev:preset": "pnpm --filter @ecom/core dev:preset",
-    "admin:unlock": "pnpm --filter @ecom/core admin:unlock",
-    "rbac:revoke": "pnpm --filter @ecom/core rbac:revoke",
-    "admin:create": "pnpm --filter @ecom/core admin:create"
+    "admin:unlock": "node --import tsx packages/core/scripts/admin-unlock.ts",
+    "rbac:revoke": "node --import tsx packages/core/scripts/rbac-revoke.ts",
+    "admin:create": "node --import tsx packages/core/scripts/admin-create.ts",
+    "admin:set-password": "node --import tsx packages/core/scripts/admin-set-password.ts",
+    "cli:tty-test": "node --import tsx packages/core/scripts/tty-test.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",
@@ -39,6 +41,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
     "turbo": "^2.5.0",
     "typescript": "~5.9.0",
     "typescript-eslint": "^8.71.1",

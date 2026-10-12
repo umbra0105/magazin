@@ -13,7 +13,9 @@
     "dev:preset": "tsx scripts/dev-apply-preset.ts",
     "admin:unlock": "tsx scripts/admin-unlock.ts",
     "rbac:revoke": "tsx scripts/rbac-revoke.ts",
-    "admin:create": "tsx scripts/admin-create.ts"
+    "admin:create": "tsx scripts/admin-create.ts",
+    "admin:set-password": "tsx scripts/admin-set-password.ts",
+    "cli:tty-test": "tsx scripts/tty-test.ts"
   },
   "dependencies": {
     "@ecom/db": "workspace:*",

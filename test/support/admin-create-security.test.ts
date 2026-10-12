@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
- * Garanții de arhitectură pentru contul de administrator: parola vine DOAR dintr-un prompt
+ * Garanții de arhitectură pentru comenzile CLI cu parole: parola vine DOAR dintr-un prompt
  * interactiv fără echo, nu din argumente, variabile de mediu, fișiere sau valori implicite.
  */
 const read = (path: string) =>
@@ -23,8 +23,8 @@ describe("pnpm admin:create", () => {
     expect(script).toMatch(/unknownArgs\.length > 0/);
   });
 
-  it("parola se cere prin promptHidden (fără echo), de două ori", () => {
-    expect(script.match(/promptHidden\(/g)?.length).toBe(2);
+  it("parola se cere prin promptNewPassword (fără echo, de două ori), doar în terminal interactiv", () => {
+    expect(script.match(/promptNewPassword\(/g)?.length).toBe(1);
     expect(script).toMatch(/!process\.stdin\.isTTY/);
   });
 
@@ -32,5 +32,46 @@ describe("pnpm admin:create", () => {
     const create = read("packages/core/src/auth/create-admin.ts");
     expect(create).not.toMatch(/password:\s*["'`][^"'`]+["'`]/);
     expect(create).toMatch(/after: \{ email, role: OWNER_ROLE_KEY, emailVerified: true \}/);
+  });
+});
+
+describe("pnpm admin:set-password", () => {
+  const script = read("packages/core/scripts/admin-set-password.ts");
+
+  it("parola nu vine din env, argumente sau opțiuni; singurul argument e emailul", () => {
+    expect(script).not.toMatch(/process\.env\W+\w*PASS/i);
+    expect(script).not.toMatch(/--password|--pass\b/i);
+    expect(script).toMatch(/args\.length !== 1/);
+  });
+
+  it("parola se cere prin promptNewPassword, doar în terminal interactiv", () => {
+    expect(script.match(/promptNewPassword\(/g)?.length).toBe(1);
+    expect(script).toMatch(/!process\.stdin\.isTTY/);
+  });
+
+  it("auditul nu primește parola, iar motivul e „schimbare din CLI”", () => {
+    const core = read("packages/core/src/auth/set-password.ts");
+    expect(core).toMatch(
+      /after: \{ reason: SET_PASSWORD_REASON, sessionsRevoked: sessions\.length \}/,
+    );
+    expect(core).toMatch(/SET_PASSWORD_REASON = "schimbare din CLI"/);
+  });
+});
+
+describe("comenzile CLI de la rădăcină", () => {
+  const pkg = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
+
+  it("rulează direct cu node + tsx, nu prin runner-ul recursiv pnpm --filter (pierdea tastele pe Windows)", () => {
+    for (const name of [
+      "admin:create",
+      "admin:set-password",
+      "admin:unlock",
+      "rbac:revoke",
+      "cli:tty-test",
+    ]) {
+      const command = pkg.scripts[name] ?? "";
+      expect(command, name).toMatch(/^node --import tsx packages\/core\/scripts\/[\w-]+\.ts$/);
+      expect(command, name).not.toContain("--filter");
+    }
   });
 });

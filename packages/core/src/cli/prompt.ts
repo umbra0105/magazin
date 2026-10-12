@@ -112,3 +112,29 @@ export async function promptLine(question: string): Promise<string> {
     rl.close();
   }
 }
+
+/**
+ * Cere o parolă nouă de două ori (fără echo), cu validare; la nepotrivire sau parolă invalidă
+ * reia, de cel mult `maxAttempts` ori. `validate` întoarce mesajul de eroare sau `null` dacă e bună.
+ */
+export async function promptNewPassword(options: {
+  validate: (password: string) => string | null;
+  ask?: (question: string) => Promise<string>;
+  report?: (message: string) => void;
+  maxAttempts?: number;
+}): Promise<string> {
+  const ask = options.ask ?? ((question: string) => promptHidden(question));
+  const report = options.report ?? ((message: string) => console.error(message));
+  const attempts = options.maxAttempts ?? 3;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const password = await ask("Parolă nouă (nu se afișează): ");
+    const problem = options.validate(password);
+    if (problem) {
+      report(problem);
+      continue;
+    }
+    if ((await ask("Repetă parola: ")) === password) return password;
+    report("Parolele nu coincid. Încearcă din nou.");
+  }
+  throw new Error("Prea multe încercări nereușite.");
+}

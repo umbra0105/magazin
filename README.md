@@ -74,6 +74,32 @@ Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 | `pnpm admin:create`                             | creează contul Owner; interactiv, parola fără echo (rulează `db:seed` întâi) |
 | `pnpm admin:unlock <email>`                     | deblochează un cont blocat după prea multe încercări de login                |
 | `pnpm rbac:revoke <rol> <permisiune> [--apply]` | scoate explicit o permisiune dintr-un rol (simulare fără `--apply`)          |
+| `pnpm admin:set-password <email>`               | schimbă parola unui cont (recuperare când emailul nu e configurat)           |
+| `pnpm cli:tty-test`                             | verifică terminalul: tastele ajung la CLI și nu se afișează                  |
+
+### Comenzile cu parolă (`admin:create`, `admin:set-password`)
+
+- Se rulează **de către om, într-un terminal interactiv**, de la rădăcina proiectului. Parola se
+  tastează de două ori, **fără echo**, și nu poate fi dată prin argumente, variabile de mediu, pipe
+  sau fișier. Nu există parolă implicită nicăieri.
+- `admin:set-password <email>` schimbă parola unui cont existent, **închide toate sesiunile lui**
+  (și din cache-ul Redis), resetează blocarea de login și scrie în jurnalul de audit „schimbare din
+  CLI” (fără parolă și fără hash). Este pentru **recuperare când emailul nu e configurat** (nu merge
+  „am uitat parola”); când emailul funcționează, folosește fluxul normal de resetare.
+- Comenzile rulează direct cu `node --import tsx …`, nu prin `pnpm --filter`: runner-ul recursiv
+  pnpm pierdea tastele pe Windows. Dacă adaugi o comandă interactivă nouă, păstrează aceeași formă
+  (un test o impune).
+
+**Test manual pe Windows (PowerShell)**, de la rădăcina proiectului:
+
+1. `pnpm cli:tty-test` → tastează 5 caractere (de ex. `abcde`) și Enter. Nu trebuie să apară nimic
+   în timp ce tastezi (nici `*`); la final trebuie să vezi „Am primit 5 caractere” și „OK”.
+2. `pnpm admin:set-password email-inexistent@example.com` → „Nu există niciun utilizator…”
+   (nu cere parola și nu modifică nimic).
+3. `echo test | pnpm admin:create` → refuză: „Comanda cere un terminal interactiv”.
+4. `pnpm admin:create` (sau `pnpm admin:set-password <email>`) → tastează parola (minim 12
+   caractere), apoi o repetare diferită: trebuie să vezi „Parolele nu coincid”; Ctrl+C anulează fără
+   să modifice nimic.
 
 ### Testele de integrare au baza lor
 

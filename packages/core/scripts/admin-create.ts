@@ -8,8 +8,8 @@
 import {
   NotInteractiveError,
   PromptCancelledError,
-  promptHidden,
   promptLine,
+  promptNewPassword,
 } from "../src/cli/prompt";
 import {
   createOwnerAccount,
@@ -35,20 +35,13 @@ if (!process.stdin.isTTY) {
 
 const db = getDb();
 
-async function askPassword(minLength: number): Promise<string> {
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const password = await promptHidden("Parolă (nu se afișează): ");
-    const check = createOwnerSchema(minLength).shape.password.safeParse(password);
-    if (!check.success) {
-      console.error(check.error.issues.map((i) => i.message).join("; "));
-      continue;
-    }
-    const again = await promptHidden("Repetă parola: ");
-    if (again === password) return password;
-    console.error("Parolele nu coincid. Încearcă din nou.");
-  }
-  throw new Error("Prea multe încercări nereușite.");
-}
+const askPassword = (minLength: number) =>
+  promptNewPassword({
+    validate: (password) => {
+      const check = createOwnerSchema(minLength).shape.password.safeParse(password);
+      return check.success ? null : check.error.issues.map((i) => i.message).join("; ");
+    },
+  });
 
 try {
   if (!force && (await ownerExists(db))) {
