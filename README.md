@@ -56,26 +56,27 @@ Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 
 ## Comenzi
 
-| Comandă                                         | Ce face                                                                      |
-| ----------------------------------------------- | ---------------------------------------------------------------------------- |
-| `pnpm dev`                                      | pornește aplicația (Next.js, port 3000)                                      |
-| `pnpm build`                                    | build de producție                                                           |
-| `pnpm lint`                                     | ESLint pe toate pachetele                                                    |
-| `pnpm lint:root`                                | ESLint pe fișierele de config și pe `e2e/`                                   |
-| `pnpm format`                                   | formatează cu Prettier (`format:check` doar verifică)                        |
-| `pnpm typecheck`                                | TypeScript strict pe toate pachetele                                         |
-| `pnpm test`                                     | teste unitare (Vitest)                                                       |
-| `pnpm test:integration`                         | teste de integrare; cer serviciile Docker pornite                            |
-| `pnpm test:e2e`                                 | teste end-to-end (Playwright); pornesc singure aplicația                     |
-| `pnpm db:migrate`                               | aplică migrațiile pe baza de date locală                                     |
-| `pnpm db:seed`                                  | seed de pachet: roluri, permisiuni, setări, flag-uri (idempotent)            |
-| `pnpm db:seed:store`                            | seed specific magazinului (rulat doar de proprietar)                         |
-| `pnpm dev:preset`                               | doar dev: aplică un preset de temă (`minimal`/`bold`/`editorial`, `--dark`)  |
-| `pnpm admin:create`                             | creează contul Owner; interactiv, parola fără echo (rulează `db:seed` întâi) |
-| `pnpm admin:unlock <email>`                     | deblochează un cont blocat după prea multe încercări de login                |
-| `pnpm rbac:revoke <rol> <permisiune> [--apply]` | scoate explicit o permisiune dintr-un rol (simulare fără `--apply`)          |
-| `pnpm admin:set-password <email>`               | schimbă parola unui cont (recuperare când emailul nu e configurat)           |
-| `pnpm cli:tty-test`                             | verifică terminalul: tastele ajung la CLI și nu se afișează                  |
+| Comandă                                         | Ce face                                                                                            |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                                      | pornește aplicația (Next.js, port 3000)                                                            |
+| `pnpm build`                                    | build de producție                                                                                 |
+| `pnpm lint`                                     | ESLint pe toate pachetele                                                                          |
+| `pnpm lint:root`                                | ESLint pe fișierele de config și pe `e2e/`                                                         |
+| `pnpm format`                                   | formatează cu Prettier (`format:check` doar verifică)                                              |
+| `pnpm typecheck`                                | TypeScript strict pe toate pachetele                                                               |
+| `pnpm test`                                     | teste unitare (Vitest)                                                                             |
+| `pnpm test:integration`                         | teste de integrare; cer serviciile Docker pornite                                                  |
+| `pnpm test:e2e`                                 | teste end-to-end (Playwright); pornesc singure aplicația                                           |
+| `pnpm db:migrate`                               | aplică migrațiile pe baza de date locală                                                           |
+| `pnpm db:seed`                                  | seed de pachet: roluri, permisiuni, setări, flag-uri (idempotent)                                  |
+| `pnpm db:seed:store`                            | seed specific magazinului (rulat doar de proprietar)                                               |
+| `pnpm dev:preset`                               | doar dev: aplică un preset de temă (`minimal`/`bold`/`editorial`, `--dark`)                        |
+| `pnpm admin:create`                             | creează contul Owner; interactiv, parola fără echo (rulează `db:seed` întâi)                       |
+| `pnpm admin:unlock <email>`                     | deblochează un cont blocat după prea multe încercări de login                                      |
+| `pnpm dev:age-session <email> <ore>`            | DOAR dezvoltare: îmbătrânește sesiunile unui utilizator (test expirare admin); refuză în producție |
+| `pnpm rbac:revoke <rol> <permisiune> [--apply]` | scoate explicit o permisiune dintr-un rol (simulare fără `--apply`)                                |
+| `pnpm admin:set-password <email>`               | schimbă parola unui cont (recuperare când emailul nu e configurat)                                 |
+| `pnpm cli:tty-test`                             | verifică terminalul: tastele ajung la CLI și nu se afișează                                        |
 
 ### Emailuri și worker
 
@@ -168,7 +169,7 @@ docker compose -f docker/docker-compose.dev.yml down -v    # oprește ȘI șterg
 
 ## Ce funcționează acum
 
-Rezumat în limbaj simplu, pe faze: [docs/FAZA-2-ce-functioneaza.md](docs/FAZA-2-ce-functioneaza.md).
+Rezumat în limbaj simplu, pe faze: [docs/FAZA-2-ce-functioneaza.md](docs/FAZA-2-ce-functioneaza.md). Verificare manuală cap-coadă: [docs/FAZA-2-verificare-manuala.md](docs/FAZA-2-verificare-manuala.md).
 
 ## Structura
 

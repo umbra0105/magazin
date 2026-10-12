@@ -1,11 +1,11 @@
 # Jurnal de progres
 
-## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — în curs
+## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — terminat, așteaptă verificarea 🏁
 **Terminat (confirmat de utilizator):** `withAudit` pe scrierile din admin (punctul 9); layout admin (guard `admin.access` + `adminSessionHours`, meniu pe permisiuni/flag-uri, dark mode); Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
-**În lucru:** punctul 10 (teste și închidere) implementat — **așteaptă verificarea**
+**În lucru:** — (punctele 1-10 confirmate; 11-12 livrate, așteaptă verificarea utilizatorului)
 **Blocat:** —
-**Rămâne din Promptul 3:** punctele 11-12 (verificare cap-coadă, închiderea TODO) și 🏁 Faza 2
-**Stare:** punctul 9 confirmat; CI verde pe `d132d38` (CI #5). Rezumat pentru oameni: `docs/FAZA-2-ce-functioneaza.md`
+**Rămâne din Promptul 3:** doar confirmarea 🏁 Faza 2 de către utilizator (`docs/FAZA-2-verificare-manuala.md`)
+**Stare:** CI verde pe `d132d38`; `main` împins la `749f19c`. Rezumat pentru oameni: `docs/FAZA-2-ce-functioneaza.md`
 
 **Decizii în sesiune:**
 - **Utilizator:** Suport NU are `orders.refund` (până există limita de rambursare); scoaterea din baze existente cu `pnpm rbac:revoke <rol> <permisiune> [--apply]` (seed-ul nu scoate niciodată permisiuni)
@@ -25,6 +25,7 @@
 - **Dependență adăugată:** `nodemailer` (aprobat de utilizator, pentru SMTP); `bullmq` + `@react-email/*` (aprobate); `msgpackr-extract` respins explicit în `allowBuilds` (fallback JS)
 - **`turbo.exe` blocat** de Windows Application Control pe mașina utilizatorului (nu modificăm setări de securitate): local `pnpm dev:web` și `pnpm check:local`; CI-ul Linux rămâne cu turbo (și `globalPassThroughEnv`)
 - **Faza 18:** `APP_URL` = URL-ul public real; `auth.trustedProxyHops=1` în pachetul cu Caddy
+- **Scripturi doar pentru dezvoltare** (`dev:mail`, `dev:preset`, `dev:age-session`, `seed-store.ts`, `dev-apply-preset.ts`) → Faza 21: se mută împreună în afara pachetului distribuit. `dev:age-session` refuză în producție (`NODE_ENV`/`APP_ENV`), dar nu trebuie să ajungă în pachet
 - **Faza 21:** Redis cu AOF (blocări de cont și limite); utilizator DB fără `UPDATE`/`DELETE` pe `audit_log`; TOTP pentru admin; mutarea scripturilor dev-only (`dev:mail`, `dev:preset`, `seed-store`) din pachet
 - **Faza 4/16:** `products.content.write` pentru Editor; reguli anti-escaladare de privilegii; limita de rambursare pentru Suport (`orders.refund`)
 - Cu `auth.requireEmailVerification=false`, Better Auth răspunde „user already exists” la înregistrare (enumerare posibilă); implicit true nu scurge nimic

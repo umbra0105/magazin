@@ -41,7 +41,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Fișier de versiune `packages/config/version.ts`
 
 ## FAZA 2 — Bază de date, setări, autentificare · ~4-5 zile
-> **Stare:** partea din **Promptul 2** (configurare, setări, criptare, flag-uri, audit, temă, seed, teste) e făcută. Rămân punctele nebifate de mai jos, care țin de **Promptul 3** (autentificare, rate limiting, RBAC, layout admin, contul de administrator). Atenție: în `07-prompturi-claude-code.md`, Promptul 3 aparține tot acestei faze din TODO; „Faza 3” din TODO este Media (Promptul 4).
+> **Stare:** FAZA 2 COMPLETĂ (Promptul 2 + Promptul 3): setări, criptare, flag-uri, audit, temă, seed, autentificare, rate limiting, RBAC, layout admin, contul de administrator, emailuri și `withAudit` pe scrieri. Verificare manuală: `docs/FAZA-2-verificare-manuala.md`. Atenție: în `07-prompturi-claude-code.md`, Promptul 3 aparține tot acestei faze din TODO; „Faza 3” din TODO este Media (Promptul 4).
 - [x] **Sentry** (`@sentry/nextjs`) activat doar dacă există DSN, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`; requestId ca tag. Decizie utilizator: amânat din Faza 1, se face aici o singură dată, după Service de setări
 - [x] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
 - [x] `auditLog()` doar de adăugare (trigger în DB), cu mascarea secretelor, și wrapper pentru server actions de admin
