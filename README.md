@@ -242,4 +242,4 @@ Oprește-l sau schimbă maparea în `docker/docker-compose.dev.yml` și valorile
 
 **Imaginea MinIO.** Compose-ul folosește `cgr.dev/chainguard/minio`, fixată prin digest, pentru că
 `minio/minio` nu mai este pe Docker Hub. Aplicația vorbește S3 generic, deci furnizorul de storage
-de producție se alege în Faza 3 fără modificări de cod.
+de producție se alege în Faza 18 fără modificări de cod.

@@ -1,5 +1,20 @@
 # Jurnal de progres
 
+## 2026-10-12 · Sesiunea 4 · Faza 3 (Media), Promptul 4 — ÎN LUCRU
+**Terminat:** — (planul în 8 puncte aprobat; vezi `docs/06-todo-master.md`, Faza 3)
+**În lucru:** punctul 1 (schema `Media`/`MediaFolder`, `media.read`)
+**Blocat:** —
+
+**Decizii în sesiune (toate ale utilizatorului):**
+- **Utilizator:** driverul de storage rămâne în `.env` (`STORAGE_DRIVER` + `S3_*`), nu în Setări; formularea din TODO corectată
+- **Utilizator:** upload prin server, cu stream, pentru ambele drivere; presigned URL doar când apar fișiere mari
+- **Utilizator:** dependențe aprobate: `sharp`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `file-type`, `blurhash`. Modificarea din `allowBuilds` (dacă e nevoie) se arată înainte
+- **Utilizator:** limită implicită 20 MB/fișier și ~40 megapixeli la intrare, editabile din setări; tipuri JPEG, PNG, WebP, AVIF (fără GIF; SVG respins); taguri `String[]`
+- **Utilizator:** `media.read` nou (matricea din `docs/04` §6 actualizată în același commit); originalul se păstrează fără EXIF/GPS lângă variante
+- **Utilizator:** ruta de upload (API route, nu server action) își face singură: sesiune, `media.write`, Origin, rate limit, audit (și refuzuri), mărime în timpul stream-ului — cu test de refuz
+- **Utilizator:** teste MinIO pe bucket separat de test, cu gardă („test" în nume); MinIO în `ci.yml`; migrația fără reset (altfel 🛑); dacă `sharp` nu se încarcă din cauza Application Control → 🛑, fără ocolirea securității Windows
+- **Utilizator:** alegerea storage-ului de producție mutată la **Faza 18** (`docs/10` Partea I, „Deschise")
+
 ## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — TERMINATĂ ȘI VERIFICATĂ 🏁
 **Terminat (confirmat de utilizator):** `withAudit` pe scrierile din admin (punctul 9); layout admin (guard `admin.access` + `adminSessionHours`, meniu pe permisiuni/flag-uri, dark mode); Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
 **În lucru:** —

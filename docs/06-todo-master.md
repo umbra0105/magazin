@@ -64,10 +64,15 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] (12) Închiderea Fazei 2: TODO, PROGRESS, `docs/FAZA-2-ce-functioneaza.md` — 🏁 confirmată de utilizator
 
 ## FAZA 3 — Media · ~2-3 zile
-- [ ] Adaptor de storage comutabil: disk local ↔ S3-compatible (din setări)
-- [ ] Upload cu validare MIME reală, limite, nume randomizate
-- [ ] Procesare imagini în queue: variante, AVIF/WebP, blurhash
-- [ ] Bibliotecă media în admin: grid, foldere, căutare, alt-text, selector reutilizabil
+> **Decizii (utilizator, Promptul 4):** driverul de storage rămâne în `.env` (`STORAGE_DRIVER`, credențialele S3), nu în Setări · upload prin server, cu stream, pentru ambele drivere (presigned URL doar când apar fișiere mari) · limită implicită 20 MB și ~40 megapixeli, tipuri JPEG/PNG/WebP/AVIF (fără GIF, SVG respins), editabile din setări · se păstrează originalul fără EXIF/GPS pentru regenerarea variantelor · alegerea furnizorului de storage de producție: Faza 18
+- [~] (1) Schema `Media` + `MediaFolder`, migrația și permisiunea `media.read` (cu matricea din `docs/04` §6)
+- [ ] (2) Adaptor de storage în `packages/integrations`: disc local ↔ S3-compatible (driver din `.env`), fișiere publice și private, URL semnat; teste pe MinIO (bucket de test, gardă) și serviciul MinIO în `ci.yml`
+- [ ] (3) Upload prin server: validare MIME reală, limite de mărime, de pixeli și de tipuri (din setări), nume randomizate, original fără EXIF; ruta API cu sesiune, `media.write`, Origin, rate limit, audit (inclusiv refuzuri) și verificarea mărimii în timpul stream-ului
+- [ ] (4) Procesare imagini în queue: variante thumb/medium/large × AVIF/WebP/JPEG, dimensiuni, blurhash, regenerare din original
+- [ ] (5) Servire: URL-uri fără numele original, `X-Content-Type-Options: nosniff`, protecție la path traversal pe driverul local, cache `immutable`
+- [ ] (6) Bibliotecă media în admin: grid, upload drag & drop, foldere, căutare, alt-text și taguri, ștergere cu verificare de utilizare (registru `MediaUsageProvider`)
+- [ ] (7) Selector reutilizabil `MediaPicker` pentru formulare (selecție unică și multiplă)
+- [ ] (8) Teste E2E, verificare manuală cap-coadă (`docs/FAZA-3-verificare-manuala.md`) și închiderea fazei (TODO, PROGRESS)
 
 ## FAZA 4 — Catalog: model și admin · ~8-10 zile
 - [ ] ⚠️ **Permisiune separată pentru conținutul produsului** (ex. `products.content.write`): rolul Editor trebuie să poată edita descrierea și SEO-ul unui produs FĂRĂ să poată schimba prețuri, stoc sau costuri. De decis numele și maparea pe roluri (decizie utilizator); `products.write` rămâne pentru prețuri/variante. Actualizează catalogul RBAC, matricea din `docs/04` și testele

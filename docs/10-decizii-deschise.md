@@ -102,6 +102,7 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | 🟡 | **Termenul legal minim de valabilitate al voucherelor** | Contabilul se interesează | Faza 15b |
 | 🟡 | **Puncte de loialitate: TVA pe 100 sau pe 90?** | Contabilul a spus „linie de discount, nu afectează baza de TVA", ambiguu. Întrebare trimisă: la 100 lei cu 10 lei plătiți în puncte, TVA se calculează pe 100 sau pe 90? | Faza 15b |
 | 🟡 | **Produs digital în comandă mixtă cu ramburs** | Recomandarea: eliberare la **livrare confirmată**, nu la virament (`11` spune acum „la confirmarea încasării"). În așteptarea deciziei utilizatorului | Faza 14b |
+| 🟡 | **Storage-ul de producție** | Codul vorbește S3 generic (`STORAGE_DRIVER`, `S3_*` din `.env`); furnizorul se schimbă fără modificări de cod. Candidați: Cloudflare R2, alt S3 gestionat, MinIO self-hosted. *Mutat din Faza 3 (decizie utilizator, 2026-10-12): nu blochează implementarea media* | Faza 18 |
 
 ---
 
