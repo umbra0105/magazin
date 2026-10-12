@@ -9,3 +9,6 @@ allowBuilds:
   prisma: true
   "@prisma/engines": true
   esbuild: false
+  # Optimizare nativă OPȚIONALĂ a msgpackr (adus de bullmq); fără ea msgpackr folosește fallback-ul JS.
+  # Binarele prebuilt vin oricum prin pachetele @msgpackr-extract/*; scriptul de build rămâne respins.
+  msgpackr-extract: false
