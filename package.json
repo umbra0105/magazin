@@ -32,6 +32,7 @@
     "admin:unlock": "node --import tsx packages/core/scripts/admin-unlock.ts",
     "rbac:revoke": "node --import tsx packages/core/scripts/rbac-revoke.ts",
     "admin:create": "node --import tsx packages/core/scripts/admin-create.ts",
+    "dev:age-session": "node --import tsx packages/core/scripts/dev-age-session.ts",
     "admin:set-password": "node --import tsx packages/core/scripts/admin-set-password.ts",
     "cli:tty-test": "node --import tsx packages/core/scripts/tty-test.ts"
   },

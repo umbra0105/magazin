@@ -6,10 +6,11 @@ import { describe, expect, it } from "vitest";
 const CORE = fileURLToPath(new URL("../../", import.meta.url));
 
 /**
- * Scripturi care NU sunt seed și manipulează o parolă tastată de om. Au garanții proprii în
- * `test/support/admin-create-security.test.ts` (fără echo, fără argumente/env/pipe, fără parolă implicită).
+ * Scripturi care NU sunt seed. `admin-create`/`admin-set-password` manipulează o parolă tastată de om și au
+ * garanții proprii în `test/support/admin-create-security.test.ts`. `dev-age-session` (doar dezvoltare)
+ * modifică exclusiv `session.createdAt` al unui utilizator; garanția e în `_dev-age-session-args.test.ts`.
  */
-const NOT_SEED = new Set(["admin-create.ts", "admin-set-password.ts"]);
+const NOT_SEED = new Set(["admin-create.ts", "admin-set-password.ts", "dev-age-session.ts"]);
 
 function seedFiles(): string[] {
   const dirs = [join(CORE, "scripts"), join(CORE, "src", "seed")];
