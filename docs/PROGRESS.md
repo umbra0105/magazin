@@ -1,19 +1,26 @@
 # Jurnal de progres
 
 ## 2026-10-12 · Sesiunea 4 · Faza 3 (Media), Promptul 4 — ÎN LUCRU
-**Terminat:** — (planul în 8 puncte aprobat; vezi `docs/06-todo-master.md`, Faza 3)
-**În lucru:** punctul 1 (schema `Media`/`MediaFolder`, `media.read`)
+**Terminat (confirmat de utilizator):** punctul 1 (schema `Media`/`MediaFolder`, migrația, `media.read`)
+**În lucru:** punctul 2 (adaptor de storage local + S3, MinIO în CI) — așteaptă verificarea utilizatorului și push-ul pentru CI
 **Blocat:** —
 
 **Decizii în sesiune (toate ale utilizatorului):**
 - **Utilizator:** driverul de storage rămâne în `.env` (`STORAGE_DRIVER` + `S3_*`), nu în Setări; formularea din TODO corectată
 - **Utilizator:** upload prin server, cu stream, pentru ambele drivere; presigned URL doar când apar fișiere mari
-- **Utilizator:** dependențe aprobate: `sharp`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `file-type`, `blurhash`. Modificarea din `allowBuilds` (dacă e nevoie) se arată înainte
+- **Utilizator:** dependențe aprobate: `sharp`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `file-type`, `blurhash`. Modificarea din `allowBuilds` (dacă e nevoie) se arată înainte. Instalate până acum (punctul 2): `@aws-sdk/client-s3` și `@aws-sdk/s3-request-presigner` la `3.1149.0`, versiuni exacte
 - **Utilizator:** limită implicită 20 MB/fișier și ~40 megapixeli la intrare, editabile din setări; tipuri JPEG, PNG, WebP, AVIF (fără GIF; SVG respins); taguri `String[]`
 - **Utilizator:** `media.read` nou (matricea din `docs/04` §6 actualizată în același commit); originalul se păstrează fără EXIF/GPS lângă variante
 - **Utilizator:** ruta de upload (API route, nu server action) își face singură: sesiune, `media.write`, Origin, rate limit, audit (și refuzuri), mărime în timpul stream-ului — cu test de refuz
 - **Utilizator:** teste MinIO pe bucket separat de test, cu gardă („test" în nume); MinIO în `ci.yml`; migrația fără reset (altfel 🛑); dacă `sharp` nu se încarcă din cauza Application Control → 🛑, fără ocolirea securității Windows
 - **Utilizator:** alegerea storage-ului de producție mutată la **Faza 18** (`docs/10` Partea I, „Deschise")
+- **Claude (punctul 2):** vizibilitatea e STRUCTURALĂ: cheia începe cu `public/` sau `private/` (validat în `keys.ts`); `publicUrl` refuză cheile private. Fără parametru de vizibilitate care să se poată uita
+- **Claude (punctul 2):** `publicUrl` fără `S3_PUBLIC_URL` trece prin ruta aplicației `/media/...` (se construiește la punctul 5), pentru ambele drivere; cu `S3_PUBLIC_URL` (CDN/bucket public) arată direct acolo. Nu depindem de politici de bucket pentru dezvoltare
+- **Claude (punctul 2):** `put` primește `Buffer` (dimensiunea e limitată de ruta de upload; fără `@aws-sdk/lib-storage`); `get` întoarce stream. Pe local, scriere atomică (temp + rename) și metadate într-un fișier `<cheie>.meta.json` (sufix rezervat)
+- **Claude (punctul 2):** linkurile semnate locale sunt HMAC-SHA256 cu cheie HKDF din `APP_KEY` (context separat de criptarea credențialelor); ruta care le servește (verificare cu `verifyClaims`) vine la Faza 14b
+- **Claude (punctul 2):** `STORAGE_LOCAL_PATH` relativ se ancorează la rădăcina monorepo-ului (primul `pnpm-workspace.yaml`), ca web (cwd `apps/web`) și worker (cwd rădăcină) să vadă același director. În producție: cale absolută. `/storage` e în `.gitignore`
+- **Claude (punctul 2):** în CI, MinIO pornește cu `docker run` într-un pas (nu `services:`, care nu permite comanda `server /data`), aceeași imagine pe digest ca în docker compose; aplicația rămâne cu `STORAGE_DRIVER=local`, variabilele `S3_*` le citesc doar testele de storage
+- **Claude (punctul 2):** `IntegrationError` adăugat în `@ecom/shared` (era în CLAUDE.md, lipsea din cod)
 
 ## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — TERMINATĂ ȘI VERIFICATĂ 🏁
 **Terminat (confirmat de utilizator):** `withAudit` pe scrierile din admin (punctul 9); layout admin (guard `admin.access` + `adminSessionHours`, meniu pe permisiuni/flag-uri, dark mode); Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro

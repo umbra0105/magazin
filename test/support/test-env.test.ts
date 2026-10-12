@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertTestBucket,
   assertTestDatabase,
   assertTestRedis,
+  deriveTestBucket,
   deriveTestDatabaseUrl,
   deriveTestRedisUrl,
   integrationEnv,
@@ -81,5 +83,29 @@ describe("integrationEnv", () => {
       DATABASE_URL: "postgresql://a:b@c:5432/proba_test",
       REDIS_URL: "redis://localhost:6379/5",
     });
+  });
+});
+
+describe("bucket de test pentru storage", () => {
+  it("derivă <bucket>-test și păstrează numele care conțin deja „test”", () => {
+    expect(deriveTestBucket("ecom")).toBe("ecom-test");
+    expect(deriveTestBucket("ecom-test")).toBe("ecom-test");
+    expect(deriveTestBucket("ecom", "alt-bucket-test")).toBe("alt-bucket-test");
+  });
+
+  it("refuză un bucket fără „test” în nume și unul lipsă", () => {
+    expect(() => assertTestBucket("ecom")).toThrow(/REFUZ/);
+    expect(() => assertTestBucket("productie")).toThrow(/test/);
+    expect(() => assertTestBucket(undefined)).toThrow();
+    expect(() => assertTestBucket("ecom-test")).not.toThrow();
+  });
+
+  it("integrationEnv îndreaptă S3_BUCKET spre bucketul de test", () => {
+    expect(integrationEnv({ S3_BUCKET: "ecom" } as NodeJS.ProcessEnv)).toEqual({
+      S3_BUCKET: "ecom-test",
+    });
+    expect(
+      integrationEnv({ S3_BUCKET: "ecom", TEST_S3_BUCKET: "proba-test" } as NodeJS.ProcessEnv),
+    ).toEqual({ S3_BUCKET: "proba-test" });
   });
 });

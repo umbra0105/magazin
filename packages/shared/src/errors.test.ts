@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DomainError, ValidationError } from "./errors";
+import { DomainError, IntegrationError, ValidationError } from "./errors";
 
 describe("erori tipate", () => {
   it("DomainError păstrează codul stabil, mesajul și detaliile", () => {
@@ -17,5 +17,13 @@ describe("erori tipate", () => {
     expect(error.code).toBe("VALIDATION_ERROR");
     expect(error.name).toBe("ValidationError");
     expect(error.details).toEqual({ field: "email" });
+  });
+
+  it("IntegrationError e DomainError cu cod stabil dat de apelant", () => {
+    const error = new IntegrationError("STORAGE_FAILED", "Scrierea a eșuat", { status: 500 });
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error.code).toBe("STORAGE_FAILED");
+    expect(error.name).toBe("IntegrationError");
+    expect(error.details).toEqual({ status: 500 });
   });
 });

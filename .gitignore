@@ -10,3 +10,6 @@ test-results
 *.tsbuildinfo
 .DS_Store
 generated
+
+# Fișiere încărcate (STORAGE_DRIVER=local)
+/storage

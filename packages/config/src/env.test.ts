@@ -32,6 +32,18 @@ describe("parseEnv", () => {
     if (env.STORAGE_DRIVER === "s3") expect(env.S3_FORCE_PATH_STYLE).toBe(true);
   });
 
+  it("S3_PUBLIC_URL e opțional și trebuie să fie un URL complet", () => {
+    const withoutUrl = parseEnv({ ...base, ...s3 });
+    if (withoutUrl.STORAGE_DRIVER === "s3") expect(withoutUrl.S3_PUBLIC_URL).toBeUndefined();
+    const withUrl = parseEnv({ ...base, ...s3, S3_PUBLIC_URL: "https://cdn.magazin.ro" });
+    if (withUrl.STORAGE_DRIVER === "s3") {
+      expect(withUrl.S3_PUBLIC_URL).toBe("https://cdn.magazin.ro");
+    }
+    expect(() => parseEnv({ ...base, ...s3, S3_PUBLIC_URL: "cdn.magazin.ro" })).toThrow(
+      EnvValidationError,
+    );
+  });
+
   it("acceptă driverul local fără variabile S3", () => {
     const env = parseEnv({ ...base, STORAGE_DRIVER: "local" });
     if (env.STORAGE_DRIVER === "local") expect(env.STORAGE_LOCAL_PATH).toBe("./storage");

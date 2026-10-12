@@ -58,9 +58,28 @@ export function assertTestRedis(redisUrl: string | undefined): asserts redisUrl 
   }
 }
 
+/** `ecom` → `ecom-test`; un nume care conține deja „test” rămâne neschimbat. */
+export function deriveTestBucket(bucket: string, override?: string): string {
+  if (override) return override;
+  return TEST_NAME.test(bucket) ? bucket : `${bucket}-test`;
+}
+
+/** Refuză orice bucket fără „test” în nume (testele de storage scriu și șterg obiecte). */
+export function assertTestBucket(bucket: string | undefined): asserts bucket is string {
+  if (!bucket) throw new Error("Testele de storage cer S3_BUCKET (sau TEST_S3_BUCKET) setat.");
+  if (!TEST_NAME.test(bucket)) {
+    throw new Error(
+      `REFUZ să rulez testele de storage pe bucketul „${bucket}”: numele lui nu conține „test”. ` +
+        "Testele scriu și șterg obiecte. Folosește un bucket de test (implicit <bucket>-test) " +
+        "sau setează TEST_S3_BUCKET către unul.",
+    );
+  }
+}
+
 export interface IntegrationEnv {
   DATABASE_URL: string;
   REDIS_URL: string;
+  S3_BUCKET: string;
 }
 
 /**
@@ -80,6 +99,9 @@ export function integrationEnv(env: NodeJS.ProcessEnv = process.env): Partial<In
       env["REDIS_URL"] ?? env["TEST_REDIS_URL"] ?? "",
       env["TEST_REDIS_URL"],
     );
+  }
+  if (env["TEST_S3_BUCKET"] || env["S3_BUCKET"]) {
+    out.S3_BUCKET = deriveTestBucket(env["S3_BUCKET"] ?? "", env["TEST_S3_BUCKET"]);
   }
   return out;
 }

@@ -35,6 +35,8 @@ const s3StorageSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().min(1),
   S3_SECRET_ACCESS_KEY: z.string().min(1),
   S3_FORCE_PATH_STYLE: envBoolean.default(false),
+  // CDN sau bucket public pentru fișierele `public/…`; fără el, URL-urile trec prin ruta aplicației.
+  S3_PUBLIC_URL: z.url({ error: "S3_PUBLIC_URL trebuie să fie un URL complet" }).optional(),
 });
 
 const storageSchema = z.discriminatedUnion("STORAGE_DRIVER", [localStorageSchema, s3StorageSchema]);

@@ -31,3 +31,6 @@ export class ForbiddenError extends DomainError {
     super("AUTH_FORBIDDEN", "Nu ai permisiunea necesară pentru această acțiune", { permission });
   }
 }
+
+/** Un serviciu extern (storage, plăți, curier, facturare) a eșuat sau a fost configurat greșit. */
+export class IntegrationError extends DomainError {}
