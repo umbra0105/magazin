@@ -49,13 +49,13 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
 - [x] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
 - [x] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
-- [~] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id) — _în curs, pe bucăți: gata Better Auth + argon2id, rate limiting + blocare, middleware `/admin` `/cont`, contul de admin CLI (confirmat), paginile de autentificare (confirmat), layout admin (confirmat), emailuri BullMQ + React Email (confirmat), `withAudit` pe scrierile din admin (în verificare)_
-- [ ] Rate limiting Redis pe rutele sensibile
+- [x] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id) — Better Auth + argon2id, lockout, middleware `/admin` `/cont`, pagini de autentificare, emailuri BullMQ + React Email
+- [x] Rate limiting Redis pe rutele sensibile (autentificare, înregistrare, resetare, confirmare email; lockout 15 min; `trustedProxyHops`)
 - [x] RBAC: permisiuni ca string-uri (inclusiv `admin.access`), roluri implicite, `can()` + `withPermission()`, matrice rol × permisiune în `docs/04` §6
 - [x] Feature flags cu helper `isEnabled()`
-- [ ] Layout admin: sidebar, topbar, breadcrumbs, guard (meniul ascunde funcțiile cu flag oprit: `FeatureFlagService.list()` e gata)
+- [x] Layout admin: sidebar, topbar, breadcrumbs, guard (meniul ascunde funcțiile cu flag oprit: `FeatureFlagService.list()` e gata)
 - [x] **Contul de administrator** (creat la instalare/prin comandă, fără parolă implicită în cod sau seed) și atribuirea rolului Owner
-- [ ] Legarea `withAudit` la scrierile existente din admin (`SettingsService.set`, `FeatureFlagService.setEnabled`, `BrandingService.save`, `IntegrationService.save`)
+- [~] Legarea `withAudit` la scrierile existente din admin — _implementat și testat (diff, valori sensibile excluse, încercări refuzate, matrice rol × acțiune); în verificare la utilizator_ — (`SettingsService.set`, `FeatureFlagService.setEnabled`, `BrandingService.save`, `IntegrationService.save`)
 - [x] Seed de bază: roluri, permisiuni, setări implicite, flag-uri oprite, branding implicit (idempotent). **Contul de administrator NU e aici: se mută în Promptul 3 (autentificare), fără parolă implicită**
 - [x] (8b) Bază de date separată pentru testele de integrare: `ecom_test` creată și migrată automat, Redis pe alt index, gardă care refuză bazele fără "test" în nume, aceeași bază în CI
 - [x] (10) Teste rămase pentru Promptul 2: setări, flag-uri, criptare, audit append-only, branding (ruta /theme.css, golden-uri, fallback-uri)

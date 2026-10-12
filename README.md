@@ -201,6 +201,20 @@ Detaliile complete sunt în `CLAUDE.md`. Pe scurt:
 teste unitare, teste de integrare (cu Postgres și Redis ca servicii), build și E2E.
 Aceiași pași îi poți rula local, în aceeași ordine, cu comenzile de mai sus.
 
+**Reproducerea CI-ului într-un container Linux curat** (recomandat înainte de un push care atinge dependențe,
+build sau configurație; prinde diferențe față de Windows, de ex. turbo care filtrează variabilele de mediu):
+
+1. pornește `postgres:16.15`, `redis:7.4.11` și `axllent/mailpit:v1.31.4` într-un singur namespace de rețea
+   (`--network container:<postgres>`), ca să funcționeze `localhost` ca în CI;
+2. exportă sursele curate (`git archive HEAD`) într-un container `node:24` și instalează `pnpm@<packageManager>`;
+3. setează doar variabilele din `ci.yml` (fără `.env`) și rulează, în ordine: `pnpm install --frozen-lockfile`,
+   `lint`, `lint:root`, `format:check`, `typecheck`, `test`, `db:deploy`, `test:integration`, `build`,
+   `playwright install --with-deps chromium`, `test:e2e`.
+
+**Scripturi de build respinse (pnpm 12):** `pnpm-workspace.yaml` → `allowBuilds` listează explicit ce
+pachete au voie să ruleze scripturi la instalare. Un pachet nou cu script de build face `pnpm install` să
+pice cu `ERR_PNPM_IGNORED_BUILDS`: decide-l explicit acolo (`true`/`false`), nu aproba totul.
+
 ## Probleme frecvente
 
 **`EnvValidationError` la pornire.** Lipsește sau e greșită o variabilă din `.env`. Mesajul

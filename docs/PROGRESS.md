@@ -2,10 +2,10 @@
 
 ## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — în curs
 **Terminat (confirmat de utilizator):** layout admin (guard `admin.access` + `adminSessionHours`, meniu pe permisiuni/flag-uri, dark mode); Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
-**În lucru:** punctul 9 (`withAudit` pe scrierile din admin: server actions fără UI sub `withPermission`, audit cu diferențe, actor, requestId, rezultat `success`/`denied`), **așteaptă verificarea**
+**În lucru:** punctul 9 (`withAudit` pe scrierile din admin) **așteaptă verificarea utilizatorului**; punctul 10 (teste/închidere: matricea de securitate rol × acțiune pe Postgres real, E2E cap-coadă Faza 2, README) e implementat, **așteaptă verificarea**
 **Blocat:** —
-**Rămâne din Promptul 3:** teste/închidere (punctele 10-12) și 🏁 Faza 2
-**Stare:** Faza 2 din TODO NU e completă; urmează punctul 8 (emailuri) abia după verificarea login-ului
+**Rămâne din Promptul 3:** punctele 11-12 (verificare cap-coadă, închiderea TODO) și 🏁 Faza 2
+**Stare:** Faza 2 din TODO NU e încă închisă; `main` e împins la `origin` (CI reprodus într-un container Linux: toți pașii verzi)
 
 **Decizii în sesiune:**
 - **Utilizator:** Suport NU are `orders.refund` (până există limita de rambursare); scoaterea din baze existente cu `pnpm rbac:revoke <rol> <permisiune> [--apply]` (seed-ul nu scoate niciodată permisiuni)
@@ -15,7 +15,10 @@
 - **Claude:** `audit_log.outcome` (`success`/`denied`, migrație `audit_log_outcome`); încercările refuzate se înregistrează fără datele trimise; la integrări în audit apar doar NUMELE credențialelor (`authFields`, `authFieldsChanged`), nu valorile și nici sufixul mascat; o scriere neschimbată nu scrie în jurnal. Server actions din `(admin)/admin/setari/actions.ts` devin endpoint-uri abia când o pagină le importă (Fazele 6/16)
 - **Claude:** layout-urile nu se re-rulează la navigare, deci fiecare pagină de admin își cere `requireAdmin({ permission, feature })`; deconectarea doar prin POST
 
+- **Utilizator → Claude (CI):** `msgpackr-extract: false` în `allowBuilds` (optimizare nativă opțională a msgpackr; fallback JS; bullmq verificat fără el). Turbo în mod strict ascundea variabilele de mediu de `next build` (`globalPassThroughEnv` în `turbo.json`), iar paginile se prerandau la build cu acces la DB: layout-ul rădăcină e `force-dynamic`. Test E2E „telefon: sidebar” repetă clicul până la hidratare
+
 **Datorie tehnică / de știut:**
+- Avertisment la build: `jose` (din `better-auth/cookies`, în middleware) folosește `CompressionStream`, neacceptat în Edge Runtime; doar avertisment, calea nu e folosită
 - `turbo.exe` blocat de Windows Application Control pe mașina utilizatorului (nu modificăm setări de securitate); CI-ul Linux rămâne cu turbo
 - Cu `auth.requireEmailVerification=false`, Better Auth răspunde „user already exists” la înregistrare (enumerare posibilă); implicit true nu scurge nimic
 - Emailuri: workerul rulează în `pnpm dev:web` (dezvoltare) și ca `pnpm worker` (producție, Faza 21: proces separat în Docker); fără SMTP activ jobul eșuează cu `EMAIL_NOT_CONFIGURED`. `pnpm dev:mail` (dev) se mută din pachet înainte de împachetare (ca `dev:preset`)
