@@ -7,6 +7,9 @@
 
 export const LOGIN_PATH = "/autentificare";
 
+/** Antetul (doar intern) prin care middleware-ul dă layout-urilor calea cererii curente. */
+export const PATHNAME_HEADER = "x-pathname";
+
 export type GuardDecision =
   { action: "next" } | { action: "redirect"; location: string } | { action: "unauthorized" };
 

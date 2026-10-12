@@ -39,6 +39,15 @@ export function renderThemeCss(config: BrandingConfig): string {
   return `${base}\n@media (prefers-color-scheme:dark){html:root{${colorDeclarations(config.colors.dark)}}}`;
 }
 
+/**
+ * Doar o paletă de culori (`html:root{...}`), pentru foile `/theme-light.css` și `/theme-dark.css`
+ * din admin: schimbarea Luminos/Întunecat/Sistem se face comutând atributul `media` al linkurilor,
+ * fără selectori suplimentari în CSS-ul principal. Aceeași garanție: doar valori validate.
+ */
+export function renderPaletteCss(colors: ColorSet): string {
+  return `html:root{${colorDeclarations(colors)}}`;
+}
+
 /** ETag stabil: se schimbă doar când se schimbă CSS-ul. */
 export function themeEtag(css: string): string {
   return `"${createHash("sha1").update(css).digest("base64url")}"`;

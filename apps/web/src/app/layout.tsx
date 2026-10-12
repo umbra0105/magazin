@@ -5,7 +5,8 @@ import "./globals.css";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ro" className={fontVariableClasses}>
+    // suppressHydrationWarning: scriptul de temă din admin setează `color-scheme` pe <html> înainte de hidratare.
+    <html lang="ro" className={fontVariableClasses} suppressHydrationWarning>
       <head>
         {/* Tema din Branding. Render-blocking în <head> = fără flash de temă greșită. */}
         {/* eslint-disable-next-line @next/next/no-css-tags -- CSS generat dinamic de ruta /theme.css, nu un fișier din bundle */}

@@ -16,10 +16,13 @@ const m = getMessages().auth;
 
 export function LoginForm({
   nextPath,
+  sessionExpired = false,
   registerHref,
 }: {
   /** Destinația după autentificare, deja validată pe server (`safeNextPath`) sau `null`. */
   nextPath: string | null;
+  /** Sesiunea de admin a expirat: se afișează „Sesiunea a expirat” deasupra formularului. */
+  sessionExpired?: boolean;
   registerHref: string;
 }) {
   const router = useRouter();
@@ -84,6 +87,11 @@ export function LoginForm({
       aria-busy={isSubmitting}
       className="flex flex-col gap-4"
     >
+      {sessionExpired && !formError ? (
+        <FormAlert tone="error" focusOnShow={false}>
+          {getMessages().admin.session.expired}
+        </FormAlert>
+      ) : null}
       {formError ? <FormAlert tone="error">{formError}</FormAlert> : null}
       {info ? <FormAlert tone="success">{info}</FormAlert> : null}
 

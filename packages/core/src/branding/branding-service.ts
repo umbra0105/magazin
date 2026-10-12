@@ -1,7 +1,7 @@
 import { ValidationError, getLogger } from "@ecom/shared";
 import { invalidateCache, readThrough, type KeyValueCache } from "../cache/read-through";
 import { checkContrast, type ContrastWarning } from "./contrast";
-import { renderThemeCss, themeEtag } from "./css";
+import { renderPaletteCss, renderThemeCss, themeEtag } from "./css";
 import { DEFAULT_PRESET, configFromPreset } from "./presets";
 import { brandingConfigSchema, type BrandingConfig } from "./tokens";
 
@@ -61,6 +61,13 @@ export class BrandingService {
   /** CSS-ul temei și ETag-ul lui, pentru `/theme.css`. */
   async getTheme(): Promise<{ css: string; etag: string }> {
     const css = renderThemeCss(await this.getConfig());
+    return { css, etag: themeEtag(css) };
+  }
+
+  /** Paleta luminoasă sau întunecată a magazinului, ca foaie de stil (alegerea din admin). */
+  async getPalette(mode: "light" | "dark"): Promise<{ css: string; etag: string }> {
+    const config = await this.getConfig();
+    const css = renderPaletteCss(config.colors[mode]);
     return { css, etag: themeEtag(css) };
   }
 

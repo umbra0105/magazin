@@ -1,7 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 import { REQUEST_ID_HEADER, resolveRequestId } from "@ecom/shared/request-id";
-import { guardDecision } from "@/lib/route-guard";
+import { PATHNAME_HEADER, guardDecision } from "@/lib/route-guard";
+
+/** Calea + query, fără parametrii interni Next (`_rsc`) care nu fac parte din adresa vizibilă. */
+function pathWithoutInternalParams(url: URL): string {
+  const params = new URLSearchParams(url.search);
+  params.delete("_rsc");
+  const query = params.toString();
+  return query ? `${url.pathname}?${query}` : url.pathname;
+}
 
 /**
  * Fiecărei cereri îi atribuie un requestId (sau îl păstrează pe cel primit) și îl întoarce în
@@ -32,6 +40,9 @@ export function middleware(request: NextRequest) {
   } else {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(REQUEST_ID_HEADER, requestId);
+    // Calea cererii pentru layout-uri/pagini (ex. `?next=` la redirectul de autentificare). Antetul
+    // vine mereu din middleware: orice valoare trimisă de client e suprascrisă.
+    requestHeaders.set(PATHNAME_HEADER, pathWithoutInternalParams(request.nextUrl));
     response = NextResponse.next({ request: { headers: requestHeaders } });
   }
   response.headers.set(REQUEST_ID_HEADER, requestId);

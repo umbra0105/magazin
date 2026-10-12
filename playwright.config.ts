@@ -40,6 +40,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
+  // Prima vizită a unei rute în `next dev` o compilează; testele de admin parcurg mai multe rute noi.
+  timeout: 90_000,
   // Prima cerere către o rută în `next dev` o compilează (pe Windows cu SWC blocat, încet).
   expect: { timeout: 15_000 },
   use: { baseURL: `http://localhost:${port}`, trace: "on-first-retry" },

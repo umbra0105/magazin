@@ -1,5 +1,26 @@
 # Jurnal de progres
 
+## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — în curs
+**Terminat (confirmat de utilizator):** Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
+**În lucru:** punctul 7 (layout admin), **așteaptă verificarea manuală** a utilizatorului (guard cu admin.access + adminSessionHours, meniu cu flag-uri/permisiuni, dark mode, breadcrumbs, tastatură)
+**Blocat:** —
+**Rămâne din Promptul 3:** emailuri (verificare, resetare) prin BullMQ + React Email; legarea `withAudit` la scrierile existente (server actions fără UI, `withPermission`); teste/închidere și 🏁 Faza 2
+**Stare:** Faza 2 din TODO NU e completă; urmează punctul 8 (emailuri) abia după verificarea login-ului
+
+**Decizii în sesiune:**
+- **Utilizator:** Suport NU are `orders.refund` (până există limita de rambursare); scoaterea din baze existente cu `pnpm rbac:revoke <rol> <permisiune> [--apply]` (seed-ul nu scoate niciodată permisiuni)
+- **Utilizator:** `admin.access` e permisiune explicită (cele 7 roluri de sistem o au; Owner implicit)
+- **Utilizator:** E2E rulează pe `ecom_test` + Redis DB 1 (gardă), cu teardown al conturilor `e2e-*@example.test`; local pe Windows fără turbo: `pnpm dev:web`, `pnpm check:local`
+- **Claude:** comenzile CLI interactive rulează cu `node --import tsx` de la rădăcină (nu `pnpm --filter`, care pierdea tastele); contoarele de blocare în Redis, nu în DB; dark mode admin prin foile `/theme-light.css` și `/theme-dark.css` (comutare `media`), fără a atinge `/theme.css`
+- **Claude:** layout-urile nu se re-rulează la navigare, deci fiecare pagină de admin își cere `requireAdmin({ permission, feature })`; deconectarea doar prin POST
+
+**Datorie tehnică / de știut:**
+- `turbo.exe` blocat de Windows Application Control pe mașina utilizatorului (nu modificăm setări de securitate); CI-ul Linux rămâne cu turbo
+- Cu `auth.requireEmailVerification=false`, Better Auth răspunde „user already exists” la înregistrare (enumerare posibilă); implicit true nu scurge nimic
+- Emailurile nu pleacă încă (punctul 8): „am uitat parola” dă eroare generică până atunci
+- Secțiunile din meniul de admin fără pagină proprie folosesc `[...slug]` (placeholder) până la fazele lor
+- `APP_URL` trebuie să fie URL-ul public real (Faza 18); `auth.trustedProxyHops=1` și Redis AOF în pachetul de producție (Fazele 18, 21); TOTP pentru admin (Faza 21)
+
 ## 2026-10-09 · Sesiunea 2 · Faza 2, partea din Promptul 2 (configurare, setări, criptare, flag-uri, audit, temă, seed)
 **Terminat (confirmat de utilizator):** punctele 1-10 și 8b din planul Promptului 2 (schema, SettingsService, setări fiscale/regionale, criptare, flag-uri, audit, tokens de temă, seed, baza de test separată, Sentry, testele rămase) + schimbarea mapării Manager + fix-ul A (tokenii vizibili în pagina principală)
 **În lucru:** — (punctul 10b, izolarea testelor unitare de baza reală, a fost confirmat `[x]` de utilizator; în TODO nu mai există `[~]`)

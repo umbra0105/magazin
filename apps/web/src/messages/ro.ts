@@ -97,6 +97,64 @@ export const ro = {
       signingOut: "Se deconectează…",
     },
   },
+  admin: {
+    metaTitle: "Administrare",
+    skipToContent: "Sari la conținut",
+    sidebarLabel: "Navigare principală",
+    openMenu: "Deschide meniul",
+    closeMenu: "Închide meniul",
+    breadcrumbLabel: "Poziția în pagină",
+    home: "Panou",
+    dashboard: {
+      title: "Panou de control",
+      description: "Prezentare generală a magazinului.",
+      placeholder:
+        "Aici vor apărea indicatorii magazinului, pe măsură ce sunt construite secțiunile.",
+    },
+    nav: {
+      dashboard: "Panou",
+      orders: "Comenzi",
+      products: "Produse",
+      inventory: "Stoc",
+      customers: "Clienți",
+      discounts: "Reduceri",
+      reviews: "Recenzii",
+      blog: "Blog",
+      loyalty: "Loialitate",
+      vouchers: "Vouchere",
+      content: "Conținut",
+      reports: "Rapoarte",
+      settings: "Setări",
+      users: "Utilizatori și roluri",
+      audit: "Jurnal de audit",
+    },
+    userMenu: {
+      button: "Meniul utilizatorului",
+      account: "Contul meu",
+      theme: "Aspect",
+      signOut: "Deconectare",
+      signingOut: "Se deconectează…",
+    },
+    theme: {
+      system: "Sistem",
+      light: "Luminos",
+      dark: "Întunecat",
+    },
+    session: {
+      expired: "Sesiunea a expirat. Autentifică-te din nou.",
+    },
+    forbidden: {
+      title: "Acces interzis",
+      noAdminAccess: "Contul tău nu are acces la zona de administrare.",
+      noPermission: "Nu ai permisiunea necesară pentru această secțiune.",
+      backHome: "Înapoi la panou",
+      toAccount: "Spre contul meu",
+    },
+    comingSoon: {
+      title: "Secțiune în construire",
+      description: "Această secțiune va fi disponibilă într-o etapă următoare.",
+    },
+  },
 } as const;
 
 export type Messages = typeof ro;

@@ -15,6 +15,18 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Pachetele workspace sunt livrate ca TypeScript sursă.
   transpilePackages: ["@ecom/shared", "@ecom/config", "@ecom/core", "@ecom/db", "@ecom/ui"],
+  // Zona de admin: niciodată în cache partajat sau de browser și niciodată indexată.
+  async headers() {
+    const privateNoIndex = [
+      { key: "Cache-Control", value: "no-store, max-age=0" },
+      { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+    ];
+    return [
+      { source: "/admin", headers: privateNoIndex },
+      { source: "/admin/:path*", headers: privateNoIndex },
+      { source: "/api/admin/:path*", headers: privateNoIndex },
+    ];
+  },
   serverExternalPackages: ["pg", "ioredis", "pino", "@node-rs/argon2"],
 };
 
