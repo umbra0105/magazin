@@ -6,6 +6,11 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { sentry } = await import("./lib/sentry");
     await sentry.sync();
+    // Doar în dezvoltare: workerul de emailuri rulează în procesul serverului (`pnpm dev:web`).
+    if (process.env.NODE_ENV === "development") {
+      const { startDevEmailWorker } = await import("./lib/dev-worker");
+      startDevEmailWorker();
+    }
   }
 }
 

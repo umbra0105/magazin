@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "pnpm --filter @ecom/web dev",
+    "worker": "node --import tsx packages/jobs/src/main.ts",
+    "dev:mail": "node --import tsx packages/core/scripts/dev-mail.ts",
     "build:web": "pnpm --filter @ecom/web build",
     "check:local": "pnpm -r typecheck && pnpm -r lint && pnpm lint:root && pnpm format:check && pnpm test",
     "build": "turbo run build",

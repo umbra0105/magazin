@@ -132,24 +132,28 @@ test.describe("celelalte pagini", () => {
     await expect(page.getByText("Introdu o adresă de email validă.")).toBeVisible();
   });
 
-  test("resetare fără token: mesaj și link către recuperare; cu token: formular cu parolă nouă", async ({
+  test("resetare: fără token în fragment = mesaj; cu token în fragment = formular cu parolă nouă", async ({
     page,
   }) => {
     await page.goto("/resetare-parola");
     await expect(page.locator("main [role=alert]")).toContainText("incomplet");
-    await page.goto("/resetare-parola/un-token-oarecare");
+    await page.goto("/resetare-parola#token=abcdefghijklmnopqrstuvwxyz012345");
     await expect(page.getByLabel("Parolă nouă")).toHaveAttribute("autocomplete", "new-password");
+    // Tokenul e scos din adresă după citire.
+    expect(page.url()).not.toContain("token");
   });
 
-  test("verificare email: fără eroare = succes; cu ?error = link invalid și retrimitere", async ({
+  test("verificare email: fără token = mesaj clar și retrimitere; cu token = buton de confirmare", async ({
     page,
   }) => {
     await page.goto("/verificare-email");
-    await expect(page.getByRole("heading", { level: 1, name: "Email verificat" })).toBeVisible();
-    await page.goto("/verificare-email?error=invalid_token");
     await expect(
       page.getByRole("heading", { level: 1, name: "Link invalid sau expirat" }),
     ).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
+
+    await page.goto("/verificare-email#token=abcdefghijklmnopqrstuvwxyz012345");
+    await expect(page.getByRole("button", { name: "Confirmă adresa de email" })).toBeVisible();
+    expect(page.url()).not.toContain("token");
   });
 });

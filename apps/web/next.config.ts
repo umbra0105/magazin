@@ -14,7 +14,15 @@ const nextConfig: NextConfig = {
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   reactStrictMode: true,
   // Pachetele workspace sunt livrate ca TypeScript sursă.
-  transpilePackages: ["@ecom/shared", "@ecom/config", "@ecom/core", "@ecom/db", "@ecom/ui"],
+  transpilePackages: [
+    "@ecom/shared",
+    "@ecom/config",
+    "@ecom/core",
+    "@ecom/db",
+    "@ecom/ui",
+    "@ecom/jobs",
+    "@ecom/emails",
+  ],
   // Zona de admin: niciodată în cache partajat sau de browser și niciodată indexată.
   async headers() {
     const privateNoIndex = [
@@ -27,7 +35,7 @@ const nextConfig: NextConfig = {
       { source: "/api/admin/:path*", headers: privateNoIndex },
     ];
   },
-  serverExternalPackages: ["pg", "ioredis", "pino", "@node-rs/argon2"],
+  serverExternalPackages: ["pg", "ioredis", "pino", "@node-rs/argon2", "bullmq", "nodemailer"],
 };
 
 // Fără org/project/authToken: nu urcă source maps și nu contactează Sentry la build.

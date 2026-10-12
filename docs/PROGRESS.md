@@ -1,10 +1,10 @@
 # Jurnal de progres
 
 ## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — în curs
-**Terminat (confirmat de utilizator):** Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
-**În lucru:** punctul 7 (layout admin), **așteaptă verificarea manuală** a utilizatorului (guard cu admin.access + adminSessionHours, meniu cu flag-uri/permisiuni, dark mode, breadcrumbs, tastatură)
+**Terminat (confirmat de utilizator):** layout admin (guard `admin.access` + `adminSessionHours`, meniu pe permisiuni/flag-uri, dark mode); Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
+**În lucru:** punctul 8 (emailuri: coadă BullMQ, șabloane React Email ro, SMTP din Integration, Mailpit în dev), **așteaptă verificarea manuală** cu Mailpit
 **Blocat:** —
-**Rămâne din Promptul 3:** emailuri (verificare, resetare) prin BullMQ + React Email; legarea `withAudit` la scrierile existente (server actions fără UI, `withPermission`); teste/închidere și 🏁 Faza 2
+**Rămâne din Promptul 3:** legarea `withAudit` la scrierile existente (server actions fără UI, `withPermission`); teste/închidere și 🏁 Faza 2
 **Stare:** Faza 2 din TODO NU e completă; urmează punctul 8 (emailuri) abia după verificarea login-ului
 
 **Decizii în sesiune:**
@@ -17,7 +17,8 @@
 **Datorie tehnică / de știut:**
 - `turbo.exe` blocat de Windows Application Control pe mașina utilizatorului (nu modificăm setări de securitate); CI-ul Linux rămâne cu turbo
 - Cu `auth.requireEmailVerification=false`, Better Auth răspunde „user already exists” la înregistrare (enumerare posibilă); implicit true nu scurge nimic
-- Emailurile nu pleacă încă (punctul 8): „am uitat parola” dă eroare generică până atunci
+- Emailuri: workerul rulează în `pnpm dev:web` (dezvoltare) și ca `pnpm worker` (producție, Faza 21: proces separat în Docker); fără SMTP activ jobul eșuează cu `EMAIL_NOT_CONFIGURED`. `pnpm dev:mail` (dev) se mută din pachet înainte de împachetare (ca `dev:preset`)
+- Tokenul de verificare e propriul (tabela `verification`, hash SHA-256, 24h, unică folosință), nu JWT-ul Better Auth (reutilizabil); cel de resetare e al Better Auth (în Redis, 1h, unică folosință). Linkurile poartă tokenul în fragment `#token=` (nu ajunge la server/loguri); confirmarea emailului e pe POST, ca scanerele de linkuri să nu consume tokenul
 - Secțiunile din meniul de admin fără pagină proprie folosesc `[...slug]` (placeholder) până la fazele lor
 - `APP_URL` trebuie să fie URL-ul public real (Faza 18); `auth.trustedProxyHops=1` și Redis AOF în pachetul de producție (Fazele 18, 21); TOTP pentru admin (Faza 21)
 

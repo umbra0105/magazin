@@ -17,6 +17,14 @@ export const SENSITIVE_FIELDS = [
   "costPrice",
   "costPriceDate",
   "costNet",
+  // Emailuri tranzacționale: linkurile conțin tokenuri, iar corpul poate conține date personale.
+  "link",
+  "verifyLink",
+  "resetLink",
+  "verifyUrl",
+  "resetUrl",
+  "html",
+  "emailBody",
 ] as const;
 
 const EXACT = new Set(SENSITIVE_FIELDS.map((field) => field.toLowerCase()));
@@ -30,6 +38,7 @@ const FRAGMENTS = [
   "credential",
   "authorization",
   "cookie",
+  "link",
 ];
 
 /** Un nume de câmp e sensibil dacă e în listă sau conține un fragment sensibil (fără majuscule). */

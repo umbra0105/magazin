@@ -13,16 +13,24 @@ export default async function globalSetup(): Promise<void> {
     process.env["TEST_REDIS_URL"],
     resolve(process.cwd(), "packages", "db"),
   );
-  // Seed-ul de pachet (roluri, permisiuni, setări implicite, flag-uri oprite) pe baza de TEST,
-  // ca testele de admin să aibă rolurile de sistem. Idempotent; scriptul citește DATABASE_URL și
-  // REDIS_URL din mediu, deci primește explicit bazele de test (niciodată cele din .env).
+
+  // Scripturile citesc DATABASE_URL și REDIS_URL din mediu, deci primesc explicit bazele de TEST
+  // (niciodată cele din .env).
+  const testEnv = {
+    ...process.env,
+    DATABASE_URL: process.env["TEST_DATABASE_URL"] ?? "",
+    REDIS_URL: process.env["TEST_REDIS_URL"] ?? "",
+  };
+  // Seed-ul de pachet (roluri, permisiuni, setări implicite, flag-uri oprite): idempotent.
   execSync("node --import tsx packages/core/scripts/seed.ts", {
     cwd: process.cwd(),
-    env: {
-      ...process.env,
-      DATABASE_URL: process.env["TEST_DATABASE_URL"] ?? "",
-      REDIS_URL: process.env["TEST_REDIS_URL"] ?? "",
-    },
+    env: testEnv,
+    stdio: "pipe",
+  });
+  // Trimiterea emailurilor spre Mailpit (SMTP localhost:1025), ca testele cu email să ajungă la el.
+  execSync("node --import tsx packages/core/scripts/dev-mail.ts", {
+    cwd: process.cwd(),
+    env: testEnv,
     stdio: "pipe",
   });
 }

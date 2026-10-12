@@ -77,6 +77,24 @@ Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 | `pnpm admin:set-password <email>`               | schimbă parola unui cont (recuperare când emailul nu e configurat)           |
 | `pnpm cli:tty-test`                             | verifică terminalul: tastele ajung la CLI și nu se afișează                  |
 
+### Emailuri și worker
+
+Emailurile tranzacționale (verificarea contului, resetarea parolei) nu se trimit în cererea web: se pun
+într-o coadă BullMQ (Redis), iar un **worker** le trimite prin SMTP.
+
+- **În dezvoltare, `pnpm dev:web` pornește și workerul** (în procesul serverului), deci nu ai nimic de
+  rulat separat. În producție workerul e un proces separat: **`pnpm worker`** (opriți-l cu Ctrl+C: termină
+  joburile în curs).
+- **SMTP-ul se setează din admin / `Integration`** (tip `email`, furnizor `smtp`; parola criptată cu
+  `APP_KEY`), iar expeditorul din setările `email.fromName` / `email.fromAddress`. Fără SMTP activ,
+  emailurile nu pleacă (jobul eșuează cu `EMAIL_NOT_CONFIGURED`), dar înregistrarea nu e afectată.
+- **Local, cu Mailpit** (pornit de `docker compose`): rulează o dată `pnpm dev:mail` ca să configureze
+  trimiterea spre `localhost:1025`; mesajele se văd la http://localhost:8025.
+- Reîncercări: 5 încercări cu backoff exponențial (~10s, 20s, 40s, 80s). Tokenul de verificare e valabil
+  24h, cel de resetare 1h (`auth.emailVerificationHours`, `auth.passwordResetMinutes`), ambele de unică
+  folosință. Linkurile se construiesc din `APP_URL`, cu tokenul în fragment (`#token=…`), deci nu apar în
+  loguri. Niciun token, link sau corp de email nu se loghează.
+
 ### Windows: dacă turbo e blocat
 
 Pe unele instalări Windows, politica „Application Control” / Smart App Control blochează binarul

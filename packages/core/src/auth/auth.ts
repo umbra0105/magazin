@@ -10,9 +10,17 @@ import type { AuthSecondaryStorage } from "./redis-storage";
 
 export type AuthSettings = SettingGroupValue<"auth">;
 
+/**
+ * Trimiterea emailurilor tranzacționale. Implementarea (coada) stă în aplicație. Un email care nu
+ * pleacă NU trebuie să strice înregistrarea sau cererea de resetare, nici să dea un răspuns diferit
+ * pentru un cont existent față de unul inexistent: erorile se înghit aici (și se loghează fără
+ * conținut de către implementare).
+ */
 export interface AuthEmailSender {
-  sendVerification(data: { email: string; name: string; url: string }): Promise<void>;
-  sendPasswordReset(data: { email: string; name: string; url: string }): Promise<void>;
+  /** Emite tokenul de verificare (24h, unică folosință) și pune emailul în coadă. */
+  sendVerification(data: { userId: string; email: string; name: string }): Promise<void>;
+  /** `token` e tokenul de resetare al Better Auth (1h, unică folosință). */
+  sendPasswordReset(data: { email: string; name: string; token: string }): Promise<void>;
 }
 
 export interface CreateAuthDeps {
@@ -72,16 +80,30 @@ export function createAuth(deps: CreateAuthDeps) {
       requireEmailVerification: settings.requireEmailVerification,
       revokeSessionsOnPasswordReset: true,
       password: { hash: hashPassword, verify: verifyPassword },
+      // Resetarea: tokenul Better Auth (stocat în `verification`, se șterge la folosire = unică folosință).
+      resetPasswordTokenExpiresIn: settings.passwordResetMinutes * 60,
       ...(email && {
-        sendResetPassword: async ({ user, url }) =>
-          email.sendPasswordReset({ email: user.email, name: user.name, url }),
+        sendResetPassword: async ({ user, token }) => {
+          try {
+            await email.sendPasswordReset({ email: user.email, name: user.name, token });
+          } catch {
+            // Nu dăm erori diferite pentru cont existent/inexistent și nu blocăm cererea.
+          }
+        },
       }),
     },
     emailVerification: {
       sendOnSignUp: settings.requireEmailVerification,
+      // Linkul Better Auth (JWT, reutilizabil) NU se folosește: `EmailVerificationService` emite un
+      // token de unică folosință, iar `sendVerification` îl pune în coadă.
       ...(email && {
-        sendVerificationEmail: async ({ user, url }) =>
-          email.sendVerification({ email: user.email, name: user.name, url }),
+        sendVerificationEmail: async ({ user }) => {
+          try {
+            await email.sendVerification({ userId: user.id, email: user.email, name: user.name });
+          } catch {
+            // un email care nu pleacă nu blochează înregistrarea
+          }
+        },
       }),
     },
     session: {

@@ -82,6 +82,28 @@ export async function ageE2eSessions(email: string, hours: number): Promise<numb
   return tokens.length;
 }
 
+/** Face expirat tokenul de verificare al emailului unui utilizator (expiresAt în trecut). */
+export async function expireE2eVerificationToken(email: string): Promise<number> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `update verification set "expiresAt" = now() - interval '1 minute'
+       where identifier = 'ecom:verify-email:' || (select id from "user" where email = $1)`,
+      [email],
+    );
+    return result.rowCount ?? 0;
+  });
+}
+
+/** Emailul utilizatorului e verificat? (pentru aserțiuni în teste). */
+export async function isE2eUserVerified(email: string): Promise<boolean> {
+  return withClient(async (db) => {
+    const result = await db.query(`select "emailVerified" as v from "user" where email = $1`, [
+      email,
+    ]);
+    return result.rows[0]?.v === true;
+  });
+}
+
 /** Pornește/oprește un flag de funcționalitate și invalidează cache-ul lui. */
 export async function setE2eFeatureFlag(key: string, enabled: boolean): Promise<void> {
   await withClient(async (db) => {

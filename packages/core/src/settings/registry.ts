@@ -66,6 +66,10 @@ export const settingGroups = {
     customerSessionDays: z.number().int().min(1).max(365).default(30),
     /** Sesiunile conturilor cu acces la admin sunt mai scurte. */
     adminSessionHours: z.number().int().min(1).max(168).default(8),
+    /** Cât e valabil linkul de verificare a emailului (unică folosință). */
+    emailVerificationHours: z.number().int().min(1).max(168).default(24),
+    /** Cât e valabil linkul de resetare a parolei (unică folosință). */
+    passwordResetMinutes: z.number().int().min(5).max(1440).default(60),
     loginMaxAttempts: z.number().int().min(1).max(100).default(5),
     loginWindowMinutes: z.number().int().min(1).max(1440).default(15),
     registerMaxAttempts: z.number().int().min(1).max(100).default(5),

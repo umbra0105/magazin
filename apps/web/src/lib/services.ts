@@ -19,6 +19,7 @@ import {
   createPrismaSettingsStore,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
+import { createAuthEmailSender } from "./email";
 import { getLogger } from "@ecom/shared";
 
 const globalForServices = globalThis as unknown as {
@@ -106,6 +107,7 @@ export async function getAuth(): Promise<Auth> {
     isProduction: env.NODE_ENV === "production",
     settings,
     guard: new AuthGuard(getCounterStore(), settings),
+    email: createAuthEmailSender(),
     onAccountLocked: async ({ email, lockoutMinutes }) => {
       // Se auditează doar conturile reale; jurnalul nu e vizibil din exterior, deci nu dă indicii.
       const user = await getDb().user.findUnique({ where: { email: email.trim().toLowerCase() } });

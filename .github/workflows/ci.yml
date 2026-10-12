@@ -38,6 +38,18 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+      # SMTP de test (1025) + API HTTP (8025): testele E2E cu email citesc mesajele de aici.
+      mailpit:
+        image: axllent/mailpit:v1.31.4
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     # Valori DOAR pentru CI (servicii efemere). Nu sunt secrete reale.
     env:
       APP_URL: http://localhost:3100
