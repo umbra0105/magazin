@@ -308,6 +308,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Creare cont administrator, alegere temă, upload logo
 - [ ] Generare pagini legale + meniuri + date demo opționale
 - [ ] Blocare permanentă `/install` după instalare
+- [ ] ⚠️ **`APP_URL` se setează la URL-ul public REAL** (cu `https://`, fără slash final): Better Auth acceptă doar originea din `APP_URL`, altfel autentificarea dă `INVALID_ORIGIN`. Wizard-ul îl cere și îl validează (și îl pune în `.env`)
 - [ ] ⚠️ **Pachetul cu Caddy setează `auth.trustedProxyHops=1` în configurația implicită** (seed/instalator). Fără asta, IP-ul clientului nu e citit și limita de login/înregistrare rămâne doar pe email
 - [ ] ⚠️ **Redis din pachetul de producție cu persistență (AOF)** (`appendonly yes`): blocările de cont și limitele stau în Redis și nu trebuie să se piardă la repornire
 - [ ] Checklist de onboarding în dashboard

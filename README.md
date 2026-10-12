@@ -134,6 +134,11 @@ neatenție date reale. Fișierele de integrare rulează pe rând (o singură baz
 baza de test: `docker exec ecom-dev-postgres-1 psql -U ecom -d postgres -c "DROP DATABASE ecom_test"`
 (se recreează la următoarea rulare). Pe CI se folosește aceeași schemă de nume (`ecom_test`, Redis DB `1`).
 
+**Testele E2E (`pnpm test:e2e`) rulează pe aceeași bază de test** (`ecom_test`, Redis DB `1`), cu aceeași
+gardă; serverul lor primește `DATABASE_URL`/`REDIS_URL` ale bazelor de test, nu pe cele din `.env`, și nu
+refolosește niciodată un server deja pornit. Conturile create de teste au emailul `e2e-<id>@example.test` și se
+șterg la final (global teardown).
+
 Serviciile Docker:
 
 ```bash
