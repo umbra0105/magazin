@@ -18,6 +18,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   roles         UserRole[]
+  mediaUploads  Media[]
 
   @@unique([email])
   @@map("user")
@@ -194,4 +195,61 @@ model UserRole {
 
   @@id([userId, roleId])
   @@map("user_role")
+}
+
+// ---------------------------------------------------------------------------
+// Media (Faza 3): fișierele din biblioteca magazinului
+// ---------------------------------------------------------------------------
+
+/// Folder din biblioteca media. Arbore prin `parentId`; numele e unic în același părinte
+/// (indecșii parțiali, fără diferență de majuscule, sunt în migrația media_library).
+model MediaFolder {
+  id        String        @id @default(cuid())
+  name      String
+  parentId  String?
+  parent    MediaFolder?  @relation("MediaFolderTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  MediaFolder[] @relation("MediaFolderTree")
+  media     Media[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([parentId])
+  @@map("media_folder")
+}
+
+/// Un fișier din bibliotecă. `storageKey` = originalul FĂRĂ EXIF/GPS (păstrat pentru a
+/// regenera variantele); `variants` = lista variantelor generate din job. Numele original
+/// al fișierului e doar informativ în admin și nu apare niciodată într-un URL.
+model Media {
+  id              String       @id @default(cuid())
+  /// "pending" | "processing" | "ready" | "failed" (constrângere CHECK în migrație)
+  status          String       @default("pending")
+  mime            String
+  sizeBytes       Int
+  width           Int?
+  height          Int?
+  /// SHA-256 (hex) al originalului stocat; permite detectarea dublurilor
+  checksum        String
+  originalName    String
+  storageKey      String       @unique
+  /// [{ name, format, key, width, height, sizeBytes }]
+  variants        Json         @default("[]")
+  blurhash        String?
+  alt             String       @default("")
+  tags            String[]     @default([])
+  folderId        String?
+  folder          MediaFolder? @relation(fields: [folderId], references: [id], onDelete: Restrict)
+  processingError String?
+  uploadedById    String?
+  uploadedBy      User?        @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([folderId])
+  @@index([status])
+  @@index([checksum])
+  @@index([createdAt])
+  @@index([uploadedById])
+  @@index([tags], type: Gin)
+  @@map("media")
 }

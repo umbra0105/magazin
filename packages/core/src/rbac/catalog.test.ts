@@ -23,6 +23,19 @@ describe("catalogul RBAC", () => {
     expect(rolesWith("products.cost.edit")).toEqual(["admin", "owner"]);
   });
 
+  it("media.read o au rolurile care văd produse sau conținut; media.write rămâne la Owner, Admin, Editor", () => {
+    expect(rolesWith("media.read")).toEqual(["admin", "editor", "manager", "owner", "warehouse"]);
+    expect(rolesWith("media.write")).toEqual(["admin", "editor", "owner"]);
+  });
+
+  it("oricine poate încărca fișiere poate și să le vadă (media.write implică media.read)", () => {
+    for (const role of DEFAULT_ROLES) {
+      if (role.permissions.includes("media.write")) {
+        expect(role.permissions, role.key).toContain("media.read");
+      }
+    }
+  });
+
   it("fiecare rol folosește doar permisiuni din catalog, fără duplicate", () => {
     for (const role of DEFAULT_ROLES) {
       expect(new Set(role.permissions).size, role.key).toBe(role.permissions.length);

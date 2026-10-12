@@ -433,6 +433,7 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `discounts.write` — Creează și modifică reduceri și cupoane | ✓ | ✓ | ✓ |  |  |  |  |
 | `content.read` — Vede conținutul (CMS, blog, SEO) | ✓ | ✓ |  | ✓ |  |  |  |
 | `content.write` — Editează conținutul (CMS, blog, SEO) | ✓ | ✓ |  | ✓ |  |  |  |
+| `media.read` — Vede biblioteca media și poate alege fișiere în formulare | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |
 | `media.write` — Încarcă și șterge fișiere media | ✓ | ✓ |  | ✓ |  |  |  |
 | `invoices.read` — Vede facturile | ✓ | ✓ |  |  |  |  | ✓ |
 | `invoices.write` — Emite și stornează facturi | ✓ | ✓ |  |  |  |  |  |
