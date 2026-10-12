@@ -3,12 +3,6 @@ import { SentryClient } from "@/components/sentry-client";
 import { fontVariableClasses } from "@/lib/fonts";
 import "./globals.css";
 
-/**
- * Tot ce se afișează depinde de baza de date (setări, branding, sesiune): nimic nu se prerandează la
- * build, altfel build-ul ar cere DB și ar îngheța conținutul magazinului în imaginea de build.
- */
-export const dynamic = "force-dynamic";
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     // suppressHydrationWarning: scriptul de temă din admin setează `color-scheme` pe <html> înainte de hidratare.

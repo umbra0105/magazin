@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getSessionCookie } from "better-auth/cookies";
 import { REQUEST_ID_HEADER, resolveRequestId } from "@ecom/shared/request-id";
 import { PATHNAME_HEADER, guardDecision } from "@/lib/route-guard";
+import { hasSessionCookie } from "@/lib/session-cookie";
 
 /** Calea + query, fără parametrii interni Next (`_rsc`) care nu fac parte din adresa vizibilă. */
 function pathWithoutInternalParams(url: URL): string {
@@ -22,7 +22,7 @@ export function middleware(request: NextRequest) {
   const decision = guardDecision({
     pathname: request.nextUrl.pathname,
     search: request.nextUrl.search,
-    hasSessionCookie: getSessionCookie(request) !== null,
+    hasSessionCookie: hasSessionCookie(request.headers.get("cookie")),
   });
 
   let response: NextResponse;

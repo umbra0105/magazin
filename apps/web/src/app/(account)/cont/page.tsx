@@ -7,6 +7,8 @@ import { getMessages } from "@/messages";
 
 const m = getMessages().auth.account;
 
+export const dynamic = "force-dynamic"; // sesiunea se citește la fiecare cerere, nu la build
+
 export const metadata: Metadata = { title: m.metaTitle, robots: { index: false } };
 
 /**

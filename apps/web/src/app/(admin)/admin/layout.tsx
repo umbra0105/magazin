@@ -21,6 +21,13 @@ import { getMessages } from "@/messages";
 
 const m = getMessages().admin;
 
+/**
+ * Depinde de sesiune/setări la fiecare cerere: nu se prerandează la build (altfel build-ul ar cere DB și
+ * ar îngheța conținutul în imaginea de build). Regula e pe segment, nu pe layout-ul rădăcină, ca
+ * vitrina (Faza 7) să poată folosi cache și regenerare.
+ */
+export const dynamic = "force-dynamic";
+
 // `noindex` și în meta; antetele `X-Robots-Tag` și `Cache-Control: no-store` vin din next.config.ts.
 export const metadata: Metadata = {
   title: { default: m.metaTitle, template: `%s · ${m.metaTitle}` },

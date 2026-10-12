@@ -2,6 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { getSettings } from "@/lib/services";
 
+/**
+ * Depinde de sesiune/setări la fiecare cerere: nu se prerandează la build (altfel build-ul ar cere DB și
+ * ar îngheța conținutul în imaginea de build). Regula e pe segment, nu pe layout-ul rădăcină, ca
+ * vitrina (Faza 7) să poată folosi cache și regenerare.
+ */
+export const dynamic = "force-dynamic";
+
 /** Cadru comun al paginilor de autentificare: numele magazinului (din setări) și conținutul centrat. */
 export default async function AuthLayout({ children }: { children: ReactNode }) {
   const storeName = await getSettings().get("general.storeName");
