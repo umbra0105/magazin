@@ -1,5 +1,8 @@
 import { getRequestContext, redactSensitive } from "@ecom/shared";
 
+/** `success` = acțiunea s-a executat; `denied` = încercare refuzată (fără permisiune), nimic modificat. */
+export type AuditOutcome = "success" | "denied";
+
 export interface AuditInput {
   actorId: string | null;
   /** Emailul sau numele actorului la momentul acțiunii (jurnalul supraviețuiește ștergerii contului). */
@@ -10,6 +13,8 @@ export interface AuditInput {
   entityId?: string | null;
   before?: unknown;
   after?: unknown;
+  /** Implicit `success`. */
+  outcome?: AuditOutcome;
 }
 
 export interface AuditRow {
@@ -22,6 +27,7 @@ export interface AuditRow {
   before: unknown;
   after: unknown;
   requestId: string | null;
+  outcome: string;
   createdAt: Date;
 }
 
@@ -55,6 +61,7 @@ export class AuditService {
       before: input.before === undefined ? null : redactSensitive(input.before),
       after: input.after === undefined ? null : redactSensitive(input.after),
       requestId: getRequestContext()?.requestId ?? null,
+      outcome: input.outcome ?? "success",
     });
   }
 

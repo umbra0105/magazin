@@ -141,6 +141,8 @@ model AuditLog {
   before     Json?
   after      Json?
   requestId  String?
+  /// "success" | "denied" (constrângere CHECK în migrație)
+  outcome    String   @default("success")
   createdAt  DateTime @default(now())
 
   @@index([entity, entityId])

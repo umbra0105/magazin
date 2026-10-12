@@ -1,5 +1,6 @@
 import { DomainError, getLogger } from "@ecom/shared";
 import type { AuditService } from "./audit-service";
+import { diffChanges } from "./diff";
 
 export interface AuditActor {
   id: string | null;
@@ -15,6 +16,11 @@ export interface AuditedActionSpec<I, O> {
   before?: (input: I) => Promise<unknown>;
   /** Starea de după; implicit rezultatul acțiunii. Trece prin mascarea secretelor. */
   after?: (result: O, input: I) => unknown;
+  /**
+   * Doar diferențele: în jurnal intră căile care s-au schimbat (cu valoarea dinainte și de după),
+   * nu stările întregi. Dacă nu s-a schimbat nimic, NU se scrie nicio înregistrare.
+   */
+  diff?: boolean;
 }
 
 export interface AuditedActionDeps {
@@ -45,6 +51,14 @@ export function createWithAudit({ audit, getActor }: AuditedActionDeps) {
       }
       const before = spec.before ? await spec.before(input) : undefined;
       const result = await handler(input, actor);
+      let recordedBefore = before;
+      let recordedAfter = spec.after ? spec.after(result, input) : result;
+      if (spec.diff) {
+        const changes = diffChanges(before, recordedAfter);
+        if (!changes) return result; // nimic modificat: nimic de înregistrat
+        recordedBefore = changes.before;
+        recordedAfter = changes.after;
+      }
       try {
         await audit.record({
           actorId: actor.id,
@@ -52,8 +66,8 @@ export function createWithAudit({ audit, getActor }: AuditedActionDeps) {
           action: spec.action,
           entity: spec.entity,
           entityId: spec.entityId?.(input, result) ?? null,
-          before,
-          after: spec.after ? spec.after(result, input) : result,
+          before: recordedBefore,
+          after: recordedAfter,
         });
       } catch (error) {
         getLogger().error(

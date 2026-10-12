@@ -1,7 +1,14 @@
 import { headers } from "next/headers";
-import { PermissionService, createWithPermission, resolveSubject } from "@ecom/core";
+import {
+  PermissionService,
+  createWithPermission,
+  recordDeniedAttempt,
+  resolveSubject,
+} from "@ecom/core";
 import type { SubjectResolution } from "@ecom/core";
 import { getDb } from "@ecom/db";
+import { REQUEST_ID_HEADER } from "@ecom/shared/request-id";
+import { getAudit } from "./admin-writes";
 import { getAuth, getSettings } from "./services";
 
 /**
@@ -26,5 +33,15 @@ export async function getCurrentSubject() {
   return resolution.status === "ok" ? resolution.subject : null;
 }
 
-/** Orice server action de admin se împachetează cu asta (testul de arhitectură o impune). */
-export const withPermission = createWithPermission({ getSubject: getCurrentSubject });
+/**
+ * Orice server action de admin se împachetează cu asta (testul de arhitectură o impune).
+ *  - verifică permisiunea pe server, la fiecare apel;
+ *  - o încercare refuzată NU rulează acțiunea și se înregistrează în jurnal cu rezultatul
+ *    `denied` (actor, acțiunea încercată, permisiunea lipsă; NICIODATĂ datele trimise);
+ *  - handlerul rulează în contextul `requestId`-ului cererii (apare în jurnalul de audit).
+ */
+export const withPermission = createWithPermission({
+  getSubject: getCurrentSubject,
+  getRequestId: async () => (await headers()).get(REQUEST_ID_HEADER),
+  onDenied: (attempt) => recordDeniedAttempt(getAudit(), attempt),
+});

@@ -49,7 +49,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] **Service de setări** cu cache Redis, typed getters, valori implicite neutre
 - [x] Setări implicite fiscale și regionale: `tax.standardRate = 21` (cota unică; nu hardcodată nicăieri în cod) și `regional.allowedCountries = ["RO"]` (aplicată în Faza 9)
 - [x] Criptare AES-256-GCM pentru credențialele de integrare (cu `APP_KEY`)
-- [~] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id) — _în curs, pe bucăți: gata Better Auth + argon2id, rate limiting + blocare, middleware `/admin` `/cont`, contul de admin CLI (confirmat), paginile de autentificare (confirmat), layout admin (confirmat), emailuri BullMQ + React Email (în verificare); rămâne legarea `withAudit`_
+- [~] Auth complet: register, verificare email, login, logout, forgot, reset (argon2id) — _în curs, pe bucăți: gata Better Auth + argon2id, rate limiting + blocare, middleware `/admin` `/cont`, contul de admin CLI (confirmat), paginile de autentificare (confirmat), layout admin (confirmat), emailuri BullMQ + React Email (confirmat), `withAudit` pe scrierile din admin (în verificare)_
 - [ ] Rate limiting Redis pe rutele sensibile
 - [x] RBAC: permisiuni ca string-uri (inclusiv `admin.access`), roluri implicite, `can()` + `withPermission()`, matrice rol × permisiune în `docs/04` §6
 - [x] Feature flags cu helper `isEnabled()`

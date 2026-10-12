@@ -9,3 +9,4 @@ export * from "./rbac";
 export * from "./seed/base-seed";
 export * from "./auth";
 export * from "./email";
+export * from "./admin";

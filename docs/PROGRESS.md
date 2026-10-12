@@ -2,9 +2,9 @@
 
 ## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — în curs
 **Terminat (confirmat de utilizator):** layout admin (guard `admin.access` + `adminSessionHours`, meniu pe permisiuni/flag-uri, dark mode); Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
-**În lucru:** punctul 8 (emailuri: coadă BullMQ, șabloane React Email ro, SMTP din Integration, Mailpit în dev), **așteaptă verificarea manuală** cu Mailpit
+**În lucru:** punctul 9 (`withAudit` pe scrierile din admin: server actions fără UI sub `withPermission`, audit cu diferențe, actor, requestId, rezultat `success`/`denied`), **așteaptă verificarea**
 **Blocat:** —
-**Rămâne din Promptul 3:** legarea `withAudit` la scrierile existente (server actions fără UI, `withPermission`); teste/închidere și 🏁 Faza 2
+**Rămâne din Promptul 3:** teste/închidere (punctele 10-12) și 🏁 Faza 2
 **Stare:** Faza 2 din TODO NU e completă; urmează punctul 8 (emailuri) abia după verificarea login-ului
 
 **Decizii în sesiune:**
@@ -12,6 +12,7 @@
 - **Utilizator:** `admin.access` e permisiune explicită (cele 7 roluri de sistem o au; Owner implicit)
 - **Utilizator:** E2E rulează pe `ecom_test` + Redis DB 1 (gardă), cu teardown al conturilor `e2e-*@example.test`; local pe Windows fără turbo: `pnpm dev:web`, `pnpm check:local`
 - **Claude:** comenzile CLI interactive rulează cu `node --import tsx` de la rădăcină (nu `pnpm --filter`, care pierdea tastele); contoarele de blocare în Redis, nu în DB; dark mode admin prin foile `/theme-light.css` și `/theme-dark.css` (comutare `media`), fără a atinge `/theme.css`
+- **Claude:** `audit_log.outcome` (`success`/`denied`, migrație `audit_log_outcome`); încercările refuzate se înregistrează fără datele trimise; la integrări în audit apar doar NUMELE credențialelor (`authFields`, `authFieldsChanged`), nu valorile și nici sufixul mascat; o scriere neschimbată nu scrie în jurnal. Server actions din `(admin)/admin/setari/actions.ts` devin endpoint-uri abia când o pagină le importă (Fazele 6/16)
 - **Claude:** layout-urile nu se re-rulează la navigare, deci fiecare pagină de admin își cere `requireAdmin({ permission, feature })`; deconectarea doar prin POST
 
 **Datorie tehnică / de știut:**
