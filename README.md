@@ -166,6 +166,10 @@ docker compose -f docker/docker-compose.dev.yml down       # oprește (datele r�
 docker compose -f docker/docker-compose.dev.yml down -v    # oprește ȘI șterge datele
 ```
 
+## Ce funcționează acum
+
+Rezumat în limbaj simplu, pe faze: [docs/FAZA-2-ce-functioneaza.md](docs/FAZA-2-ce-functioneaza.md).
+
 ## Structura
 
 ```

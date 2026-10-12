@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
-import { promoteE2eUser } from "../packages/core/test/e2e-support";
+import { ageE2eSessions, promoteE2eUser } from "../packages/core/test/e2e-support";
 import { extractTokenLink, waitForEmail } from "./support/mailpit";
 
 /**
@@ -9,7 +9,7 @@ import { extractTokenLink, waitForEmail } from "./support/mailpit";
  * primește rolul de Suport și intră doar în ce are voie; la deconectare pierde accesul.
  * Parola se generează la fiecare rulare; contul `e2e-*@example.test` se șterge la final.
  */
-test("Faza 2 cap-coadă: înregistrare → email → login → fără admin → rol Suport → doar ce are voie → logout", async ({
+test("Faza 2 cap-coadă: înregistrare → email → login → fără admin → rol Suport → doar ce are voie → logout → sesiune expirată", async ({
   page,
   request,
   baseURL,
@@ -65,4 +65,17 @@ test("Faza 2 cap-coadă: înregistrare → email → login → fără admin → 
   await expect(page).toHaveURL(/\/autentificare$/);
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/autentificare/);
+
+  // 7. Autentificat din nou, o sesiune de admin mai veche decât limita (8 ore) expiră.
+  await page.goto("/autentificare?next=%2Fadmin");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Parolă", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Intră în cont" }).click();
+  await page.waitForURL((url) => url.pathname === "/admin");
+  expect(await ageE2eSessions(email, 9)).toBeGreaterThan(0);
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/autentificare\?sesiune=expirata/);
+  await expect(page.locator("main [role=alert]")).toHaveText(
+    "Sesiunea a expirat. Autentifică-te din nou.",
+  );
 });

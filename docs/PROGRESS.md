@@ -1,11 +1,11 @@
 # Jurnal de progres
 
 ## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — în curs
-**Terminat (confirmat de utilizator):** layout admin (guard `admin.access` + `adminSessionHours`, meniu pe permisiuni/flag-uri, dark mode); Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
-**În lucru:** punctul 9 (`withAudit` pe scrierile din admin) **așteaptă verificarea utilizatorului**; punctul 10 (teste/închidere: matricea de securitate rol × acțiune pe Postgres real, E2E cap-coadă Faza 2, README) e implementat, **așteaptă verificarea**
+**Terminat (confirmat de utilizator):** `withAudit` pe scrierile din admin (punctul 9); layout admin (guard `admin.access` + `adminSessionHours`, meniu pe permisiuni/flag-uri, dark mode); Better Auth + argon2id; rate limiting + blocare (Redis, fără coloane noi în User); RBAC `can()`/`withPermission()` cu `admin.access` explicit și matricea rol × permisiune în docs/04; middleware `/admin` `/cont`; `pnpm admin:create`; `pnpm admin:set-password`; pagini de autentificare cu `@ecom/ui` și traduceri ro
+**În lucru:** punctul 10 (teste și închidere) implementat — **așteaptă verificarea**
 **Blocat:** —
 **Rămâne din Promptul 3:** punctele 11-12 (verificare cap-coadă, închiderea TODO) și 🏁 Faza 2
-**Stare:** Faza 2 din TODO NU e încă închisă; `main` e împins la `origin` (CI reprodus într-un container Linux: toți pașii verzi)
+**Stare:** punctul 9 confirmat; CI verde pe `d132d38` (CI #5). Rezumat pentru oameni: `docs/FAZA-2-ce-functioneaza.md`
 
 **Decizii în sesiune:**
 - **Utilizator:** Suport NU are `orders.refund` (până există limita de rambursare); scoaterea din baze existente cu `pnpm rbac:revoke <rol> <permisiune> [--apply]` (seed-ul nu scoate niciodată permisiuni)
@@ -17,14 +17,21 @@
 
 - **Utilizator → Claude (CI):** `msgpackr-extract: false` în `allowBuilds` (optimizare nativă opțională a msgpackr; fallback JS; bullmq verificat fără el). Turbo în mod strict ascundea variabilele de mediu de `next build` (`globalPassThroughEnv` în `turbo.json`), iar paginile se prerandau la build cu acces la DB: layout-ul rădăcină e `force-dynamic`. Test E2E „telefon: sidebar” repetă clicul până la hidratare
 
-**Datorie tehnică / de știut:**
-- Avertisment la build: `jose` (din `better-auth/cookies`, în middleware) folosește `CompressionStream`, neacceptat în Edge Runtime; doar avertisment, calea nu e folosită
-- `turbo.exe` blocat de Windows Application Control pe mașina utilizatorului (nu modificăm setări de securitate); CI-ul Linux rămâne cu turbo
+**Datorie tehnică (tot într-un loc, cu faza în care se rezolvă):**
+- **Audit netranzacțional** → Faza 21: auditul și scrierea sunt stores separate; la eșecul auditului modificarea rămâne (apelantul primește `AUDIT_WRITE_FAILED`). De scris în aceeași tranzacție acolo unde datele sunt în Postgres
+- **`force-dynamic`** → Faza 7: pus pe segmentele `(auth)`, `(admin)`, `/cont` și pe pagina vitrinei (nu pe layout-ul rădăcină). Vitrina trebuie să citească setările cu cache/regenerare și să renunțe la `force-dynamic`
+- **Avertismentul `jose` din middleware** — REZOLVAT: middleware-ul citește direct numele cookie-ului (`apps/web/src/lib/session-cookie.ts`), cu test de integrare față de numele real din Better Auth (cu și fără `__Secure-`). Dacă se schimbă prefixul cookie-ului în `createAuth`, testul pică
+- **`/api/verify-email` fără IP de încredere**: bucket comun, cu limita de 10× mai mare (`trustedProxyHops=0`). Cu `trustedProxyHops=1` în spatele Caddy limita e pe IP real → Faza 18/21
+- **Dependență adăugată:** `nodemailer` (aprobat de utilizator, pentru SMTP); `bullmq` + `@react-email/*` (aprobate); `msgpackr-extract` respins explicit în `allowBuilds` (fallback JS)
+- **`turbo.exe` blocat** de Windows Application Control pe mașina utilizatorului (nu modificăm setări de securitate): local `pnpm dev:web` și `pnpm check:local`; CI-ul Linux rămâne cu turbo (și `globalPassThroughEnv`)
+- **Faza 18:** `APP_URL` = URL-ul public real; `auth.trustedProxyHops=1` în pachetul cu Caddy
+- **Faza 21:** Redis cu AOF (blocări de cont și limite); utilizator DB fără `UPDATE`/`DELETE` pe `audit_log`; TOTP pentru admin; mutarea scripturilor dev-only (`dev:mail`, `dev:preset`, `seed-store`) din pachet
+- **Faza 4/16:** `products.content.write` pentru Editor; reguli anti-escaladare de privilegii; limita de rambursare pentru Suport (`orders.refund`)
 - Cu `auth.requireEmailVerification=false`, Better Auth răspunde „user already exists” la înregistrare (enumerare posibilă); implicit true nu scurge nimic
-- Emailuri: workerul rulează în `pnpm dev:web` (dezvoltare) și ca `pnpm worker` (producție, Faza 21: proces separat în Docker); fără SMTP activ jobul eșuează cu `EMAIL_NOT_CONFIGURED`. `pnpm dev:mail` (dev) se mută din pachet înainte de împachetare (ca `dev:preset`)
-- Tokenul de verificare e propriul (tabela `verification`, hash SHA-256, 24h, unică folosință), nu JWT-ul Better Auth (reutilizabil); cel de resetare e al Better Auth (în Redis, 1h, unică folosință). Linkurile poartă tokenul în fragment `#token=` (nu ajunge la server/loguri); confirmarea emailului e pe POST, ca scanerele de linkuri să nu consume tokenul
+- Emailuri: workerul rulează în `pnpm dev:web` (dezvoltare) și ca `pnpm worker` (producție, Faza 21: proces separat în Docker); fără SMTP activ jobul eșuează cu `EMAIL_NOT_CONFIGURED`
+- Tokenul de verificare e propriul (tabela `verification`, hash SHA-256, 24h, unică folosință); cel de resetare e al Better Auth (Redis, 1h). Linkurile poartă tokenul în fragment `#token=`; confirmarea e pe POST (scanere de linkuri)
 - Secțiunile din meniul de admin fără pagină proprie folosesc `[...slug]` (placeholder) până la fazele lor
-- `APP_URL` trebuie să fie URL-ul public real (Faza 18); `auth.trustedProxyHops=1` și Redis AOF în pachetul de producție (Fazele 18, 21); TOTP pentru admin (Faza 21)
+- Server actions din `setari/actions.ts` devin endpoint-uri abia când o pagină le importă (Fazele 6/16); testate prin servicii
 
 ## 2026-10-09 · Sesiunea 2 · Faza 2, partea din Promptul 2 (configurare, setări, criptare, flag-uri, audit, temă, seed)
 **Terminat (confirmat de utilizator):** punctele 1-10 și 8b din planul Promptului 2 (schema, SettingsService, setări fiscale/regionale, criptare, flag-uri, audit, tokens de temă, seed, baza de test separată, Sentry, testele rămase) + schimbarea mapării Manager + fix-ul A (tokenii vizibili în pagina principală)

@@ -55,7 +55,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Feature flags cu helper `isEnabled()`
 - [x] Layout admin: sidebar, topbar, breadcrumbs, guard (meniul ascunde funcțiile cu flag oprit: `FeatureFlagService.list()` e gata)
 - [x] **Contul de administrator** (creat la instalare/prin comandă, fără parolă implicită în cod sau seed) și atribuirea rolului Owner
-- [~] Legarea `withAudit` la scrierile existente din admin — _implementat și testat (diff, valori sensibile excluse, încercări refuzate, matrice rol × acțiune); în verificare la utilizator_ — (`SettingsService.set`, `FeatureFlagService.setEnabled`, `BrandingService.save`, `IntegrationService.save`)
+- [x] Legarea `withAudit` la scrierile din admin (`SettingsService.set`, `FeatureFlagService.setEnabled`, `BrandingService.save`, `IntegrationService.save`): diferențe, valori sensibile excluse, încercări refuzate (`outcome`), matrice rol × acțiune
 - [x] Seed de bază: roluri, permisiuni, setări implicite, flag-uri oprite, branding implicit (idempotent). **Contul de administrator NU e aici: se mută în Promptul 3 (autentificare), fără parolă implicită**
 - [x] (8b) Bază de date separată pentru testele de integrare: `ecom_test` creată și migrată automat, Redis pe alt index, gardă care refuză bazele fără "test" în nume, aceeași bază în CI
 - [x] (10) Teste rămase pentru Promptul 2: setări, flag-uri, criptare, audit append-only, branding (ruta /theme.css, golden-uri, fallback-uri)
@@ -115,6 +115,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Announcement bar, 404, 500, mentenanță, skeletons
 
 ## FAZA 7 — Storefront catalog · ~7-9 zile
+- [ ] ⚠️ **Cache și regenerare pentru vitrină**: acum `/` (și zonele `(auth)`, `(admin)`, `/cont`) sunt `force-dynamic` pe segment. Vitrina trebuie să citească setările/brandingul cu cache (tag-uri, `revalidate`) ca să poată fi servită din cache și regenerată (viteză, SEO). Restrânge `force-dynamic` doar la rutele care chiar au nevoie de el
 - [ ] PLP cu grid, sortare, paginare, descriere SEO
 - [ ] Filtre faceted cu contorizări, sincronizate în URL, funcționale fără JS
 - [ ] **Filtre pe interval numeric** (debit, putere, volum piscină) cu slider
@@ -339,6 +340,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Audit de accesibilitate cu axe
 
 ## FAZA 21 — Împachetare și distribuție · ~4-5 zile 🔑
+- [ ] ⚠️ **Audit în aceeași tranzacție cu modificarea**, acolo unde datele sunt în Postgres: acum auditul și scrierea sunt stores separate (la eșecul auditului, modificarea rămâne, iar apelantul primește `AUDIT_WRITE_FAILED`). Servicii cu `tx` comun sau outbox; integrări cu stare externă rămân best-effort, cu alertă
 - [ ] Dockerfile multi-stage cu `output: 'standalone'` (app + worker separat)
 - [ ] `docker-compose.prod.yml`: app, worker, postgres, redis, caddy
 - [ ] Caddyfile cu SSL automat, HTTP/2, compresie, headers
