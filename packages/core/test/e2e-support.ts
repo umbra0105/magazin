@@ -115,3 +115,17 @@ export async function setE2eFeatureFlag(key: string, enabled: boolean): Promise<
   });
   await withRedis((redis) => redis.del("ecom:feature-flags:v1"));
 }
+
+/** Șterge contoarele de limitare (`ecom:rl:*`) din Redis-ul de TEST, ca o rulare să nu o moștenească pe alta. */
+export async function clearE2eRateLimits(): Promise<number> {
+  return withRedis(async (redis) => {
+    let removed = 0;
+    let cursor = "0";
+    do {
+      const [next, keys] = await redis.scan(cursor, "MATCH", "ecom:rl:*", "COUNT", 200);
+      cursor = next;
+      if (keys.length > 0) removed += await redis.del(...keys);
+    } while (cursor !== "0");
+    return removed;
+  });
+}

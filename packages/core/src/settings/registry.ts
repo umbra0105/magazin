@@ -76,6 +76,9 @@ export const settingGroups = {
     registerWindowMinutes: z.number().int().min(1).max(1440).default(60),
     passwordResetMaxAttempts: z.number().int().min(1).max(100).default(5),
     passwordResetWindowMinutes: z.number().int().min(1).max(1440).default(60),
+    /** Încercări de confirmare a emailului (`/api/verify-email`) per IP în fereastră. */
+    verifyEmailMaxAttempts: z.number().int().min(1).max(1000).default(10),
+    verifyEmailWindowMinutes: z.number().int().min(1).max(1440).default(15),
     /** Eșecuri de login (pe email) după care contul se blochează temporar. */
     lockoutThreshold: z.number().int().min(3).max(100).default(10),
     lockoutMinutes: z.number().int().min(1).max(1440).default(15),

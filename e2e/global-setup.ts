@@ -1,5 +1,7 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
+import { clearE2eRateLimits } from "../packages/core/test/e2e-support";
+import { setTestSetting } from "../packages/db/test/cleanup-e2e-users";
 import { prepareTestDatabase } from "../packages/db/test/prepare-test-database";
 
 /**
@@ -13,6 +15,15 @@ export default async function globalSetup(): Promise<void> {
     process.env["TEST_REDIS_URL"],
     resolve(process.cwd(), "packages", "db"),
   );
+
+  // Un proxy de încredere: Next adaugă singur `X-Forwarded-For` (IP-ul socketului) când lipsește, iar
+  // testele trimit propriul antet ca să aibă IP-uri distincte (limitele pe IP nu se amestecă).
+  await setTestSetting(process.env["TEST_DATABASE_URL"], "auth.trustedProxyHops", 1);
+  // Toate cererile din browser vin de la același IP (localhost): limita de înregistrări pe IP nu are
+  // sens într-o suită care creează zeci de conturi. Se testează separat, în teste unitare.
+  await setTestSetting(process.env["TEST_DATABASE_URL"], "auth.registerMaxAttempts", 100);
+  // Contoarele de limitare ale unei rulări anterioare nu trebuie să le afecteze pe cele ale acesteia.
+  await clearE2eRateLimits();
 
   // Scripturile citesc DATABASE_URL și REDIS_URL din mediu, deci primesc explicit bazele de TEST
   // (niciodată cele din .env).

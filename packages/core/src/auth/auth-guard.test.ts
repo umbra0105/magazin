@@ -103,4 +103,19 @@ describe("AuthGuard", () => {
       RateLimitedError,
     );
   });
+
+  it("confirmarea emailului: limitată pe IP, alt IP nu e afectat", async () => {
+    const { guard } = setup({ verifyEmailMaxAttempts: 3 });
+    for (let i = 0; i < 3; i++) await guard.checkVerifyEmail("203.0.113.5");
+    const err = await guard.checkVerifyEmail("203.0.113.5").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RateLimitedError);
+    expect((err as RateLimitedError).retryAfterSeconds).toBeGreaterThan(0);
+    await expect(guard.checkVerifyEmail("203.0.113.6")).resolves.toBeUndefined();
+  });
+
+  it("confirmarea emailului fără IP de încredere: bucket comun, cu limita de 10 ori mai mare", async () => {
+    const { guard } = setup({ verifyEmailMaxAttempts: 2 });
+    for (let i = 0; i < 20; i++) await guard.checkVerifyEmail(null);
+    await expect(guard.checkVerifyEmail(null)).rejects.toBeInstanceOf(RateLimitedError);
+  });
 });

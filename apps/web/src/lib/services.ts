@@ -86,6 +86,11 @@ function getCounterStore(): ResilientCounterStore {
   );
 }
 
+/** Limitatorul de cereri de autentificare, cu setările curente (același depozit ca în Better Auth). */
+export async function getAuthGuard(): Promise<AuthGuard> {
+  return new AuthGuard(getCounterStore(), await getSettings().getGroup("auth"));
+}
+
 const AUTH_SECRET_LABEL = "ecom/auth-secret/v1";
 
 /**

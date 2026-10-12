@@ -50,6 +50,18 @@ export class AuthGuard {
     await this.hit(`reset-email:${normalizeEmail(email)}`, max, win);
   }
 
+  /**
+   * Confirmarea emailului (`/api/verify-email`), limitată pe IP. Tokenurile au 256 de biți, deci
+   * limita nu apără împotriva ghicirii, ci împotriva abuzului (încărcare, sondare). Fără IP de
+   * încredere (`trustedProxyHops = 0`) există un singur bucket comun, cu limita de 10 ori mai mare,
+   * ca un atacator să nu poată bloca confirmările tuturor.
+   */
+  async checkVerifyEmail(ip: string | null): Promise<void> {
+    const { verifyEmailMaxAttempts: max, verifyEmailWindowMinutes: win } = this.settings;
+    if (ip) await this.hit(`verify-ip:${ip}`, max, win);
+    else await this.hit("verify-ip:-", max * 10, win);
+  }
+
   /** Secundele rămase din blocare; 0 = cont deblocat. */
   lockRemainingSeconds(email: string): Promise<number> {
     return this.store.ttl(`lock:${normalizeEmail(email)}`);

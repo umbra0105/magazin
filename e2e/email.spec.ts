@@ -123,6 +123,28 @@ test.describe("verificarea emailului", () => {
   });
 });
 
+test.describe("limitarea confirmării emailului", () => {
+  test("după 10 încercări de pe același IP, a 11-a primește 429 cu Retry-After; alt IP nu e afectat", async ({
+    request,
+    baseURL,
+  }) => {
+    const ip = `198.51.100.${Math.floor(Math.random() * 200) + 1}`;
+    const attempt = (forwardedFor: string) =>
+      request.post(`${baseURL}/api/verify-email`, {
+        headers: { origin: baseURL as string, "x-forwarded-for": forwardedFor },
+        data: { token: randomBytes(32).toString("base64url") },
+      });
+
+    for (let i = 0; i < 10; i++) expect((await attempt(ip)).status()).toBe(400);
+    const limited = await attempt(ip);
+    expect(limited.status()).toBe(429);
+    expect(Number(limited.headers()["retry-after"])).toBeGreaterThan(0);
+    expect((await limited.json()).code).toBe("AUTH_RATE_LIMITED");
+
+    expect((await attempt("203.0.113.77")).status()).toBe(400);
+  });
+});
+
 test.describe("resetarea parolei", () => {
   test("am uitat parola → email → resetare → login cu parola nouă; linkul nu mai merge", async ({
     page,
