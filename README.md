@@ -77,6 +77,25 @@ Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 | `pnpm admin:set-password <email>`               | schimbă parola unui cont (recuperare când emailul nu e configurat)           |
 | `pnpm cli:tty-test`                             | verifică terminalul: tastele ajung la CLI și nu se afișează                  |
 
+### Windows: dacă turbo e blocat
+
+Pe unele instalări Windows, politica „Application Control” / Smart App Control blochează binarul
+`turbo.exe` și comenzile `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm lint` cad cu
+`spawn UNKNOWN` (iar Next.js poate avertiza că binarul SWC e blocat și trece singur pe wasm, mai
+lent). **Nu e nevoie să schimbi setări de securitate**: aceleași comenzi există fără turbo.
+CI-ul (Linux) folosește în continuare turbo.
+
+| Comandă                               | Ce face                                                       |
+| ------------------------------------- | ------------------------------------------------------------- |
+| `pnpm dev:web`                        | pornește doar aplicația web (în loc de `pnpm dev`)            |
+| `pnpm build:web`                      | build de producție al aplicației web (în loc de `pnpm build`) |
+| `pnpm check:local`                    | typecheck + lint + lint:root + format:check + teste unitare   |
+| `pnpm -r typecheck` / `pnpm -r lint`  | typecheck / lint pe toate pachetele, fără turbo               |
+| `pnpm test` / `pnpm test:integration` | testele rulează cu Vitest direct, nu au nevoie de turbo       |
+
+Dacă `pnpm dev:web` pornește, ai tot ce-ți trebuie pentru lucru local. Comenzile CLI cu parolă
+(`admin:create` etc.) nu folosesc turbo.
+
 ### Comenzile cu parolă (`admin:create`, `admin:set-password`)
 
 - Se rulează **de către om, într-un terminal interactiv**, de la rădăcina proiectului. Parola se

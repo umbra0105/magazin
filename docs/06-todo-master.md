@@ -54,7 +54,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] RBAC: permisiuni ca string-uri (inclusiv `admin.access`), roluri implicite, `can()` + `withPermission()`, matrice rol × permisiune în `docs/04` §6
 - [x] Feature flags cu helper `isEnabled()`
 - [ ] Layout admin: sidebar, topbar, breadcrumbs, guard (meniul ascunde funcțiile cu flag oprit: `FeatureFlagService.list()` e gata)
-- [ ] **Contul de administrator** (creat la instalare/prin comandă, fără parolă implicită în cod sau seed) și atribuirea rolului Owner
+- [x] **Contul de administrator** (creat la instalare/prin comandă, fără parolă implicită în cod sau seed) și atribuirea rolului Owner
 - [ ] Legarea `withAudit` la scrierile existente din admin (`SettingsService.set`, `FeatureFlagService.setEnabled`, `BrandingService.save`, `IntegrationService.save`)
 - [x] Seed de bază: roluri, permisiuni, setări implicite, flag-uri oprite, branding implicit (idempotent). **Contul de administrator NU e aici: se mută în Promptul 3 (autentificare), fără parolă implicită**
 - [x] (8b) Bază de date separată pentru testele de integrare: `ecom_test` creată și migrată automat, Redis pe alt index, gardă care refuză bazele fără "test" în nume, aceeași bază în CI
