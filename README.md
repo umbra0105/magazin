@@ -62,28 +62,32 @@ Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 
 ## Comenzi
 
-| Comandă                                         | Ce face                                                                                            |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                                      | pornește aplicația (Next.js, port 3000)                                                            |
-| `pnpm build`                                    | build de producție                                                                                 |
-| `pnpm lint`                                     | ESLint pe toate pachetele                                                                          |
-| `pnpm lint:root`                                | ESLint pe fișierele de config și pe `e2e/`                                                         |
-| `pnpm format`                                   | formatează cu Prettier (`format:check` doar verifică)                                              |
-| `pnpm typecheck`                                | TypeScript strict pe toate pachetele                                                               |
-| `pnpm test`                                     | teste unitare (Vitest)                                                                             |
-| `pnpm test:integration`                         | teste de integrare; cer serviciile Docker pornite                                                  |
-| `pnpm test:e2e`                                 | teste end-to-end (Playwright); pornesc singure aplicația                                           |
-| `pnpm db:migrate`                               | aplică migrațiile pe baza de date locală                                                           |
-| `pnpm db:seed`                                  | seed de pachet: roluri, permisiuni, setări, flag-uri (idempotent)                                  |
-| `pnpm db:seed:store`                            | seed specific magazinului (rulat doar de proprietar)                                               |
-| `pnpm storage:init`                             | creează bucketul S3 din `.env` dacă lipsește (idempotent); refuză cu `STORAGE_DRIVER=local`        |
-| `pnpm dev:preset`                               | doar dev: aplică un preset de temă (`minimal`/`bold`/`editorial`, `--dark`)                        |
-| `pnpm admin:create`                             | creează contul Owner; interactiv, parola fără echo (rulează `db:seed` întâi)                       |
-| `pnpm admin:unlock <email>`                     | deblochează un cont blocat după prea multe încercări de login                                      |
-| `pnpm dev:age-session <email> <ore>`            | DOAR dezvoltare: îmbătrânește sesiunile unui utilizator (test expirare admin); refuză în producție |
-| `pnpm rbac:revoke <rol> <permisiune> [--apply]` | scoate explicit o permisiune dintr-un rol (simulare fără `--apply`)                                |
-| `pnpm admin:set-password <email>`               | schimbă parola unui cont (recuperare când emailul nu e configurat)                                 |
-| `pnpm cli:tty-test`                             | verifică terminalul: tastele ajung la CLI și nu se afișează                                        |
+Toate scripturile din rădăcină merg la fel cu `pnpm <script>` și cu `npm run <script>` (argumentele după `--`, ex. `npm run dev:web -- -p 3101`). Cele care aveau nevoie de `pnpm --filter` sau de `turbo` rulează acum prin node (`scripts/in.mjs`, `scripts/run-all.mjs`), deci funcționează și pe mașini unde `pnpm.exe` sau `turbo.exe` sunt blocate de politici Windows; numele rămân aceleași, inclusiv în CI. Variantele turbo: `turbo:lint`, `turbo:typecheck`, `turbo:build`.
+
+| Comandă                                                | Ce face                                                                                            |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                                             | pornește aplicația (Next.js, port 3000)                                                            |
+| `pnpm build`                                           | build de producție                                                                                 |
+| `pnpm lint`                                            | ESLint pe toate pachetele                                                                          |
+| `pnpm lint:root`                                       | ESLint pe fișierele de config și pe `e2e/`                                                         |
+| `pnpm format`                                          | formatează cu Prettier (`format:check` doar verifică)                                              |
+| `pnpm typecheck`                                       | TypeScript strict pe toate pachetele                                                               |
+| `pnpm test`                                            | teste unitare (Vitest)                                                                             |
+| `pnpm test:integration`                                | teste de integrare; cer serviciile Docker pornite                                                  |
+| `pnpm test:e2e`                                        | teste end-to-end (Playwright); pornesc singure aplicația                                           |
+| `pnpm db:migrate`                                      | aplică migrațiile pe baza de date locală                                                           |
+| `pnpm db:seed`                                         | seed de pachet: roluri, permisiuni, setări, flag-uri (idempotent)                                  |
+| `pnpm db:seed:store`                                   | seed specific magazinului (rulat doar de proprietar)                                               |
+| `pnpm storage:init`                                    | creează bucketul S3 din `.env` dacă lipsește (idempotent); refuză cu `STORAGE_DRIVER=local`        |
+| `pnpm media:regenerate <id, --failed, --stale, --all>` | regenerează variantele imaginilor din original (workerul le procesează)                            |
+| `pnpm media:recent`                                    | doar citire: ultimele 5 fișiere media (id, status, dimensiuni, blurhash, variante, eroare)         |
+| `pnpm dev:preset`                                      | doar dev: aplică un preset de temă (`minimal`/`bold`/`editorial`, `--dark`)                        |
+| `pnpm admin:create`                                    | creează contul Owner; interactiv, parola fără echo (rulează `db:seed` întâi)                       |
+| `pnpm admin:unlock <email>`                            | deblochează un cont blocat după prea multe încercări de login                                      |
+| `pnpm dev:age-session <email> <ore>`                   | DOAR dezvoltare: îmbătrânește sesiunile unui utilizator (test expirare admin); refuză în producție |
+| `pnpm rbac:revoke <rol> <permisiune> [--apply]`        | scoate explicit o permisiune dintr-un rol (simulare fără `--apply`)                                |
+| `pnpm admin:set-password <email>`                      | schimbă parola unui cont (recuperare când emailul nu e configurat)                                 |
+| `pnpm cli:tty-test`                                    | verifică terminalul: tastele ajung la CLI și nu se afișează                                        |
 
 ### Emailuri și worker
 

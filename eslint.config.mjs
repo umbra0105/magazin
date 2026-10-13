@@ -5,6 +5,7 @@ export default tseslint.config(
   {
     ignores: [
       "**/.next/**",
+      "**/.next-*/**",
       "**/node_modules/**",
       "**/dist/**",
       "**/coverage/**",
@@ -26,6 +27,13 @@ export default tseslint.config(
         },
       ],
       "@typescript-eslint/consistent-type-imports": "error",
+    },
+  },
+  {
+    // Scripturi Node simple din rădăcină (fără TypeScript): globalele Node.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
     },
   },
 );

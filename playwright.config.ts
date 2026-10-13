@@ -47,7 +47,7 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${port}`, trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `pnpm --filter @ecom/web exec next dev --port ${port}`,
+    command: `node scripts/in.mjs apps/web node_modules/next/dist/bin/next dev --port ${port}`,
     url: `http://localhost:${port}`,
     // Niciodată un server deja pornit: ar putea fi unul legat de baza de dezvoltare.
     reuseExistingServer: false,

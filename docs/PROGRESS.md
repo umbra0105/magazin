@@ -2,8 +2,29 @@
 
 ## 2026-10-12 · Sesiunea 4 · Faza 3 (Media), Promptul 4 — ÎN LUCRU
 **Terminat (confirmat de utilizator):** punctele 1 (schema, migrația, `media.read`), 2 (adaptor de storage, MinIO în CI) și 3 (upload prin server; verificat în browser: 201 pending, 503 fără bucket, 415, 413, 401/403, audit success/denied/failed)
-**În lucru:** punctul 4 (procesare imagini în queue)
+**În lucru:** punctul 4 (procesare imagini în queue): cod gata și verificat local (typecheck, lint, format, unit, integrare inclusiv MinIO real); așteaptă commit și verificarea utilizatorului
 **Blocat:** —
+
+**Mediu (Windows-ul utilizatorului): `pnpm.exe` poate fi blocat de Smart App Control / Device Guard.** În sesiunea din 2026-10-13, la ~09:33, `pnpm.exe` (nesemnat, din `C:\Users\Admin\AppData\Local\pnpm\global\v11\<hash>\node_modules\pnpm\`) a fost blocat de Code Integrity (evenimente 3077/3033/3118). Folderul există din 2026-10-08, deci blocarea e nouă, nu o descărcare recentă. Pachetul pnpm 12.10.1 conține DOAR `pnpm.exe` (fără intrare JavaScript). **Decizie utilizator:** verificările locale rulează prin `node` direct, pe uneltele din `node_modules`-ul proiectului; nu se schimbă și nu se ocolesc politicile Windows; dacă `node.exe` sau un modul nativ (esbuild, sharp, rollup, SWC, argon2) e blocat → 🛑. Comenzi de zi cu zi, din rădăcina repo-ului `X:\360\magazin`. **`npm run <script>` funcționează pentru toate** (npm se lansează prin node, nu e blocat), la fel ca `pnpm <script>`; argumentele se dau după `--` (ex. `npm run media:regenerate -- --failed`, `npm run dev:web -- -p 3101`). Scripturile care apelau `pnpm --filter` sau `turbo` au fost rescrise să ruleze prin node (`scripts/in.mjs`, `scripts/run-all.mjs`), deci merg la fel cu pnpm, npm și în CI; variantele turbo au rămas ca `turbo:lint`, `turbo:typecheck`, `turbo:build`.
+
+| Ce vrei | Comandă | Verificat |
+|---|---|---|
+| Pornește aplicația + workerii (dev) | `npm run dev:web` (`-- -p 3101` pentru alt port) | da: `/api/health` 200, `.env` încărcat, workerii porniți |
+| Worker separat (emailuri + media) | `npm run worker` | aceeași cale ca `dev:web`; neexecutat |
+| Teste unitare / integrare | `npm run test` / `npm run test:integration` | da (526 / 166 trec) |
+| Teste E2E | `npm run test:e2e` | da: `-- --list` (31 teste); serverul E2E pornește prin node |
+| Typecheck / lint / format | `npm run typecheck` / `npm run lint` / `npm run lint:root` / `npm run format:check` | da |
+| Tot ce ținea de `check:local` | `npm run check:local` | prin componentele de mai sus |
+| Build de probă (nu atinge `.next`) | `NEXT_DIST_DIR=.next-probe npm run build:web`, apoi ștergi `apps/web/.next-probe` și `git checkout -- apps/web/tsconfig.json apps/web/next-env.d.ts` | da (direct cu node) |
+| Seed de pachet | `npm run db:seed` | da (idempotent) |
+| Migrații dev / Studio | `npm run db:migrate` / `npm run db:studio` | studio: da (pornește pe un port afișat în consolă, ex. 49152); migrate: neexecutat (interactiv; același prisma ca `migrate deploy`) |
+| Bucket S3 | `npm run storage:init` | da |
+| Cont admin | `npm run admin:create`, `admin:set-password <email>`, `admin:unlock <email>` | da (refuz fără terminal / mesaj de folosire) |
+| Media: regenerare | `npm run media:regenerate -- <id, --failed, --stale, --all>` | da (mesaj de folosire; regenerarea e acoperită de teste) |
+| Media: ultimele 5 (doar citire) | `npm run media:recent` | da |
+| SMTP local / preset temă / seed magazin | `npm run dev:mail` / `dev:preset` / `db:seed:store` | neexecutate (modifică configurarea din baza de dev); aceeași formă `node --import tsx` ca restul |
+
+Nu a fost nevoie de funcții PowerShell. Testele de integrare nu mai depind de `pnpm` (`prepare-test-database.ts` lansează Prisma cu node), iar hook-urile Git (`.husky/pre-commit`, `.husky/commit-msg`) rulează acum `lint-staged` și `commitlint` direct cu node (commit `chore(husky)`).
 
 **Incident în sesiune (raportat):** la verificarea punctului 3 am pornit `next start` pe portul 3000, deja ocupat de un proces al utilizatorului (cel mai probabil serverul de dezvoltare, `pnpm dev:web`). Apoi am oprit după linia de comandă un proces `next` care, probabil, era chiar acel server; `next start` mi-a stricat și folderul `.next` (build de producție peste cel de dezvoltare). Nu am atins baza de date. Utilizatorul trebuie să repornească `pnpm dev:web`. De acum probele mele rulează doar pe porturi proprii (3101), pornite și oprite după PID, și verific mai întâi ce ascultă pe port
 
@@ -27,6 +48,13 @@
 - **Claude (punctul 2):** linkurile semnate locale sunt HMAC-SHA256 cu cheie HKDF din `APP_KEY` (context separat de criptarea credențialelor); ruta care le servește (verificare cu `verifyClaims`) vine la Faza 14b
 - **Claude (punctul 2):** `STORAGE_LOCAL_PATH` relativ se ancorează la rădăcina monorepo-ului (primul `pnpm-workspace.yaml`), ca web (cwd `apps/web`) și worker (cwd rădăcină) să vadă același director. În producție: cale absolută. `/storage` e în `.gitignore`
 - **Claude (punctul 2):** în CI, MinIO pornește cu `docker run` într-un pas (nu `services:`, care nu permite comanda `server /data`), aceeași imagine pe digest ca în docker compose; aplicația rămâne cu `STORAGE_DRIVER=local`, variabilele `S3_*` le citesc doar testele de storage
+- **Claude (punctul 4):** limită GLOBALĂ de decodări de imagini = 2: semafor în Redis (ZSET de lease-uri cu expirare 120 s, ceasul Redis, script Lua), aceeași cheie în aplicație și în worker; dacă Redis cade, rezervă în memorie per proces (fail-closed). La upload: fără loc → `503 MEDIA_BUSY` + `Retry-After: 5`, înainte de decodare, auditat `failed`. În worker: fără loc → jobul trece în `delayed` (±25% jitter) și NU consumă o încercare. Locul se ia DUPĂ citirea corpului (altfel un client lent ar ține locuri) și se eliberează înainte de scrierile în storage
+- **Claude (punctul 4):** coada `media` (BullMQ): 5 încercări, backoff exponențial 10 s, job `media-<id>`; în Redis stă doar `{mediaId}`. Reușita șterge jobul, eșecul îl păstrează 24 h. `failedReason` și `Media.processingError` conțin doar un COD (`STORAGE_UNAVAILABLE`, `IMAGE_TOO_LARGE`, `IMAGE_CORRUPT`, `ORIGINAL_MISSING`, `UNEXPECTED`); mesajul erorii originale nu se persistă nicăieri. Erorile definitive (imagine coruptă sau prea mare, original lipsă) nu se reîncearcă
+- **Claude (punctul 4):** limita de pixeli (`media.maxInputPixels`, citită la fiecare procesare) se aplică din antet, înainte de decodare, și la procesare, nu doar la upload
+- **Claude (punctul 4):** variante thumb/medium/large (lățimi 320/800/1600 din setări) × AVIF/WebP/JPEG; imaginea nu se mărește (o țintă ≥ originalul se generează o singură dată, la mărimea originalului); JPEG din imagine cu transparență se așază pe alb. Cheia variantei conține hash-ul conținutului (`<nume>.<hash8>.<ext>`), deci un URL nu-și schimbă niciodată conținutul și cache-ul `immutable` rămâne corect; la regenerare, cheile vechi nefolosite se scot din storage abia după ce rândul a fost actualizat
+- **Claude (punctul 4):** regenerare cerută cât jobul încă rulează (defect găsit de un test): `add` cu același id era ignorat și cererea se pierdea. Acum: job `media-<id>-rerun` adăugat o singură dată când cel principal e activ, plus lock per fișier în Redis (`SET NX PX`) care le face să ruleze pe rând; lock ocupat = `busy` (amânat, fără încercare consumată)
+- **Claude (punctul 4):** `pnpm media:regenerate <id | --failed | --stale | --all>` (CLI, audit `media.regenerate` ca `cli`); butonul din UI vine la punctul 6. `MediaService.onCreated` pune în coadă după upload; dacă punerea în coadă eșuează, fișierul rămâne `pending`, iar `--stale` îl reia
+- **Claude (punctul 4):** `blurhash` 2.0.5 adăugat în `@ecom/core` (aprobat). `sharp`, `file-type` și `blurhash` se importă leneș. Dependențe workspace noi: `@ecom/integrations` în `@ecom/jobs` și `@ecom/core`, `@ecom/config` în `@ecom/core`
 - **Claude (punctul 3):** ruta `POST /api/media` primește fișierul ca CORP brut (nu multipart), cu `X-File-Name` (percent-encoded) și `?folderId=&alt=`: așa mărimea se poate limita în timpul stream-ului fără parser multipart. Toată logica e în `handleMediaUpload` (`@ecom/core`, testabil fără Next); ruta din `apps/web` doar o leagă. Ordinea: origine → sesiune → `media.write` → rate limit → mărime în stream → tip real/pixeli/curățare → storage + DB → audit
 - **Claude (punctul 3):** originalul păstrat NU e identic bit cu bit: se decodează și se re-codifică (JPEG 4:4:4 calitate 95, PNG fără pierderi, WebP 95, AVIF 90). Asta scoate EXIF/GPS/XMP și conținutul poliglot și aplică orientarea; e aproape fără pierderi. Imaginile animate păstrează doar primul cadru
 - **Claude (punctul 3):** `sharp` și `file-type` se importă leneș în `sanitizeImage`: `@ecom/core` se încarcă peste tot, deci un modul nativ care nu se poate încărca pe o mașină strică doar upload-ul de imagini, nu toată aplicația
