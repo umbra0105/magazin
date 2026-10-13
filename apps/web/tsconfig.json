@@ -5,15 +5,9 @@
     "jsx": "preserve",
     "allowJs": false,
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./src/*"] }
   },
-  "include": [".next/types/**/*.ts", "next-env.d.ts", "src", ".next-e2e/types/**/*.ts"],
+  "include": ["next-env.d.ts", "src", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

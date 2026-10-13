@@ -130,6 +130,12 @@ jobs:
       - name: Teste E2E
         run: pnpm test:e2e
 
+      # Upload pe driverul S3 (MinIO de mai sus): server E2E cu STORAGE_DRIVER=s3, bucketul de test
+      # (TEST_S3_BUCKET, cu "test" în nume) creat de `storage:init`. Rulează după suita obișnuită, cu un
+      # singur server de test pe rând.
+      - name: Test E2E pe S3 (MinIO)
+        run: pnpm test:e2e:s3
+
       - name: Raport Playwright (la eșec)
         if: failure()
         uses: actions/upload-artifact@v4

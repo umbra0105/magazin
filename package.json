@@ -22,6 +22,7 @@
     "prepare": "husky",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:s3": "node scripts/e2e-s3.mjs",
     "test:integration": "vitest run --project integration",
     "lint:root": "eslint e2e test scripts vitest.config.mts playwright.config.ts eslint.config.mjs commitlint.config.mjs",
     "db:migrate": "node scripts/in.mjs packages/db node_modules/prisma/build/index.js migrate dev",

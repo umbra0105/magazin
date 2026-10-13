@@ -2,16 +2,23 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import {
+  assertTestBucket,
   assertTestDatabase,
   assertTestRedis,
+  deriveTestBucket,
   deriveTestDatabaseUrl,
   deriveTestRedisUrl,
 } from "./test/support/test-env";
 
 const port = 3100;
+// Al doilea server E2E, cu driverul S3 (MinIO), pentru `e2e/media-s3.spec.ts` (proiectul `chromium-s3`).
+const s3Port = 3101;
+// `E2E_TARGET=s3` (scriptul `test:e2e:s3`): rulează DOAR specul S3, cu DOAR serverul S3 pornit. Un singur
+// server de test o dată (RAM), iar suita obișnuită nu depinde de MinIO.
+const s3Only = process.env["E2E_TARGET"] === "s3";
 
 // Fișierele încărcate de testele E2E stau într-un director temporar (șters de global-teardown), nu în
-// bucketul de dezvoltare. Testul E2E pe S3 (MinIO din CI) vine la finalul Fazei 3.
+// bucketul de dezvoltare. Testul pe S3 are serverul și bucketul lui (vezi `s3Server` mai jos).
 export const e2eStorageDir = join(tmpdir(), "ecom-e2e-storage");
 process.env["E2E_STORAGE_DIR"] = e2eStorageDir;
 
@@ -39,6 +46,57 @@ assertTestRedis(testRedisUrl);
 process.env["TEST_DATABASE_URL"] = testDatabaseUrl;
 process.env["TEST_REDIS_URL"] = testRedisUrl;
 
+// Serverul S3: bucket de test (garda „test” în nume) creat de `storage:init` la pornire și Redis pe
+// ALT index (2), ca joburile `media` ale lui să nu fie preluate de workerul serverului cu storage
+// local (și invers). Baza de date e aceeași (de test).
+const s3Bucket = deriveTestBucket(
+  process.env["S3_BUCKET"] ?? "ecom",
+  process.env["TEST_S3_BUCKET"],
+);
+assertTestBucket(s3Bucket);
+const s3RedisUrl = testRedisUrl.replace(/\/\d+$/, "/2");
+assertTestRedis(s3RedisUrl);
+const s3Endpoint = (process.env["S3_ENDPOINT"] ?? "http://localhost:9000").replace(/\/+$/, "");
+
+const localServer = {
+  command: `node scripts/in.mjs apps/web node_modules/next/dist/bin/next dev --port ${port}`,
+  url: `http://localhost:${port}`,
+  // Niciodată un server deja pornit: ar putea fi unul legat de baza de dezvoltare.
+  reuseExistingServer: false,
+  timeout: 120_000,
+  env: {
+    // Mediul serverului de test: baza și Redis-ul de test, nu cele din .env.
+    DATABASE_URL: testDatabaseUrl,
+    REDIS_URL: testRedisUrl,
+    // Better Auth acceptă doar originea din APP_URL: serverul de test trebuie să o știe pe a lui.
+    APP_URL: `http://localhost:${port}`,
+    // Director de build propriu: serverul E2E nu scrie peste `.next` al unui server de dev pornit.
+    NEXT_DIST_DIR: ".next-e2e",
+    // Activează harness-urile `*.e2e.tsx` (vezi next.config.ts); niciodată în producție.
+    E2E_HARNESS: "1",
+    STORAGE_DRIVER: "local",
+    STORAGE_LOCAL_PATH: e2eStorageDir,
+  },
+};
+
+const s3Server = {
+  // Întâi bucketul de test (`storage:init`, idempotent), apoi serverul cu driverul S3.
+  command: `node --import tsx packages/core/scripts/storage-init.ts && node scripts/in.mjs apps/web node_modules/next/dist/bin/next dev --port ${s3Port}`,
+  url: `http://localhost:${s3Port}`,
+  reuseExistingServer: false,
+  timeout: 180_000,
+  env: {
+    DATABASE_URL: testDatabaseUrl,
+    REDIS_URL: s3RedisUrl,
+    APP_URL: `http://localhost:${s3Port}`,
+    NEXT_DIST_DIR: ".next-e2e-s3",
+    E2E_HARNESS: "1",
+    STORAGE_DRIVER: "s3",
+    S3_BUCKET: s3Bucket,
+    S3_PUBLIC_URL: `${s3Endpoint}/${s3Bucket}`,
+  },
+};
+
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
@@ -52,25 +110,20 @@ export default defineConfig({
   // Prima cerere către o rută în `next dev` o compilează (pe Windows cu SWC blocat, încet).
   expect: { timeout: 15_000 },
   use: { baseURL: `http://localhost:${port}`, trace: "on-first-retry" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: `node scripts/in.mjs apps/web node_modules/next/dist/bin/next dev --port ${port}`,
-    url: `http://localhost:${port}`,
-    // Niciodată un server deja pornit: ar putea fi unul legat de baza de dezvoltare.
-    reuseExistingServer: false,
-    timeout: 120_000,
-    env: {
-      // Mediul serverului de test: baza și Redis-ul de test, nu cele din .env.
-      DATABASE_URL: testDatabaseUrl,
-      REDIS_URL: testRedisUrl,
-      // Better Auth acceptă doar originea din APP_URL: serverul de test trebuie să o știe pe a lui.
-      APP_URL: `http://localhost:${port}`,
-      // Director de build propriu: serverul E2E nu scrie peste `.next` al unui server de dev pornit.
-      NEXT_DIST_DIR: ".next-e2e",
-      // Activează harness-urile `*.e2e.tsx` (vezi next.config.ts); niciodată în producție.
-      E2E_HARNESS: "1",
-      STORAGE_DRIVER: "local",
-      STORAGE_LOCAL_PATH: e2eStorageDir,
-    },
-  },
+  projects: s3Only
+    ? [
+        {
+          name: "chromium-s3",
+          testMatch: /media-s3.spec.ts/,
+          use: { ...devices["Desktop Chrome"], baseURL: `http://localhost:${s3Port}` },
+        },
+      ]
+    : [
+        {
+          name: "chromium",
+          testIgnore: /media-s3.spec.ts/,
+          use: { ...devices["Desktop Chrome"] },
+        },
+      ],
+  webServer: s3Only ? s3Server : localServer,
 });
