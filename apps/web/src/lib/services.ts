@@ -77,7 +77,7 @@ export function getBranding(): BrandingService {
  * Contoarele din memorie se păstrează între reconstruirile instanței Better Auth (la schimbarea
  * setărilor), ca limitele și blocările puse cât Redis era căzut să nu se piardă în același proces.
  */
-function getCounterStore(): ResilientCounterStore {
+export function getCounterStore(): ResilientCounterStore {
   globalForServices.__ecomAuthMemory ??= new MemoryCounterStore();
   return new ResilientCounterStore(
     new RedisCounterStore(getRedis()),

@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
     "@ecom/config",
     "@ecom/core",
     "@ecom/db",
+    "@ecom/integrations",
     "@ecom/ui",
     "@ecom/jobs",
     "@ecom/emails",
@@ -35,7 +36,15 @@ const nextConfig: NextConfig = {
       { source: "/api/admin/:path*", headers: privateNoIndex },
     ];
   },
-  serverExternalPackages: ["pg", "ioredis", "pino", "@node-rs/argon2", "bullmq", "nodemailer"],
+  serverExternalPackages: [
+    "pg",
+    "ioredis",
+    "pino",
+    "@node-rs/argon2",
+    "bullmq",
+    "nodemailer",
+    "sharp",
+  ],
 };
 
 // Fără org/project/authToken: nu urcă source maps și nu contactează Sentry la build.

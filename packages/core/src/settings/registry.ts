@@ -88,6 +88,27 @@ export const settingGroups = {
      */
     trustedProxyHops: z.number().int().min(0).max(5).default(0),
   },
+  media: {
+    /** Mărimea maximă a unui fișier încărcat, în octeți (implicit 20 MB; plafon 50 MB: trece prin memorie). */
+    maxUploadBytes: z
+      .number()
+      .int()
+      .min(1024)
+      .max(50 * 1024 * 1024)
+      .default(20 * 1024 * 1024),
+    /** Pixeli maximi la intrare (lățime × înălțime), împotriva imaginilor-bombă. */
+    maxInputPixels: z.number().int().min(1_000_000).max(100_000_000).default(40_000_000),
+    /** Tipurile acceptate la încărcare; doar din lista suportată (GIF și SVG nu sunt acceptate). */
+    allowedMimeTypes: z
+      .array(z.enum(["image/jpeg", "image/png", "image/webp", "image/avif"]))
+      .min(1)
+      .default(["image/jpeg", "image/png", "image/webp", "image/avif"]),
+    /** Încărcări per utilizator în fereastră. */
+    uploadMaxAttempts: z.number().int().min(1).max(10_000).default(60),
+    uploadWindowMinutes: z.number().int().min(1).max(1440).default(10),
+    /** Încercări refuzate (origine, sesiune, permisiune) pe IP care mai intră în jurnalul de audit. */
+    refusedAuditMaxAttempts: z.number().int().min(1).max(10_000).default(20),
+  },
   monitoring: {
     /** DSN Sentry. Gol = Sentry complet inactiv. Nu e secret (se trimite și în browser). */
     sentryDsn: z

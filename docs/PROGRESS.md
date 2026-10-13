@@ -2,13 +2,15 @@
 
 ## 2026-10-12 · Sesiunea 4 · Faza 3 (Media), Promptul 4 — ÎN LUCRU
 **Terminat (confirmat de utilizator):** punctele 1 (schema, migrația, `media.read`) și 2 (adaptor de storage, MinIO în CI)
-**În lucru:** — (punctul 2 confirmat; urmează punctul 3)
+**În lucru:** punctul 3 (upload prin server) — gata, așteaptă verificarea utilizatorului
 **Blocat:** —
+
+**Incident în sesiune (raportat):** la verificarea punctului 3 am pornit `next start` pe portul 3000, deja ocupat de un proces al utilizatorului (cel mai probabil serverul de dezvoltare, `pnpm dev:web`). Apoi am oprit după linia de comandă un proces `next` care, probabil, era chiar acel server; `next start` mi-a stricat și folderul `.next` (build de producție peste cel de dezvoltare). Nu am atins baza de date. Utilizatorul trebuie să repornească `pnpm dev:web`. De acum probele mele rulează doar pe porturi proprii (3101), pornite și oprite după PID, și verific mai întâi ce ascultă pe port
 
 **Decizii în sesiune (toate ale utilizatorului):**
 - **Utilizator:** driverul de storage rămâne în `.env` (`STORAGE_DRIVER` + `S3_*`), nu în Setări; formularea din TODO corectată
 - **Utilizator:** upload prin server, cu stream, pentru ambele drivere; presigned URL doar când apar fișiere mari
-- **Utilizator:** dependențe aprobate: `sharp`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `file-type`, `blurhash`. Modificarea din `allowBuilds` (dacă e nevoie) se arată înainte. Instalate până acum (punctul 2): `@aws-sdk/client-s3` și `@aws-sdk/s3-request-presigner` la `3.1149.0`, versiuni exacte
+- **Utilizator:** dependențe aprobate: `sharp`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `file-type`, `blurhash`. Modificarea din `allowBuilds` (dacă e nevoie) se arată înainte. Instalate până acum: `@aws-sdk/client-s3` și `@aws-sdk/s3-request-presigner` la `3.1149.0` (punctul 2); `sharp` `0.35.5` și `file-type` `22.1.1` în `@ecom/core` (punctul 3), versiuni exacte. `sharp` se încarcă pe Windows-ul utilizatorului fără modificare în `allowBuilds` (binarul vine prebuilt, fără script de build); `blurhash` vine la punctul 4
 - **Utilizator:** limită implicită 20 MB/fișier și ~40 megapixeli la intrare, editabile din setări; tipuri JPEG, PNG, WebP, AVIF (fără GIF; SVG respins); taguri `String[]`
 - **Utilizator:** `media.read` nou (matricea din `docs/04` §6 actualizată în același commit); originalul se păstrează fără EXIF/GPS lângă variante
 - **Utilizator:** ruta de upload (API route, nu server action) își face singură: sesiune, `media.write`, Origin, rate limit, audit (și refuzuri), mărime în timpul stream-ului — cu test de refuz
@@ -20,6 +22,12 @@
 - **Claude (punctul 2):** linkurile semnate locale sunt HMAC-SHA256 cu cheie HKDF din `APP_KEY` (context separat de criptarea credențialelor); ruta care le servește (verificare cu `verifyClaims`) vine la Faza 14b
 - **Claude (punctul 2):** `STORAGE_LOCAL_PATH` relativ se ancorează la rădăcina monorepo-ului (primul `pnpm-workspace.yaml`), ca web (cwd `apps/web`) și worker (cwd rădăcină) să vadă același director. În producție: cale absolută. `/storage` e în `.gitignore`
 - **Claude (punctul 2):** în CI, MinIO pornește cu `docker run` într-un pas (nu `services:`, care nu permite comanda `server /data`), aceeași imagine pe digest ca în docker compose; aplicația rămâne cu `STORAGE_DRIVER=local`, variabilele `S3_*` le citesc doar testele de storage
+- **Claude (punctul 3):** ruta `POST /api/media` primește fișierul ca CORP brut (nu multipart), cu `X-File-Name` (percent-encoded) și `?folderId=&alt=`: așa mărimea se poate limita în timpul stream-ului fără parser multipart. Toată logica e în `handleMediaUpload` (`@ecom/core`, testabil fără Next); ruta din `apps/web` doar o leagă. Ordinea: origine → sesiune → `media.write` → rate limit → mărime în stream → tip real/pixeli/curățare → storage + DB → audit
+- **Claude (punctul 3):** originalul păstrat NU e identic bit cu bit: se decodează și se re-codifică (JPEG 4:4:4 calitate 95, PNG fără pierderi, WebP 95, AVIF 90). Asta scoate EXIF/GPS/XMP și conținutul poliglot și aplică orientarea; e aproape fără pierderi. Imaginile animate păstrează doar primul cadru
+- **Claude (punctul 3):** `sharp` și `file-type` se importă leneș în `sanitizeImage`: `@ecom/core` se încarcă peste tot, deci un modul nativ care nu se poate încărca pe o mașină strică doar upload-ul de imagini, nu toată aplicația
+- **Claude (punctul 3):** refuzurile se auditează cu rezultat `denied` și doar motivul (fără nume, fără conținut). Înregistrările refuzate sunt limitate pe IP (`media.refusedAuditMaxAttempts`, ×10 în bucket comun fără IP de încredere), ca o buclă anonimă să nu umple un jurnal care nu se poate șterge. Dacă auditul de succes eșuează, răspunsul e `500 AUDIT_WRITE_FAILED` cu `mediaId` (aceeași politică ca `withAudit`; fișierul rămâne salvat)
+- **Claude (punctul 3):** setări noi în grupul `media`: `maxUploadBytes` (20 MB, plafon 50 MB: trece prin memorie), `maxInputPixels` (40 MP), `allowedMimeTypes` (doar din cele 4 suportate), `uploadMaxAttempts`/`uploadWindowMinutes` (60 / 10 min), `refusedAuditMaxAttempts` (20)
+- **Claude (punctul 3):** rândul `Media` se creează `pending`; procesarea în queue (variante, blurhash) vine la punctul 4 (`MediaService` are deja cârligul `onCreated`). Până atunci fișierele încărcate rămân `pending`
 - **Claude (punctul 2):** `IntegrationError` adăugat în `@ecom/shared` (era în CLAUDE.md, lipsea din cod)
 
 ## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — TERMINATĂ ȘI VERIFICATĂ 🏁
