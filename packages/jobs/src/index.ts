@@ -4,3 +4,6 @@ export * from "./email-processor";
 export * from "./mailer";
 export * from "./worker";
 export * from "./runtime";
+export * from "./media-queue";
+export * from "./media-worker";
+export * from "./media-runtime";

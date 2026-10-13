@@ -108,6 +108,13 @@ export const settingGroups = {
     uploadWindowMinutes: z.number().int().min(1).max(1440).default(10),
     /** Încercări refuzate (origine, sesiune, permisiune) pe IP care mai intră în jurnalul de audit. */
     refusedAuditMaxAttempts: z.number().int().min(1).max(10_000).default(20),
+    /** Lățimile variantelor generate (pixeli, latura mare); fiecare în AVIF, WebP și JPEG. */
+    thumbWidth: z.number().int().min(64).max(1000).default(320),
+    mediumWidth: z.number().int().min(200).max(2000).default(800),
+    largeWidth: z.number().int().min(400).max(4000).default(1600),
+    avifQuality: z.number().int().min(1).max(100).default(60),
+    webpQuality: z.number().int().min(1).max(100).default(80),
+    jpegQuality: z.number().int().min(1).max(100).default(82),
   },
   monitoring: {
     /** DSN Sentry. Gol = Sentry complet inactiv. Nu e secret (se trimite și în browser). */

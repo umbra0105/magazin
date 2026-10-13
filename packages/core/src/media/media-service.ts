@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { StorageDriver } from "@ecom/integrations";
 import { getLogger } from "@ecom/shared";
+import type { DecodeLimiter } from "./decode-limiter";
 import { MediaError } from "./errors";
 import { sanitizeImage, type ImageLimits } from "./image";
 import type { MediaRow, MediaStore } from "./media-store";
@@ -22,6 +23,13 @@ export interface UploadedMedia extends MediaRow {
 export interface MediaServiceDeps {
   store: MediaStore;
   storage: StorageDriver;
+  /**
+   * Limita globală de decodări de imagini (aceeași ca în worker). Fără loc liber, încărcarea e
+   * refuzată cu `MEDIA_BUSY` (503 + Retry-After) înainte de orice decodare. Omis = fără limită.
+   */
+  limiter?: DecodeLimiter;
+  /** Doar în teste: înlocuiește `sanitizeImage`. */
+  sanitize?: typeof sanitizeImage;
   /**
    * Apelat după ce fișierul și rândul există (aici pornește procesarea în queue, punctul 4).
    * O eroare aici nu anulează încărcarea: fișierul rămâne `pending` și poate fi reluat.
@@ -46,7 +54,16 @@ export class MediaService {
       throw new MediaError("MEDIA_FOLDER_NOT_FOUND", "Folderul nu există");
     }
 
-    const image = await sanitizeImage(command.bytes, command.limits);
+    const lease = (await this.deps.limiter?.tryAcquire()) ?? null;
+    if (this.deps.limiter && !lease) {
+      throw new MediaError("MEDIA_BUSY", "Se procesează prea multe imagini în acest moment");
+    }
+    let image;
+    try {
+      image = await (this.deps.sanitize ?? sanitizeImage)(command.bytes, command.limits);
+    } finally {
+      await lease?.release();
+    }
     const key = `public/media/${randomUUID()}/original.${image.extension}`;
 
     await storage.put(key, image.buffer, { contentType: image.mime, cacheControl: IMMUTABLE });

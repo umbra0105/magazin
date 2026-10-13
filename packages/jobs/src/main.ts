@@ -1,8 +1,9 @@
 /**
- * Procesul de worker: `pnpm worker`. Consumă coada de emailuri. În dezvoltare, `pnpm dev:web`
- * pornește același worker în procesul aplicației, deci nu trebuie rulat separat.
+ * Procesul de worker: `pnpm worker`. Consumă cozile `emails` și `media`. În dezvoltare, `pnpm dev:web`
+ * pornește aceiași workeri în procesul aplicației, deci nu trebuie rulat separat.
  */
 import { getLogger } from "@ecom/shared";
+import { startMediaWorkerFromEnv } from "./media-runtime";
 import { startEmailWorkerFromEnv } from "./runtime";
 
 try {
@@ -12,8 +13,9 @@ try {
 }
 
 const logger = getLogger();
-const running = startEmailWorkerFromEnv();
-logger.info({ queue: "emails" }, "worker pornit (Ctrl+C pentru oprire)");
+const email = startEmailWorkerFromEnv();
+const media = startMediaWorkerFromEnv();
+logger.info({ queues: ["emails", "media"] }, "worker pornit (Ctrl+C pentru oprire)");
 
 let stopping = false;
 async function shutdown(signal: string): Promise<void> {
@@ -21,7 +23,7 @@ async function shutdown(signal: string): Promise<void> {
   stopping = true;
   logger.info({ signal }, "worker: opresc după joburile în curs");
   try {
-    await running.close();
+    await Promise.all([email.close(), media.close()]);
   } finally {
     process.exit(0);
   }

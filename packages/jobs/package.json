@@ -14,6 +14,7 @@
     "@ecom/core": "workspace:*",
     "@ecom/db": "workspace:*",
     "@ecom/emails": "workspace:*",
+    "@ecom/integrations": "workspace:*",
     "@ecom/shared": "workspace:*",
     "bullmq": "6.3.12",
     "ioredis": "6.0.0",

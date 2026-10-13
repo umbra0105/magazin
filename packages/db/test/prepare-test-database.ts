@@ -1,4 +1,6 @@
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { Client } from "pg";
 import { assertTestDatabase, assertTestRedis } from "../../../test/support/test-env";
 
@@ -44,12 +46,21 @@ export async function prepareTestDatabase(
     await client.end();
   }
 
+  // Prisma CLI se lansează direct cu node (din node_modules-ul pachetului), nu prin `pnpm exec`:
+  // testele nu depind de launcherul pnpm (pe unele mașini Windows `pnpm.exe` poate fi blocat de
+  // politici de securitate). Dacă fișierul lipsește (alt layout de instalare), cădem pe `pnpm exec`.
+  const prismaCli = join(prismaDir, "node_modules", "prisma", "build", "index.js");
+  const options = {
+    cwd: prismaDir,
+    env: { ...process.env, DATABASE_URL: testUrl },
+    stdio: "pipe" as const,
+  };
   try {
-    execSync("pnpm exec prisma migrate deploy", {
-      cwd: prismaDir,
-      env: { ...process.env, DATABASE_URL: testUrl },
-      stdio: "pipe",
-    });
+    if (existsSync(prismaCli)) {
+      execFileSync(process.execPath, [prismaCli, "migrate", "deploy"], options);
+    } else {
+      execSync("pnpm exec prisma migrate deploy", options);
+    }
   } catch (error) {
     const out = error as { stdout?: Buffer; stderr?: Buffer };
     throw new Error(

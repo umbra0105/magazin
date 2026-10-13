@@ -2,7 +2,9 @@ import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import type { Readable } from "node:stream";
 import type { PutOptions, StorageDriver, StoredObject } from "@ecom/integrations";
+import { MemoryDecodeLimiter } from "./decode-limiter";
 import { MediaError } from "./errors";
+import { sanitizeImage } from "./image";
 import { MediaService, type UploadCommand } from "./media-service";
 import type { MediaRow, MediaStore, NewMedia } from "./media-store";
 
@@ -154,5 +156,86 @@ describe("MediaService.upload", () => {
       await command({ alt: "a".repeat(1000) }),
     );
     expect(s.created[0]?.alt).toHaveLength(300);
+  });
+});
+
+describe("MediaService.upload: limita globală de decodări", () => {
+  const limits = { allowedMimeTypes: ["image/jpeg"], maxInputPixels: 40_000_000 };
+
+  it("fără loc liber: MEDIA_BUSY, fără decodare, fără storage, fără rând", async () => {
+    const limiter = new MemoryDecodeLimiter({ slots: 2 });
+    const held = [await limiter.tryAcquire(), await limiter.tryAcquire()];
+    const storage = new MemoryStorage();
+    const s = store();
+    let decoded = 0;
+    const service = new MediaService({
+      store: s,
+      storage,
+      limiter,
+      sanitize: async (...args) => {
+        decoded += 1;
+        return sanitizeImage(...args);
+      },
+    });
+
+    const error = await service.upload(await command()).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(MediaError);
+    expect((error as MediaError).code).toBe("MEDIA_BUSY");
+    expect(decoded).toBe(0);
+    expect(storage.objects.size).toBe(0);
+    expect(s.created).toHaveLength(0);
+
+    await held[0]?.release();
+    await service.upload(await command());
+    expect(decoded).toBe(1);
+    await held[1]?.release();
+  });
+
+  it("locul se eliberează după decodare, chiar dacă imaginea e invalidă", async () => {
+    const limiter = new MemoryDecodeLimiter({ slots: 1 });
+    const service = new MediaService({ store: store(), storage: new MemoryStorage(), limiter });
+    await expect(
+      service.upload(await command({ bytes: Buffer.from("nu e imagine"), limits })),
+    ).rejects.toMatchObject({ code: "MEDIA_UNSUPPORTED_TYPE" });
+    expect(await limiter.tryAcquire()).not.toBeNull();
+  });
+
+  it("sub încărcare: niciodată mai mult de 2 decodări simultane; restul primesc MEDIA_BUSY", async () => {
+    const limiter = new MemoryDecodeLimiter({ slots: 2 });
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const service = new MediaService({
+      store: store(),
+      storage: new MemoryStorage(),
+      limiter,
+      sanitize: async (...args) => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 40)); // decodare „lentă”
+          return await sanitizeImage(...args);
+        } finally {
+          inFlight -= 1;
+        }
+      },
+    });
+
+    const bytes = await jpeg();
+    const results = await Promise.allSettled(
+      Array.from({ length: 8 }, () =>
+        service.upload({ bytes, originalName: "p.jpg", uploadedById: "u", limits }),
+      ),
+    );
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    const busy = results.filter(
+      (r) => r.status === "rejected" && (r.reason as MediaError).code === "MEDIA_BUSY",
+    ).length;
+
+    expect(maxInFlight).toBe(2);
+    expect(ok).toBe(2);
+    expect(busy).toBe(6);
+    expect(ok + busy).toBe(8);
+    // după ce s-au terminat, locurile sunt din nou libere
+    expect(await limiter.tryAcquire()).not.toBeNull();
   });
 });

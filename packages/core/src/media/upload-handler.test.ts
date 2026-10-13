@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { AuditService, type AuditRow, type AuditStore } from "../audit/audit-service";
 import { MemoryCounterStore } from "../auth/counter-store";
 import type { PermissionSubject } from "../rbac/can";
+import { z } from "zod";
 import { settingGroups } from "../settings/registry";
 import { StorageError } from "@ecom/integrations";
 import { MediaError } from "./errors";
@@ -12,9 +13,7 @@ import { handleMediaUpload, type MediaSettings, type MediaUploadDeps } from "./u
 const APP = "https://magazin.test";
 
 const defaults = (): MediaSettings => ({
-  maxUploadBytes: settingGroups.media.maxUploadBytes.parse(undefined),
-  maxInputPixels: settingGroups.media.maxInputPixels.parse(undefined),
-  allowedMimeTypes: settingGroups.media.allowedMimeTypes.parse(undefined),
+  ...z.object(settingGroups.media).parse({}),
   uploadMaxAttempts: 3,
   uploadWindowMinutes: 10,
   refusedAuditMaxAttempts: 2,
@@ -295,6 +294,22 @@ describe("POST /api/media: erori de conținut", () => {
       after: { reason: "storage_unavailable", errorCode: "STORAGE_FAILED" },
     });
     expect(JSON.stringify(rows)).not.toContain("contract-ion-popescu");
+  });
+
+  it("limita de decodări plină → 503 MEDIA_BUSY cu Retry-After, auditat ca failed, nu ca refuz", async () => {
+    const { deps, rows } = setup({
+      subject: editor,
+      upload: async () => {
+        throw new MediaError("MEDIA_BUSY", "intern");
+      },
+    });
+    const res = await handleMediaUpload(request(), deps);
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("5");
+    const json = (await res.json()) as { code: string; message: string };
+    expect(json.code).toBe("MEDIA_BUSY");
+    expect(json.message).toMatch(/prea multe imagini/);
+    expect(rows[0]).toMatchObject({ outcome: "failed", after: { reason: "busy" } });
   });
 
   it("recunoaște o eroare de storage și când clasa vine dintr-o altă copie a modulului", async () => {

@@ -25,6 +25,9 @@ export interface MediaUploadDeps {
   audit: AuditService;
 }
 
+const BUSY_RETRY_SECONDS = 5;
+const BUSY_MESSAGE =
+  "Se procesează prea multe imagini în acest moment. Încearcă din nou în câteva secunde.";
 export const STORAGE_UNAVAILABLE = "MEDIA_STORAGE_UNAVAILABLE";
 const STORAGE_UNAVAILABLE_MESSAGE =
   "Stocarea fișierelor nu este disponibilă momentan. Încearcă din nou peste puțin timp sau anunță administratorul.";
@@ -132,6 +135,17 @@ export async function handleMediaUpload(
       },
     });
   } catch (error) {
+    if (error instanceof MediaError && error.code === "MEDIA_BUSY") {
+      // Nu e vina utilizatorului și nu e un refuz: serverul decodează deja numărul maxim de imagini.
+      return respond(
+        "failed",
+        503,
+        { code: error.code, message: BUSY_MESSAGE },
+        "busy",
+        {},
+        { "Retry-After": String(BUSY_RETRY_SECONDS) },
+      );
+    }
     if (error instanceof MediaError) {
       const reason = error.code.replace(/^MEDIA_/, "").toLowerCase();
       return refuse(MEDIA_ERROR_STATUS[error.code], error.code, reason, {

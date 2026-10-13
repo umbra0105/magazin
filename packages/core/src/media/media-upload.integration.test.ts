@@ -16,6 +16,7 @@ import { MemoryCounterStore } from "../auth/counter-store";
 import { PermissionService } from "../rbac/permission-service";
 import { resolveSubject } from "../rbac/resolve-subject";
 import { runBaseSeed } from "../seed/base-seed";
+import { z } from "zod";
 import { settingGroups } from "../settings/registry";
 import { inRolledBackTransaction, type TestTx } from "../test-utils/rollback";
 import { MediaService } from "./media-service";
@@ -44,9 +45,7 @@ afterAll(async () => {
 });
 
 const media = (): MediaSettings => ({
-  maxUploadBytes: settingGroups.media.maxUploadBytes.parse(undefined),
-  maxInputPixels: settingGroups.media.maxInputPixels.parse(undefined),
-  allowedMimeTypes: settingGroups.media.allowedMimeTypes.parse(undefined),
+  ...z.object(settingGroups.media).parse({}),
   uploadMaxAttempts: 60,
   uploadWindowMinutes: 10,
   refusedAuditMaxAttempts: 20,

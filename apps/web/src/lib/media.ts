@@ -2,19 +2,70 @@ import { loadEnv } from "@ecom/config";
 import {
   MediaService,
   MediaUploadGuard,
+  MemoryDecodeLimiter,
+  RedisDecodeLimiter,
+  ResilientDecodeLimiter,
   createPrismaMediaStore,
+  type DecodeLimiter,
   type MediaUploadDeps,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
+import { createMediaQueue, enqueueMediaProcessing, type MediaQueue } from "@ecom/jobs";
 import { createStorage, type StorageDriver } from "@ecom/integrations";
+import { getLogger } from "@ecom/shared";
 import { getAudit } from "./admin-writes";
 import { getCurrentSubject } from "./session";
-import { getCounterStore, getSettings } from "./services";
+import { getCounterStore, getRedis, getSettings } from "./services";
 
 const globalForMedia = globalThis as unknown as {
   __ecomStorage?: StorageDriver;
   __ecomMedia?: MediaService;
+  __ecomMediaQueue?: MediaQueue;
+  __ecomDecodeLimiter?: DecodeLimiter;
 };
+
+const ENQUEUE_TIMEOUT_MS = 5000;
+
+/** O singură coadă `media` (și conexiune Redis) per proces. */
+export function getMediaQueue(): MediaQueue {
+  if (!globalForMedia.__ecomMediaQueue) {
+    const queue = createMediaQueue(loadEnv().REDIS_URL);
+    // Fără handler, o eroare de conexiune ar opri procesul; enqueue-ul are propriul timeout.
+    queue.on("error", () => undefined);
+    globalForMedia.__ecomMediaQueue = queue;
+  }
+  return globalForMedia.__ecomMediaQueue;
+}
+
+/**
+ * Limita GLOBALĂ de decodări de imagini (aceeași cheie Redis ca în worker): max. 2 simultan în
+ * toată instalarea. Dacă Redis cade, limita rămâne per proces.
+ */
+export function getDecodeLimiter(): DecodeLimiter {
+  globalForMedia.__ecomDecodeLimiter ??= new ResilientDecodeLimiter(
+    new RedisDecodeLimiter(getRedis()),
+    new MemoryDecodeLimiter(),
+    getLogger(),
+  );
+  return globalForMedia.__ecomDecodeLimiter;
+}
+
+async function enqueueWithTimeout(mediaId: string): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      enqueueMediaProcessing(getMediaQueue(), mediaId),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("timeout la punerea în coadă")),
+          ENQUEUE_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /** Driverul de storage din `.env` (`STORAGE_DRIVER`). Un singur obiect per proces. */
 export function getStorage(): StorageDriver {
@@ -26,6 +77,10 @@ export function getMediaService(): MediaService {
   globalForMedia.__ecomMedia ??= new MediaService({
     store: createPrismaMediaStore(getDb()),
     storage: getStorage(),
+    limiter: getDecodeLimiter(),
+    // Procesarea (variante, blurhash) rulează în worker, nu în cerere. Dacă punerea în coadă
+    // eșuează, fișierul rămâne `pending` și se reia cu `pnpm media:regenerate`.
+    onCreated: (media) => enqueueWithTimeout(media.id),
   });
   return globalForMedia.__ecomMedia;
 }
