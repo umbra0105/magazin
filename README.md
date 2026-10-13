@@ -25,7 +25,7 @@ pnpm install
 # 2. Configurare: copiază exemplul și, dacă e nevoie, ajustează valorile
 cp .env.example .env            # în PowerShell: Copy-Item .env.example .env
 
-# 3. Servicii locale: Postgres, Redis, MinIO, Mailpit
+# 3. Servicii locale: Postgres, Redis, MinIO, Mailpit (creează și bucketul S3 al aplicației)
 docker compose -f docker/docker-compose.dev.yml up -d
 
 # 4. Browserul pentru testele E2E (o singură dată pe fiecare calculator)
@@ -42,6 +42,12 @@ Verifică:
 - Starea serviciilor: <http://localhost:3000/api/health> (200 dacă Postgres și Redis răspund)
 - Emailuri prinse local (Mailpit): <http://localhost:8025>
 - Consola MinIO: <http://localhost:9001>
+
+**Bucketul S3.** Cu `STORAGE_DRIVER=s3` (implicit în `.env.example`), încărcarea de fișiere cere ca
+bucketul din `S3_BUCKET` să existe. Pasul 3 îl creează singur (serviciul `minio-init`, idempotent,
+iese cu „Exited (0)”). Pentru un serviciu S3 fără docker compose (sau dacă ai schimbat `S3_BUCKET`),
+rulează `pnpm storage:init`: creează bucketul dacă lipsește și nu atinge nimic dacă există; refuză
+cu `STORAGE_DRIVER=local`. Fără bucket, încărcarea întoarce 503 `MEDIA_STORAGE_UNAVAILABLE`.
 
 Pasul 4 e necesar doar pentru `pnpm test:e2e`. Fără el, restul funcționează.
 Toate valorile din `.env.example` sunt pentru dezvoltare locală, inclusiv `APP_KEY`.
@@ -70,6 +76,7 @@ Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 | `pnpm db:migrate`                               | aplică migrațiile pe baza de date locală                                                           |
 | `pnpm db:seed`                                  | seed de pachet: roluri, permisiuni, setări, flag-uri (idempotent)                                  |
 | `pnpm db:seed:store`                            | seed specific magazinului (rulat doar de proprietar)                                               |
+| `pnpm storage:init`                             | creează bucketul S3 din `.env` dacă lipsește (idempotent); refuză cu `STORAGE_DRIVER=local`        |
 | `pnpm dev:preset`                               | doar dev: aplică un preset de temă (`minimal`/`bold`/`editorial`, `--dark`)                        |
 | `pnpm admin:create`                             | creează contul Owner; interactiv, parola fără echo (rulează `db:seed` întâi)                       |
 | `pnpm admin:unlock <email>`                     | deblochează un cont blocat după prea multe încercări de login                                      |
@@ -228,6 +235,10 @@ listează fiecare variabilă problematică. Pornește de la `.env.example`.
 **`/api/health` întoarce 503.** Un serviciu nu răspunde. Verifică
 `docker compose -f docker/docker-compose.dev.yml ps`. Detaliul tehnic apare în logurile
 serverului (nu în răspuns), împreună cu `requestId`.
+
+**Încărcarea de imagini dă 503 `MEDIA_STORAGE_UNAVAILABLE`.** Storage-ul nu răspunde sau bucketul din
+`S3_BUCKET` nu există (cel mai des: MinIO proaspăt, fără `docker compose up -d` după ultima actualizare).
+Rulează `pnpm storage:init`; detaliul tehnic (numele erorii și statusul) apare în logurile serverului.
 
 **Playwright: `Executable doesn't exist`.** Nu ai rulat pasul 4 (`pnpm exec playwright install chromium`).
 

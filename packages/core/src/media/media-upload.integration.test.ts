@@ -4,7 +4,12 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
-import { LocalStorageDriver, deriveSigningKey } from "@ecom/integrations";
+import {
+  LocalStorageDriver,
+  StorageError,
+  deriveSigningKey,
+  type StorageDriver,
+} from "@ecom/integrations";
 import { AuditService } from "../audit/audit-service";
 import { createPrismaAuditStore } from "../audit/prisma-store";
 import { MemoryCounterStore } from "../auth/counter-store";
@@ -62,6 +67,7 @@ async function uploadAs<T>(
     body?: Buffer;
     query?: string;
     fileName?: string;
+    storage?: StorageDriver;
   },
   check: (ctx: { response: Response; tx: TestTx }) => Promise<T>,
 ): Promise<T> {
@@ -98,7 +104,10 @@ async function uploadAs<T>(
       getSettings: async () => ({ media: media(), trustedProxyHops: 0 }),
       appUrl: APP,
       createGuard: (s) => new MediaUploadGuard(new MemoryCounterStore(), s),
-      service: new MediaService({ store: createPrismaMediaStore(tx), storage }),
+      service: new MediaService({
+        store: createPrismaMediaStore(tx),
+        storage: options.storage ?? storage,
+      }),
       audit: new AuditService(createPrismaAuditStore(tx)),
     });
     return check({ response, tx });
@@ -236,6 +245,31 @@ describe("upload media: rolurile reale din seed, baza reală, storage local", ()
       expect(await tx.media.count()).toBe(0);
     });
     expect(await objectCount()).toBe(before);
+  });
+
+  it("storage indisponibil (bucket lipsă): 503 JSON, nicio înregistrare Media, audit cu rezultat failed", async () => {
+    const broken = new Proxy(storage, {
+      get(target, prop, receiver) {
+        if (prop === "put") {
+          return async () => {
+            throw new StorageError("STORAGE_FAILED", "Scrierea în S3 a eșuat", {
+              errorName: "NoSuchBucket",
+              status: 404,
+            });
+          };
+        }
+        return Reflect.get(target, prop, receiver) as unknown;
+      },
+    });
+    await uploadAs("editor", { storage: broken }, async ({ response, tx }) => {
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ code: "MEDIA_STORAGE_UNAVAILABLE" });
+      expect(await tx.media.count()).toBe(0);
+      const rows = await tx.auditLog.findMany({ where: { action: "media.upload" } });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ outcome: "failed", actorId: "media-editor" });
+      expect(JSON.stringify(rows[0]?.after)).not.toContain("poza");
+    });
   });
 
   it("folder existent: rândul îl referă", async () => {

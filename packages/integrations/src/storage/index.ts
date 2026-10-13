@@ -1,6 +1,12 @@
 export { buildKey, isPublicKey, visibilityOf } from "./keys";
 export { createStorage, resolveStorageDir } from "./create-storage";
 export {
+  ensureS3Bucket,
+  initStorage,
+  type EnsureBucketResult,
+  type S3ConnectionOptions,
+} from "./init";
+export {
   LocalStorageDriver,
   MAX_SIGNED_URL_SECONDS,
   type LocalStorageOptions,
@@ -9,6 +15,7 @@ export { S3StorageDriver, contentDisposition, type S3StorageOptions } from "./s3
 export { deriveSigningKey, signClaims, verifyClaims, type SignedUrlClaims } from "./signing";
 export {
   StorageError,
+  isStorageError,
   type PutOptions,
   type SignedUrlOptions,
   type StorageDriver,

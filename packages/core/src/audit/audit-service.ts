@@ -1,7 +1,11 @@
 import { getRequestContext, redactSensitive } from "@ecom/shared";
 
-/** `success` = acțiunea s-a executat; `denied` = încercare refuzată (fără permisiune), nimic modificat. */
-export type AuditOutcome = "success" | "denied";
+/**
+ * `success` = acțiunea s-a executat; `denied` = încercare refuzată (fără permisiune, origine,
+ * conținut invalid), nimic modificat; `failed` = acțiune autorizată, eșuată din cauza unei
+ * defecțiuni (ex. storage indisponibil).
+ */
+export type AuditOutcome = "success" | "denied" | "failed";
 
 export interface AuditInput {
   actorId: string | null;

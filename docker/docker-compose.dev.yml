@@ -53,6 +53,22 @@ services:
       timeout: 5s
       retries: 10
 
+  # Creează bucketul aplicației la fiecare `up` și iese (ca baza de date, care se creează singură
+  # din POSTGRES_DB): fără pas manual. Idempotent: `--ignore-existing` nu modifică un bucket
+  # existent. Numele vine din S3_BUCKET (implicit `ecom`, ca în .env.example). Același lucru face
+  # `pnpm storage:init`, pentru S3 fără docker compose. Containerul apare „Exited (0)” în `ps -a`.
+  minio-init:
+    image: cgr.dev/chainguard/minio@sha256:59667194421209c2c1eacbe761e24787e047985c5dfa96b15da9b59fe9b55cd0
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      # alias `local` către serverul de mai sus, fără shell (imaginea nu are)
+      MC_HOST_local: http://ecom_minio:ecom_minio_dev@minio:9000
+    entrypoint: ["mc"]
+    command: ["mb", "--ignore-existing", "local/${S3_BUCKET:-ecom}"]
+
   mailpit:
     # Fixat: Mailpit v1.31.4 (tag + digest)
     image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48

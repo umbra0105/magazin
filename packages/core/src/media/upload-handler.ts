@@ -1,8 +1,9 @@
+import { isStorageError } from "@ecom/integrations";
 import { DomainError, getLogger } from "@ecom/shared";
 import { RateLimitedError } from "../auth/auth-guard";
 import { resolveClientIp } from "../auth/client-ip";
 import { isSameOriginRequest } from "../auth/request-origin";
-import type { AuditService } from "../audit/audit-service";
+import type { AuditOutcome, AuditService } from "../audit/audit-service";
 import { can, type PermissionSubject } from "../rbac/can";
 import type { SettingGroupValue } from "../settings/registry";
 import { readBodyWithLimit } from "./body";
@@ -23,6 +24,12 @@ export interface MediaUploadDeps {
   service: Pick<MediaService, "upload">;
   audit: AuditService;
 }
+
+export const STORAGE_UNAVAILABLE = "MEDIA_STORAGE_UNAVAILABLE";
+const STORAGE_UNAVAILABLE_MESSAGE =
+  "Stocarea fișierelor nu este disponibilă momentan. Încearcă din nou peste puțin timp sau anunță administratorul.";
+const UPLOAD_FAILED = "MEDIA_UPLOAD_FAILED";
+const UPLOAD_FAILED_MESSAGE = "Fișierul nu a putut fi încărcat. Încearcă din nou.";
 
 const NO_STORE = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
 
@@ -50,9 +57,10 @@ export async function handleMediaUpload(
   const guard = deps.createGuard(settings);
   const subject = await deps.getSubject();
 
-  const refuse = async (
+  const respond = async (
+    outcome: Exclude<AuditOutcome, "success">,
     status: number,
-    code: string,
+    body: Record<string, unknown>,
     reason: string,
     details: Record<string, unknown> = {},
     headers: Record<string, string> = {},
@@ -64,16 +72,24 @@ export async function handleMediaUpload(
           actorLabel: subject?.email ?? null,
           action: "media.upload",
           entity: "media",
-          outcome: "denied",
+          outcome,
           after: { reason, ...details },
         });
       }
     } catch (error) {
       // jurnalul sau contorul căzut nu schimbă răspunsul
-      getLogger().error({ err: error, reason }, "înregistrarea refuzului de upload a eșuat");
+      getLogger().error({ err: error, reason }, "înregistrarea încercării de upload a eșuat");
     }
-    return json({ code }, status, headers);
+    return json(body, status, headers);
   };
+
+  const refuse = (
+    status: number,
+    code: string,
+    reason: string,
+    details: Record<string, unknown> = {},
+    headers: Record<string, string> = {},
+  ): Promise<Response> => respond("denied", status, { code }, reason, details, headers);
 
   if (!isSameOriginRequest(request.headers, deps.appUrl)) {
     return refuse(403, "ORIGIN_INVALID", "origin_mismatch");
@@ -122,7 +138,29 @@ export async function handleMediaUpload(
         declaredBytes: Number(request.headers.get("content-length")) || null,
       });
     }
-    throw error;
+    // Defecțiune de infrastructură (bucket lipsă, MinIO oprit, credențiale greșite): nu e vina
+    // utilizatorului. Detaliul tehnic ajunge doar în loguri, niciodată în răspuns sau în jurnal.
+    if (isStorageError(error)) {
+      getLogger().error(
+        { err: error, code: error.code, details: error.details },
+        "încărcarea media a eșuat: storage indisponibil",
+      );
+      return respond(
+        "failed",
+        503,
+        { code: STORAGE_UNAVAILABLE, message: STORAGE_UNAVAILABLE_MESSAGE },
+        "storage_unavailable",
+        { errorCode: error.code },
+        { "Retry-After": "30" },
+      );
+    }
+    getLogger().error({ err: error }, "încărcarea media a eșuat neașteptat");
+    return respond(
+      "failed",
+      500,
+      { code: UPLOAD_FAILED, message: UPLOAD_FAILED_MESSAGE },
+      "unexpected_error",
+    );
   }
 
   try {

@@ -72,3 +72,13 @@ export class StorageError extends IntegrationError {
     super(code, message, details);
   }
 }
+
+/**
+ * `instanceof` nu e de ajuns între pachete: un bundler poate include modulul în două copii, iar
+ * clasa lor ar fi diferită. Codul stabil (`STORAGE_*`) e contractul.
+ */
+export function isStorageError(error: unknown): error is StorageError {
+  if (error instanceof StorageError) return true;
+  const code = (error as { code?: unknown } | null)?.code;
+  return error instanceof Error && typeof code === "string" && code.startsWith("STORAGE_");
+}

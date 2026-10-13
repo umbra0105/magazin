@@ -69,10 +69,10 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] (2) Adaptor de storage în `packages/integrations`: disc local ↔ S3-compatible (driver din `.env`), fișiere publice și private, URL semnat; teste pe MinIO (bucket de test, gardă) și serviciul MinIO în `ci.yml`
 - [~] (3) Upload prin server: validare MIME reală, limite de mărime, de pixeli și de tipuri (din setări), nume randomizate, original fără EXIF; ruta API cu sesiune, `media.write`, Origin, rate limit, audit (inclusiv refuzuri) și verificarea mărimii în timpul stream-ului
 - [ ] (4) Procesare imagini în queue: variante thumb/medium/large × AVIF/WebP/JPEG, dimensiuni, blurhash, regenerare din original
-- [ ] (5) Servire: URL-uri fără numele original, `X-Content-Type-Options: nosniff`, protecție la path traversal pe driverul local, cache `immutable`
+- [ ] (5) Servire: URL-uri fără numele original, `X-Content-Type-Options: nosniff`, protecție la path traversal pe driverul local, cache `immutable`; **politica de acces public pe prefixul `public/` (citire anonimă) și `S3_PUBLIC_URL`** — `pnpm storage:init` creează doar bucketul, nu stabilește politici
 - [ ] (6) Bibliotecă media în admin: grid, upload drag & drop, foldere, căutare, alt-text și taguri, ștergere cu verificare de utilizare (registru `MediaUsageProvider`)
 - [ ] (7) Selector reutilizabil `MediaPicker` pentru formulare (selecție unică și multiplă)
-- [ ] (8) Teste E2E, verificare manuală cap-coadă (`docs/FAZA-3-verificare-manuala.md`) și închiderea fazei (TODO, PROGRESS)
+- [ ] (8) Teste E2E, verificare manuală cap-coadă (`docs/FAZA-3-verificare-manuala.md`) și închiderea fazei (TODO, PROGRESS). **Include un test E2E de upload care rulează pe driverul S3 din CI** (serverul E2E cu `STORAGE_DRIVER=s3` pe MinIO, bucket creat cu `pnpm storage:init` în workflow; bucket cu „test” în nume), ca problemele care apar doar pe configurația reală (bucket lipsă, credențiale, path-style) să nu mai scape
 
 ## FAZA 4 — Catalog: model și admin · ~8-10 zile
 - [ ] ⚠️ **Permisiune separată pentru conținutul produsului** (ex. `products.content.write`): rolul Editor trebuie să poată edita descrierea și SEO-ul unui produs FĂRĂ să poată schimba prețuri, stoc sau costuri. De decis numele și maparea pe roluri (decizie utilizator); `products.write` rămâne pentru prețuri/variante. Actualizează catalogul RBAC, matricea din `docs/04` și testele

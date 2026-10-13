@@ -3,6 +3,7 @@ import { AuditService, type AuditRow, type AuditStore } from "../audit/audit-ser
 import { MemoryCounterStore } from "../auth/counter-store";
 import type { PermissionSubject } from "../rbac/can";
 import { settingGroups } from "../settings/registry";
+import { StorageError } from "@ecom/integrations";
 import { MediaError } from "./errors";
 import type { UploadCommand, UploadedMedia } from "./media-service";
 import { MediaUploadGuard } from "./upload-guard";
@@ -259,14 +260,84 @@ describe("POST /api/media: erori de conținut", () => {
     expect(rows[0]).toMatchObject({ outcome: "denied", actorId: "user-1" });
   });
 
-  it("o eroare neașteptată a serviciului nu e înghițită", async () => {
+  it("storage indisponibil (ex. bucket lipsă) → 503 cu cod clar și mesaj în română, auditat ca failed", async () => {
+    const { deps, rows } = setup({
+      subject: editor,
+      upload: async () => {
+        throw new StorageError("STORAGE_FAILED", "Scrierea în S3 a eșuat", {
+          errorName: "NoSuchBucket",
+          status: 404,
+        });
+      },
+    });
+    const res = await handleMediaUpload(
+      request({ headers: { "x-file-name": "contract-ion-popescu.jpg" } }),
+      deps,
+    );
+    expect(res.status).toBe(503);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    expect(res.headers.get("retry-after")).toBe("30");
+    const text = await res.text();
+    const json = JSON.parse(text) as { code: string; message: string };
+    expect(json.code).toBe("MEDIA_STORAGE_UNAVAILABLE");
+    expect(json.message).toMatch(/Stocarea fișierelor nu este disponibilă/);
+    // fără detalii interne: nici furnizor, nici nume de bucket sau de eroare, nici cod intern
+    for (const leak of ["S3", "NoSuchBucket", "STORAGE_FAILED", "404", "bucket"]) {
+      expect(text).not.toContain(leak);
+    }
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      action: "media.upload",
+      entity: "media",
+      outcome: "failed",
+      actorId: "user-1",
+      after: { reason: "storage_unavailable", errorCode: "STORAGE_FAILED" },
+    });
+    expect(JSON.stringify(rows)).not.toContain("contract-ion-popescu");
+  });
+
+  it("recunoaște o eroare de storage și când clasa vine dintr-o altă copie a modulului", async () => {
+    class ForeignStorageError extends Error {
+      readonly code = "STORAGE_FAILED";
+    }
     const { deps } = setup({
       subject: editor,
       upload: async () => {
-        throw new Error("storage picat");
+        throw new ForeignStorageError("Scrierea în S3 a eșuat");
       },
     });
-    await expect(handleMediaUpload(request(), deps)).rejects.toThrow("storage picat");
+    const res = await handleMediaUpload(request(), deps);
+    expect(res.status).toBe(503);
+  });
+
+  it("o eroare neașteptată → 500 JSON (nu corp gol), auditat ca failed, fără detalii interne", async () => {
+    const { deps, rows } = setup({
+      subject: editor,
+      upload: async () => {
+        throw new Error("conexiunea la baza de date a căzut la 10.0.0.5");
+      },
+    });
+    const res = await handleMediaUpload(request(), deps);
+    expect(res.status).toBe(500);
+    const text = await res.text();
+    expect(JSON.parse(text)).toMatchObject({ code: "MEDIA_UPLOAD_FAILED" });
+    expect(text).not.toContain("10.0.0.5");
+    expect(rows[0]).toMatchObject({ outcome: "failed", after: { reason: "unexpected_error" } });
+  });
+
+  it("eșecurile de storage repetate nu umplu jurnalul (aceeași limită ca refuzurile)", async () => {
+    const { deps, rows } = setup({
+      subject: editor,
+      settings: { refusedAuditMaxAttempts: 1, uploadMaxAttempts: 1000 },
+      upload: async () => {
+        throw new StorageError("STORAGE_FAILED", "x");
+      },
+    });
+    for (let i = 0; i < 30; i++) {
+      expect((await handleMediaUpload(request(), deps)).status).toBe(503);
+    }
+    expect(rows).toHaveLength(10); // limita 1 × 10 (bucket comun, fără IP de încredere)
   });
 });
 

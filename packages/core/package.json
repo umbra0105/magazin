@@ -18,6 +18,7 @@
     "cli:tty-test": "tsx scripts/tty-test.ts"
   },
   "dependencies": {
+    "@ecom/config": "workspace:*",
     "@ecom/db": "workspace:*",
     "@ecom/integrations": "workspace:*",
     "@ecom/shared": "workspace:*",

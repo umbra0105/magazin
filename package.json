@@ -31,6 +31,7 @@
     "dev:preset": "pnpm --filter @ecom/core dev:preset",
     "admin:unlock": "node --import tsx packages/core/scripts/admin-unlock.ts",
     "rbac:revoke": "node --import tsx packages/core/scripts/rbac-revoke.ts",
+    "storage:init": "node --import tsx packages/core/scripts/storage-init.ts",
     "admin:create": "node --import tsx packages/core/scripts/admin-create.ts",
     "dev:age-session": "node --import tsx packages/core/scripts/dev-age-session.ts",
     "admin:set-password": "node --import tsx packages/core/scripts/admin-set-password.ts",
