@@ -2,7 +2,7 @@
 
 ## 2026-10-12 · Sesiunea 4 · Faza 3 (Media), Promptul 4 — ÎN LUCRU
 **Terminat (confirmat de utilizator):** punctele 1 (schema, migrația, `media.read`), 2 (adaptor de storage, MinIO în CI), 4 (procesare în queue; CI verde pe cfebd5b) și 3 (upload prin server; verificat în browser: 201 pending, 503 fără bucket, 415, 413, 401/403, audit success/denied/failed)
-**În lucru:** punctul 5 (servire fișiere)
+**În lucru:** punctul 6 (biblioteca media în admin)
 **Blocat:** —
 
 **Mediu (Windows-ul utilizatorului): `pnpm.exe` poate fi blocat de Smart App Control / Device Guard.** În sesiunea din 2026-10-13, la ~09:33, `pnpm.exe` (nesemnat, din `C:\Users\Admin\AppData\Local\pnpm\global\v11\<hash>\node_modules\pnpm\`) a fost blocat de Code Integrity (evenimente 3077/3033/3118). Folderul există din 2026-10-08, deci blocarea e nouă, nu o descărcare recentă. Pachetul pnpm 12.10.1 conține DOAR `pnpm.exe` (fără intrare JavaScript). **Decizie utilizator:** verificările locale rulează prin `node` direct, pe uneltele din `node_modules`-ul proiectului; nu se schimbă și nu se ocolesc politicile Windows; dacă `node.exe` sau un modul nativ (esbuild, sharp, rollup, SWC, argon2) e blocat → 🛑. Comenzi de zi cu zi, din rădăcina repo-ului `X:\360\magazin`. **`npm run <script>` funcționează pentru toate** (npm se lansează prin node, nu e blocat), la fel ca `pnpm <script>`; argumentele se dau după `--` (ex. `npm run media:regenerate -- --failed`, `npm run dev:web -- -p 3101`). Scripturile care apelau `pnpm --filter` sau `turbo` au fost rescrise să ruleze prin node (`scripts/in.mjs`, `scripts/run-all.mjs`), deci merg la fel cu pnpm, npm și în CI; variantele turbo au rămas ca `turbo:lint`, `turbo:typecheck`, `turbo:build`.
