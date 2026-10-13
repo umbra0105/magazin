@@ -47,3 +47,5 @@ export {
   type MediaLock,
   type MediaLockHandle,
 } from "./media-lock";
+export { serveSignedObject, servePublicObject, type SignedServeOptions } from "./serve";
+export { buildMediaUrls, type MediaUrlSource, type MediaUrls, type MediaVariantUrl } from "./urls";

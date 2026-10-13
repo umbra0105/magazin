@@ -12,11 +12,18 @@ import { loadRootEnv } from "./_runtime";
 loadRootEnv();
 
 try {
-  const { bucket, result } = await initStorage(loadEnv());
+  const { bucket, result, policy } = await initStorage(loadEnv());
   console.log(
     result === "created"
       ? `Bucketul „${bucket}” a fost creat.`
-      : `Bucketul „${bucket}” există deja; nu s-a modificat nimic.`,
+      : `Bucketul „${bucket}” există deja.`,
+  );
+  console.log(
+    policy === "applied"
+      ? "Politica de citire anonimă pe public/* a fost aplicată (private/ rămâne accesibil doar cu link semnat)."
+      : policy === "unchanged"
+        ? "Politica de citire anonimă pe public/* era deja aplicată."
+        : "Bucketul are o altă politică; nu am atins-o. Verifică manual că public/* se poate citi anonim și private/* nu.",
   );
 } catch (error) {
   if (error instanceof StorageError) {

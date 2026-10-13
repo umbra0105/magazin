@@ -46,8 +46,12 @@ Verifică:
 **Bucketul S3.** Cu `STORAGE_DRIVER=s3` (implicit în `.env.example`), încărcarea de fișiere cere ca
 bucketul din `S3_BUCKET` să existe. Pasul 3 îl creează singur (serviciul `minio-init`, idempotent,
 iese cu „Exited (0)”). Pentru un serviciu S3 fără docker compose (sau dacă ai schimbat `S3_BUCKET`),
-rulează `pnpm storage:init`: creează bucketul dacă lipsește și nu atinge nimic dacă există; refuză
-cu `STORAGE_DRIVER=local`. Fără bucket, încărcarea întoarce 503 `MEDIA_STORAGE_UNAVAILABLE`.
+rulează `pnpm storage:init`: creează bucketul dacă lipsește, aplică politica de citire anonimă DOAR
+pe `public/*` (`private/` rămâne accesibil numai cu link semnat; o politică străină existentă nu se
+suprascrie) și nu atinge restul; refuză cu `STORAGE_DRIVER=local`. Fără bucket, încărcarea întoarce
+503 `MEDIA_STORAGE_UNAVAILABLE`. Cu `S3_PUBLIC_URL` setat (în dev `http://localhost:9000/ecom`),
+imaginile se servesc direct din bucket; fără el, prin aplicația (`/media/…`). Fișierele private pe
+driverul local se servesc doar prin `/storage/signed/…`, cu semnătură HMAC validă.
 
 Pasul 4 e necesar doar pentru `pnpm test:e2e`. Fără el, restul funcționează.
 Toate valorile din `.env.example` sunt pentru dezvoltare locală, inclusiv `APP_KEY`.

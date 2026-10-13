@@ -1,9 +1,12 @@
 export { buildKey, isPublicKey, visibilityOf } from "./keys";
 export { createStorage, resolveStorageDir } from "./create-storage";
 export {
+  ensurePublicReadPolicy,
   ensureS3Bucket,
   initStorage,
+  publicReadPolicy,
   type EnsureBucketResult,
+  type PublicPolicyResult,
   type S3ConnectionOptions,
 } from "./init";
 export {
