@@ -64,6 +64,8 @@ Pentru producție generezi propriile secrete (`openssl rand -base64 32`).
 
 Toate scripturile din rădăcină merg la fel cu `pnpm <script>` și cu `npm run <script>` (argumentele după `--`, ex. `npm run dev:web -- -p 3101`). Cele care aveau nevoie de `pnpm --filter` sau de `turbo` rulează acum prin node (`scripts/in.mjs`, `scripts/run-all.mjs`), deci funcționează și pe mașini unde `pnpm.exe` sau `turbo.exe` sunt blocate de politici Windows; numele rămân aceleași, inclusiv în CI. Variantele turbo: `turbo:lint`, `turbo:typecheck`, `turbo:build`.
 
+**PowerShell pe Windows:** dacă `npm run ...` dă „running scripts is disabled on this system” (execution policy blochează `npm.ps1`), folosește shim-ul `.cmd`: `npm.cmd run dev:web`. Nu e nevoie să schimbi politica; alternativ rulezi aceleași comenzi din Command Prompt sau Git Bash.
+
 | Comandă                                                | Ce face                                                                                            |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | `pnpm dev`                                             | pornește aplicația (Next.js, port 3000)                                                            |

@@ -24,7 +24,7 @@
 | Media: ultimele 5 (doar citire) | `npm run media:recent` | da |
 | SMTP local / preset temă / seed magazin | `npm run dev:mail` / `dev:preset` / `db:seed:store` | neexecutate (modifică configurarea din baza de dev); aceeași formă `node --import tsx` ca restul |
 
-Nu a fost nevoie de funcții PowerShell. Testele de integrare nu mai depind de `pnpm` (`prepare-test-database.ts` lansează Prisma cu node), iar hook-urile Git (`.husky/pre-commit`, `.husky/commit-msg`) rulează acum `lint-staged` și `commitlint` direct cu node (commit `chore(husky)`).
+**PowerShell pe Windows-ul utilizatorului: `npm run ...` pică cu „running scripts is disabled on this system” (execution policy blochează `npm.ps1`).** Soluție fără schimbarea politicii: `npm.cmd run <script>` (shim `.cmd`), sau Command Prompt / Git Bash cu `npm run <script>`. Politica de execuție PowerShell nu se modifică. Nu a fost nevoie de funcții PowerShell. Testele de integrare nu mai depind de `pnpm` (`prepare-test-database.ts` lansează Prisma cu node), iar hook-urile Git (`.husky/pre-commit`, `.husky/commit-msg`) rulează acum `lint-staged` și `commitlint` direct cu node (commit `chore(husky)`).
 
 **Incident în sesiune (raportat):** la verificarea punctului 3 am pornit `next start` pe portul 3000, deja ocupat de un proces al utilizatorului (cel mai probabil serverul de dezvoltare, `pnpm dev:web`). Apoi am oprit după linia de comandă un proces `next` care, probabil, era chiar acel server; `next start` mi-a stricat și folderul `.next` (build de producție peste cel de dezvoltare). Nu am atins baza de date. Utilizatorul trebuie să repornească `pnpm dev:web`. De acum probele mele rulează doar pe porturi proprii (3101), pornite și oprite după PID, și verific mai întâi ce ascultă pe port
 
