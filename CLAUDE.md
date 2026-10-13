@@ -194,6 +194,21 @@ Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
   al protocolului.
 - Un commit per punct terminat. Fără commit-uri uriașe la final de zi.
 
+## Procese, porturi și build-uri — regulă permanentă
+
+Mașina utilizatorului rulează în paralel servere pornite de el (dev server, Docker). Greșelile aici
+strică munca lui fără ca eu să observ.
+
+- **Nu opri niciun proces pe care nu l-ai pornit tu.** Nici după nume, nici după linia de comandă,
+  nici după port. Ții evidența PID-urilor proprii și oprești doar acele PID-uri.
+- **Probele rulează doar pe port propriu**, pornite și oprite după PID. Dacă un port e ocupat,
+  alegi alt port; nu te bazezi pe ce răspunde pe un port ocupat și nu îl „eliberezi".
+- **Nu rula build-uri care scriu peste `.next` cât timp poate exista un server de dev pornit.**
+  Pentru probe folosește un director de build separat: `NEXT_DIST_DIR=.next-probe pnpm build:web`
+  (și `next start` cu același `NEXT_DIST_DIR`). După probă ștergi `apps/web/.next-probe` și restabilești
+  fișierele pe care Next le rescrie la build: `git checkout -- apps/web/tsconfig.json apps/web/next-env.d.ts`.
+- Înainte să pornești un server sau un build, verifică ce ascultă pe portul ales.
+
 ## Ce să NU faci
 
 - Nu instala librării grele fără să întrebi.

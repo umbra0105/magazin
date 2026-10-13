@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   // generarea lui eșuează fără drepturi de symlink.
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   reactStrictMode: true,
+  // Directorul de build. Implicit `.next`; pentru probe (build/start în paralel cu un server de dev
+  // pornit) se setează NEXT_DIST_DIR=.next-probe ca să nu scrie peste `.next` (vezi CLAUDE.md).
+  distDir: process.env["NEXT_DIST_DIR"] || ".next",
   // Pachetele workspace sunt livrate ca TypeScript sursă.
   transpilePackages: [
     "@ecom/shared",

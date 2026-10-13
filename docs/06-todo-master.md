@@ -67,7 +67,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 > **Decizii (utilizator, Promptul 4):** driverul de storage rămâne în `.env` (`STORAGE_DRIVER`, credențialele S3), nu în Setări · upload prin server, cu stream, pentru ambele drivere (presigned URL doar când apar fișiere mari) · limită implicită 20 MB și ~40 megapixeli, tipuri JPEG/PNG/WebP/AVIF (fără GIF, SVG respins), editabile din setări · se păstrează originalul fără EXIF/GPS pentru regenerarea variantelor · alegerea furnizorului de storage de producție: Faza 18
 - [x] (1) Schema `Media` + `MediaFolder`, migrația și permisiunea `media.read` (cu matricea din `docs/04` §6)
 - [x] (2) Adaptor de storage în `packages/integrations`: disc local ↔ S3-compatible (driver din `.env`), fișiere publice și private, URL semnat; teste pe MinIO (bucket de test, gardă) și serviciul MinIO în `ci.yml`
-- [~] (3) Upload prin server: validare MIME reală, limite de mărime, de pixeli și de tipuri (din setări), nume randomizate, original fără EXIF; ruta API cu sesiune, `media.write`, Origin, rate limit, audit (inclusiv refuzuri) și verificarea mărimii în timpul stream-ului
+- [x] (3) Upload prin server: validare MIME reală, limite de mărime, de pixeli și de tipuri (din setări), nume randomizate, original fără EXIF; ruta API cu sesiune, `media.write`, Origin, rate limit, audit (inclusiv refuzuri) și verificarea mărimii în timpul stream-ului
 - [ ] (4) Procesare imagini în queue: variante thumb/medium/large × AVIF/WebP/JPEG, dimensiuni, blurhash, regenerare din original
 - [ ] (5) Servire: URL-uri fără numele original, `X-Content-Type-Options: nosniff`, protecție la path traversal pe driverul local, cache `immutable`; **politica de acces public pe prefixul `public/` (citire anonimă) și `S3_PUBLIC_URL`** — `pnpm storage:init` creează doar bucketul, nu stabilește politici
 - [ ] (6) Bibliotecă media în admin: grid, upload drag & drop, foldere, căutare, alt-text și taguri, ștergere cu verificare de utilizare (registru `MediaUsageProvider`)
@@ -284,6 +284,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 
 ## FAZA 16 — CMS și conținut · ~6-7 zile
 - [ ] ⚠️ **Utilizatori și roluri în admin (`users.manage`) — reguli anti-escaladare de privilegii** (decizie utilizator): un utilizator nu poate acorda un rol sau o permisiune pe care nu o are; doar Owner atribuie sau retrage rolul Owner; un Admin nu își poate modifica propriul rol și nici pe cel al Owner-ului; **test explicit pentru escaladare de privilegii**. Verificarea stă în `packages/core`, nu în UI
+- [ ] 🟡 **Upload media pentru Manager:** acum Managerul are `media.read` dar NU `media.write` (decizie utilizator, Faza 3). De reluat aici dacă vrem ca Managerul să poată încărca imagini (ex. la produse); schimbarea e în `packages/core/src/rbac/catalog.ts` + matricea din `docs/04` §6
 - [ ] ⚠️ **Rambursare pentru Suport: limita de rambursare** — până atunci `orders.refund` nu e la Suport (Faza 11, ecranul de comenzi/rambursări)
 - [ ] Schema: Page, Menu, Banner, BlogPost, Faq, Redirect, SeoMeta, BlockPreset
 - [ ] Sistem de blocuri cu registry, schema Zod per bloc, formular de editare

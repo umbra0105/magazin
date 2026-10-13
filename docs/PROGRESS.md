@@ -1,8 +1,8 @@
 # Jurnal de progres
 
 ## 2026-10-12 · Sesiunea 4 · Faza 3 (Media), Promptul 4 — ÎN LUCRU
-**Terminat (confirmat de utilizator):** punctele 1 (schema, migrația, `media.read`) și 2 (adaptor de storage, MinIO în CI)
-**În lucru:** punctul 3 (upload prin server) — gata, așteaptă verificarea utilizatorului
+**Terminat (confirmat de utilizator):** punctele 1 (schema, migrația, `media.read`), 2 (adaptor de storage, MinIO în CI) și 3 (upload prin server; verificat în browser: 201 pending, 503 fără bucket, 415, 413, 401/403, audit success/denied/failed)
+**În lucru:** punctul 4 (procesare imagini în queue)
 **Blocat:** —
 
 **Incident în sesiune (raportat):** la verificarea punctului 3 am pornit `next start` pe portul 3000, deja ocupat de un proces al utilizatorului (cel mai probabil serverul de dezvoltare, `pnpm dev:web`). Apoi am oprit după linia de comandă un proces `next` care, probabil, era chiar acel server; `next start` mi-a stricat și folderul `.next` (build de producție peste cel de dezvoltare). Nu am atins baza de date. Utilizatorul trebuie să repornească `pnpm dev:web`. De acum probele mele rulează doar pe porturi proprii (3101), pornite și oprite după PID, și verific mai întâi ce ascultă pe port
@@ -10,6 +10,9 @@
 **Defect găsit la verificarea punctului 3 (de utilizator) și reparat:** POST /api/media dădea 500 cu corp gol pe `pnpm dev:web`. Cauza confirmată: bucketul de dev `ecom` nu exista în MinIO (conținea doar `ecom-test`, creat de teste); SDK-ul răspundea `NoSuchBucket`, status 404. De ce n-a prins-o niciun test: testele de integrare creează singure bucketul de test, iar E2E rulează cu `STORAGE_DRIVER=local`. Reparat prin: (1) ruta întoarce 503 `MEDIA_STORAGE_UNAVAILABLE` (și 500 JSON `MEDIA_UPLOAD_FAILED` la erori neașteptate), cu `audit_log.outcome = 'failed'` (migrația `audit_log_outcome_failed`: constrângerea permitea doar `success`/`denied`); (2) `pnpm storage:init` și serviciul `minio-init` din docker compose; (3) test E2E de upload pe driverul S3 în CI, planificat la punctul 8
 
 **Decizii în sesiune (toate ale utilizatorului):**
+- **Utilizator (după punctul 3):** originalul re-codificat (nu identic bit cu bit) e acceptat
+- **Utilizator (după punctul 3):** Managerul rămâne FĂRĂ `media.write` (are `media.read`). De reluat la Faza 16 dacă vrem upload și pentru Manager (notat în TODO, Faza 16)
+- **Utilizator (regulă permanentă, acum în `CLAUDE.md`):** nu opresc procese pe care nu le-am pornit eu; probele rulează doar pe port propriu, pornite și oprite după PID; dacă un port e ocupat aleg alt port; build-urile pentru probe nu scriu peste `.next` (director separat, `NEXT_DIST_DIR`)
 - **Utilizator:** driverul de storage rămâne în `.env` (`STORAGE_DRIVER` + `S3_*`), nu în Setări; formularea din TODO corectată
 - **Utilizator:** upload prin server, cu stream, pentru ambele drivere; presigned URL doar când apar fișiere mari
 - **Utilizator:** dependențe aprobate: `sharp`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `file-type`, `blurhash`. Modificarea din `allowBuilds` (dacă e nevoie) se arată înainte. Instalate până acum: `@aws-sdk/client-s3` și `@aws-sdk/s3-request-presigner` la `3.1149.0` (punctul 2); `sharp` `0.35.5` și `file-type` `22.1.1` în `@ecom/core` (punctul 3), versiuni exacte. `sharp` se încarcă pe Windows-ul utilizatorului fără modificare în `allowBuilds` (binarul vine prebuilt, fără script de build); `blurhash` vine la punctul 4
