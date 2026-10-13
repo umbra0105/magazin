@@ -1,8 +1,8 @@
 # Jurnal de progres
 
 ## 2026-10-12 · Sesiunea 4 · Faza 3 (Media), Promptul 4 — ÎN LUCRU
-**Terminat (confirmat de utilizator):** punctul 1 (schema `Media`/`MediaFolder`, migrația, `media.read`)
-**În lucru:** punctul 2 (adaptor de storage local + S3, MinIO în CI) — așteaptă verificarea utilizatorului și push-ul pentru CI
+**Terminat (confirmat de utilizator):** punctele 1 (schema, migrația, `media.read`) și 2 (adaptor de storage, MinIO în CI)
+**În lucru:** — (punctul 2 confirmat; urmează punctul 3)
 **Blocat:** —
 
 **Decizii în sesiune (toate ale utilizatorului):**
