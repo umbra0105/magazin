@@ -28,3 +28,15 @@ export class MediaError extends DomainError {
     super(code, message, details);
   }
 }
+
+/**
+ * Verificare structurală (după codul stabil), nu `instanceof`: în Next, același modul poate exista
+ * în mai multe copii (straturi RSC / acțiuni, reîncărcare la cald), iar un serviciu păstrat în
+ * `globalThis` ar arunca o clasă diferită de cea importată de apelant.
+ */
+export function isMediaError(error: unknown): error is MediaError {
+  const code = (error as { code?: unknown } | null)?.code;
+  return (
+    error instanceof Error && typeof code === "string" && Object.hasOwn(MEDIA_ERROR_STATUS, code)
+  );
+}

@@ -69,6 +69,9 @@ const png = (name: string, color: [number, number, number]) => ({
   buffer: solidPng(640, 360, color),
 });
 
+// Pe rând în fișier: testele încarcă imagini, iar limita globală e de 2 decodări simultane.
+test.describe.configure({ mode: "serial" });
+
 test.describe("biblioteca media", () => {
   test("Owner: încarcă 3 imagini, se procesează singure, editează, folder, caută, șterge", async ({
     page,

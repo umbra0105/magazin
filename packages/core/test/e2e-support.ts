@@ -129,3 +129,34 @@ export async function clearE2eRateLimits(): Promise<number> {
     return removed;
   });
 }
+
+/**
+ * Inserează un rând `Media` fără fișiere reale, cu starea dată (`pending`, `failed`…), încărcat de
+ * contul de test `email`: pentru testele care verifică ce NU trebuie să apară (ex. în selector).
+ * Rândul se șterge la teardown (după `uploadedById`). Întoarce id-ul.
+ */
+export async function insertE2eMedia(
+  email: string,
+  options: { name: string; status: "pending" | "processing" | "failed" | "ready" },
+): Promise<string> {
+  return withClient(async (db) => {
+    const user = await db.query(`select id from "user" where email = $1`, [email]);
+    const userId = user.rows[0]?.id as string | undefined;
+    if (!userId) throw new Error(`Utilizatorul de test ${email} nu există`);
+    const id = `e2e${Math.random().toString(36).slice(2, 12)}${Date.now().toString(36)}`;
+    await db.query(
+      `insert into media (id, status, mime, "sizeBytes", width, height, checksum, "originalName",
+         "storageKey", variants, alt, tags, "uploadedById", "createdAt", "updatedAt")
+       values ($1, $2, 'image/png', 100, 10, 10, $3, $4, $5, '[]'::jsonb, '', '{}', $6, now(), now())`,
+      [
+        id,
+        options.status,
+        "e".repeat(64),
+        options.name,
+        `public/media/e2e-fake-${id}/original.png`,
+        userId,
+      ],
+    );
+    return id;
+  });
+}

@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
   // generarea lui eșuează fără drepturi de symlink.
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   reactStrictMode: true,
+  // Harness-urile pentru teste (`*.e2e.tsx`) devin rute doar cu E2E_HARNESS=1 (setat de Playwright);
+  // într-un build normal fișierele nu sunt nici rute, nici compilate.
+  pageExtensions:
+    process.env["E2E_HARNESS"] === "1"
+      ? ["tsx", "ts", "jsx", "js", "e2e.tsx"]
+      : ["tsx", "ts", "jsx", "js"],
   // Directorul de build. Implicit `.next`; pentru probe (build/start în paralel cu un server de dev
   // pornit) se setează NEXT_DIST_DIR=.next-probe ca să nu scrie peste `.next` (vezi CLAUDE.md).
   distDir: process.env["NEXT_DIST_DIR"] || ".next",

@@ -1,15 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import {
-  MediaInUseError,
-  MediaLibraryError,
-  type LibraryFolder,
-  type LibraryItem,
-  type MediaUsage,
-} from "@ecom/core";
-import { DomainError, ValidationError } from "@ecom/shared";
+import { can, type LibraryFolder, type LibraryItem, type MediaUsage } from "@ecom/core";
 import { getMediaLibrary } from "@/lib/media";
+import { getSettings } from "@/lib/services";
 import { withPermission } from "@/lib/session";
 
 /**
@@ -26,18 +20,30 @@ export type ActionFailure = {
   usages?: readonly MediaUsage[];
 };
 
+/**
+ * Clasificare după codul stabil al erorii, nu `instanceof`: serviciul bibliotecii e păstrat în
+ * `globalThis`, iar în Next modulele pot exista în mai multe copii (straturi, reîncărcare la cald).
+ */
 function failure(error: unknown): ActionFailure {
-  if (error instanceof MediaInUseError) {
-    return { ok: false, code: "IN_USE", usages: error.usages };
+  const e = error as { code?: unknown; usages?: unknown; message?: unknown; name?: unknown } | null;
+  const code = typeof e?.code === "string" ? e.code : undefined;
+  if (code === "MEDIA_IN_USE" && Array.isArray(e?.usages)) {
+    return { ok: false, code: "IN_USE", usages: e.usages as MediaUsage[] };
   }
-  if (error instanceof MediaLibraryError) return { ok: false, code: error.code };
-  if (error instanceof ValidationError) {
-    return { ok: false, code: "VALIDATION_ERROR", message: error.message };
+  if (
+    code === "MEDIA_NOT_FOUND" ||
+    code === "FOLDER_NOT_FOUND" ||
+    code === "FOLDER_NAME_TAKEN" ||
+    code === "FOLDER_CYCLE" ||
+    code === "FOLDER_TOO_DEEP" ||
+    code === "AUDIT_WRITE_FAILED"
+  ) {
+    return { ok: false, code };
   }
-  if (error instanceof z.ZodError) return { ok: false, code: "VALIDATION_ERROR" };
-  if (error instanceof DomainError && error.code === "AUDIT_WRITE_FAILED") {
-    return { ok: false, code: "AUDIT_WRITE_FAILED" };
+  if (code === "VALIDATION_ERROR" && typeof e?.message === "string") {
+    return { ok: false, code: "VALIDATION_ERROR", message: e.message };
   }
+  if (e?.name === "ZodError") return { ok: false, code: "VALIDATION_ERROR" };
   throw error;
 }
 
@@ -151,4 +157,42 @@ export const moveMediaFolder = withPermission(
     }
   },
   { action: "media_folder.move", entity: "media_folder" },
+);
+
+/**
+ * Lista pentru selectorul `MediaPicker`: doar fișierele `ready` (filtrul de stare e impus aici, pe
+ * server, nu vine din cerere), 12 pe pagină, plus folderele. Cere `media.read`; `canWrite` spune
+ * selectorului dacă să arate încărcarea (serverul refuză oricum încărcarea fără `media.write`).
+ */
+export const listPickerMedia = withPermission(
+  "media.read",
+  async (input: unknown, subject) => {
+    const parsed = z
+      .object({
+        q: z.string().max(100).optional(),
+        folder: z.string().max(40).optional(),
+        page: z.number().int().min(1).max(100000).optional(),
+      })
+      .parse(input);
+    const library = getMediaLibrary();
+    const [list, folders, maxUploadBytes] = await Promise.all([
+      library.list(subject, {
+        ...(parsed.q && { q: parsed.q }),
+        ...(parsed.folder && { folder: parsed.folder }),
+        ...(parsed.page && { page: parsed.page }),
+        status: "ready",
+        pageSize: 12,
+      }),
+      library.folders(subject),
+      getSettings().get("media.maxUploadBytes"),
+    ]);
+    return {
+      ok: true as const,
+      ...list,
+      folders,
+      canWrite: can(subject, "media.write"),
+      maxUploadMb: Math.max(Math.round(maxUploadBytes / (1024 * 1024)), 1),
+    };
+  },
+  { action: "media.pick", entity: "media" },
 );

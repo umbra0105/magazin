@@ -1,13 +1,12 @@
 import { isStorageError } from "@ecom/integrations";
 import { DomainError, getLogger } from "@ecom/shared";
-import { RateLimitedError } from "../auth/auth-guard";
 import { resolveClientIp } from "../auth/client-ip";
 import { isSameOriginRequest } from "../auth/request-origin";
 import type { AuditOutcome, AuditService } from "../audit/audit-service";
 import { can, type PermissionSubject } from "../rbac/can";
 import type { SettingGroupValue } from "../settings/registry";
 import { readBodyWithLimit } from "./body";
-import { MEDIA_ERROR_STATUS, MediaError } from "./errors";
+import { MEDIA_ERROR_STATUS, isMediaError } from "./errors";
 import { sanitizeFileName } from "./file-name";
 import type { MediaService, UploadedMedia } from "./media-service";
 import type { MediaUploadGuard } from "./upload-guard";
@@ -105,15 +104,14 @@ export async function handleMediaUpload(
   try {
     await guard.checkUpload(subject.userId, ip);
   } catch (error) {
-    if (error instanceof RateLimitedError) {
+    if (error instanceof Error && (error as { code?: unknown }).code === "AUTH_RATE_LIMITED") {
+      const retryAfter = (error as { retryAfterSeconds?: unknown }).retryAfterSeconds;
       return refuse(
         429,
-        error.code,
+        "AUTH_RATE_LIMITED",
         "rate_limited",
         {},
-        {
-          "Retry-After": String(error.retryAfterSeconds),
-        },
+        { "Retry-After": String(typeof retryAfter === "number" ? retryAfter : 60) },
       );
     }
     throw error;
@@ -135,7 +133,7 @@ export async function handleMediaUpload(
       },
     });
   } catch (error) {
-    if (error instanceof MediaError && error.code === "MEDIA_BUSY") {
+    if (isMediaError(error) && error.code === "MEDIA_BUSY") {
       // Nu e vina utilizatorului și nu e un refuz: serverul decodează deja numărul maxim de imagini.
       return respond(
         "failed",
@@ -146,7 +144,7 @@ export async function handleMediaUpload(
         { "Retry-After": String(BUSY_RETRY_SECONDS) },
       );
     }
-    if (error instanceof MediaError) {
+    if (isMediaError(error)) {
       const reason = error.code.replace(/^MEDIA_/, "").toLowerCase();
       return refuse(MEDIA_ERROR_STATUS[error.code], error.code, reason, {
         declaredBytes: Number(request.headers.get("content-length")) || null,

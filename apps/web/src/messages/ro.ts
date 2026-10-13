@@ -303,6 +303,35 @@ export const ro = {
         AUDIT_WRITE_FAILED:
           "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",
       },
+      picker: {
+        titleSingle: "Alege o imagine",
+        titleMultiple: "Alege imagini",
+        descriptionSingle: "Alege o imagine din biblioteca media.",
+        descriptionMultiple: (max: number) =>
+          `Alege cel mult ${max} imagini. Ordinea în care le alegi se păstrează.`,
+        onlyReady: "Se afișează doar fișierele procesate (gata).",
+        loading: "Se încarcă fișierele…",
+        loadError: "Nu am putut încărca biblioteca. Încearcă din nou.",
+        retry: "Reîncearcă",
+        empty: "Nu există fișiere gata în această căutare.",
+        selectItem: (name: string) => `Alege ${name}`,
+        selectedItem: (name: string, order: number) =>
+          `${name}, ales (poziția ${order}). Apasă pentru a scoate.`,
+        selectedCount: (n: number, max: number) =>
+          max === 1 ? `${n} din 1 ales` : `${n} din ${max} alese`,
+        maxReached: (max: number) =>
+          `Ai atins maximul de ${max} imagini. Scoate una ca să alegi alta.`,
+        tray: "Imaginile alese, în ordine",
+        removeFromSelection: (name: string) => `Scoate din selecție: ${name}`,
+        unknownItem: "Fișier ales",
+        confirm: (n: number) => (n === 1 ? "Alege 1 imagine" : `Alege ${n} imagini`),
+        cancel: "Anulează",
+        uploadTitle: "Încarcă imagini noi",
+        processingNew: (n: number) =>
+          n === 1 ? "1 fișier încărcat se procesează…" : `${n} fișiere încărcate se procesează…`,
+        becameReady: "Un fișier încărcat e gata și a apărut în listă.",
+        applyFilters: "Caută",
+      },
       live: {
         uploaded: (n: number) => (n === 1 ? "1 fișier încărcat" : `${n} fișiere încărcate`),
         ready: "Un fișier a fost procesat.",

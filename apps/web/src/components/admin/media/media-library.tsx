@@ -1,20 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages } from "@/messages";
-import { getMediaStatuses } from "@/app/(admin)/admin/media/actions";
-import { UploadQueue, xhrSend, type UploadItem } from "@/lib/media-uploader";
 import { MediaDetailDialog } from "./detail-dialog";
 import { FolderPanel } from "./folder-panel";
 import { MediaCard } from "./media-card";
+import { MediaGrid } from "./media-grid";
 import type { LibraryFolder, LibraryItem } from "./media-types";
 import { UploadPanel } from "./upload-panel";
+import { useMediaUploads } from "./use-media-uploads";
+import { useStatusPolling } from "./use-status-polling";
 
 const m = getMessages().admin.media;
 
-const POLL_MS = 3000;
-const ACCEPT = "image/jpeg,image/png,image/webp,image/avif";
+export const MEDIA_ACCEPT = "image/jpeg,image/png,image/webp,image/avif";
+export const MEDIA_TYPES_LABEL = "JPEG, PNG, WebP, AVIF";
 
 export interface MediaLibraryProps {
   items: LibraryItem[];
@@ -31,7 +32,8 @@ export interface MediaLibraryProps {
 /**
  * Biblioteca media (partea interactivă): grid, încărcări, detalii, foldere. Lista vine de la server
  * (filtrare, căutare și paginare sunt în URL, deci funcționează și fără JS); aici se adaugă
- * actualizarea automată a statusului și încărcările cu progres.
+ * actualizarea automată a statusului și încărcările cu progres. Grid-ul, coada de încărcări și
+ * interogarea de status sunt aceleași ca în selectorul `MediaPicker`.
  */
 export function MediaLibrary({
   items: initialItems,
@@ -45,9 +47,7 @@ export function MediaLibrary({
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [uploads, setUploads] = useState<readonly UploadItem[]>([]);
   const [announcement, setAnnouncement] = useState("");
-  const grid = useRef<HTMLUListElement>(null);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Lista de la server înlocuiește starea locală la fiecare navigare / refresh.
@@ -58,91 +58,35 @@ export function MediaLibrary({
     refreshTimer.current = setTimeout(() => router.refresh(), 400);
   }, [router]);
 
-  const queue = useMemo(
-    () =>
-      new UploadQueue({
-        concurrency: 2,
-        send: xhrSend,
-        onChange: (all) => setUploads([...all]),
-        onUploaded: () => refreshSoon(),
-      }),
-    [refreshSoon],
-  );
+  const uploader = useMediaUploads({
+    folderId: currentFolder && currentFolder !== "root" ? currentFolder : null,
+    onUploaded: refreshSoon,
+  });
 
   // Statusul pending/processing se actualizează singur.
   const pendingIds = items
     .filter((i) => i.status === "pending" || i.status === "processing")
     .map((i) => i.id);
-  const pendingKey = pendingIds.join(",");
-  useEffect(() => {
-    if (pendingIds.length === 0) return;
-    let cancelled = false;
-    const timer = setInterval(async () => {
-      try {
-        const result = await getMediaStatuses(pendingIds);
-        if (cancelled || !result.ok) return;
-        const fresh = new Map(result.items.map((i) => [i.id, i]));
-        let becameReady = false;
-        setItems((current) =>
-          current.map((item) => {
-            const next = fresh.get(item.id);
-            if (!next) return item;
-            if (next.status === "ready" && item.status !== "ready") becameReady = true;
-            return next;
-          }),
-        );
-        if (becameReady) setAnnouncement(m.live.ready);
-      } catch {
-        // o interogare ratată nu strică pagina; următoarea încearcă din nou
-      }
-    }, POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [pendingKey]);
+  useStatusPolling(pendingIds, (fresh) => {
+    const byId = new Map(fresh.map((i) => [i.id, i]));
+    let becameReady = false;
+    setItems((current) =>
+      current.map((item) => {
+        const next = byId.get(item.id);
+        if (!next) return item;
+        if (next.status === "ready" && item.status !== "ready") becameReady = true;
+        return next;
+      }),
+    );
+    if (becameReady) setAnnouncement(m.live.ready);
+  });
 
   useEffect(() => {
-    const done = uploads.filter((u) => u.status === "done").length;
+    const done = uploader.uploads.filter((u) => u.status === "done").length;
     if (done > 0) setAnnouncement(m.live.uploaded(done));
-  }, [uploads]);
-
-  const onFiles = (files: File[]) => {
-    queue.add(files, {
-      folderId: currentFolder && currentFolder !== "root" ? currentFolder : null,
-      alt: "",
-    });
-  };
-
-  // Navigare cu săgețile între carduri (tab rămâne pe un singur card, ca în orice grilă).
-  const onGridKeyDown = (event: React.KeyboardEvent<HTMLUListElement>) => {
-    const keys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
-    if (!keys.includes(event.key)) return;
-    const cards = [
-      ...(grid.current?.querySelectorAll<HTMLButtonElement>("[data-media-card]") ?? []),
-    ];
-    const index = cards.findIndex((c) => c === document.activeElement);
-    if (index < 0 || cards.length === 0) return;
-    const firstTop = cards[0]?.offsetTop ?? 0;
-    const columns = Math.max(cards.filter((c) => c.offsetTop === firstTop).length, 1);
-    const delta: Record<string, number> = {
-      ArrowLeft: -1,
-      ArrowRight: 1,
-      ArrowUp: -columns,
-      ArrowDown: columns,
-    };
-    const target =
-      event.key === "Home"
-        ? 0
-        : event.key === "End"
-          ? cards.length - 1
-          : Math.min(Math.max(index + (delta[event.key] ?? 0), 0), cards.length - 1);
-    event.preventDefault();
-    cards[target]?.focus();
-  };
+  }, [uploader.uploads]);
 
   const selected = items.find((i) => i.id === selectedId) ?? null;
-  const types = "JPEG, PNG, WebP, AVIF";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
@@ -157,13 +101,13 @@ export function MediaLibrary({
         />
         {canWrite && (
           <UploadPanel
-            items={uploads}
-            rules={m.upload.rules(maxUploadMb, types)}
-            accept={ACCEPT}
-            onFiles={onFiles}
-            onRetry={(id) => queue.retry(id)}
-            onRemove={(id) => queue.remove(id)}
-            onClear={() => queue.clearFinished()}
+            items={uploader.uploads}
+            rules={m.upload.rules(maxUploadMb, MEDIA_TYPES_LABEL)}
+            accept={MEDIA_ACCEPT}
+            onFiles={uploader.add}
+            onRetry={uploader.retry}
+            onRemove={uploader.remove}
+            onClear={uploader.clearFinished}
           />
         )}
       </aside>
@@ -177,16 +121,11 @@ export function MediaLibrary({
             {canWrite && totalCount === 0 ? m.grid.empty : m.grid.emptyFiltered}
           </p>
         ) : (
-          <ul
-            ref={grid}
-            aria-label={m.grid.label}
-            onKeyDown={onGridKeyDown}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
-          >
+          <MediaGrid label={m.grid.label}>
             {items.map((item) => (
               <MediaCard key={item.id} item={item} onOpen={setSelectedId} />
             ))}
-          </ul>
+          </MediaGrid>
         )}
       </div>
 

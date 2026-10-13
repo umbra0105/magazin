@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MEDIA_STATUSES, can, type MediaListStatus } from "@ecom/core";
-import { Button, Input, Label, Select, buttonVariants } from "@ecom/ui";
+import { Button, buttonVariants } from "@ecom/ui";
+import { MediaFilterFields } from "@/components/admin/media/media-filter-fields";
 import { MediaLibrary } from "@/components/admin/media/media-library";
-import { flattenFolders } from "@/components/admin/media/media-types";
 import { requireAdmin } from "@/lib/admin-page";
 import { getMediaLibrary } from "@/lib/media";
 import { getSettings } from "@/lib/services";
@@ -84,40 +84,13 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
         role="search"
         className="flex flex-wrap items-end gap-3"
       >
-        <div className="flex min-w-48 flex-1 flex-col gap-1.5">
-          <Label htmlFor="media-q">{m.search.label}</Label>
-          <Input
-            id="media-q"
-            name="q"
-            type="search"
-            defaultValue={q}
-            placeholder={m.search.placeholder}
-            maxLength={100}
-          />
-        </div>
-        <div className="flex min-w-40 flex-col gap-1.5">
-          <Label htmlFor="media-folder-filter">{m.filters.folder}</Label>
-          <Select id="media-folder-filter" name="folder" defaultValue={folderParam}>
-            <option value="">{m.filters.allFolders}</option>
-            <option value="root">{m.filters.noFolder}</option>
-            {flattenFolders(folders).map(({ folder, depth }) => (
-              <option key={folder.id} value={folder.id}>
-                {`${"  ".repeat(depth)}${folder.name}`}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="flex min-w-36 flex-col gap-1.5">
-          <Label htmlFor="media-status-filter">{m.filters.status}</Label>
-          <Select id="media-status-filter" name="status" defaultValue={status ?? ""}>
-            <option value="">{m.filters.allStatuses}</option>
-            {MEDIA_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {m.status[s]}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <MediaFilterFields
+          idPrefix="media-filter"
+          folders={folders}
+          q={q}
+          folder={folderParam}
+          status={status ?? ""}
+        />
         <Button type="submit">{m.search.submit}</Button>
         {filtered && (
           <Link href="/admin/media" className={buttonVariants({ variant: "outline" })}>
@@ -139,7 +112,10 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
       />
 
       {result.pageCount > 1 && (
-        <nav aria-label={m.grid.pagination} className="flex items-center justify-between gap-3">
+        <nav
+          aria-label={m.grid.pagination}
+          className="flex flex-wrap items-center justify-between gap-2"
+        >
           {result.page > 1 ? (
             <Link
               href={hrefWith({ page: result.page - 1 })}
@@ -151,7 +127,10 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
           ) : (
             <span />
           )}
-          <span className="text-sm" aria-current="page">
+          <span
+            className="order-last w-full text-center text-sm sm:order-none sm:w-auto"
+            aria-current="page"
+          >
             {m.grid.pageOf(result.page, result.pageCount)}
           </span>
           {result.page < result.pageCount ? (

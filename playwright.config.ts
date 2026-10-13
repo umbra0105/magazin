@@ -67,6 +67,8 @@ export default defineConfig({
       APP_URL: `http://localhost:${port}`,
       // Director de build propriu: serverul E2E nu scrie peste `.next` al unui server de dev pornit.
       NEXT_DIST_DIR: ".next-e2e",
+      // Activează harness-urile `*.e2e.tsx` (vezi next.config.ts); niciodată în producție.
+      E2E_HARNESS: "1",
       STORAGE_DRIVER: "local",
       STORAGE_LOCAL_PATH: e2eStorageDir,
     },
