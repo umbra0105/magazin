@@ -49,3 +49,32 @@ export {
 } from "./media-lock";
 export { serveSignedObject, servePublicObject, type SignedServeOptions } from "./serve";
 export { buildMediaUrls, type MediaUrlSource, type MediaUrls, type MediaVariantUrl } from "./urls";
+export {
+  DEFAULT_PAGE_SIZE,
+  MAX_FOLDER_DEPTH,
+  MAX_PAGE_SIZE,
+  MEDIA_STATUSES,
+  MediaInUseError,
+  MediaLibraryError,
+  MediaLibraryService,
+  type LibraryFolder,
+  type LibraryItem,
+  type LibraryPage,
+  type LibraryQuery,
+  type LibraryRow,
+  type MediaLibraryDeps,
+  type MediaLibraryErrorCode,
+  type MediaLibraryStore,
+  type MediaListStatus,
+} from "./library";
+export { createPrismaLibraryStore } from "./library-store";
+export { MediaUsageRegistry, type MediaUsage, type MediaUsageProvider } from "./usage";
+export {
+  MAX_ALT_LENGTH,
+  MAX_TAGS,
+  MAX_TAG_LENGTH,
+  normalizeAlt,
+  normalizeFolderName,
+  normalizeTags,
+} from "./tags";
+export { blurhashToDataUrl } from "./placeholder";

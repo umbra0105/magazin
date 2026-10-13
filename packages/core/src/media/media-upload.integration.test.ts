@@ -68,7 +68,11 @@ async function uploadAs<T>(
     fileName?: string;
     storage?: StorageDriver;
   },
-  check: (ctx: { response: Response; tx: TestTx }) => Promise<T>,
+  check: (ctx: {
+    response: Response;
+    tx: TestTx;
+    baseline: { media: number; audit: number };
+  }) => Promise<T>,
 ): Promise<T> {
   return inRolledBackTransaction(db, async (tx) => {
     await runBaseSeed(tx);
@@ -81,6 +85,12 @@ async function uploadAs<T>(
       await tx.userRole.create({ data: { userId: user.id, roleId: found.id } });
       userId = user.id;
     }
+    // Baza de test poate conține rânduri de la alte suite (E2E scrie în jurnal, care nu se șterge):
+    // asertăm pe diferențe față de starea de dinainte.
+    const baseline = {
+      media: await tx.media.count(),
+      audit: await tx.auditLog.count({ where: { action: "media.upload" } }),
+    };
     const permissions = new PermissionService(tx);
     const headers = new Headers({
       "x-file-name": encodeURIComponent(options.fileName ?? "poza.jpg"),
@@ -109,7 +119,7 @@ async function uploadAs<T>(
       }),
       audit: new AuditService(createPrismaAuditStore(tx)),
     });
-    return check({ response, tx });
+    return check({ response, tx, baseline });
   });
 }
 
@@ -197,11 +207,17 @@ describe("upload media: rolurile reale din seed, baza reală, storage local", ()
 
   it("fără sesiune: 401, nimic scris, audit denied fără actor", async () => {
     const before = await objectCount();
-    await uploadAs(null, {}, async ({ response, tx }) => {
+    await uploadAs(null, {}, async ({ response, tx, baseline }) => {
       expect(response.status).toBe(401);
-      expect(await tx.media.count()).toBe(0);
-      const rows = await tx.auditLog.findMany({ where: { action: "media.upload" } });
-      expect(rows).toHaveLength(1);
+      expect(await tx.media.count()).toBe(baseline.media);
+      expect(await tx.auditLog.count({ where: { action: "media.upload" } })).toBe(
+        baseline.audit + 1,
+      );
+      const rows = await tx.auditLog.findMany({
+        where: { action: "media.upload" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      });
       expect(rows[0]).toMatchObject({ outcome: "denied", actorId: null });
     });
     expect(await objectCount()).toBe(before);
@@ -260,12 +276,18 @@ describe("upload media: rolurile reale din seed, baza reală, storage local", ()
         return Reflect.get(target, prop, receiver) as unknown;
       },
     });
-    await uploadAs("editor", { storage: broken }, async ({ response, tx }) => {
+    await uploadAs("editor", { storage: broken }, async ({ response, tx, baseline }) => {
       expect(response.status).toBe(503);
       expect(await response.json()).toMatchObject({ code: "MEDIA_STORAGE_UNAVAILABLE" });
-      expect(await tx.media.count()).toBe(0);
-      const rows = await tx.auditLog.findMany({ where: { action: "media.upload" } });
-      expect(rows).toHaveLength(1);
+      expect(await tx.media.count()).toBe(baseline.media);
+      expect(await tx.auditLog.count({ where: { action: "media.upload" } })).toBe(
+        baseline.audit + 1,
+      );
+      const rows = await tx.auditLog.findMany({
+        where: { action: "media.upload" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      });
       expect(rows[0]).toMatchObject({ outcome: "failed", actorId: "media-editor" });
       expect(JSON.stringify(rows[0]?.after)).not.toContain("poza");
     });

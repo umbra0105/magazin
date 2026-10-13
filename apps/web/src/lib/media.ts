@@ -1,11 +1,15 @@
 import { loadEnv } from "@ecom/config";
 import {
+  MediaLibraryService,
   MediaService,
   MediaUploadGuard,
+  MediaUsageRegistry,
   MemoryDecodeLimiter,
   RedisDecodeLimiter,
   ResilientDecodeLimiter,
+  createPrismaLibraryStore,
   createPrismaMediaStore,
+  createPrismaProcessingStore,
   type DecodeLimiter,
   type MediaUploadDeps,
 } from "@ecom/core";
@@ -22,6 +26,8 @@ const globalForMedia = globalThis as unknown as {
   __ecomMedia?: MediaService;
   __ecomMediaQueue?: MediaQueue;
   __ecomDecodeLimiter?: DecodeLimiter;
+  __ecomMediaUsage?: MediaUsageRegistry;
+  __ecomMediaLibrary?: MediaLibraryService;
 };
 
 const ENQUEUE_TIMEOUT_MS = 5000;
@@ -102,4 +108,27 @@ export function getMediaUploadDeps(): MediaUploadDeps {
     service: getMediaService(),
     audit: getAudit(),
   };
+}
+
+/**
+ * Registrul locurilor unde sunt folosite fișierele media. Modulele care referă media (produse,
+ * pagini, bannere) își înregistrează aici un `MediaUsageProvider`; ștergerea se refuză cât timp
+ * un provider îl raportează folosit. Un singur obiect per proces.
+ */
+export function getMediaUsageRegistry(): MediaUsageRegistry {
+  globalForMedia.__ecomMediaUsage ??= new MediaUsageRegistry();
+  return globalForMedia.__ecomMediaUsage;
+}
+
+/** Biblioteca media din admin (citire, editare, foldere, ștergere, regenerare), cu audit. */
+export function getMediaLibrary(): MediaLibraryService {
+  globalForMedia.__ecomMediaLibrary ??= new MediaLibraryService({
+    store: createPrismaLibraryStore(getDb()),
+    storage: getStorage(),
+    audit: getAudit(),
+    usage: getMediaUsageRegistry(),
+    processing: createPrismaProcessingStore(getDb()),
+    queue: { enqueueProcess: (mediaId) => enqueueWithTimeout(mediaId) },
+  });
+  return globalForMedia.__ecomMediaLibrary;
 }

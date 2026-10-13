@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import {
   assertTestDatabase,
@@ -7,6 +9,11 @@ import {
 } from "./test/support/test-env";
 
 const port = 3100;
+
+// Fișierele încărcate de testele E2E stau într-un director temporar (șters de global-teardown), nu în
+// bucketul de dezvoltare. Testul E2E pe S3 (MinIO din CI) vine la finalul Fazei 3.
+export const e2eStorageDir = join(tmpdir(), "ecom-e2e-storage");
+process.env["E2E_STORAGE_DIR"] = e2eStorageDir;
 
 // .env din rădăcină (DATABASE_URL / REDIS_URL de dezvoltare) servește DOAR la derivarea numelor
 // bazelor de test; serverul E2E nu primește niciodată baza de dezvoltare.
@@ -58,6 +65,10 @@ export default defineConfig({
       REDIS_URL: testRedisUrl,
       // Better Auth acceptă doar originea din APP_URL: serverul de test trebuie să o știe pe a lui.
       APP_URL: `http://localhost:${port}`,
+      // Director de build propriu: serverul E2E nu scrie peste `.next` al unui server de dev pornit.
+      NEXT_DIST_DIR: ".next-e2e",
+      STORAGE_DRIVER: "local",
+      STORAGE_LOCAL_PATH: e2eStorageDir,
     },
   },
 });

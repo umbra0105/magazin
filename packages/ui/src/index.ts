@@ -11,3 +11,8 @@ export {
   CardTitle,
 } from "./components/card";
 export { PasswordInput, type PasswordInputProps } from "./components/password-input";
+export { Badge, badgeVariants, type BadgeProps } from "./components/badge";
+export { Progress, type ProgressProps } from "./components/progress";
+export { Select, type SelectProps } from "./components/select";
+export { Textarea, type TextareaProps } from "./components/textarea";
+export { Dialog, type DialogProps } from "./components/dialog";

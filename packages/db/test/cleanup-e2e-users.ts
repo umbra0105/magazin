@@ -10,6 +10,14 @@ export async function cleanupE2eUsers(databaseUrl: string | undefined): Promise<
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
   try {
+    // Fișierele media încărcate de conturile de test (rândurile; obiectele stau în directorul
+    // temporar al E2E, șters de global-teardown) și folderele rămase goale cu prefixul testelor.
+    await client.query(
+      `delete from media where "uploadedById" in (select id from "user" where email like 'e2e-%@example.test')`,
+    );
+    await client.query(
+      `delete from media_folder f where f.name like 'Produse %' and not exists (select 1 from media m where m."folderId" = f.id) and not exists (select 1 from media_folder c where c."parentId" = f.id)`,
+    );
     const result = await client.query(`delete from "user" where email like 'e2e-%@example.test'`);
     return result.rowCount ?? 0;
   } finally {

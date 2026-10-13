@@ -17,6 +17,7 @@ export type AdminNavIcon =
   | "loyalty"
   | "vouchers"
   | "content"
+  | "media"
   | "reports"
   | "settings"
   | "users"
@@ -44,6 +45,7 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "loyalty", href: "/admin/loialitate", permission: "discounts.read", feature: "loyalty" },
   { id: "vouchers", href: "/admin/vouchere", permission: "discounts.read", feature: "vouchers" },
   { id: "content", href: "/admin/continut", permission: "content.read" },
+  { id: "media", href: "/admin/media", permission: "media.read" },
   { id: "reports", href: "/admin/rapoarte", permission: "reports.read" },
   { id: "settings", href: "/admin/setari", permission: "settings.read" },
   { id: "users", href: "/admin/utilizatori", permission: "users.manage" },
