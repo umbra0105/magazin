@@ -73,6 +73,8 @@ Order (snapshot)
 `costPrice` și `CostPriceHistory` sunt **doar pentru admin**:
 - nu apar în API public, în props trimise către componente client, în JSON-ul storefront-ului, în feed-uri (Google Merchant, Facebook), în emailuri sau în loguri (cheia se adaugă în lista de câmpuri mascate a loggerului, în Faza 4);
 - `OrderLine.productSnapshot` **nu include** `costPrice`. Dacă vor fi rapoarte de profit, se adaugă o coloană separată, vizibilă doar în admin;
+- **Aplicare (Faza 4, punctul 6):** `CostPriceService` din `@ecom/core/catalog`. Citirea cere `products.cost.view`; scrierea cere `products.cost.edit` **ȘI** `products.cost.view` (editarea fără vizualizare ar fi un oracol: scrii o valoare și afli dacă era aceeași); fără `view`, răspunsurile NU conțin câmpul de cost (cheie absentă, nu `null`); auditul și logurile păstrează doar faptul că s-a schimbat și autorul, niciodată valoarea (nici veche, nici nouă); mesajele de eroare nu repetă valori. Proiecția publică a unei variante e o listă albă (`PUBLIC_VARIANT_FIELDS`), nu o listă neagră. Un test de arhitectură pică dacă o suprafață publică, o componentă client sau un fișier neautorizat atinge costul.
+- **Consecință pentru interfață:** componentele client (`"use client"`) nu pot primi costul ca props. Câmpul din tab-ul „Prețuri” se randează dintr-o componentă de SERVER (input cu `defaultValue`) și se trimite printr-o server action; valoarea nu ajunge în JavaScript-ul clientului.
 - vizibil doar cu permisiunea `products.cost.view`, editabil cu `products.cost.edit`. În rolurile implicite, `products.cost.view` o au **Owner, Admin, Manager și Contabil**; Editor, Suport și Depozit nu o au. `products.cost.edit` o au doar Owner și Admin (`packages/core/src/rbac/catalog.ts`).
 
 ---

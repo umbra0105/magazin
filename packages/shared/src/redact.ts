@@ -39,6 +39,9 @@ const FRAGMENTS = [
   "authorization",
   "cookie",
   "link",
+  // costul de achiziție: orice nume care îl conține (newCostPrice, lastCostPriceNet, costNetTotal...)
+  "costprice",
+  "costnet",
 ];
 
 /** Un nume de câmp e sensibil dacă e în listă sau conține un fragment sensibil (fără majuscule). */

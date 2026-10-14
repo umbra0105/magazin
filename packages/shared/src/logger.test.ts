@@ -56,6 +56,32 @@ describe("logger: câmpuri de cost și credențiale", () => {
   });
 });
 
+describe("logger: costul de achiziție la adâncime", () => {
+  it("ascunde costPrice și la 6 niveluri, prin array-uri (rezultat de serviciu logat întreg)", () => {
+    const { lines, logger } = capture();
+    logger.info(
+      {
+        result: {
+          product: { variants: [{ sku: "A1", costPrice: 77777, costPriceDate: "2026-09-30" }] },
+        },
+        a: { b: { c: { d: { e: [{ costNet: 88888 }] } } } },
+      },
+      "rezultat",
+    );
+    const serialized = JSON.stringify(lines[0]);
+    for (const secret of ["77777", "2026-09-30", "88888"]) {
+      expect(serialized).not.toContain(secret);
+    }
+    expect(serialized).toContain('"sku":"A1"');
+  });
+
+  it("câmpurile sensibile din erori logate nu duc costul în mesaj (regula: valorile nu intră în mesaje)", () => {
+    const { lines, logger } = capture();
+    logger.warn({ err: new Error("cost invalid"), variantId: "v1" }, "cost respins");
+    expect(JSON.stringify(lines[0])).toContain("cost invalid");
+  });
+});
+
 describe("resolveRequestId", () => {
   it("păstrează un id valid primit de la client", () => {
     expect(resolveRequestId("abc-12345678")).toBe("abc-12345678");

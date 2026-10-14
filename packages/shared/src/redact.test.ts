@@ -19,6 +19,24 @@ describe("isSensitiveKey", () => {
   });
 });
 
+describe("costul de achiziție", () => {
+  it("orice nume care conține costPrice sau costNet e sensibil", () => {
+    for (const key of [
+      "costPrice",
+      "newCostPrice",
+      "oldCostPrice",
+      "lastCostPriceNet",
+      "costNet",
+      "costNetTotal",
+    ]) {
+      expect(isSensitiveKey(key), key).toBe(true);
+    }
+    for (const key of ["price", "salePrice", "cost", "shippingCost", "costCenter"]) {
+      expect(isSensitiveKey(key), key).toBe(false);
+    }
+  });
+});
+
 describe("redactSensitive", () => {
   it("maschează la orice adâncime, inclusiv în array-uri, fără să modifice originalul", () => {
     const input = { a: { b: [{ token: "x", ok: 1 }] } };

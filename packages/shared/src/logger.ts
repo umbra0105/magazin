@@ -7,8 +7,20 @@ import { getRequestContext } from "./request-context";
  * recursiv, deci fiecare nume e acoperit la adâncimile 0-3 (ex. `order.lines.costPrice` →
  * `*.*.costPrice`); un array se numără ca un nivel (`lines[0]` → `*`).
  */
+/**
+ * Prețul de achiziție se maschează mai adânc decât restul (până la 6 niveluri: ex.
+ * `result.product.variants[0].costPrice`), fiindcă e cea mai sensibilă informație din catalog.
+ */
+const COST_FIELDS = ["costPrice", "costPriceDate", "costNet"] as const;
+const COST_DEPTH = 6;
+
 export const REDACT_PATHS = [
   ...SENSITIVE_FIELDS.flatMap((field) => [field, `*.${field}`, `*.*.${field}`, `*.*.*.${field}`]),
+  ...COST_FIELDS.flatMap((field) =>
+    Array.from({ length: COST_DEPTH + 1 }, (_, depth) =>
+      [...Array<string>(depth).fill("*"), field].join("."),
+    ),
+  ),
   'headers["authorization"]',
   'headers["cookie"]',
 ];

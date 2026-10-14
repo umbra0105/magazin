@@ -2,7 +2,7 @@
 
 ## 2026-10-14 · Sesiunea 5 · Faza 4 (Catalog), Promptul 5 — ÎN LUCRU
 **Terminat (confirmat de utilizator):** punctele 0 (curățare `e2e-*` la început + măsurare RSS) 0b (E2E pe build de producție; test unitar pentru randarea șabloanelor de email sub `tsx`) și 1 (schema catalogului, migrația `catalog_core` aplicată de utilizator pe baza de dezvoltare)
-**În lucru:** punctul 5 (tabelele de canal și `ChannelProvider`) — [~], așteaptă confirmarea utilizatorului
+**În lucru:** punctul 6 (confidențialitatea costului) — [~], așteaptă confirmarea utilizatorului
 **Blocat:** —
 **Plan aprobat de utilizator** (16 puncte + punctul 0, în `docs/06-todo-master.md`). Propunere de `git push` (doar la cererea utilizatorului) după punctele 2, 6, 10 și 14.
 
@@ -22,6 +22,15 @@
 - `e2e/media.spec.ts`: pasul de mutare în folder căuta fișierul pe prima pagină a bibliotecii partajate (cădea cu încărcări paralele); acum îl găsește după etichetă (`?q=<tag>`)
 - `.gitignore`: `/local-data` (exportul WooCommerce al utilizatorului, `local-data/woocommerce-export.csv`, nu se comite)
 - CI: pasul „Build” rămâne (verifică build-ul fără harness); E2E își face propriul build în `.next-e2e`, deci CI-ul are un build în plus (~1 min)
+
+**Punctul 6 — confidențialitatea costului NIR (fără migrație nouă):**
+- **`CostPriceService`** (`packages/core/src/catalog/cost-price.ts`): `setCost` cere `products.cost.edit` **ȘI** `products.cost.view` (decizie: un rol care poate scrie fără să vadă ar fi un oracol de egalitate). Un test verifică și că orice rol implicit cu `edit` are și `view`. Răspunsul întoarce doar `{ applied }`. `getCost`/`getHistory` cer `view`
+- **Regula „cel mai recent preț de intrare”:** varianta se actualizează dacă data intrării e ≥ cea curentă (aceeași zi = corecție); una mai veche rămâne doar în `cost_price_history`. Data din viitor (> 1 zi) și sumele neîntregi/negative sunt refuzate, cu mesaje care nu repetă valoarea. Importul NIR din Faza 15 va folosi aceeași metodă cu `source: import` și regula lui strictă („doar dacă data e mai nouă”), de decis acolo
+- **Proiecții:** `projectVariantForAdmin(subject, row)`: fără `view` cheile `costPrice`/`costPriceDate` LIPSESC (nu `null`); `toPublicVariant(row)`: listă albă (`PUBLIC_VARIANT_FIELDS`), nu listă neagră
+- **Audit:** `product.cost.update` cu `before: { hadCost }`, `after: { changed, applied, source }`, actor și entitate: nicio valoare, nici dată. **Loguri:** mascare a `costPrice`/`costPriceDate`/`costNet` la 6 niveluri de adâncime (era 3) și, în audit/loguri, orice nume de câmp care conține `costPrice` sau `costNet` (`newCostPrice`, `lastCostPriceNet`)
+- **Test de arhitectură** (`cost-exposure.architecture.test.ts`, citește sursa ca text): (1) nicio suprafață publică (`(storefront)`, `(auth)`, `cont`, `api/` fără `api/admin`, `components/` fără `components/admin`, `packages/ui`, `packages/emails`) nu menționează costul sau `productVariant`; (2) niciun fișier cu `"use client"` nu îl menționează (nici în admin); (3) niciun alt fișier de producție nu îl atinge în afara listei permise (`cost-price*.ts`, `constants.ts`, `redact.ts`, `logger.ts`, `pricing/`, `(admin)`, `api/admin`, `components/admin`), deci un fișier nou care îl folosește face testul să pice până când e adăugat deliberat. Funcția de verificare e testată pe fișiere sintetice; verificat și manual: o mențiune adăugată în `packages/ui` face testul să pice
+- **Consecință pentru punctul 11:** costul din tab-ul „Prețuri” se randează dintr-o componentă de SERVER și se trimite printr-o server action (componentele client nu primesc costul ca props)
+- Teste: 15 în `cost-price.test.ts` + 8 în `cost-exposure.architecture.test.ts` (unitare), 4 de integrare pe baza reală, 3 în shared (mascare adâncă). Totaluri: unitare ✔ 636, integrare ✔ 259, E2E ✔ 42 (prod build), typecheck ✔, lint ✔
 
 **Punctul 5 — canale de vânzare (migrația `20261014220000_sales_channels`, neaplicată pe baza de dezvoltare):**
 - **Regulă permanentă (cerere utilizator, în CLAUDE.md și `docs/04` „Reguli pentru schema bazei”):** orice CHECK compus folosește comparații explicite `IS NULL`/`IS NOT NULL` și are un test cu cazul „una setată, una nulă”. Aplicată la `channel_listing_salePrice_check` (promoția cere prețul canalului), cu test explicit

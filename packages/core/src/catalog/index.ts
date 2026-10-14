@@ -31,3 +31,20 @@ export {
   PRODUCT_USAGE_KINDS,
 } from "./media-usage";
 export { lowestPriceInWindow, OMNIBUS_WINDOW_DAYS, type PricePoint } from "./price-history";
+export {
+  canViewCost,
+  COST_FIELDS,
+  CostPriceError,
+  CostPriceService,
+  projectVariantForAdmin,
+  PUBLIC_VARIANT_FIELDS,
+  toPublicVariant,
+  type ApplyCostCommand,
+  type CostHistoryEntry,
+  type CostPriceDeps,
+  type CostPriceStore,
+  type PublicVariantField,
+  type SetCostPriceInput,
+  type VariantCost,
+} from "./cost-price";
+export { createPrismaCostPriceStore } from "./cost-price-store";
