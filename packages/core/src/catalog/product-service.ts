@@ -9,6 +9,7 @@ import {
   productCacheTags,
 } from "./catalog-support";
 import {
+  BULK_PRICE_MIN_RESULT,
   MAX_MONEY,
   parseInput,
   productBulkUpdateSchema,
@@ -469,15 +470,19 @@ export class ProductService {
         for (const product of usable) {
           for (const v of product.variants) {
             const price = Math.round((v.price * factor) / 10_000);
-            if (price < 0 || price > MAX_MONEY) {
+            // promoția păstrează proporția și nu depășește prețul întreg
+            const scaledSale =
+              v.salePrice === null ? null : Math.round((v.salePrice * factor) / 10_000);
+            // nimic nu ajunge la zero (nici prin rotunjire) și nimic nu trece de plafonul de sume
+            if (
+              price < BULK_PRICE_MIN_RESULT ||
+              price > MAX_MONEY ||
+              (scaledSale !== null && scaledSale < BULK_PRICE_MIN_RESULT)
+            ) {
               outOfRange++;
               continue;
             }
-            // promoția păstrează proporția și nu depășește prețul întreg
-            const salePrice =
-              v.salePrice === null
-                ? null
-                : Math.min(Math.round((v.salePrice * factor) / 10_000), price);
+            const salePrice = scaledSale === null ? null : Math.min(scaledSale, price);
             const before = effectivePrice(v, at);
             const after = effectivePrice({ ...v, price, salePrice }, at);
             variantUpdates.push({
@@ -491,7 +496,7 @@ export class ProductService {
         if (outOfRange > 0) {
           throw new CatalogError(
             "CATALOG_BULK_PRICE_OUT_OF_RANGE",
-            `Ajustarea ar scoate ${outOfRange} variante din intervalul permis de preț; nu s-a modificat nimic`,
+            `Ajustarea ar duce ${outOfRange} variante la 0 sau peste plafonul de sume; nu s-a modificat nimic`,
           );
         }
       }

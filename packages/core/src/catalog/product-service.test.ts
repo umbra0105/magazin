@@ -4,6 +4,7 @@ import { AuditService, type AuditRow, type AuditStore } from "../audit/audit-ser
 import type { PermissionSubject } from "../rbac/can";
 import { DEFAULT_ROLES } from "../rbac/catalog";
 import { ProductFieldsForbiddenError } from "./product-write";
+import { MAX_MONEY } from "./product-schemas";
 import { ProductService } from "./product-service";
 import type {
   BulkApplyCommand,
@@ -842,6 +843,125 @@ describe("editare în masă", () => {
       service.bulkUpdate(roleSubject("owner"), confirmed([p.id], { priceAdjustBps: 30000 })),
     ).rejects.toMatchObject({ code: "CATALOG_BULK_PRICE_OUT_OF_RANGE" });
     expect(store.bulkCalls).toEqual([]);
+  });
+
+  describe("prețul ±%: niciun preț la zero sau sub zero, nimic peste plafon", () => {
+    const owner = () => roleSubject("owner");
+
+    it.each([-10000, -10001, -15000, -20000, -9001, -1_000_000])(
+      "%i puncte de bază (−100% sau mai puțin, sau sub minim) se refuză fără nicio modificare",
+      async (bps) => {
+        const { store, service, auditRows } = setup();
+        const p = store.seedProduct({ slug: "z", title: "Z" });
+        const v = store.seedVariant(p.id, { sku: "Z-1", price: 10000, salePrice: 8000 });
+        await expect(
+          service.bulkUpdate(owner(), confirmed([p.id], { priceAdjustBps: bps })),
+        ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+        expect(store.bulkCalls).toEqual([]);
+        expect(store.variants.get(v.id)).toMatchObject({ price: 10000, salePrice: 8000 });
+        expect(auditRows.filter((r) => r.outcome === "success")).toEqual([]);
+      },
+    );
+
+    it.each([0.5, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 30001, 1e12])(
+      "procent neîntreg, nenumeric sau peste maxim (%s) se refuză",
+      async (bps) => {
+        const { store, service } = setup();
+        const p = store.seedProduct({ slug: "w", title: "W" });
+        store.seedVariant(p.id, { sku: "W-1", price: 10000 });
+        await expect(
+          service.bulkUpdate(owner(), confirmed([p.id], { priceAdjustBps: bps })),
+        ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+        expect(store.bulkCalls).toEqual([]);
+      },
+    );
+
+    it("minimul permis (−90%) trece când rezultatul rămâne ≥ 1 ban", async () => {
+      const { store, service } = setup();
+      const p = store.seedProduct({ slug: "m", title: "M" });
+      const v = store.seedVariant(p.id, { sku: "M-1", price: 10 });
+      await service.bulkUpdate(owner(), confirmed([p.id], { priceAdjustBps: -9000 }));
+      expect(store.variants.get(v.id)?.price).toBe(1);
+    });
+
+    it("rotunjirea care ar duce prețul la zero (4 bani −90% = 0,4 → 0) refuză tot, fără aplicare parțială", async () => {
+      const { store, service } = setup();
+      const ok = store.seedProduct({ slug: "ok", title: "Ok" });
+      const okV = store.seedVariant(ok.id, { sku: "OK-1", price: 10000 });
+      const tiny = store.seedProduct({ slug: "tiny", title: "Tiny" });
+      store.seedVariant(tiny.id, { sku: "T-1", price: 4 });
+      await expect(
+        service.bulkUpdate(owner(), confirmed([ok.id, tiny.id], { priceAdjustBps: -9000 })),
+      ).rejects.toMatchObject({ code: "CATALOG_BULK_PRICE_OUT_OF_RANGE" });
+      expect(store.bulkCalls).toEqual([]);
+      expect(store.variants.get(okV.id)?.price).toBe(10000);
+    });
+
+    it("prețul redus care ar ajunge la zero prin rotunjire refuză tot", async () => {
+      const { store, service } = setup();
+      const p = store.seedProduct({ slug: "s0", title: "S0" });
+      store.seedVariant(p.id, { sku: "S0-1", price: 10000, salePrice: 4 });
+      await expect(
+        service.bulkUpdate(owner(), confirmed([p.id], { priceAdjustBps: -9000 })),
+      ).rejects.toMatchObject({ code: "CATALOG_BULK_PRICE_OUT_OF_RANGE" });
+      expect(store.bulkCalls).toEqual([]);
+    });
+
+    it("o variantă care are deja prețul 0 nu e „reparată” în tăcere: cererea se refuză întreagă", async () => {
+      const { store, service } = setup();
+      const p = store.seedProduct({ slug: "free", title: "Free" });
+      store.seedVariant(p.id, { sku: "F-1", price: 0 });
+      await expect(
+        service.bulkUpdate(owner(), confirmed([p.id], { priceAdjustBps: 1000 })),
+      ).rejects.toMatchObject({ code: "CATALOG_BULK_PRICE_OUT_OF_RANGE" });
+      expect(store.bulkCalls).toEqual([]);
+    });
+
+    it("plafonul de sume: exact MAX_MONEY trece, cu un ban peste se refuză (+300% și +0,01%)", async () => {
+      const at = async (price: number, bps: number) => {
+        const { store, service } = setup();
+        const p = store.seedProduct({ slug: `c${price}`, title: "C" });
+        const v = store.seedVariant(p.id, { sku: `C-${price}`, price });
+        const run = service.bulkUpdate(owner(), confirmed([p.id], { priceAdjustBps: bps }));
+        return { run, store, variantId: v.id };
+      };
+      // 250.000.000 × 4 = 1.000.000.000 = plafonul
+      const edge = await at(MAX_MONEY / 4, 30000);
+      await edge.run;
+      expect(edge.store.variants.get(edge.variantId)?.price).toBe(MAX_MONEY);
+
+      for (const [price, bps] of [
+        [MAX_MONEY / 4 + 1, 30000],
+        [MAX_MONEY, 1],
+        [MAX_MONEY, 30000],
+      ] as const) {
+        const over = await at(price, bps);
+        await expect(over.run).rejects.toMatchObject({ code: "CATALOG_BULK_PRICE_OUT_OF_RANGE" });
+        expect(over.store.bulkCalls).toEqual([]);
+        expect(over.store.variants.get(over.variantId)?.price).toBe(price);
+      }
+    });
+
+    it("niciun preț rezultat din ajustare nu iese din [1, MAX_MONEY] pe o grilă de valori și procente", async () => {
+      const prices = [1, 2, 3, 4, 7, 9, 10, 99, 100, 101, 999, 12345, 2_000_000, MAX_MONEY / 4];
+      const percents = [-9000, -8999, -5000, -3333, -1, 1, 3333, 9999, 15000, 30000];
+      for (const price of prices) {
+        for (const bps of percents) {
+          const { store, service } = setup();
+          const p = store.seedProduct({ slug: "g", title: "G" });
+          const v = store.seedVariant(p.id, { sku: "G-1", price });
+          try {
+            await service.bulkUpdate(owner(), confirmed([p.id], { priceAdjustBps: bps }));
+          } catch (error) {
+            expect(error).toMatchObject({ code: "CATALOG_BULK_PRICE_OUT_OF_RANGE" });
+          }
+          const after = store.variants.get(v.id)?.price as number;
+          expect(Number.isInteger(after)).toBe(true);
+          expect(after).toBeGreaterThanOrEqual(1);
+          expect(after).toBeLessThanOrEqual(MAX_MONEY);
+        }
+      }
+    });
   });
 
   it("prețul inline pentru un produs cu o singură variantă; cu mai multe variante e refuzat", async () => {

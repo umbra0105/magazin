@@ -632,7 +632,7 @@ export const ro = {
         CATALOG_BULK_INVALID:
           "Unele produse selectate nu mai există sau sunt șterse. Reîncarcă lista.",
         CATALOG_BULK_PRICE_OUT_OF_RANGE:
-          "Ajustarea ar scoate unele variante din intervalul permis de preț. Nu s-a modificat nimic.",
+          "Ajustarea ar duce unele variante la preț 0 sau peste plafonul de sume (sau o variantă are deja prețul 0). Nu s-a modificat nimic; scoate produsele respective din selecție.",
         CATEGORY_NOT_FOUND: "Categoria aleasă nu mai există.",
         BRAND_NOT_FOUND: "Brandul ales nu mai există.",
         AUDIT_WRITE_FAILED:

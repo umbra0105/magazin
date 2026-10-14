@@ -171,6 +171,11 @@ export const MAX_BULK_PRODUCTS = 50;
 /** Ajustarea prețului în puncte de bază: de la -90% la +300%. */
 export const BULK_PRICE_ADJUST_MIN_BPS = -9000;
 export const BULK_PRICE_ADJUST_MAX_BPS = 30000;
+/**
+ * Prețul (și prețul redus) rezultat din ajustare nu poate fi sub 1 ban: o rotunjire nu are voie să
+ * ducă un preț la zero. Plafonul de sus e `MAX_MONEY`.
+ */
+export const BULK_PRICE_MIN_RESULT = 1;
 
 /**
  * Editarea în masă. `confirm` și `expectedCount` sunt confirmarea explicită: cererea fără ele (sau cu un
