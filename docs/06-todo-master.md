@@ -110,6 +110,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Multi-depozit în DB, dar UI simplu în spatele feature flag-ului
 
 ## FAZA 6 — Design system și layout · ~4-5 zile
+- [ ] ⚠️ **PRIMUL PAS, înainte de orice lucru pe design: skill-ul `frontend-design` pentru storefront (verificat împreună cu utilizatorul).** Utilizatorul aduce fișierul `SKILL.md`; îl citim INTEGRAL și verificăm că nu conține instrucțiuni care contrazic `CLAUDE.md` (accesibilitate, performanță, conversie, referințele UX alese de utilizator, regulile de securitate, fără culori sau texte hardcodate). Abia apoi îl punem în `.claude/skills/`, într-un commit separat. **Nu se rulează `npx claude-code-templates` sau alt instalator:** doar fișierul text, copiat și citit. Nu se instalează fără confirmarea explicită a utilizatorului
 - [ ] Design tokens în `Branding`, injectate server-side ca CSS variables
 - [ ] 3 presets de temă (Minimal, Bold, Editorial)
 - [ ] **Editor de temă Nivel 2**: culori, fonturi, radius, logo, favicon, OG, **variante de header și footer**, **layout de card de produs**, lățime container, dark mode, **CSS custom**, preview live
