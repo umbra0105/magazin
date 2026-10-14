@@ -415,10 +415,17 @@ Vezi `09-preturi-si-parteneri.md` §5.
 | **Owner** | Tot, inclusiv setări de sistem, actualizări și integrări |
 | **Admin** | Tot, mai puțin actualizări de sistem și chei de integrare |
 | **Manager** | Comenzi, produse (inclusiv prețul de achiziție, `products.cost.view`), clienți, reduceri, rapoarte |
-| **Editor conținut** | CMS, blog, SEO, media |
+| **Editor conținut** | CMS, blog, SEO, media și conținutul produselor (`products.content.write`: descriere, SEO, media, documente), fără prețuri, stoc sau cost |
 | **Suport clienți** | Vede comenzi și clienți, poate anula comenzi. **Rambursarea (`orders.refund`) rămâne la Manager, Admin și Owner până există o limită de rambursare** (decizie utilizator) |
 | **Depozit** | Comenzi (doar fulfillment), stoc, AWB — fără prețuri și date financiare |
 | **Contabil** | Rapoarte, facturi, export — doar citire |
+
+**Conținutul produsului (`products.content.write`)** îl au Owner, Admin, Manager și Editor. Acoperă DOAR: titlu, subtitlu, descriere, adresă (slug), SEO, legăturile media și documentele. Orice alt câmp (preț, preț redus și fereastra de promoție, stoc, cost, clasă de livrare, TVA, variante, stare, brand, categorii, excluderea de la discount...) cere `products.write`; costul cere în plus `products.cost.edit` ȘI `products.cost.view`. Reguli aplicate pe server (`ProductUpdateGuard`, nu doar în interfață):
+- **deny-by-default:** un câmp care nu e explicit de conținut cere `products.write`, deci un câmp nou din model nu devine editabil de Editor din greșeală;
+- **cerere mixtă = respinsă întreagă:** dacă o cerere combină câmpuri permise și interzise, nu se aplică nimic (nici partea permisă);
+- **refuz clar și auditat:** HTTP 403, cod stabil `AUTH_FORBIDDEN`, mesaj cu numele câmpurilor refuzate și permisiunea cerută; încercarea intră în jurnalul de audit cu `outcome: denied`, cu NUMELE câmpurilor, niciodată cu valorile trimise;
+- `products.write` o include pe `products.content.write` (cine poate modifica prețuri poate modifica și descrierea); invers nu;
+- orice server action sau endpoint care modifică produse trece prin `withPermission("products.…")` (test de arhitectură).
 
 **Prețul de achiziție (`products.cost.view`)** îl văd doar Owner, Admin, Manager și Contabil; Editor, Suport și Depozit nu. Maparea completă rol → permisiuni este în `packages/core/src/rbac/catalog.ts` (sursa de adevăr pentru seed).
 
@@ -438,7 +445,8 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `orders.refund` — Rambursează comenzi | ✓ | ✓ | ✓ |  |  |  |  |
 | `orders.fulfill` — Pregătește și expediază comenzi (fulfillment, AWB) | ✓ | ✓ | ✓ |  |  | ✓ |  |
 | `products.read` — Vede produsele | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |
-| `products.write` — Creează și modifică produse | ✓ | ✓ | ✓ |  |  |  |  |
+| `products.write` — Creează și modifică produse (prețuri, stoc, variante, clasă de livrare, TVA) | ✓ | ✓ | ✓ |  |  |  |  |
+| `products.content.write` — Editează conținutul produselor (descriere, SEO, media, documente), fără prețuri, stoc sau cost | ✓ | ✓ | ✓ | ✓ |  |  |  |
 | `products.archive` — Arhivează și șterge produse | ✓ | ✓ | ✓ |  |  |  |  |
 | `products.cost.view` — Vede prețul de achiziție (NIR) al produselor | ✓ | ✓ | ✓ |  |  |  | ✓ |
 | `products.cost.edit` — Modifică prețul de achiziție (NIR) al produselor | ✓ | ✓ |  |  |  |  |  |

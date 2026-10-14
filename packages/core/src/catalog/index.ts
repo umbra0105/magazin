@@ -48,3 +48,13 @@ export {
   type VariantCost,
 } from "./cost-price";
 export { createPrismaCostPriceStore } from "./cost-price-store";
+export {
+  classifyProductUpdate,
+  PRODUCT_CONTENT_FIELDS,
+  PRODUCT_COST_FIELDS,
+  ProductFieldsForbiddenError,
+  ProductUpdateGuard,
+  type ProductUpdateClassification,
+  type ProductUpdateGuardDeps,
+  type ProductUpdatePayload,
+} from "./product-write";

@@ -51,6 +51,8 @@ function isPublic(path: string): boolean {
 const ALLOWED_EXACT = new Set([
   "packages/core/src/catalog/cost-price.ts",
   "packages/core/src/catalog/cost-price-store.ts",
+  // regula de scriere a produsului: numele câmpurilor de cost din cerere (fără valori)
+  "packages/core/src/catalog/product-write.ts",
   // doar numele surselor de intrare (COST_PRICE_SOURCES), nicio valoare
   "packages/core/src/catalog/constants.ts",
   "packages/core/src/catalog/index.ts",

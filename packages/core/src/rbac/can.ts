@@ -22,10 +22,19 @@ export function hasAdminAccess(subject: PermissionSubject | null): subject is Pe
   return subject.roles.includes(OWNER_ROLE_KEY) || subject.permissions.has("admin.access");
 }
 
+/**
+ * Permisiuni care se obțin și printr-una mai largă: `products.write` (prețuri, stoc, variante...)
+ * include editarea conținutului. Invers NU: `products.content.write` nu dă acces la preț, stoc sau cost.
+ */
+const IMPLIED_BY: Partial<Record<PermissionKey, readonly PermissionKey[]>> = {
+  "products.content.write": ["products.write"],
+};
+
 /** Fără `admin.access` nicio altă permisiune nu contează: ea e poarta către toate acțiunile de admin. */
 export function can(subject: PermissionSubject | null, permission: PermissionKey): boolean {
   if (!hasAdminAccess(subject)) return false;
-  return subject.roles.includes(OWNER_ROLE_KEY) || subject.permissions.has(permission);
+  if (subject.roles.includes(OWNER_ROLE_KEY) || subject.permissions.has(permission)) return true;
+  return (IMPLIED_BY[permission] ?? []).some((broader) => subject.permissions.has(broader));
 }
 
 /** Aruncă `UnauthenticatedError` fără utilizator și `ForbiddenError` fără permisiune. */

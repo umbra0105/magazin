@@ -11,7 +11,9 @@ export const PERMISSIONS = {
   "orders.refund": "Rambursează comenzi",
   "orders.fulfill": "Pregătește și expediază comenzi (fulfillment, AWB)",
   "products.read": "Vede produsele",
-  "products.write": "Creează și modifică produse",
+  "products.write": "Creează și modifică produse (prețuri, stoc, variante, clasă de livrare, TVA)",
+  "products.content.write":
+    "Editează conținutul produselor (descriere, SEO, media, documente), fără prețuri, stoc sau cost",
   "products.archive": "Arhivează și șterge produse",
   "products.cost.view": "Vede prețul de achiziție (NIR) al produselor",
   "products.cost.edit": "Modifică prețul de achiziție (NIR) al produselor",
@@ -77,6 +79,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "orders.fulfill",
       "products.read",
       "products.write",
+      "products.content.write",
       "products.archive",
       "products.cost.view",
       "media.read",
@@ -93,7 +96,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
   {
     key: "editor",
     name: "Editor conținut",
-    description: "CMS, blog, SEO, media",
+    description: "CMS, blog, SEO, media și conținutul produselor (fără prețuri, stoc sau cost)",
     permissions: [
       "admin.access",
       "content.read",
@@ -101,6 +104,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "media.read",
       "media.write",
       "products.read",
+      "products.content.write",
     ],
   },
   {

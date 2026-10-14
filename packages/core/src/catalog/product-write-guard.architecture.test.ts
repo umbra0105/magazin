@@ -1,0 +1,206 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+
+/**
+ * Test de arhitectură: orice server action sau endpoint care MODIFICĂ produse trece prin
+ * `withPermission("products.…", …)`. Pică dacă un fișier de acțiuni/rute scrie produse (prin Prisma
+ * sau prin serviciile catalogului) fără acest înveliș pe fiecare export.
+ *
+ * Citește sursa ca text; `findUnguardedProductWrites` e pură și testată pe fișiere sintetice, ca testul
+ * să nu poată trece „în gol”.
+ */
+
+const root = fileURLToPath(new URL("../../../../", import.meta.url));
+
+export interface SourceFile {
+  path: string;
+  content: string;
+}
+
+/** Tabelele atinse de modificările de catalog (delegate Prisma) și acțiunile lor de scriere. */
+const MODELS = [
+  "product",
+  "productVariant",
+  "productMedia",
+  "productDocument",
+  "productOption",
+  "optionValue",
+  "variantOptionValue",
+  "productCategory",
+  "attributeValue",
+  "productRelation",
+  "priceHistory",
+  "costPriceHistory",
+  "collectionProduct",
+  "partsDiagram",
+  "channelListing",
+];
+const PRISMA_WRITE = new RegExp(
+  `\\.(?:${MODELS.join("|")})\\.(?:create|createMany|update|updateMany|upsert|delete|deleteMany)\\b`,
+);
+/** Serviciile catalogului care scriu (numele lor sunt o convenție: testul le caută). */
+const SERVICE_WRITE =
+  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|getProductService|getCostPriceService|getProductUpdateGuard|productService|costPriceService|productUpdateGuard)\b/;
+
+const WRITES_PRODUCTS = (content: string): boolean =>
+  PRISMA_WRITE.test(content) || SERVICE_WRITE.test(content);
+
+/** Fișiere de acțiuni (`"use server"`) sau rute API. */
+const isEntrypoint = (file: SourceFile): boolean =>
+  /\/route\.tsx?$/.test(file.path) ||
+  /^\s*(?:\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*["']use server["']/.test(file.content);
+
+const PRODUCT_PERMISSION = /^products\.[a-z]+(?:\.[a-z]+)?$/;
+
+interface Export {
+  name: string;
+  /** Permisiunea din `withPermission("…")`, dacă exportul e învelit. */
+  permission: string | null;
+}
+
+/** Exporturile unui fișier de acțiuni/rute, cu permisiunea din `withPermission` unde există. */
+function exportsOf(content: string): Export[] {
+  const out: Export[] = [];
+  const guarded = /export\s+const\s+(\w+)\s*=\s*withPermission\(\s*["']([\w.]+)["']/g;
+  for (const m of content.matchAll(guarded)) {
+    out.push({ name: m[1] as string, permission: m[2] as string });
+  }
+  const guardedNames = new Set(out.map((e) => e.name));
+  const any =
+    /export\s+(?:async\s+)?(?:function\s+(\w+)|const\s+(\w+)\s*=|default\s+(?:async\s+)?function\s*(\w*))/g;
+  for (const m of content.matchAll(any)) {
+    const name = (m[1] ?? m[2] ?? m[3] ?? "default") as string;
+    if (!guardedNames.has(name)) out.push({ name, permission: null });
+  }
+  return out;
+}
+
+export function findUnguardedProductWrites(files: readonly SourceFile[]): string[] {
+  const problems: string[] = [];
+  for (const file of files) {
+    if (!isEntrypoint(file) || !WRITES_PRODUCTS(file.content)) continue;
+    const exported = exportsOf(file.content);
+    if (exported.length === 0) {
+      problems.push(`${file.path}: modifică produse, dar nu exportă nicio acțiune învelită`);
+    }
+    for (const e of exported) {
+      if (e.permission === null) {
+        problems.push(`${file.path}: «${e.name}» modifică produse fără withPermission`);
+      } else if (!PRODUCT_PERMISSION.test(e.permission)) {
+        problems.push(
+          `${file.path}: «${e.name}» modifică produse cu permisiunea «${e.permission}» (cere products.*)`,
+        );
+      }
+    }
+  }
+  return problems;
+}
+
+const SKIP_DIRS = new Set(["node_modules", "generated", ".next", ".turbo", "dist", "coverage"]);
+const TEST_FILE = /\.(test|spec)\.(ts|tsx)$|\.e2e\.tsx$/;
+
+function walk(dir: string, out: string[]): void {
+  for (const name of readdirSync(dir)) {
+    if (SKIP_DIRS.has(name) || name.startsWith(".next")) continue;
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) walk(full, out);
+    else if (/\.(ts|tsx)$/.test(name) && !TEST_FILE.test(name)) out.push(full);
+  }
+}
+
+function loadWebSource(): SourceFile[] {
+  const paths: string[] = [];
+  walk(join(root, "apps", "web", "src"), paths);
+  return paths.map((full) => ({
+    path: relative(root, full).split(sep).join("/"),
+    content: readFileSync(full, "utf8"),
+  }));
+}
+
+describe("scrierile de produse trec prin withPermission(products.*) (sursa reală)", () => {
+  const files = loadWebSource();
+
+  it("scanează aplicația (nu trece în gol) și recunoaște punctele de intrare existente", () => {
+    expect(files.length).toBeGreaterThan(40);
+    expect(files.filter(isEntrypoint).length).toBeGreaterThan(0);
+    // acțiunile de setări există și sunt recunoscute ca învelite (altă permisiune, nu produse)
+    const settings = files.find((f) => f.path.endsWith("(admin)/admin/setari/actions.ts"));
+    expect(settings).toBeDefined();
+    expect(exportsOf(settings?.content ?? "").every((e) => e.permission !== null)).toBe(true);
+  });
+
+  it("nicio acțiune sau rută care modifică produse nu e neprotejată sau protejată cu altă permisiune", () => {
+    expect(findUnguardedProductWrites(files)).toEqual([]);
+  });
+});
+
+describe("findUnguardedProductWrites pe fișiere sintetice (testul pică când trebuie)", () => {
+  const action = (body: string): SourceFile => ({
+    path: "apps/web/src/app/(admin)/admin/produse/actions.ts",
+    content: `"use server";\n${body}`,
+  });
+
+  it("prinde o acțiune care scrie produse fără permisiune", () => {
+    const problems = findUnguardedProductWrites([
+      action(
+        `export async function updateTitle(id: string) {\n  await getDb().product.update({ where: { id }, data: {} });\n}`,
+      ),
+    ]);
+    expect(problems).toEqual([
+      expect.stringContaining("«updateTitle» modifică produse fără withPermission"),
+    ]);
+  });
+
+  it("prinde o acțiune învelită cu permisiune din altă zonă (settings.write, content.write)", () => {
+    for (const permission of ["settings.write", "content.write", "media.write"]) {
+      const problems = findUnguardedProductWrites([
+        action(
+          `export const rename = withPermission("${permission}", async () => {\n  await getProductService().rename();\n});`,
+        ),
+      ]);
+      expect(problems, permission).toEqual([expect.stringContaining("cere products.*")]);
+    }
+  });
+
+  it("prinde o rută API care scrie produse fără învelișul de permisiune", () => {
+    const problems = findUnguardedProductWrites([
+      {
+        path: "apps/web/src/app/api/produse/route.ts",
+        content: `export async function POST(req: Request) {\n  await db.productVariant.updateMany({ data: {} });\n  return new Response();\n}`,
+      },
+    ]);
+    expect(problems).toEqual([expect.stringContaining("«POST» modifică produse")]);
+  });
+
+  it("prinde și un export neînvelit dintr-un fișier în care altul e învelit", () => {
+    const problems = findUnguardedProductWrites([
+      action(
+        `export const ok = withPermission("products.content.write", async () => { await productService.update(); });\n` +
+          `export async function sneaky() { await productService.update(); }`,
+      ),
+    ]);
+    expect(problems).toEqual([expect.stringContaining("«sneaky»")]);
+  });
+
+  it("nu dă fals pozitive: acțiuni de produse învelite corect, acțiuni fără produse, fișiere fără directivă", () => {
+    expect(
+      findUnguardedProductWrites([
+        action(
+          `export const a = withPermission("products.write", async () => { await productService.update(); });\n` +
+            `export const b = withPermission("products.content.write", async () => { await getProductService().update(); });\n` +
+            `export const c = withPermission("products.cost.edit", async () => { await costPriceService.setCost(); });`,
+        ),
+        {
+          path: "apps/web/src/app/(admin)/admin/setari/actions.ts",
+          content: `"use server";\nexport const s = withPermission("settings.write", async () => {});`,
+        },
+        {
+          path: "apps/web/src/lib/helper.ts",
+          content: `export async function util() { await getDb().product.update({}); }`,
+        },
+      ]),
+    ).toEqual([]);
+  });
+});
