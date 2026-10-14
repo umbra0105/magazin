@@ -46,7 +46,7 @@ Order
 
 ProductVariant
   + ean               ⚠️ OBLIGATORIU la eMAG. Adaugă-l de la început.
-  + brandId           obligatoriu la eMAG
+  + brandId           obligatoriu la eMAG; NULLABLE pe produs (magazinul poate să nu folosească mărci), cerut doar la publicarea pe canal
   + warrantyMonths    obligatoriu la eMAG
 ```
 
@@ -94,7 +94,7 @@ Recomandare: **A, cu tampon configurabil.**
 
 ### Faza 4 (acum, ~1 zi)
 - [ ] Tabelele `SalesChannel`, `ChannelListing`, `ChannelCategoryMapping`
-- [ ] Câmpuri `ean`, `warrantyMonths` pe variantă; `brandId` obligatoriu
+- [ ] Câmpuri `ean`, `warrantyMonths` pe variantă (nullable în bază; EAN-ul și brandul se cer la publicarea pe canal, în serviciu); `brandId` nullable pe produs
 - [ ] `channelId`, `externalId`, `externalData` pe `Order`
 - [ ] Canalul `web` creat implicit la instalare
 - [ ] Interfața `ChannelProvider` (publishListing, syncStock, syncPrice, fetchOrders, acknowledgeOrder, pushAwb, pushInvoice, fetchReturns)

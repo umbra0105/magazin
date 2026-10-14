@@ -39,7 +39,7 @@ Address           customerId, type, firstName, lastName, company, vatId, regCom,
 ### Catalog
 ```
 Product           slug, title, subtitle, description(rich), status(draft|active|archived),
-                  brandId, taxClassId, type(physical|digital),
+                  brandId?(opțional; obligatoriu doar la publicarea pe eMAG), taxClassId, type(physical|digital),
                   requiresInstallation, shippingClass(standard|oversized|pallet),
                   legacyId?, legacyUrl?,
                   energyClass?, eprelUrl?,

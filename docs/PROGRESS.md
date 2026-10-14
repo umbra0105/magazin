@@ -2,7 +2,7 @@
 
 ## 2026-10-14 · Sesiunea 5 · Faza 4 (Catalog), Promptul 5 — ÎN LUCRU
 **Terminat (confirmat de utilizator):** punctele 0 (curățare `e2e-*` la început + măsurare RSS) și 0b (E2E pe build de producție; test unitar pentru randarea șabloanelor de email sub `tsx`)
-**În lucru:** punctul 1 (schema catalogului) — [~], așteaptă confirmarea utilizatorului
+**În lucru:** punctul 1 (schema catalogului, cu `brandId` nullable) — [~], așteaptă confirmarea utilizatorului
 **Blocat:** —
 **Plan aprobat de utilizator** (16 puncte + punctul 0, în `docs/06-todo-master.md`). Propunere de `git push` (doar la cererea utilizatorului) după punctele 2, 6, 10 și 14.
 
@@ -34,7 +34,8 @@
 - Teste: 9 unitare (Omnibus) + 17 de integrare pe constrângeri. Totaluri: unitare ✔ 603, integrare ✔ 214, typecheck ✔, lint ✔
 **Decizii (Claude, de confirmat):**
 - **`ean` și `warrantyMonths` sunt NULLABLE în bază**, deși CLAUDE.md le numește „obligatorii pe variantă”: un draft sau un rând de import fără EAN nu s-ar putea salva, iar valoarea implicită a garanției e o decizie de business (nu o hardcodez). Obligativitatea se aplică la publicarea pe un canal (eMAG, Faza 22b) și poate fi cerută și la activarea produsului din admin (punctul 11)
-- **`brandId` e NOT NULL** (cum cere eMAG); importul WooCommerce trebuie să primească un brand pentru fiecare produs (sau un brand „fără brand” creat de magazin, nu de pachet)
+- **`brandId` e NULLABLE** (decizie utilizator, corecție aplicată direct în migrația `catalog_core`, neaplicată pe nicio bază de dezvoltare): magazinul nu folosește mărci pe produse. Nu creăm un brand fals „Fără brand”; storefront-ul nu afișează nimic dacă lipsește. Brandul devine obligatoriu doar la publicarea pe un canal care îl cere (eMAG), verificat în serviciu (punctul 5, canale)
+- **`ean` și `warrantyMonths` nullable în bază — CONFIRMAT de utilizator.** Regulă în serviciu: garanția are valoare implicită dintr-o setare a magazinului (fără hardcodare), aplicată la activarea produsului (punctul 11); EAN-ul e obligatoriu doar la publicarea pe un canal extern (punctul 5)
 - Imaginea categoriei și logoul brandului nu au coloane încă (ar cere provider de utilizare media): vin la punctul 9, cu providerii lor
 - Migrația nu a fost aplicată pe baza de dezvoltare; se aplică cu `npm.cmd run db:migrate`
 

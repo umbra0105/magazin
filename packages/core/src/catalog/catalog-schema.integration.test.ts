@@ -188,15 +188,22 @@ describe("catalog: slug-uri, branduri, categorii, legacy", () => {
     });
   });
 
-  it("brandul e obligatoriu și nu se șterge cât are produse", async () => {
+  it("brandul e opțional (produs fără brand), dar un brand inexistent e refuzat și nu se șterge cât are produse", async () => {
+    await inRolledBackTransaction(db, async (tx) => {
+      const p = await tx.product.create({ data: { slug: `p-${uid()}`, title: "Fără brand" } });
+      expect(p.brandId).toBeNull();
+    });
     await violation((tx) =>
       tx.product.create({
-        data: { slug: `p-${uid()}`, title: "Fără brand", brandId: "inexistent" },
+        data: { slug: `p-${uid()}`, title: "Brand inexistent", brandId: "inexistent" },
       }),
     );
     await violation(async (tx) => {
-      const p = await newProduct(tx);
-      await tx.brand.delete({ where: { id: p.brandId } });
+      const brand = await newBrand(tx);
+      await tx.product.create({
+        data: { slug: `p-${uid()}`, title: "Cu brand", brandId: brand.id },
+      });
+      await tx.brand.delete({ where: { id: brand.id } });
     });
   });
 

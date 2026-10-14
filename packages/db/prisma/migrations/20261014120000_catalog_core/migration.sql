@@ -44,7 +44,7 @@ CREATE TABLE "product" (
     "description" TEXT,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "type" TEXT NOT NULL DEFAULT 'physical',
-    "brandId" TEXT NOT NULL,
+    "brandId" TEXT,
     "shippingClass" TEXT NOT NULL DEFAULT 'standard',
     "requiresInstallation" BOOLEAN NOT NULL DEFAULT false,
     "manageStock" BOOLEAN NOT NULL DEFAULT true,

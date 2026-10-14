@@ -259,7 +259,7 @@ model Media {
 // Catalog (Faza 4): produse, variante, categorii, branduri, media pe produs
 // ---------------------------------------------------------------------------
 
-/// Brandul produselor (obligatoriu pe produs: îl cere eMAG). `legacyId`/`legacyUrl` = identificatorul și
+/// Brandul produselor (opțional pe produs; eMAG îl cere la publicare). `legacyId`/`legacyUrl` = identificatorul și
 /// adresa din magazinul WooCommerce de unde se migrează (import repetabil + redirecționări 301 la lansare).
 model Brand {
   id             String    @id @default(cuid())
@@ -317,8 +317,9 @@ model Product {
   status                   String            @default("draft")
   /// "physical" | "digital" (CHECK în migrație)
   type                     String            @default("physical")
-  brandId                  String
-  brand                    Brand             @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  /// Opțional: magazinul poate să nu folosească mărci. Obligatoriu doar la publicarea pe un canal care îl cere (eMAG).
+  brandId                  String?
+  brand                    Brand?            @relation(fields: [brandId], references: [id], onDelete: Restrict)
   /// "standard" | "oversized" | "pallet" (CHECK în migrație). Regulile pe clase vin la Faza 12.
   shippingClass            String            @default("standard")
   requiresInstallation     Boolean           @default(false)
