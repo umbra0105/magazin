@@ -1,8 +1,8 @@
 # Jurnal de progres
 
 ## 2026-10-14 · Sesiunea 5 · Faza 4 (Catalog), Promptul 5 — ÎN LUCRU
-**Terminat (confirmat de utilizator):** punctul 0 (curățare `e2e-*` la început + măsurare RSS)
-**În lucru:** punctul 0b (E2E pe build de producție) — [~], așteaptă confirmarea utilizatorului
+**Terminat (confirmat de utilizator):** punctele 0 (curățare `e2e-*` la început + măsurare RSS) și 0b (E2E pe build de producție; test unitar pentru randarea șabloanelor de email sub `tsx`)
+**În lucru:** punctul 1 (schema catalogului) — [~], așteaptă confirmarea utilizatorului
 **Blocat:** —
 **Plan aprobat de utilizator** (16 puncte + punctul 0, în `docs/06-todo-master.md`). Propunere de `git push` (doar la cererea utilizatorului) după punctele 2, 6, 10 și 14.
 
@@ -22,6 +22,21 @@
 - `e2e/media.spec.ts`: pasul de mutare în folder căuta fișierul pe prima pagină a bibliotecii partajate (cădea cu încărcări paralele); acum îl găsește după etichetă (`?q=<tag>`)
 - `.gitignore`: `/local-data` (exportul WooCommerce al utilizatorului, `local-data/woocommerce-export.csv`, nu se comite)
 - CI: pasul „Build” rămâne (verifică build-ul fără harness); E2E își face propriul build în `.next-e2e`, deci CI-ul are un build în plus (~1 min)
+
+**Punctul 1 — schema catalogului (migrația `20261014120000_catalog_core`):**
+- Tabele: `brand`, `category`, `product`, `product_category`, `product_variant`, `cost_price_history`, `price_history`, `product_media`. Mutate din punctele 3 și 6 în punctul 1 la cererea utilizatorului (vezi TODO)
+- `product.shippingClass` ∈ standard/oversized/pallet (CHECK); `status` draft/active/archived; `type` physical/digital; `stockStatus` instock/outofstock/onbackorder (și override per variantă). Valorile sunt și în `@ecom/core/catalog` (testul verifică potrivirea cu CHECK-urile)
+- Prețuri pe VARIANTĂ: `price` brut (int, bani), `salePrice` + `saleStartsAt`/`saleEndsAt`, `costPrice` NET + `costPriceDate` (⚠️ doar admin), greutate în grame, dimensiuni în mm (întregi). CHECK: sume ≥ 0, promoție ≤ preț, fereastră de promoție ordonată, EAN doar cifre 8–14, dimensiuni > 0
+- `legacyId` UNIQUE (nullable) pe produs, variantă, categorie, brand; `legacyUrl` pe produs, categorie, brand
+- Slug-ul produsului: unic printre cele neșterse, fără diferență de majuscule (index parțial; `deletedAt` = soft delete). Categorie: slug unic în același părinte (două indexuri parțiale, ca la `media_folder`) și `path` unic. O singură categorie primară și o singură variantă implicită per produs
+- `product_media`: FK către `media` cu `ON DELETE RESTRICT` (plasă de siguranță sub providerul de la punctul 2), FK compus `(variantId, productId)` → varianta trebuie să aparțină aceluiași produs, aceeași imagine o singură dată pe produs și pe variantă
+- `PriceHistory` + `lowestPriceInWindow(history, { until, days = 30 })` (pură, cu teste): fereastra e `[until − 30 zile, until)`, cu `until` = începutul reducerii; include prețul în vigoare la începutul ferestrei; `null` fără istoric. Scrierea istoricului (la fiecare schimbare a prețului efectiv, plus snapshot zilnic din `docs/04`) vine cu serviciile, punctul 8
+- Teste: 9 unitare (Omnibus) + 17 de integrare pe constrângeri. Totaluri: unitare ✔ 603, integrare ✔ 214, typecheck ✔, lint ✔
+**Decizii (Claude, de confirmat):**
+- **`ean` și `warrantyMonths` sunt NULLABLE în bază**, deși CLAUDE.md le numește „obligatorii pe variantă”: un draft sau un rând de import fără EAN nu s-ar putea salva, iar valoarea implicită a garanției e o decizie de business (nu o hardcodez). Obligativitatea se aplică la publicarea pe un canal (eMAG, Faza 22b) și poate fi cerută și la activarea produsului din admin (punctul 11)
+- **`brandId` e NOT NULL** (cum cere eMAG); importul WooCommerce trebuie să primească un brand pentru fiecare produs (sau un brand „fără brand” creat de magazin, nu de pachet)
+- Imaginea categoriei și logoul brandului nu au coloane încă (ar cere provider de utilizare media): vin la punctul 9, cu providerii lor
+- Migrația nu a fost aplicată pe baza de dezvoltare; se aplică cu `npm.cmd run db:migrate`
 
 **Datorie tehnică (Faza 4, în plus față de PROGRESS din Faza 3):**
 - Coada `emails` din Redis-ul de test păstrează joburile eșuate între rulări (retry cu backoff): după o defecțiune, rulările următoare reîncearcă joburi vechi. `globalSetup` nu golește cozile (de decis dacă merită)

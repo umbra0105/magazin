@@ -11,3 +11,4 @@ export * from "./auth";
 export * from "./email";
 export * from "./admin";
 export * from "./media";
+export * from "./catalog";

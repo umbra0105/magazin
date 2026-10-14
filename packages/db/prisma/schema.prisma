@@ -221,9 +221,9 @@ model MediaFolder {
 /// regenera variantele); `variants` = lista variantelor generate din job. Numele original
 /// al fișierului e doar informativ în admin și nu apare niciodată într-un URL.
 model Media {
-  id              String       @id @default(cuid())
+  id              String         @id @default(cuid())
   /// "pending" | "processing" | "ready" | "failed" (constrângere CHECK în migrație)
-  status          String       @default("pending")
+  status          String         @default("pending")
   mime            String
   sizeBytes       Int
   width           Int?
@@ -231,19 +231,20 @@ model Media {
   /// SHA-256 (hex) al originalului stocat; permite detectarea dublurilor
   checksum        String
   originalName    String
-  storageKey      String       @unique
+  storageKey      String         @unique
   /// [{ name, format, key, width, height, sizeBytes }]
-  variants        Json         @default("[]")
+  variants        Json           @default("[]")
   blurhash        String?
-  alt             String       @default("")
-  tags            String[]     @default([])
+  alt             String         @default("")
+  tags            String[]       @default([])
   folderId        String?
-  folder          MediaFolder? @relation(fields: [folderId], references: [id], onDelete: Restrict)
+  folder          MediaFolder?   @relation(fields: [folderId], references: [id], onDelete: Restrict)
   processingError String?
   uploadedById    String?
-  uploadedBy      User?        @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  uploadedBy      User?          @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  productMedia    ProductMedia[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@index([folderId])
   @@index([status])
@@ -252,4 +253,202 @@ model Media {
   @@index([uploadedById])
   @@index([tags], type: Gin)
   @@map("media")
+}
+
+// ---------------------------------------------------------------------------
+// Catalog (Faza 4): produse, variante, categorii, branduri, media pe produs
+// ---------------------------------------------------------------------------
+
+/// Brandul produselor (obligatoriu pe produs: îl cere eMAG). `legacyId`/`legacyUrl` = identificatorul și
+/// adresa din magazinul WooCommerce de unde se migrează (import repetabil + redirecționări 301 la lansare).
+model Brand {
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  name           String
+  description    String?
+  seoTitle       String?
+  seoDescription String?
+  legacyId       String?   @unique
+  legacyUrl      String?
+  products       Product[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("brand")
+}
+
+/// Categorie într-un arbore (`parentId`). `path` = calea de slug-uri (ex. `pompe/pompe-filtrare`),
+/// `depth` = adâncimea (0 = rădăcină); ambele sunt calculate de serviciu, nu editate direct.
+model Category {
+  id                       String            @id @default(cuid())
+  parentId                 String?
+  parent                   Category?         @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children                 Category[]        @relation("CategoryTree")
+  slug                     String
+  name                     String
+  description              String?
+  path                     String            @unique
+  depth                    Int               @default(0)
+  sortOrder                Int               @default(0)
+  /// Produsele din categorie costă prețul public pentru toate grupurile (`09` §1)
+  excludeFromGroupDiscount Boolean           @default(false)
+  seoTitle                 String?
+  seoDescription           String?
+  legacyId                 String?           @unique
+  legacyUrl                String?
+  products                 ProductCategory[]
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  @@index([parentId])
+  @@map("category")
+}
+
+/// Produsul vandabil. Prețurile, EAN-ul, garanția, greutatea și costul stau pe VARIANTĂ (un produs
+/// simplu are o singură variantă implicită). `slug` e unic printre produsele neșterse (index parțial în
+/// migrație). `deletedAt` = soft delete.
+model Product {
+  id                       String            @id @default(cuid())
+  slug                     String
+  title                    String
+  subtitle                 String?
+  description              String?
+  /// "draft" | "active" | "archived" (CHECK în migrație)
+  status                   String            @default("draft")
+  /// "physical" | "digital" (CHECK în migrație)
+  type                     String            @default("physical")
+  brandId                  String
+  brand                    Brand             @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  /// "standard" | "oversized" | "pallet" (CHECK în migrație). Regulile pe clase vin la Faza 12.
+  shippingClass            String            @default("standard")
+  requiresInstallation     Boolean           @default(false)
+  /// Valoarea implicită vine din setarea `inventory.manageStock`; aici e suprascrierea per produs.
+  manageStock              Boolean           @default(true)
+  /// "instock" | "outofstock" | "onbackorder" (CHECK); folosit când `manageStock = false`
+  stockStatus              String            @default("instock")
+  excludeFromGroupDiscount Boolean           @default(false)
+  seoTitle                 String?
+  seoDescription           String?
+  publishedAt              DateTime?
+  sortOrder                Int               @default(0)
+  metadata                 Json              @default("{}")
+  legacyId                 String?           @unique
+  legacyUrl                String?
+  deletedAt                DateTime?
+  variants                 ProductVariant[]
+  categories               ProductCategory[]
+  media                    ProductMedia[]
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  @@index([brandId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("product")
+}
+
+model ProductCategory {
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  /// O singură categorie primară per produs (index parțial în migrație)
+  isPrimary  Boolean  @default(false)
+
+  @@id([productId, categoryId])
+  @@index([categoryId])
+  @@map("product_category")
+}
+
+/// Variantă vandabilă. Sumele sunt `int` în bani. `price` = BRUT (cu TVA inclus), `salePrice` = prețul
+/// promoțional brut (în intervalul `saleStartsAt`–`saleEndsAt`, dacă sunt setate). `costPrice` = prețul de
+/// achiziție NET (fără TVA), ⚠️ DOAR pentru admin (`products.cost.view`): niciodată în API public, props
+/// către componente client, feed-uri, snapshot de comandă sau loguri.
+model ProductVariant {
+  id             String             @id @default(cuid())
+  productId      String
+  product        Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku            String             @unique
+  /// GTIN (8-14 cifre). Nu e NOT NULL în bază (draft-uri, import); obligatoriu la publicarea pe eMAG.
+  ean            String?
+  /// Garanția în luni. Nu e NOT NULL în bază (valoarea implicită e o decizie de business); obligatorie la eMAG.
+  warrantyMonths Int?
+  price          Int
+  salePrice      Int?
+  saleStartsAt   DateTime?
+  saleEndsAt     DateTime?
+  costPrice      Int?
+  costPriceDate  DateTime?
+  /// Greutate în grame, dimensiuni în milimetri (întregi; transportul folosește max(real, volumetric))
+  weightGrams    Int?
+  lengthMm       Int?
+  widthMm        Int?
+  heightMm       Int?
+  /// Suprascrierea per variantă a lui `Product.manageStock` (null = moștenește de la produs)
+  manageStock    Boolean?
+  /// "instock" | "outofstock" | "onbackorder" (CHECK); suprascrie `Product.stockStatus` (null = moștenește)
+  stockStatus    String?
+  position       Int                @default(0)
+  isDefault      Boolean            @default(false)
+  legacyId       String?            @unique
+  media          ProductMedia[]
+  costHistory    CostPriceHistory[]
+  priceHistory   PriceHistory[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([id, productId])
+  @@index([productId])
+  @@index([ean])
+  @@map("product_variant")
+}
+
+/// Istoricul prețurilor de achiziție NET. ⚠️ DOAR admin, ca `ProductVariant.costPrice`.
+model CostPriceHistory {
+  id            String         @id @default(cuid())
+  variantId     String
+  variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  costPrice     Int
+  effectiveDate DateTime
+  /// "manual" | "import" (CHECK în migrație)
+  source        String
+  importId      String?
+  createdAt     DateTime       @default(now())
+
+  @@index([variantId, effectiveDate])
+  @@map("cost_price_history")
+}
+
+/// Prețul public brut în vigoare al unei variante de la `effectiveFrom` încolo (valoarea efectivă:
+/// min(preț, promoție activă)). Sursa pentru „cel mai mic preț din ultimele 30 de zile” (Omnibus).
+/// Se scrie la fiecare schimbare a prețului efectiv; vezi `lowestPriceInWindow` din `@ecom/core`.
+model PriceHistory {
+  id            String         @id @default(cuid())
+  variantId     String
+  variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  price         Int
+  effectiveFrom DateTime
+
+  @@unique([variantId, effectiveFrom])
+  @@map("price_history")
+}
+
+/// Fișier din bibliotecă atașat unui produs (sau unei variante a lui). `onDelete: Restrict` spre `Media`
+/// e plasa de siguranță sub `ProductMediaUsageProvider`: un fișier folosit nu se poate șterge nici dacă
+/// providerul nu e înregistrat. `position` 0 = imaginea principală.
+model ProductMedia {
+  id        String          @id @default(cuid())
+  productId String
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId, productId], references: [id, productId], onDelete: Cascade)
+  mediaId   String
+  media     Media           @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  position  Int             @default(0)
+  createdAt DateTime        @default(now())
+
+  @@index([productId, position])
+  @@index([variantId])
+  @@index([mediaId])
+  @@map("product_media")
 }
