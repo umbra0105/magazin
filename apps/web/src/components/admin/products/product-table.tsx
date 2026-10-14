@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Pencil, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Badge, Button, Dialog, Input, Label, Select } from "@ecom/ui";
@@ -517,6 +518,13 @@ export function ProductTable({
                       <span className="flex items-center font-medium">
                         {row.title}
                         {(canEditContent || canWrite) && editButton(row, "title", m.inline.title)}
+                        <Link
+                          href={`/admin/produse/${row.id}`}
+                          aria-label={m.editor.editLink(row.title)}
+                          className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline"
+                        >
+                          {m.editor.open}
+                        </Link>
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {[

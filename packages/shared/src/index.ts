@@ -9,3 +9,4 @@ export {
   ValidationError,
 } from "./errors";
 export { REDACTED, SENSITIVE_FIELDS, isSensitiveKey, redactSensitive } from "./redact";
+export { netFromGross, percentToBasisPoints, vatFromGross } from "./vat";

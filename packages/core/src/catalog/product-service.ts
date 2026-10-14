@@ -56,6 +56,11 @@ export interface ProductServiceDeps {
   audit: AuditService;
   /** Valoarea implicită a `manageStock` pentru produse noi (setarea `inventory.manageStock`). */
   defaultManageStock: () => Promise<boolean>;
+  /**
+   * Garanția implicită, în luni (setarea `catalog.defaultWarrantyMonths`). La activarea unui produs,
+   * variantele fără garanție proprie o primesc; fără această dependență regula nu se aplică.
+   */
+  defaultWarrantyMonths?: () => Promise<number | null>;
   /** Invalidare de cache (în aplicație: `revalidateTag`). Opțional. */
   invalidate?: (tags: readonly string[]) => Promise<void> | void;
   logger: Pick<ReturnType<typeof getLogger>, "warn">;
@@ -135,6 +140,39 @@ export class ProductService {
     return product;
   }
 
+  /** Produsul și variantele lui pentru editorul din admin (cere `products.read`; fără cost). */
+  async getForEdit(
+    subject: PermissionSubject | null,
+    id: string,
+  ): Promise<{ product: ProductRecord; variants: VariantRecord[] }> {
+    assertCan(subject, "products.read");
+    const product = await this.deps.store.getProduct(id);
+    if (!product) throw PRODUCT_NOT_FOUND();
+    return { product, variants: await this.deps.store.listVariantsOf(id) };
+  }
+
+  /**
+   * Regula de activare: garanția implicită din setare pe variantele fără garanție proprie. Nu schimbă
+   * EAN-ul sau brandul (nu sunt obligatorii pentru activare). Eșecul regulii nu anulează activarea.
+   */
+  private async applyActivationDefaults(
+    subject: PermissionSubject,
+    productIds: readonly string[],
+  ): Promise<void> {
+    const months = (await this.deps.defaultWarrantyMonths?.()) ?? null;
+    if (months === null) return;
+    const updated = await this.deps.store.applyDefaultWarranty(productIds, months);
+    if (updated === 0) return;
+    await this.deps.audit.record({
+      actorId: subject.userId,
+      actorLabel: subject.email,
+      action: "product.warranty.default_applied",
+      entity: "product",
+      entityId: productIds.length === 1 ? (productIds[0] as string) : null,
+      after: { variants: updated, months, products: productIds.length },
+    });
+  }
+
   /**
    * Creează un produs cu variantele lui. Fără `slug` în cerere, adresa se generează din titlu
    * (cu sufix numeric la coliziune, verificând și produsele șterse). Cere `products.write`.
@@ -157,7 +195,12 @@ export class ProductService {
       ));
     if (data.slug) await this.assertSlugFree(data.slug);
 
-    const { variants, ...withSlug } = data;
+    const { variants, categoryIds = [], ...withSlug } = data;
+    for (const categoryId of categoryIds) {
+      if (!(await this.deps.store.categoryExists(categoryId))) {
+        throw new CatalogError("CATEGORY_NOT_FOUND", "Categoria aleasă nu mai există");
+      }
+    }
     const fields: Record<string, unknown> = { ...withSlug };
     delete fields["slug"];
     const at = this.now();
@@ -191,6 +234,7 @@ export class ProductService {
       },
       rows,
       at,
+      categoryIds,
     );
 
     await this.deps.audit.record({
@@ -252,6 +296,9 @@ export class ProductService {
         before: diff.before,
         after: diff.after,
       });
+      if (patch.status === "active" && before.status !== "active") {
+        await this.applyActivationDefaults(subject, [productId]);
+      }
       const tags = new Set([...productCacheTags(after), ...productCacheTags(before)]);
       await this.invalidate([...tags]);
       return after;
@@ -514,6 +561,7 @@ export class ProductService {
         addCategoryId: changes.addCategoryId ?? null,
         variantUpdates,
       });
+      if (changes.status === "active") await this.applyActivationDefaults(subject, ids);
 
       // Un singur eveniment agregat: lista de id-uri și ce s-a schimbat (valori nesensibile).
       await this.deps.audit.record({

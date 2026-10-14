@@ -112,7 +112,14 @@ export default async function ProductsPage({
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold">{m.title}</h1>
+          {canWrite && (
+            <Link href="/admin/produse/nou" className={buttonVariants({ variant: "default" })}>
+              {m.editor.newButton}
+            </Link>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground">{m.description}</p>
         {!canWrite && !canEditContent && (
           <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">

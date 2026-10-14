@@ -45,6 +45,13 @@ export const settingGroups = {
     manageStock: z.boolean().default(true),
     reservationMinutes: z.number().int().min(1).default(15),
   },
+  catalog: {
+    /**
+     * Garanția implicită, în luni, pusă pe variantele fără garanție proprie la activarea produsului
+     * (24 = minimul legal pentru consumatori). Magazinul o poate schimba; produsul o poate suprascrie.
+     */
+    defaultWarrantyMonths: z.number().int().min(0).max(240).default(24),
+  },
   checkout: {
     guestCheckoutEnabled: z.boolean().default(true),
   },

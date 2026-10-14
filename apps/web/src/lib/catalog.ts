@@ -2,10 +2,12 @@ import { revalidateTag } from "next/cache";
 import {
   BrandService,
   CategoryService,
+  ProductAssignmentsService,
   ProductListService,
   ProductService,
   createPrismaBrandStore,
   createPrismaCategoryStore,
+  createPrismaProductAssignmentStore,
   createPrismaProductListStore,
   createPrismaProductStore,
 } from "@ecom/core";
@@ -20,6 +22,7 @@ const globalForCatalog = globalThis as unknown as {
   __ecomBrands?: BrandService;
   __ecomProducts?: ProductService;
   __ecomProductList?: ProductListService;
+  __ecomAssignments?: ProductAssignmentsService;
 };
 
 /**
@@ -61,6 +64,8 @@ export function getProductService(): ProductService {
     store: createPrismaProductStore(getDb()),
     audit: getAudit(),
     defaultManageStock: async () => (await getSettings().getGroup("inventory")).manageStock,
+    defaultWarrantyMonths: async () =>
+      (await getSettings().getGroup("catalog")).defaultWarrantyMonths,
     invalidate,
     logger: getLogger(),
   });
@@ -74,4 +79,16 @@ export function getProductListService(): ProductListService {
     storage: getStorage(),
   });
   return globalForCatalog.__ecomProductList;
+}
+
+/** Categoriile și imaginile unui produs (taburile Categorii și Media din editor). */
+export function getProductAssignmentsService(): ProductAssignmentsService {
+  globalForCatalog.__ecomAssignments ??= new ProductAssignmentsService({
+    store: createPrismaProductAssignmentStore(getDb()),
+    audit: getAudit(),
+    storage: getStorage(),
+    invalidate,
+    logger: getLogger(),
+  });
+  return globalForCatalog.__ecomAssignments;
 }

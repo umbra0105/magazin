@@ -16,3 +16,4 @@ export { Progress, type ProgressProps } from "./components/progress";
 export { Select, type SelectProps } from "./components/select";
 export { Textarea, type TextareaProps } from "./components/textarea";
 export { Dialog, type DialogProps } from "./components/dialog";
+export { Tabs, type TabItem, type TabsProps } from "./components/tabs";

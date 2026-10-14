@@ -111,10 +111,12 @@ export interface ProductStore {
   getVariant(id: string): Promise<VariantRecord | null>;
   /** SKU-urile (din `skus`) care există deja, fără diferență de majuscule. */
   findExistingSkus(skus: readonly string[], excludeVariantId?: string): Promise<string[]>;
+  /** `categoryIds`: categoriile produsului (prima e cea principală), create în aceeași tranzacție. */
   createProduct(
     data: ProductFieldsData,
     variants: readonly NewVariantRow[],
     at: Date,
+    categoryIds?: readonly string[],
   ): Promise<{ product: ProductRecord; variants: VariantRecord[] }>;
   updateProduct(id: string, data: Partial<ProductFieldsData>): Promise<ProductRecord>;
   /** `priceRecord` != null: scrie în istoric noul preț efectiv, în aceeași tranzacție. */
@@ -135,6 +137,11 @@ export interface ProductStore {
   ): Promise<{ id: string; slug: string; deletedAt: Date | null; variants: VariantRecord[] }[]>;
   categoryExists(id: string): Promise<boolean>;
   brandExists(id: string): Promise<boolean>;
+  /**
+   * Pune garanția implicită pe variantele produselor date care nu au una (`NULL`); cele cu valoare
+   * proprie rămân neatinse. Întoarce câte variante au fost actualizate.
+   */
+  applyDefaultWarranty(productIds: readonly string[], months: number): Promise<number>;
   /** Aplică o editare în masă, ATOMIC (tot sau nimic). */
   bulkApply(command: BulkApplyCommand): Promise<void>;
   addGeneratedVariants(
@@ -231,9 +238,14 @@ export function createPrismaProductStore(db: Db): ProductStore {
       return rows.map((r) => r.sku);
     },
 
-    async createProduct(data, variants, at) {
+    async createProduct(data, variants, at, categoryIds = []) {
       return inTransaction(db, async (tx) => {
         const product = await tx.product.create({ data, select: productSelect });
+        for (const [index, categoryId] of categoryIds.entries()) {
+          await tx.productCategory.create({
+            data: { productId: product.id, categoryId, isPrimary: index === 0 },
+          });
+        }
         const created: VariantRecord[] = [];
         for (const [index, row] of variants.entries()) {
           const variant = await tx.productVariant.create({
@@ -319,6 +331,15 @@ export function createPrismaProductStore(db: Db): ProductStore {
           variants: { orderBy: { position: "asc" }, select: variantSelect },
         },
       });
+    },
+
+    async applyDefaultWarranty(productIds, months) {
+      if (productIds.length === 0) return 0;
+      const result = await db.productVariant.updateMany({
+        where: { productId: { in: [...productIds] }, warrantyMonths: null },
+        data: { warrantyMonths: months },
+      });
+      return result.count;
     },
 
     async categoryExists(id) {

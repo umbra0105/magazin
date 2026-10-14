@@ -130,8 +130,16 @@ const productFields = {
   seoDescription: optionalText(500),
 };
 
+/** Câte categorii poate avea un produs și câte fișiere media (un tavan împotriva cererilor absurde). */
+export const MAX_PRODUCT_CATEGORIES = 20;
+export const MAX_PRODUCT_MEDIA = 30;
+
+const entityId = z.string().min(1).max(40);
+
 export const productCreateSchema = z.strictObject({
   ...productFields,
+  /** Categoriile produsului; prima e cea principală. Se creează în aceeași tranzacție cu produsul. */
+  categoryIds: z.array(entityId).max(MAX_PRODUCT_CATEGORIES).optional(),
   variants: z
     .array(variantInputSchema)
     .min(1, "Produsul are nevoie de cel puțin o variantă")
@@ -209,3 +217,32 @@ export const productBulkUpdateSchema = z.strictObject({
 });
 
 export type ProductBulkUpdateInput = z.infer<typeof productBulkUpdateSchema>;
+
+/** Categoriile unui produs: lista completă (înlocuiește ce există); `primaryId` implicit = prima. */
+export const productCategoriesSchema = z
+  .strictObject({
+    categoryIds: z.array(entityId).max(MAX_PRODUCT_CATEGORIES),
+    primaryId: entityId.nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (new Set(value.categoryIds).size !== value.categoryIds.length) {
+      ctx.addIssue({ code: "custom", path: ["categoryIds"], message: "Categorie repetată" });
+    }
+    if (value.primaryId && !value.categoryIds.includes(value.primaryId)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["primaryId"],
+        message: "Categoria principală trebuie să fie printre cele alese",
+      });
+    }
+  });
+
+/** Media produsului: lista completă, în ordinea afișării (prima = imaginea principală). */
+export const productMediaSchema = z.strictObject({
+  mediaIds: z
+    .array(entityId)
+    .max(MAX_PRODUCT_MEDIA)
+    .refine((ids) => new Set(ids).size === ids.length, "Fișier repetat"),
+});
+
+export type ProductCategoriesInput = z.infer<typeof productCategoriesSchema>;

@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { getProductService } from "@/lib/catalog";
+import { productFailure as failure } from "@/lib/product-action-support";
 import { withPermission } from "@/lib/session";
 
 /**
@@ -10,35 +11,6 @@ import { withPermission } from "@/lib/session";
  * folosește `ProductUpdateGuard`: un Editor poate schimba doar titlul, orice alt câmp cere
  * `products.write`, iar cererea mixtă se respinge întreagă. Prețul de achiziție nu apare aici nicăieri.
  */
-
-export type ProductActionFailure = { ok: false; code: string; message?: string };
-
-const DOMAIN_CODES = new Set([
-  "AUTH_FORBIDDEN",
-  "CATALOG_PRODUCT_NOT_FOUND",
-  "CATALOG_PRODUCT_DELETED",
-  "CATALOG_NOT_SINGLE_VARIANT",
-  "CATALOG_SLUG_CONFLICT",
-  "CATALOG_SALE_PRICE_INVALID",
-  "CATALOG_BULK_COUNT_MISMATCH",
-  "CATALOG_BULK_INVALID",
-  "CATALOG_BULK_PRICE_OUT_OF_RANGE",
-  "CATEGORY_NOT_FOUND",
-  "BRAND_NOT_FOUND",
-  "VALIDATION_ERROR",
-  "AUDIT_WRITE_FAILED",
-]);
-
-/** Clasificare după codul stabil (module duplicate în Next: nu `instanceof`). */
-function failure(error: unknown): ProductActionFailure {
-  const e = error as { code?: unknown; message?: unknown; name?: unknown } | null;
-  const code = typeof e?.code === "string" ? e.code : undefined;
-  if (code && DOMAIN_CODES.has(code)) {
-    return { ok: false, code, ...(typeof e?.message === "string" && { message: e.message }) };
-  }
-  if (e?.name === "ZodError") return { ok: false, code: "VALIDATION_ERROR" };
-  throw error;
-}
 
 const inlineInput = z.discriminatedUnion("field", [
   z.object({ id: z.string().min(1).max(40), field: z.literal("title"), value: z.string() }),

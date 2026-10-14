@@ -259,6 +259,29 @@ export function createPrismaProductListStore(db: Db): ProductListStore {
   };
 }
 
+/**
+ * Doar varianta `thumb` (WebP, apoi JPEG, apoi AVIF), niciodată originalul. Folosită de lista de
+ * produse și de tabul Media al editorului.
+ */
+export function pickThumbUrl(
+  source: {
+    storageKey: string;
+    width: number | null;
+    height: number | null;
+    blurhash: string | null;
+    variants: unknown;
+  },
+  storage: StorageDriver,
+): string | null {
+  const urls = buildMediaUrls(source, storage);
+  const thumbs = urls.variants.filter((v) => v.name === "thumb");
+  for (const format of ["webp", "jpeg", "avif"]) {
+    const found = thumbs.find((v) => v.format === format);
+    if (found) return found.url;
+  }
+  return thumbs[0]?.url ?? null;
+}
+
 export interface ProductListDeps {
   store: ProductListStore;
   storage: StorageDriver;
@@ -281,7 +304,7 @@ export class ProductListService {
       page: {
         rows: rows.map(({ thumbSource, ...row }) => ({
           ...row,
-          thumb: thumbSource ? this.thumbUrl(thumbSource) : null,
+          thumb: thumbSource ? pickThumbUrl(thumbSource, this.deps.storage) : null,
         })),
         total,
         page: query.page,
@@ -289,16 +312,5 @@ export class ProductListService {
         pageCount,
       },
     };
-  }
-
-  /** Doar varianta `thumb` (WebP, apoi JPEG, apoi AVIF), niciodată originalul. */
-  private thumbUrl(source: NonNullable<RawProductListRow["thumbSource"]>): string | null {
-    const urls = buildMediaUrls(source, this.deps.storage);
-    const thumbs = urls.variants.filter((v) => v.name === "thumb");
-    for (const format of ["webp", "jpeg", "avif"]) {
-      const found = thumbs.find((v) => v.format === format);
-      if (found) return found.url;
-    }
-    return thumbs[0]?.url ?? null;
   }
 }

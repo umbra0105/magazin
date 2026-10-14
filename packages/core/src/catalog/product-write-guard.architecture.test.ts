@@ -45,7 +45,7 @@ const PRISMA_WRITE = new RegExp(
 );
 /** Serviciile catalogului care scriu (numele lor sunt o convenție: testul le caută). */
 const SERVICE_WRITE =
-  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService)\b/;
+  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService|ProductAssignmentsService|getProductAssignmentsService|productAssignmentsService|getPurchasePriceService|purchasePriceService)\b/;
 
 const WRITES_PRODUCTS = (content: string): boolean =>
   PRISMA_WRITE.test(content) || SERVICE_WRITE.test(content);
@@ -147,6 +147,30 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
       expect(WRITES_PRODUCTS(file?.content ?? ""), suffix).toBe(true);
       const exported = exportsOf(file?.content ?? "");
       expect(exported.length, suffix).toBeGreaterThanOrEqual(3);
+      for (const e of exported) {
+        expect(e.permission?.startsWith("products."), suffix + ": " + e.name).toBe(true);
+      }
+    }
+  });
+
+  it("acțiunile editorului de produs (creare, câmpuri, variante, categorii, media, cost) sunt recunoscute și învelite cu products.*", () => {
+    const expected: Record<string, string[]> = {
+      "editor-actions.ts": [
+        "saveProductFields",
+        "createProduct",
+        "saveVariantFields",
+        "saveProductCategories",
+        "saveProductMedia",
+        "checkProductSlug",
+      ],
+      "purchase-actions.ts": ["savePurchasePrice"],
+    };
+    for (const [suffix, names] of Object.entries(expected)) {
+      const file = files.find((f) => f.path.endsWith("(admin)/admin/produse/" + suffix));
+      expect(file, suffix).toBeDefined();
+      expect(WRITES_PRODUCTS(file?.content ?? ""), suffix).toBe(true);
+      const exported = exportsOf(file?.content ?? "");
+      expect(exported.map((e) => e.name).sort(), suffix).toEqual([...names].sort());
       for (const e of exported) {
         expect(e.permission?.startsWith("products."), suffix + ": " + e.name).toBe(true);
       }

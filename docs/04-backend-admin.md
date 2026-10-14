@@ -427,6 +427,25 @@ Vezi `09-preturi-si-parteneri.md` §5.
 - `products.write` o include pe `products.content.write` (cine poate modifica prețuri poate modifica și descrierea); invers nu;
 - orice server action sau endpoint care modifică produse trece prin `withPermission("products.…")` (test de arhitectură).
 
+**Editorul de produs, blocul 11a** (Faza 4): `/admin/produse/nou` (creare rapidă: titlu, SKU, preț, brand, categorie, clasă de livrare; produsul se creează ca ciornă, cu o variantă, categoria în aceeași tranzacție) și `/admin/produse/[id]` (taburi: General, Prețuri, Stoc, Categorii, Media, SEO; Variante, Atribute, Asociate în 11b; Documente, GPSR/energie, Fișă explodată în 11c). Ce vede și ce poate face fiecare rol, pe tab:
+
+| Tab / câmp | Fără drept (ex. Suport) | `products.read` (Depozit) | `products.content.write` (Editor) | `products.write` (Manager, Admin, Owner) |
+|---|---|---|---|---|
+| Pagina produsului | acces interzis | doar citire | conținut editabil, restul citire | tot (mai puțin costul) |
+| General: titlu, subtitlu, adresă, descriere | – | citire | **editabil** | editabil |
+| General: stare, brand, livrare, montaj, discount de grup | – | citire | citire | editabil |
+| Prețuri: preț, redus, fereastră, SKU, EAN, garanție | – | citire | citire (prețul e public) | editabil |
+| Stoc, Categorii | – | citire | citire | editabil |
+| Media, SEO | – | citire | **editabil** | editabil |
+| Preț de achiziție (NIR) | **absent din HTML** | **absent din HTML** | **absent din HTML** | vizibil doar cu `products.cost.view` (Manager, Owner, Admin, Contabil), editabil doar cu `products.cost.edit` (Admin, Owner) |
+
+- **Costul:** panou de SERVER (`PurchasePanel`) în tabul Prețuri, cu formular și server action proprii (`savePurchasePrice`); fără `products.cost.view` nu se randează deloc (nici gol, nici ascuns). Rezultatul salvării revine prin URL ca cod de stare, niciodată cu valoarea. Componentele client nu-l primesc (testul de arhitectură al costului).
+- **Salvare:** pe tab; clientul trimite DOAR câmpurile modificate. Serverul validează cu Zod strict și trece cererea prin `ProductUpdateGuard`; o cerere mixtă (conținut + câmp restricționat) se respinge întreagă, cu audit `denied` și doar numele câmpurilor.
+- **Prețuri:** introducere în lei cu cel mult 2 zecimale (→ bani fără `float`); previzualizare „fără TVA” din `tax.standardRate` (funcție pură `netFromGross` în `packages/shared`); prețul redus ≤ prețul întreg; fereastra de promoție în ORA MAGAZINULUI (`regional.timezone`), sfârșitul după început.
+- **Regula de activare:** la trecerea în „Activ” (și la activarea în masă), variantele fără garanție proprie primesc `catalog.defaultWarrantyMonths` (implicit 24, din registrul de setări; editabilă prin acțiunea `updateSetting` până apare pagina de setări). EAN-ul și brandul nu sunt obligatorii.
+- **Protecție la pierderea modificărilor:** `beforeunload`, link-urile interne și butonul „înapoi” cer confirmare cât timp un tab e modificat; indicatorul „●” apare pe tab.
+- **Accesibilitate:** etichete legate de câmp, erori legate prin `aria-describedby`/`aria-invalid` cu focus pe primul câmp greșit, taburi WAI-ARIA (săgeți, Home, End), reordonarea imaginilor cu butoane și anunț `aria-live`.
+
 **Lista de produse și editarea în masă** (Faza 4, punctul 10):
 - lista cere `products.read`; titlul se editează inline cu `products.content.write`, starea, stocul, prețul și acțiunile în masă cu `products.write` (aceeași poartă `ProductUpdateGuard`);
 - **editarea în masă:** cel mult 50 de produse per cerere (`MAX_BULK_PRODUCTS`), confirmare explicită (`confirm` + `expectedCount`, deci și serverul o cere), toate produsele existente și neșterse, aplicare într-o singură tranzacție (tot sau nimic), un eveniment de audit agregat `product.bulk_update` cu lista de id-uri și schimbările (fără valori sensibile). Cererea mixtă se respinge întreagă; prețul de achiziție NU se poate schimba prin editare în masă (nu există cheie pentru el, schema e strictă);

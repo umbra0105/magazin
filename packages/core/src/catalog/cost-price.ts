@@ -180,9 +180,11 @@ export class CostPriceService {
 
     // Cel mai recent preț de intrare: data egală înlocuiește (corecție în aceeași zi); una mai veche
     // rămâne doar în istoric. Regula strictă „doar dacă e mai nouă” a importului NIR e din Faza 15.
+    // Data intrării (NIR) e o DATĂ calendaristică: se compară pe zi (UTC), nu pe ora din zi, ca o
+    // corecție făcută în aceeași zi cu intrarea curentă să o înlocuiască.
+    const day = (date: Date) => Math.floor(date.getTime() / 86_400_000);
     const updateVariant =
-      current.costPriceDate === null ||
-      input.effectiveDate.getTime() >= current.costPriceDate.getTime();
+      current.costPriceDate === null || day(input.effectiveDate) >= day(current.costPriceDate);
     const source = input.source ?? "manual";
 
     await this.deps.store.apply({

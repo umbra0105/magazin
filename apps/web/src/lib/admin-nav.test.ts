@@ -93,6 +93,24 @@ describe("breadcrumbsFor", () => {
       { label: "ABC 123", href: null },
     ]);
   });
+  it("un etichetator de segmente poate înlocui „nou” și id-urile tehnice", () => {
+    const labeler = (section: string | null, raw: string) =>
+      section === "products" ? (raw === "nou" ? "Produs nou" : "Editare produs") : null;
+    expect(breadcrumbsFor("/admin/produse/nou", label, "Panou", undefined, labeler)).toEqual([
+      { label: "Panou", href: "/admin" },
+      { label: "L:products", href: "/admin/produse" },
+      { label: "Produs nou", href: null },
+    ]);
+    expect(breadcrumbsFor("/admin/produse/cm123", label, "Panou", undefined, labeler)[2]).toEqual({
+      label: "Editare produs",
+      href: null,
+    });
+    // alte secțiuni rămân neschimbate
+    expect(breadcrumbsFor("/admin/comenzi/ABC", label, "Panou", undefined, labeler)[2]).toEqual({
+      label: "ABC",
+      href: null,
+    });
+  });
   it("în afara adminului nu produce firimituri; segment cu % invalid nu aruncă", () => {
     expect(breadcrumbsFor("/cont", label, "Panou")).toEqual([]);
     expect(() => breadcrumbsFor("/admin/comenzi/%E0%A4%A", label, "Panou")).not.toThrow();

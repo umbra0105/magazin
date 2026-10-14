@@ -17,6 +17,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./request-id": "./src/request-id.ts"
+    "./request-id": "./src/request-id.ts",
+    "./vat": "./src/vat.ts"
   }
 }

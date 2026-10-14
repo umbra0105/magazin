@@ -171,6 +171,7 @@ export async function attachMediaToE2eProduct(
   slugSuffix: string,
 ): Promise<string> {
   const slug = `e2e-${slugSuffix}`;
+  trackedProducts.add(slug);
   await withClient(async (db) => {
     const media = await db.query(
       `select id from media where "originalName" = $1 order by "createdAt" desc limit 1`,
@@ -190,10 +191,31 @@ export async function attachMediaToE2eProduct(
   return slug;
 }
 
-/** Șterge produsele de test (slug `e2e-…`); legăturile lor media dispar în cascadă. */
+/**
+ * Produsele, categoriile și brandurile de test create de ACEST worker. Playwright rulează fișierele în
+ * workeri paraleli, pe aceeași bază: o curățare „toate `e2e-%`” ar șterge datele unui test care încă
+ * rulează în alt worker. Fiecare ajutor care creează date le înregistrează aici; curățarea șterge
+ * doar ce a creat workerul propriu.
+ */
+const trackedProducts = new Set<string>();
+const trackedCategories = new Set<string>();
+const trackedBrands = new Set<string>();
+
+/** Înregistrează un produs creat prin interfață (nu printr-un ajutor), ca să fie curățat la final. */
+export function trackE2eProduct(slug: string): void {
+  trackedProducts.add(slug);
+}
+
+/**
+ * Șterge produsele de test create de acest worker (slug `e2e-…`); legăturile lor media dispar în
+ * cascadă. Nu atinge produsele altor workeri.
+ */
 export async function removeE2eProducts(): Promise<number> {
+  const slugs = [...trackedProducts];
+  trackedProducts.clear();
+  if (slugs.length === 0) return 0;
   return withClient(async (db) => {
-    const result = await db.query(`delete from product where slug like 'e2e-%'`);
+    const result = await db.query(`delete from product where slug = any($1::text[])`, [slugs]);
     return result.rowCount ?? 0;
   });
 }
@@ -207,6 +229,7 @@ export async function attachProductToE2eCategory(
   title: string,
   slugSuffix: string,
 ): Promise<void> {
+  trackedProducts.add(`e2e-${slugSuffix}`);
   await withClient(async (db) => {
     const category = await db.query(`select id from category where slug = $1 limit 1`, [
       categorySlug,
@@ -230,6 +253,7 @@ export async function attachProductToE2eBrand(
   title: string,
   slugSuffix: string,
 ): Promise<void> {
+  trackedProducts.add(`e2e-${slugSuffix}`);
   await withClient(async (db) => {
     const brand = await db.query(`select id from brand where slug = $1 limit 1`, [brandSlug]);
     const brandId = brand.rows[0]?.id as string | undefined;
@@ -254,6 +278,7 @@ export async function seedE2eProducts(tag: string, count: number): Promise<strin
   await withClient(async (db) => {
     for (let n = 1; n <= count; n++) {
       const nn = String(n).padStart(2, "0");
+      trackedProducts.add(`e2e-${tag}-${nn}`);
       const title = `E2E ${tag} Produs ${nn}`;
       titles.push(title);
       const product = await db.query(
@@ -274,4 +299,107 @@ export async function seedE2eProducts(tag: string, count: number): Promise<strin
     }
   });
   return titles;
+}
+
+/**
+ * Creează o categorie și un brand de probă (adresa `e2e-…`), pentru testele editorului de produs.
+ * Se șterg cu `removeE2eCatalogRefs` (după produse). Întoarce numele afișate.
+ */
+export async function seedE2eCatalogRefs(
+  tag: string,
+): Promise<{ categoryName: string; brandName: string }> {
+  const categoryName = `E2E Categorie ${tag}`;
+  const brandName = `E2E Brand ${tag}`;
+  trackedCategories.add(`e2e-cat-${tag}`);
+  trackedBrands.add(`e2e-brand-${tag}`);
+  await withClient(async (db) => {
+    await db.query(
+      `insert into category (id, name, slug, path, depth, "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $2, 0, 0, now())`,
+      [categoryName, `e2e-cat-${tag}`],
+    );
+    await db.query(
+      `insert into brand (id, name, slug, "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, now())`,
+      [brandName, `e2e-brand-${tag}`],
+    );
+  });
+  return { categoryName, brandName };
+}
+
+/** Șterge categoriile și brandurile de probă create de acest worker (după produse, ca FK-urile să nu blocheze). */
+export async function removeE2eCatalogRefs(): Promise<void> {
+  const categories = [...trackedCategories];
+  const brands = [...trackedBrands];
+  trackedCategories.clear();
+  trackedBrands.clear();
+  await withClient(async (db) => {
+    if (categories.length > 0) {
+      await db.query(
+        `delete from product_category where "categoryId" in (select id from category where slug = any($1::text[]))`,
+        [categories],
+      );
+      await db.query(`delete from category where slug = any($1::text[])`, [categories]);
+    }
+    if (brands.length > 0) {
+      await db.query(`delete from brand where slug = any($1::text[])`, [brands]);
+    }
+  });
+}
+
+/** Rânduri din jurnalul de audit pentru un produs (acțiune + rezultat), cele mai vechi primele. */
+export async function readE2eProductAudit(
+  productSlug: string,
+): Promise<{ action: string; outcome: string }[]> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select a.action, a.outcome from audit_log a
+       where a."entityId" in (select id from product where slug = $1)
+          or a."entityId" in (select v.id from product_variant v join product p on p.id = v."productId" where p.slug = $1)
+       order by a."createdAt" asc`,
+      [productSlug],
+    );
+    return result.rows as { action: string; outcome: string }[];
+  });
+}
+
+/** Valorile de bază ale unui produs de probă, citite direct din bază (pentru aserțiuni). */
+export async function readE2eProduct(slug: string): Promise<{
+  title: string;
+  status: string;
+  price: number | null;
+  salePrice: number | null;
+  warrantyMonths: number | null;
+  categoryNames: string[];
+  mediaNames: string[];
+} | null> {
+  return withClient(async (db) => {
+    const product = await db.query(`select id, title, status from product where slug = $1`, [slug]);
+    const row = product.rows[0] as { id: string; title: string; status: string } | undefined;
+    if (!row) return null;
+    const variant = await db.query(
+      `select price, "salePrice", "warrantyMonths" from product_variant where "productId" = $1 order by position limit 1`,
+      [row.id],
+    );
+    const categories = await db.query(
+      `select c.name from product_category pc join category c on c.id = pc."categoryId" where pc."productId" = $1 order by c.name`,
+      [row.id],
+    );
+    const media = await db.query(
+      `select m."originalName" as name from product_media pm join media m on m.id = pm."mediaId"
+       where pm."productId" = $1 and pm."variantId" is null order by pm.position`,
+      [row.id],
+    );
+    const v = variant.rows[0] as
+      { price: number; salePrice: number | null; warrantyMonths: number | null } | undefined;
+    return {
+      title: row.title,
+      status: row.status,
+      price: v?.price ?? null,
+      salePrice: v?.salePrice ?? null,
+      warrantyMonths: v?.warrantyMonths ?? null,
+      categoryNames: categories.rows.map((r: { name: string }) => r.name),
+      mediaNames: media.rows.map((r: { name: string }) => r.name),
+    };
+  });
 }

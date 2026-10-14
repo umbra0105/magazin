@@ -56,6 +56,8 @@ const ALLOWED_EXACT = new Set([
   // doar numele surselor de intrare (COST_PRICE_SOURCES), nicio valoare
   "packages/core/src/catalog/constants.ts",
   "packages/core/src/catalog/index.ts",
+  // fabrica serviciului de cost din aplicația web: importată doar din admin, în componente de server
+  "apps/web/src/lib/purchase-price.ts",
   // lista câmpurilor mascate din loguri și audit
   "packages/shared/src/redact.ts",
   "packages/shared/src/logger.ts",

@@ -191,6 +191,30 @@ describe("scrierea costului: permisiuni", () => {
 });
 
 describe("scrierea costului: reguli de dată și validare", () => {
+  it("aceeași zi, altă oră din zi: corecția înlocuiește (data intrării se compară pe zi)", async () => {
+    const { service, store } = setup();
+    await service.setCost(full, {
+      variantId: "v1",
+      costPrice: 1000,
+      effectiveDate: new Date("2026-10-01T15:30:00Z"),
+    });
+    const out = await service.setCost(full, {
+      variantId: "v1",
+      costPrice: 1100,
+      effectiveDate: new Date("2026-10-01T00:00:00Z"),
+    });
+    expect(out).toEqual({ applied: true });
+    expect(store.variant?.costPrice).toBe(1100);
+    // ziua anterioară rămâne doar în istoric
+    const older = await service.setCost(full, {
+      variantId: "v1",
+      costPrice: 900,
+      effectiveDate: new Date("2026-09-30T23:59:00Z"),
+    });
+    expect(older).toEqual({ applied: false });
+    expect(store.variant?.costPrice).toBe(1100);
+  });
+
   it("cel mai recent preț de intrare: una mai nouă înlocuiește, una mai veche rămâne doar în istoric", async () => {
     const { service, store } = setup();
     expect(

@@ -130,8 +130,29 @@ class MemoryStore implements ProductStore {
       .map((v) => v.sku);
   }
 
-  async createProduct(data: ProductFieldsData, rows: readonly NewVariantRow[], at: Date) {
+  createdWithCategories: string[][] = [];
+  warrantyApplied: { productIds: readonly string[]; months: number }[] = [];
+
+  async applyDefaultWarranty(productIds: readonly string[], months: number): Promise<number> {
+    this.warrantyApplied.push({ productIds, months });
+    let updated = 0;
+    for (const v of this.variants.values()) {
+      if (productIds.includes(v.productId) && v.warrantyMonths === null) {
+        this.variants.set(v.id, { ...v, warrantyMonths: months });
+        updated++;
+      }
+    }
+    return updated;
+  }
+
+  async createProduct(
+    data: ProductFieldsData,
+    rows: readonly NewVariantRow[],
+    at: Date,
+    categoryIds: readonly string[] = [],
+  ) {
     this.calls.createProduct++;
+    this.createdWithCategories.push([...categoryIds]);
     const product = this.seedProduct({
       slug: data.slug,
       title: data.title,
@@ -245,7 +266,12 @@ class MemoryStore implements ProductStore {
   }
 }
 
-function setup(opts: { invalidate?: (tags: readonly string[]) => void | Promise<void> } = {}) {
+function setup(
+  opts: {
+    invalidate?: (tags: readonly string[]) => void | Promise<void>;
+    warranty?: number | null;
+  } = {},
+) {
   const store = new MemoryStore();
   const auditRows: AuditRow[] = [];
   const auditStore: AuditStore = {
@@ -262,6 +288,7 @@ function setup(opts: { invalidate?: (tags: readonly string[]) => void | Promise<
     store,
     audit: new AuditService(auditStore),
     defaultManageStock: async () => false,
+    defaultWarrantyMonths: async () => opts.warranty ?? null,
     invalidate:
       opts.invalidate ??
       (async (tags) => {
@@ -980,5 +1007,93 @@ describe("editare în masă", () => {
     await expect(
       service.updateSingleVariantPrice(roleSubject("editor"), single.id, 100),
     ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});
+
+describe("regula de activare: garanția implicită din setare", () => {
+  it("la activare, variantele fără garanție o primesc; cele cu garanție proprie rămân neatinse", async () => {
+    const { store, service, auditRows } = setup({ warranty: 24 });
+    const p = store.seedProduct({ slug: "g", title: "G" });
+    const bare = store.seedVariant(p.id, { sku: "G-1" });
+    const own = store.seedVariant(p.id, { sku: "G-2", position: 1, warrantyMonths: 60 });
+
+    await service.update(roleSubject("manager"), p.id, { status: "active" });
+
+    expect(store.variants.get(bare.id)?.warrantyMonths).toBe(24);
+    expect(store.variants.get(own.id)?.warrantyMonths).toBe(60);
+    expect(auditRows.some((r) => r.action === "product.warranty.default_applied")).toBe(true);
+  });
+
+  it("nu se aplică la alte modificări, nici la un produs deja activ, nici fără setare", async () => {
+    const withSetting = setup({ warranty: 24 });
+    const p = withSetting.store.seedProduct({ slug: "h", title: "H", status: "active" });
+    const v = withSetting.store.seedVariant(p.id, { sku: "H-1" });
+    await withSetting.service.update(roleSubject("manager"), p.id, { title: "H2" });
+    await withSetting.service.update(roleSubject("manager"), p.id, { status: "active" });
+    expect(withSetting.store.variants.get(v.id)?.warrantyMonths).toBeNull();
+
+    const without = setup({ warranty: null });
+    const q = without.store.seedProduct({ slug: "i", title: "I" });
+    const w = without.store.seedVariant(q.id, { sku: "I-1" });
+    await without.service.update(roleSubject("manager"), q.id, { status: "active" });
+    expect(without.store.variants.get(w.id)?.warrantyMonths).toBeNull();
+  });
+
+  it("EAN-ul și brandul lipsă nu opresc activarea", async () => {
+    const { store, service } = setup({ warranty: 24 });
+    const p = store.seedProduct({ slug: "j", title: "J" });
+    store.seedVariant(p.id, { sku: "J-1", ean: null });
+    const out = await service.update(roleSubject("manager"), p.id, { status: "active" });
+    expect(out).toMatchObject({ status: "active", brandId: null });
+  });
+
+  it("activarea în masă aplică aceeași regulă", async () => {
+    const { store, service } = setup({ warranty: 12 });
+    const a = store.seedProduct({ slug: "ka", title: "KA" });
+    const va = store.seedVariant(a.id, { sku: "KA-1" });
+    await service.bulkUpdate(roleSubject("manager"), {
+      ids: [a.id],
+      confirm: true,
+      expectedCount: 1,
+      changes: { status: "active" },
+    });
+    expect(store.variants.get(va.id)?.warrantyMonths).toBe(12);
+  });
+});
+
+describe("creare cu categorii și citire pentru editor", () => {
+  it("categoriile se creează odată cu produsul (prima e cea principală); o categorie inexistentă refuză tot", async () => {
+    const { store, service } = setup();
+    const created = await service.create(roleSubject("manager"), {
+      title: "Cu categorie",
+      categoryIds: ["cat-1"],
+      variants: [{ sku: "C-1", price: 1000 }],
+    });
+    expect(store.createdWithCategories).toEqual([["cat-1"]]);
+    expect(created.product.title).toBe("Cu categorie");
+
+    await expect(
+      service.create(roleSubject("manager"), {
+        title: "Altul",
+        categoryIds: ["lipsa"],
+        variants: [{ sku: "C-2", price: 1000 }],
+      }),
+    ).rejects.toMatchObject({ code: "CATEGORY_NOT_FOUND" });
+    expect(store.calls.createProduct).toBe(1);
+  });
+
+  it("getForEdit cere products.read și nu conține cost", async () => {
+    const { store, service } = setup();
+    const p = store.seedProduct({ slug: "e", title: "E" });
+    store.seedVariant(p.id, { sku: "E-1", price: 5000 });
+    const out = await service.getForEdit(roleSubject("editor"), p.id);
+    expect(out.variants).toHaveLength(1);
+    expect(JSON.stringify(out).toLowerCase()).not.toContain("cost");
+    await expect(service.getForEdit(roleSubject("support"), p.id)).rejects.toMatchObject({
+      code: "AUTH_FORBIDDEN",
+    });
+    await expect(service.getForEdit(roleSubject("owner"), "lipsa")).rejects.toMatchObject({
+      code: "CATALOG_PRODUCT_NOT_FOUND",
+    });
   });
 });

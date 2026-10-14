@@ -103,6 +103,14 @@ export {
 } from "./product-store";
 export { ProductService, type ProductServiceDeps } from "./product-service";
 export {
+  createPrismaProductAssignmentStore,
+  ProductAssignmentsService,
+  type AssignedCategory,
+  type ProductAssignmentDeps,
+  type ProductAssignmentStore,
+  type ProductMediaItem,
+} from "./product-assignments";
+export {
   childrenOf,
   descendantIds,
   MAX_CATEGORY_DEPTH,
@@ -152,6 +160,7 @@ export {
   parseProductListQuery,
   PRODUCT_LIST_PAGE_SIZES,
   PRODUCT_LIST_SORTS,
+  pickThumbUrl,
   ProductListService,
   type ProductListPage,
   type ProductListQuery,

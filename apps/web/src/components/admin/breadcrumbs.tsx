@@ -11,7 +11,17 @@ const m = getMessages().admin;
 /** Calculată în browser din `usePathname()`: layout-ul nu se re-randează la navigarea între pagini. */
 export function Breadcrumbs() {
   const pathname = usePathname();
-  const crumbs = breadcrumbsFor(pathname, (id) => m.nav[id], m.home);
+  const crumbs = breadcrumbsFor(
+    pathname,
+    (id) => m.nav[id],
+    m.home,
+    undefined,
+    (section, raw) => {
+      if (section !== "products") return null;
+      // /admin/produse/nou și /admin/produse/<id>: etichete, nu cuvântul „nou” sau id-ul tehnic
+      return raw === "nou" ? m.products.editor.createTitle : m.products.editor.breadcrumbEdit;
+    },
+  );
   if (crumbs.length === 0) return null;
   return (
     <nav aria-label={m.breadcrumbLabel} className="min-w-0">
