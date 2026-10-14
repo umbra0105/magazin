@@ -79,12 +79,17 @@ export {
   type VariantSyncPlan,
 } from "./variant-generator";
 export {
+  BULK_PRICE_ADJUST_MAX_BPS,
+  BULK_PRICE_ADJUST_MIN_BPS,
+  MAX_BULK_PRODUCTS,
   MAX_MONEY,
   parseInput,
+  productBulkUpdateSchema,
   productCreateSchema,
   productUpdateSchema,
   variantInputSchema,
   variantUpdateSchema,
+  type ProductBulkUpdateInput,
   type ProductCreateInput,
   type ProductUpdateInput,
   type VariantInput,
@@ -140,3 +145,17 @@ export {
   type BrandStore,
   type BrandWithCount,
 } from "./brand-service";
+export {
+  createPrismaProductListStore,
+  DEFAULT_PRODUCT_LIST_PAGE_SIZE,
+  MAX_SEARCH_LENGTH,
+  parseProductListQuery,
+  PRODUCT_LIST_PAGE_SIZES,
+  PRODUCT_LIST_SORTS,
+  ProductListService,
+  type ProductListPage,
+  type ProductListQuery,
+  type ProductListRow,
+  type ProductListSort,
+  type ProductListStore,
+} from "./product-list";

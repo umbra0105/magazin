@@ -3,6 +3,11 @@
  * nu în componente: traducerea în altă limbă (ex. engleză, la cerere) înseamnă un fișier nou cu
  * aceeași formă. Funcțiile primesc valorile dinamice (minute, lungimi), ca acordul să fie corect.
  */
+/** Acord cu numărul în română: `1 produs`, `2–19 produse`, `20, 30, 120 de produse`. */
+const countOf = (n: number, one: string, many: string, manyDe: string): string =>
+  n === 1 ? `1 ${one}` : n % 100 === 0 || n % 100 >= 20 ? `${n} ${manyDe}` : `${n} ${many}`;
+const produse = (n: number): string => countOf(n, "produs", "produse", "de produse");
+
 export const ro = {
   auth: {
     common: {
@@ -500,6 +505,136 @@ export const ro = {
         BRAND_SLUG_CONFLICT: "Adresa e deja folosită de alt brand.",
         BRAND_LOGO_NOT_FOUND: "Logoul ales nu mai există în bibliotecă.",
         AUTH_FORBIDDEN: "Nu ai permisiunea pentru această acțiune.",
+        AUDIT_WRITE_FAILED:
+          "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",
+      },
+    },
+    products: {
+      title: "Produse",
+      description: "Lista produselor magazinului: caută, filtrează și modifică direct din listă.",
+      readOnly: "Poți vedea produsele, dar nu le poți modifica.",
+      contentOnly:
+        "Poți edita titlul produselor. Prețul, starea, stocul și restul câmpurilor cer permisiunea de gestionare a produselor.",
+      search: {
+        label: "Caută produse",
+        placeholder: "Titlu, SKU, EAN sau cod producător",
+        submit: "Caută",
+        reset: "Resetează filtrele",
+      },
+      filters: {
+        category: "Categorie",
+        brand: "Brand",
+        status: "Stare",
+        shipping: "Clasă de livrare",
+        stock: "Stoc",
+        sort: "Sortare",
+        perPage: "Pe pagină",
+        all: "Toate",
+      },
+      statuses: { draft: "Ciornă", active: "Activ", archived: "Arhivat" },
+      shipping: { standard: "Standard", oversized: "Supradimensionat", pallet: "Paletizat" },
+      stock: { instock: "În stoc", outofstock: "Stoc epuizat", onbackorder: "La comandă" },
+      sorts: {
+        updated_desc: "Cele mai recente",
+        title_asc: "Titlu A–Z",
+        title_desc: "Titlu Z–A",
+        status_asc: "După stare",
+      },
+      total: produse,
+      empty: "Nu există încă niciun produs.",
+      emptyFiltered: "Niciun produs nu corespunde căutării sau filtrelor.",
+      table: {
+        label: "Lista produselor",
+        select: (name: string) => `Selectează ${name}`,
+        selectPage: "Selectează toate produsele din pagină",
+        image: "Imagine",
+        product: "Produs",
+        sku: "SKU",
+        price: "Preț",
+        status: "Stare",
+        stock: "Stoc",
+        shipping: "Livrare",
+        brand: "Brand",
+        updated: "Modificat",
+        variants: (n: number) => (n === 1 ? "1 variantă" : `${n} variante`),
+        noImage: "Fără imagine",
+        noVariants: "Fără variante",
+        managedStock: "Stoc gestionat",
+      },
+      pagination: {
+        label: "Paginare",
+        previous: "Pagina anterioară",
+        next: "Pagina următoare",
+        pageOf: (page: number, count: number) => `Pagina ${page} din ${count}`,
+      },
+      inline: {
+        edit: (what: string, name: string) => `Editează ${what} pentru ${name}`,
+        title: "titlul",
+        status: "starea",
+        stock: "stocul",
+        price: "prețul",
+        save: "Salvează",
+        cancel: "Anulează",
+        saved: (name: string) => `${name}: salvat.`,
+        priceLabel: "Preț (lei, cu TVA)",
+        priceInvalid: "Introdu o sumă validă, cu cel mult 2 zecimale (ex. 199,50).",
+        singleVariantOnly: "Prețul se editează pe variante",
+      },
+      bulk: {
+        region: "Acțiuni în masă",
+        selected: (n: number) => `${produse(n)} ${n === 1 ? "selectat" : "selectate"}`,
+        clear: "Deselectează tot",
+        limit: (max: number) => `Cel mult ${max} produse per acțiune.`,
+        overLimit: (max: number) => `Ai selectat prea multe produse (maximum ${max}).`,
+        action: "Acțiune",
+        choose: "— Alege acțiunea —",
+        actions: {
+          status: "Schimbă starea",
+          shippingClass: "Schimbă clasa de livrare",
+          stockStatus: "Schimbă starea stocului",
+          brand: "Schimbă brandul",
+          addCategory: "Adaugă într-o categorie",
+          priceAdjust: "Ajustează prețul cu un procent",
+        },
+        value: "Valoare",
+        noBrand: "— Fără brand —",
+        percent: "Procent (de ex. 10 pentru +10%, -5 pentru -5%)",
+        percentInvalid: "Introdu un procent între -90 și 300.",
+        apply: "Aplică…",
+        confirmTitle: (n: number) => `Aplici modificarea la ${produse(n)}?`,
+        confirmDescription:
+          "Modificarea se aplică tuturor produselor selectate sau niciunuia. Acțiunea se înregistrează în jurnalul de audit.",
+        summary: {
+          status: (v: string) => `Starea devine: ${v}`,
+          shippingClass: (v: string) => `Clasa de livrare devine: ${v}`,
+          stockStatus: (v: string) => `Starea stocului devine: ${v}`,
+          brand: (v: string) => `Brandul devine: ${v}`,
+          addCategory: (v: string) => `Se adaugă în categoria: ${v}`,
+          priceAdjust: (pct: string) =>
+            `Prețurile (și promoțiile) se ajustează cu ${pct}%. Prețul de achiziție nu se modifică.`,
+        },
+        confirm: "Confirm și aplic",
+        applying: "Se aplică…",
+        cancel: "Anulează",
+        close: "Închide",
+        done: (n: number) => `${n === 1 ? "Modificat" : "Modificate"}: ${produse(n)}.`,
+      },
+      errors: {
+        generic: "Acțiunea a eșuat. Încearcă din nou.",
+        AUTH_FORBIDDEN: "Nu ai permisiunea pentru această acțiune.",
+        CATALOG_PRODUCT_NOT_FOUND: "Produsul nu mai există. Reîncarcă lista.",
+        CATALOG_PRODUCT_DELETED: "Produsul e șters.",
+        CATALOG_NOT_SINGLE_VARIANT: "Produsul are mai multe variante: editează prețul pe variante.",
+        CATALOG_SLUG_CONFLICT: "Adresa e deja folosită.",
+        CATALOG_SALE_PRICE_INVALID: "Prețul redus nu poate depăși prețul întreg.",
+        CATALOG_BULK_COUNT_MISMATCH:
+          "Selecția nu corespunde confirmării. Reîncarcă lista și reia acțiunea.",
+        CATALOG_BULK_INVALID:
+          "Unele produse selectate nu mai există sau sunt șterse. Reîncarcă lista.",
+        CATALOG_BULK_PRICE_OUT_OF_RANGE:
+          "Ajustarea ar scoate unele variante din intervalul permis de preț. Nu s-a modificat nimic.",
+        CATEGORY_NOT_FOUND: "Categoria aleasă nu mai există.",
+        BRAND_NOT_FOUND: "Brandul ales nu mai există.",
         AUDIT_WRITE_FAILED:
           "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",
       },

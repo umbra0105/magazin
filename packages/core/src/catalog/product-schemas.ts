@@ -165,3 +165,42 @@ export function parseInput<S extends z.ZodType>(schema: S, input: unknown): z.in
   const summary = issues.map((i) => (i.path ? `${i.path}: ${i.message}` : i.message)).join("; ");
   throw new ValidationError(`Date invalide: ${summary}`, { issues });
 }
+
+/** Limita de produse per cerere de editare în masă. */
+export const MAX_BULK_PRODUCTS = 50;
+/** Ajustarea prețului în puncte de bază: de la -90% la +300%. */
+export const BULK_PRICE_ADJUST_MIN_BPS = -9000;
+export const BULK_PRICE_ADJUST_MAX_BPS = 30000;
+
+/**
+ * Editarea în masă. `confirm` și `expectedCount` sunt confirmarea explicită: cererea fără ele (sau cu un
+ * număr care nu corespunde listei) se respinge. Nu există nicio cheie pentru cost: schema e strictă.
+ */
+export const productBulkUpdateSchema = z.strictObject({
+  ids: z
+    .array(z.string().min(1).max(40))
+    .min(1, "Alege cel puțin un produs")
+    .max(MAX_BULK_PRODUCTS, `Cel mult ${MAX_BULK_PRODUCTS} produse per cerere`),
+  confirm: z.literal(true, { error: "Confirmarea explicită lipsește" }),
+  expectedCount: z.number().int().min(1).max(MAX_BULK_PRODUCTS),
+  changes: z
+    .strictObject({
+      status: z.enum(PRODUCT_STATUSES).optional(),
+      shippingClass: z.enum(SHIPPING_CLASSES).optional(),
+      stockStatus: z.enum(STOCK_STATUSES).optional(),
+      manageStock: z.boolean().optional(),
+      brandId: z.string().min(1).max(40).nullable().optional(),
+      addCategoryId: z.string().min(1).max(40).optional(),
+      priceAdjustBps: z
+        .number()
+        .int()
+        .min(BULK_PRICE_ADJUST_MIN_BPS)
+        .max(BULK_PRICE_ADJUST_MAX_BPS)
+        .optional(),
+    })
+    .refine((value) => Object.values(value).some((v) => v !== undefined), {
+      message: "Alege cel puțin o modificare",
+    }),
+});
+
+export type ProductBulkUpdateInput = z.infer<typeof productBulkUpdateSchema>;

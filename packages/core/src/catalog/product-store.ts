@@ -85,6 +85,25 @@ export interface GeneratedVariantRow {
   selections: readonly { option: string; value: string }[];
 }
 
+export interface BulkVariantUpdate {
+  variantId: string;
+  price: number;
+  salePrice: number | null;
+  /** Prețul efectiv nou, de scris în istoric, dacă s-a schimbat. */
+  priceRecord: { price: number; at: Date } | null;
+}
+
+export interface BulkApplyCommand {
+  productIds: readonly string[];
+  /** Câmpuri de produs aplicate tuturor produselor. */
+  productData: Partial<
+    Pick<ProductRecord, "status" | "shippingClass" | "stockStatus" | "manageStock" | "brandId">
+  >;
+  /** Categorie în care se adaugă toate produsele (fără să le scoată din altele). */
+  addCategoryId: string | null;
+  variantUpdates: readonly BulkVariantUpdate[];
+}
+
 export interface ProductStore {
   /** Produsul care deține adresa, ȘTERS SAU NU, fără diferență de majuscule. */
   findSlugOwner(slug: string, excludeProductId?: string): Promise<SlugOwner | null>;
@@ -108,6 +127,16 @@ export interface ProductStore {
   listVariantCombinationKeys(productId: string): Promise<string[]>;
   /** Codul variantei implicite (pentru a deriva SKU-urile generate). */
   getDefaultSku(productId: string): Promise<string | null>;
+  /** Variantele unui produs, în ordinea afișării. */
+  listVariantsOf(productId: string): Promise<VariantRecord[]>;
+  /** Produsele cerute (existente), cu variantele lor. */
+  getManyWithVariants(
+    ids: readonly string[],
+  ): Promise<{ id: string; slug: string; deletedAt: Date | null; variants: VariantRecord[] }[]>;
+  categoryExists(id: string): Promise<boolean>;
+  brandExists(id: string): Promise<boolean>;
+  /** Aplică o editare în masă, ATOMIC (tot sau nimic). */
+  bulkApply(command: BulkApplyCommand): Promise<void>;
   addGeneratedVariants(
     productId: string,
     options: readonly OptionInput[],
@@ -270,6 +299,81 @@ export function createPrismaProductStore(db: Db): ProductStore {
         select: { sku: true },
       });
       return row?.sku ?? null;
+    },
+
+    async listVariantsOf(productId) {
+      return db.productVariant.findMany({
+        where: { productId },
+        orderBy: [{ isDefault: "desc" }, { position: "asc" }],
+        select: variantSelect,
+      });
+    },
+
+    async getManyWithVariants(ids) {
+      return db.product.findMany({
+        where: { id: { in: [...ids] } },
+        select: {
+          id: true,
+          slug: true,
+          deletedAt: true,
+          variants: { orderBy: { position: "asc" }, select: variantSelect },
+        },
+      });
+    },
+
+    async categoryExists(id) {
+      return (await db.category.count({ where: { id } })) > 0;
+    },
+
+    async brandExists(id) {
+      return (await db.brand.count({ where: { id } })) > 0;
+    },
+
+    async bulkApply(command) {
+      await inTransaction(db, async (tx) => {
+        const ids = [...command.productIds];
+        if (Object.keys(command.productData).length > 0) {
+          await tx.product.updateMany({ where: { id: { in: ids } }, data: command.productData });
+        } else {
+          // atinge `updatedAt` și când se schimbă doar prețurile sau categoria
+          await tx.product.updateMany({
+            where: { id: { in: ids } },
+            data: { updatedAt: new Date() },
+          });
+        }
+        if (command.addCategoryId) {
+          await tx.productCategory.createMany({
+            data: ids.map((productId) => ({
+              productId,
+              categoryId: command.addCategoryId as string,
+              isPrimary: false,
+            })),
+            skipDuplicates: true,
+          });
+        }
+        for (const update of command.variantUpdates) {
+          await tx.productVariant.update({
+            where: { id: update.variantId },
+            data: { price: update.price, salePrice: update.salePrice },
+          });
+          if (update.priceRecord) {
+            await tx.priceHistory.upsert({
+              where: {
+                variantId_effectiveFrom: {
+                  variantId: update.variantId,
+                  effectiveFrom: update.priceRecord.at,
+                },
+              },
+              create: {
+                variantId: update.variantId,
+                price: update.priceRecord.price,
+                effectiveFrom: update.priceRecord.at,
+              },
+              update: { price: update.priceRecord.price },
+            });
+          }
+        }
+      });
     },
 
     async addGeneratedVariants(productId, options, rows, at) {

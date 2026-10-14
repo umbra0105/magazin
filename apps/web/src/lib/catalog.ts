@@ -2,16 +2,24 @@ import { revalidateTag } from "next/cache";
 import {
   BrandService,
   CategoryService,
+  ProductListService,
+  ProductService,
   createPrismaBrandStore,
   createPrismaCategoryStore,
+  createPrismaProductListStore,
+  createPrismaProductStore,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { getLogger } from "@ecom/shared";
 import { getAudit } from "./admin-writes";
+import { getStorage } from "./media";
+import { getSettings } from "./services";
 
 const globalForCatalog = globalThis as unknown as {
   __ecomCategories?: CategoryService;
   __ecomBrands?: BrandService;
+  __ecomProducts?: ProductService;
+  __ecomProductList?: ProductListService;
 };
 
 /**
@@ -42,4 +50,28 @@ export function getBrandService(): BrandService {
     logger: getLogger(),
   });
   return globalForCatalog.__ecomBrands;
+}
+
+/**
+ * Serviciul de produse (creare, modificare prin `ProductUpdateGuard`, variante, editare în masă).
+ * `manageStock` implicit pentru produse noi vine din setarea `inventory.manageStock`.
+ */
+export function getProductService(): ProductService {
+  globalForCatalog.__ecomProducts ??= new ProductService({
+    store: createPrismaProductStore(getDb()),
+    audit: getAudit(),
+    defaultManageStock: async () => (await getSettings().getGroup("inventory")).manageStock,
+    invalidate,
+    logger: getLogger(),
+  });
+  return globalForCatalog.__ecomProducts;
+}
+
+/** Lista de produse din admin (căutare, filtre, paginare; doar `thumb`, fără cost). */
+export function getProductListService(): ProductListService {
+  globalForCatalog.__ecomProductList ??= new ProductListService({
+    store: createPrismaProductListStore(getDb()),
+    storage: getStorage(),
+  });
+  return globalForCatalog.__ecomProductList;
 }

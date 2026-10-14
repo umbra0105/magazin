@@ -427,6 +427,12 @@ Vezi `09-preturi-si-parteneri.md` §5.
 - `products.write` o include pe `products.content.write` (cine poate modifica prețuri poate modifica și descrierea); invers nu;
 - orice server action sau endpoint care modifică produse trece prin `withPermission("products.…")` (test de arhitectură).
 
+**Lista de produse și editarea în masă** (Faza 4, punctul 10):
+- lista cere `products.read`; titlul se editează inline cu `products.content.write`, starea, stocul, prețul și acțiunile în masă cu `products.write` (aceeași poartă `ProductUpdateGuard`);
+- **editarea în masă:** cel mult 50 de produse per cerere (`MAX_BULK_PRODUCTS`), confirmare explicită (`confirm` + `expectedCount`, deci și serverul o cere), toate produsele existente și neșterse, aplicare într-o singură tranzacție (tot sau nimic), un eveniment de audit agregat `product.bulk_update` cu lista de id-uri și schimbările (fără valori sensibile). Cererea mixtă se respinge întreagă; prețul de achiziție NU se poate schimba prin editare în masă (nu există cheie pentru el, schema e strictă);
+- **prețul ±%:** în puncte de bază (de la -90% la +300%), rotunjit pe variantă, promoția păstrează proporția și nu depășește prețul întreg, `PriceHistory` primește prețul efectiv nou;
+- **fără cost:** proiecția listei nu are câmpuri de cost, parametrii din URL nu pot cere sortare sau filtru după cost (se ignoră), iar componenta client a listei nu primește costul (test de arhitectură). Imaginile: doar varianta `thumb`, niciodată originalul.
+
 **Categorii și branduri** (Faza 4, punctul 9) folosesc același model, fără permisiune dedicată de „catalog”:
 - **conținut** (nume, descriere, SEO, imagine/logo): `products.content.write` (Editor, Manager, Admin, Owner);
 - **structură** (creare, mutare, adresă, excluderea de la discountul de grup, ștergere): `products.write` (Manager, Admin, Owner);

@@ -240,3 +240,38 @@ export async function attachProductToE2eBrand(
     );
   });
 }
+
+/** Prețul de achiziție pus pe produsele de probă: valoare-santinelă, căutată în paginile randate. */
+export const E2E_COST_SENTINEL = 777777;
+
+/**
+ * Creează `count` produse de probă (slug `e2e-<tag>-NN`, titlu „E2E <tag> Produs NN”, SKU
+ * `E2E-<TAG>-NN`), fiecare cu o variantă care are preț de achiziție `E2E_COST_SENTINEL`. Starea:
+ * `active` din 3 în 3, altfel `draft`. Se șterg la teardown (slug `e2e-…`). Întoarce titlurile.
+ */
+export async function seedE2eProducts(tag: string, count: number): Promise<string[]> {
+  const titles: string[] = [];
+  await withClient(async (db) => {
+    for (let n = 1; n <= count; n++) {
+      const nn = String(n).padStart(2, "0");
+      const title = `E2E ${tag} Produs ${nn}`;
+      titles.push(title);
+      const product = await db.query(
+        `insert into product (id, slug, title, status, "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, now() - ($4 || ' minutes')::interval) returning id`,
+        [`e2e-${tag}-${nn}`, title, n % 3 === 0 ? "active" : "draft", String(n)],
+      );
+      await db.query(
+        `insert into product_variant (id, "productId", sku, price, "costPrice", "costPriceDate", position, "isDefault", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, $4, now(), 0, true, now())`,
+        [
+          product.rows[0]?.id as string,
+          `E2E-${tag.toUpperCase()}-${nn}`,
+          10000 + n * 100,
+          E2E_COST_SENTINEL,
+        ],
+      );
+    }
+  });
+  return titles;
+}

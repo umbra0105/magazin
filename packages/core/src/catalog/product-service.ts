@@ -9,7 +9,9 @@ import {
   productCacheTags,
 } from "./catalog-support";
 import {
+  MAX_MONEY,
   parseInput,
+  productBulkUpdateSchema,
   productCreateSchema,
   productUpdateSchema,
   variantUpdateSchema,
@@ -18,6 +20,8 @@ import {
 } from "./product-schemas";
 import { ProductUpdateGuard } from "./product-write";
 import type {
+  BulkApplyCommand,
+  BulkVariantUpdate,
   GeneratedVariantRow,
   ProductFieldsData,
   ProductRecord,
@@ -394,6 +398,132 @@ export class ProductService {
     });
     if (created.length > 0) await this.invalidate(productCacheTags(product));
     return { created, existing: plan.existing.length, orphaned: plan.orphaned.length };
+  }
+
+  /**
+   * Prețul unei variante, pentru un produs cu O SINGURĂ variantă (editarea inline din listă). Cere
+   * `products.write`; la produse cu mai multe variante se refuză (prețul se editează pe variante).
+   */
+  async updateSingleVariantPrice(
+    subject: PermissionSubject | null,
+    productId: string,
+    price: unknown,
+  ): Promise<VariantRecord> {
+    assertCan(subject, "products.write");
+    const variants = await this.deps.store.listVariantsOf(productId);
+    if (variants.length !== 1) {
+      throw new CatalogError(
+        "CATALOG_NOT_SINGLE_VARIANT",
+        variants.length === 0
+          ? "Produsul nu are nicio variantă"
+          : "Produsul are mai multe variante: prețul se editează pe fiecare variantă",
+      );
+    }
+    return this.updateVariant(subject, (variants[0] as VariantRecord).id, { price });
+  }
+
+  /**
+   * Editare în masă, prin aceeași poartă ca editarea unui produs (`ProductUpdateGuard`): TOATE
+   * câmpurile de aici cer `products.write`, deci un Editor e refuzat, iar o cerere mixtă se respinge
+   * întreagă. Cerințe: confirmare explicită (`confirm`, `expectedCount`), cel mult `MAX_BULK_PRODUCTS`
+   * produse, toate existente și neșterse. Se aplică într-o singură tranzacție (tot sau nimic), cu un
+   * eveniment de audit agregat (lista de id-uri și schimbările, fără valori sensibile). Prețul de
+   * achiziție nu poate fi schimbat prin editare în masă.
+   */
+  async bulkUpdate(
+    subject: PermissionSubject | null,
+    input: unknown,
+  ): Promise<{ updatedProducts: number; updatedVariants: number }> {
+    if (!subject) throw new UnauthenticatedError();
+    const request = parseInput(productBulkUpdateSchema, input);
+    const ids = [...new Set(request.ids)];
+    if (ids.length !== request.ids.length || request.expectedCount !== ids.length) {
+      throw new CatalogError(
+        "CATALOG_BULK_COUNT_MISMATCH",
+        "Numărul de produse confirmat nu corespunde selecției; reîncarcă lista și reia",
+      );
+    }
+    const changes = request.changes;
+
+    return this.guard.run(subject, { productId: `bulk:${ids.length}` }, changes, async () => {
+      const found = await this.deps.store.getManyWithVariants(ids);
+      const usable = found.filter((p) => p.deletedAt === null);
+      if (usable.length !== ids.length) {
+        throw new CatalogError(
+          "CATALOG_BULK_INVALID",
+          `${ids.length - usable.length} dintre produsele selectate nu mai există sau sunt șterse; reîncarcă lista`,
+        );
+      }
+      if (changes.addCategoryId && !(await this.deps.store.categoryExists(changes.addCategoryId))) {
+        throw new CatalogError("CATEGORY_NOT_FOUND", "Categoria aleasă nu mai există");
+      }
+      if (changes.brandId && !(await this.deps.store.brandExists(changes.brandId))) {
+        throw new CatalogError("BRAND_NOT_FOUND", "Brandul ales nu mai există");
+      }
+
+      const at = this.now();
+      const variantUpdates: BulkVariantUpdate[] = [];
+      if (changes.priceAdjustBps !== undefined && changes.priceAdjustBps !== 0) {
+        const factor = 10_000 + changes.priceAdjustBps;
+        let outOfRange = 0;
+        for (const product of usable) {
+          for (const v of product.variants) {
+            const price = Math.round((v.price * factor) / 10_000);
+            if (price < 0 || price > MAX_MONEY) {
+              outOfRange++;
+              continue;
+            }
+            // promoția păstrează proporția și nu depășește prețul întreg
+            const salePrice =
+              v.salePrice === null
+                ? null
+                : Math.min(Math.round((v.salePrice * factor) / 10_000), price);
+            const before = effectivePrice(v, at);
+            const after = effectivePrice({ ...v, price, salePrice }, at);
+            variantUpdates.push({
+              variantId: v.id,
+              price,
+              salePrice,
+              priceRecord: after !== before ? { price: after, at } : null,
+            });
+          }
+        }
+        if (outOfRange > 0) {
+          throw new CatalogError(
+            "CATALOG_BULK_PRICE_OUT_OF_RANGE",
+            `Ajustarea ar scoate ${outOfRange} variante din intervalul permis de preț; nu s-a modificat nimic`,
+          );
+        }
+      }
+
+      const productData: BulkApplyCommand["productData"] = {
+        ...(changes.status !== undefined && { status: changes.status }),
+        ...(changes.shippingClass !== undefined && { shippingClass: changes.shippingClass }),
+        ...(changes.stockStatus !== undefined && { stockStatus: changes.stockStatus }),
+        ...(changes.manageStock !== undefined && { manageStock: changes.manageStock }),
+        ...(changes.brandId !== undefined && { brandId: changes.brandId }),
+      };
+      await this.deps.store.bulkApply({
+        productIds: ids,
+        productData,
+        addCategoryId: changes.addCategoryId ?? null,
+        variantUpdates,
+      });
+
+      // Un singur eveniment agregat: lista de id-uri și ce s-a schimbat (valori nesensibile).
+      await this.deps.audit.record({
+        actorId: subject.userId,
+        actorLabel: subject.email,
+        action: "product.bulk_update",
+        entity: "product",
+        entityId: null,
+        after: { count: ids.length, ids, changes },
+      });
+      const tags = new Set<string>([CATALOG_TAG]);
+      for (const product of usable) for (const tag of productCacheTags(product)) tags.add(tag);
+      await this.invalidate([...tags]);
+      return { updatedProducts: ids.length, updatedVariants: variantUpdates.length };
+    });
   }
 
   /** Verifică o adresă propusă (pentru formular): liberă sau cine o folosește. */

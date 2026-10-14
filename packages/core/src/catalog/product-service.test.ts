@@ -6,6 +6,7 @@ import { DEFAULT_ROLES } from "../rbac/catalog";
 import { ProductFieldsForbiddenError } from "./product-write";
 import { ProductService } from "./product-service";
 import type {
+  BulkApplyCommand,
   GeneratedVariantRow,
   NewVariantRow,
   ProductFieldsData,
@@ -36,6 +37,10 @@ class MemoryStore implements ProductStore {
   variants = new Map<string, VariantRecord>();
   combos = new Map<string, string[]>(); // productId -> chei de combinație
   priceHistory: { variantId: string; price: number; at: Date }[] = [];
+  categories = new Set<string>(["cat-1"]);
+  brands = new Set<string>(["brand-1"]);
+  bulkCalls: BulkApplyCommand[] = [];
+  addedToCategory = new Map<string, string[]>();
   calls = { createProduct: 0, updateProduct: 0, updateVariant: 0 };
   private n = 0;
 
@@ -162,6 +167,55 @@ class MemoryStore implements ProductStore {
     this.variants.set(id, next);
     if (priceRecord) this.priceHistory.push({ variantId: id, ...priceRecord });
     return next;
+  }
+
+  async listVariantsOf(productId: string): Promise<VariantRecord[]> {
+    return [...this.variants.values()]
+      .filter((v) => v.productId === productId)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  async getManyWithVariants(ids: readonly string[]) {
+    return ids.flatMap((id) => {
+      const p = this.products.get(id);
+      return p
+        ? [
+            {
+              id,
+              slug: p.slug,
+              deletedAt: p.deletedAt,
+              variants: [...this.variants.values()].filter((v) => v.productId === id),
+            },
+          ]
+        : [];
+    });
+  }
+
+  async categoryExists(id: string): Promise<boolean> {
+    return this.categories.has(id);
+  }
+
+  async brandExists(id: string): Promise<boolean> {
+    return this.brands.has(id);
+  }
+
+  async bulkApply(command: BulkApplyCommand): Promise<void> {
+    this.bulkCalls.push(command);
+    for (const id of command.productIds) {
+      const current = this.products.get(id) as ProductRecord;
+      this.products.set(id, { ...current, ...command.productData });
+      if (command.addCategoryId) {
+        this.addedToCategory.set(command.addCategoryId, [
+          ...(this.addedToCategory.get(command.addCategoryId) ?? []),
+          id,
+        ]);
+      }
+    }
+    for (const u of command.variantUpdates) {
+      const current = this.variants.get(u.variantId) as VariantRecord;
+      this.variants.set(u.variantId, { ...current, price: u.price, salePrice: u.salePrice });
+      if (u.priceRecord) this.priceHistory.push({ variantId: u.variantId, ...u.priceRecord });
+    }
   }
 
   async listVariantCombinationKeys(productId: string): Promise<string[]> {
@@ -607,5 +661,204 @@ describe("verificarea adresei pentru formular", () => {
     await expect(service.checkSlug(roleSubject("support"), "x")).rejects.toBeInstanceOf(
       ForbiddenError,
     );
+  });
+});
+
+describe("editare în masă", () => {
+  function seedProducts(store: MemoryStore, n: number) {
+    return Array.from({ length: n }, (_, i) => {
+      const p = store.seedProduct({ slug: `p${i}`, title: `Produs ${i}`, status: "draft" });
+      const v = store.seedVariant(p.id, { sku: `S-${i}`, price: 10000 });
+      return { p, v };
+    });
+  }
+  const confirmed = (ids: string[], changes: Record<string, unknown>) => ({
+    ids,
+    confirm: true,
+    expectedCount: ids.length,
+    changes,
+  });
+
+  it("Managerul schimbă starea mai multor produse: tranzacție unică, audit agregat cu lista de id-uri", async () => {
+    const { store, service, auditRows, invalidated } = setup();
+    const items = seedProducts(store, 3);
+    const ids = items.map((i) => i.p.id);
+    const result = await service.bulkUpdate(
+      roleSubject("manager"),
+      confirmed(ids, { status: "active", shippingClass: "oversized" }),
+    );
+    expect(result).toEqual({ updatedProducts: 3, updatedVariants: 0 });
+    expect(store.bulkCalls).toHaveLength(1);
+    for (const id of ids) {
+      expect(store.products.get(id)).toMatchObject({
+        status: "active",
+        shippingClass: "oversized",
+      });
+    }
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0]).toMatchObject({
+      action: "product.bulk_update",
+      entityId: null,
+      outcome: "success",
+      after: { count: 3, ids, changes: { status: "active", shippingClass: "oversized" } },
+    });
+    expect(invalidated[0]).toEqual(expect.arrayContaining(["catalog", `product:${ids[0]}`]));
+  });
+
+  it("Editorul nu poate schimba nimic prin editare în masă (nici starea, nici prețul, nici stocul); audit denied fără valori", async () => {
+    const { store, service, auditRows } = setup();
+    const ids = seedProducts(store, 2).map((i) => i.p.id);
+    for (const changes of [
+      { status: "active" },
+      { priceAdjustBps: 500 },
+      { stockStatus: "outofstock" },
+      { shippingClass: "pallet", addCategoryId: "cat-1" },
+    ]) {
+      await expect(
+        service.bulkUpdate(roleSubject("editor"), confirmed(ids, changes)),
+      ).rejects.toBeInstanceOf(ProductFieldsForbiddenError);
+    }
+    expect(store.bulkCalls).toEqual([]);
+    expect(auditRows.every((r) => r.outcome === "denied")).toBe(true);
+    expect(JSON.stringify(auditRows)).not.toContain(ids[0]);
+    expect(JSON.stringify(auditRows)).not.toContain("500");
+  });
+
+  it("prețul ±%: rotunjit pe variantă, promoția păstrează proporția, istoricul primește prețul efectiv", async () => {
+    const { store, service } = setup();
+    const a = store.seedProduct({ slug: "a", title: "A" });
+    const va = store.seedVariant(a.id, { sku: "A-1", price: 10001, salePrice: 8000 });
+    const b = store.seedProduct({ slug: "b", title: "B" });
+    const vb = store.seedVariant(b.id, { sku: "B-1", price: 5000 });
+
+    await service.bulkUpdate(
+      roleSubject("admin"),
+      confirmed([a.id, b.id], { priceAdjustBps: 1000 }),
+    );
+    // +10%: 10001 → 11001 (rotunjit), promoția 8000 → 8800, prețul efectiv = promoția
+    expect(store.variants.get(va.id)).toMatchObject({ price: 11001, salePrice: 8800 });
+    expect(store.variants.get(vb.id)).toMatchObject({ price: 5500, salePrice: null });
+    expect(store.priceHistory).toEqual(
+      expect.arrayContaining([
+        { variantId: va.id, price: 8800, at: NOW },
+        { variantId: vb.id, price: 5500, at: NOW },
+      ]),
+    );
+
+    await service.bulkUpdate(roleSubject("admin"), confirmed([b.id], { priceAdjustBps: -5000 }));
+    expect(store.variants.get(vb.id)?.price).toBe(2750);
+  });
+
+  it("limita de produse, confirmarea explicită și numărul confirmat se impun; nimic nu se aplică la refuz", async () => {
+    const { store, service } = setup();
+    const items = seedProducts(store, 3);
+    const ids = items.map((i) => i.p.id);
+    const owner = roleSubject("owner");
+
+    const tooMany = Array.from({ length: 51 }, (_, i) => `id-${i}`);
+    await expect(
+      service.bulkUpdate(owner, confirmed(tooMany, { status: "active" })),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      service.bulkUpdate(owner, { ids, expectedCount: 3, changes: { status: "active" } }),
+    ).rejects.toBeInstanceOf(ValidationError); // fără confirm
+    await expect(
+      service.bulkUpdate(owner, { ...confirmed(ids, { status: "active" }), confirm: false }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(
+      service.bulkUpdate(owner, { ...confirmed(ids, { status: "active" }), expectedCount: 2 }),
+    ).rejects.toMatchObject({ code: "CATALOG_BULK_COUNT_MISMATCH" });
+    await expect(
+      service.bulkUpdate(
+        owner,
+        confirmed([ids[0] as string, ids[0] as string], { status: "active" }),
+      ),
+    ).rejects.toMatchObject({ code: "CATALOG_BULK_COUNT_MISMATCH" });
+    await expect(service.bulkUpdate(owner, confirmed(ids, {}))).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+    expect(store.bulkCalls).toEqual([]);
+  });
+
+  it("costul nu poate fi trimis prin editare în masă (cheie necunoscută, schema e strictă)", async () => {
+    const { store, service } = setup();
+    const ids = seedProducts(store, 1).map((i) => i.p.id);
+    for (const changes of [
+      { costPrice: 123456 },
+      { status: "active", costPriceDate: "2026-10-01" },
+    ]) {
+      const error = (await service
+        .bulkUpdate(roleSubject("owner"), confirmed(ids, changes))
+        .catch((e: unknown) => e)) as Error;
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(JSON.stringify(error)).not.toContain("123456");
+    }
+    await expect(
+      service.bulkUpdate(roleSubject("owner"), {
+        ...confirmed(ids, { status: "active" }),
+        costPrice: 1,
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(store.bulkCalls).toEqual([]);
+  });
+
+  it("produs inexistent sau șters în selecție: tot sau nimic; categorie și brand inexistente refuzate", async () => {
+    const { store, service } = setup();
+    const items = seedProducts(store, 2);
+    const gone = store.seedProduct({ slug: "g", title: "G", deletedAt: new Date() });
+    const owner = roleSubject("owner");
+
+    await expect(
+      service.bulkUpdate(
+        owner,
+        confirmed([items[0]?.p.id as string, gone.id], { status: "active" }),
+      ),
+    ).rejects.toMatchObject({ code: "CATALOG_BULK_INVALID" });
+    await expect(
+      service.bulkUpdate(
+        owner,
+        confirmed([items[0]?.p.id as string, "nu-exista"], { status: "active" }),
+      ),
+    ).rejects.toMatchObject({ code: "CATALOG_BULK_INVALID" });
+    const ids = items.map((i) => i.p.id);
+    await expect(
+      service.bulkUpdate(owner, confirmed(ids, { addCategoryId: "lipsa" })),
+    ).rejects.toMatchObject({ code: "CATEGORY_NOT_FOUND" });
+    await expect(
+      service.bulkUpdate(owner, confirmed(ids, { brandId: "lipsa" })),
+    ).rejects.toMatchObject({ code: "BRAND_NOT_FOUND" });
+    expect(store.bulkCalls).toEqual([]);
+
+    await service.bulkUpdate(owner, confirmed(ids, { addCategoryId: "cat-1", brandId: "brand-1" }));
+    expect(store.addedToCategory.get("cat-1")).toEqual(ids);
+    expect(store.products.get(ids[0] as string)?.brandId).toBe("brand-1");
+  });
+
+  it("ajustarea care scoate o variantă din interval refuză tot, fără aplicare parțială", async () => {
+    const { store, service } = setup();
+    const p = store.seedProduct({ slug: "s", title: "S" });
+    store.seedVariant(p.id, { sku: "S-1", price: 900_000_000 });
+    await expect(
+      service.bulkUpdate(roleSubject("owner"), confirmed([p.id], { priceAdjustBps: 30000 })),
+    ).rejects.toMatchObject({ code: "CATALOG_BULK_PRICE_OUT_OF_RANGE" });
+    expect(store.bulkCalls).toEqual([]);
+  });
+
+  it("prețul inline pentru un produs cu o singură variantă; cu mai multe variante e refuzat", async () => {
+    const { store, service } = setup();
+    const single = store.seedProduct({ slug: "u", title: "U" });
+    const v = store.seedVariant(single.id, { sku: "U-1", price: 1000 });
+    const multi = store.seedProduct({ slug: "m", title: "M" });
+    store.seedVariant(multi.id, { sku: "M-1" });
+    store.seedVariant(multi.id, { sku: "M-2", position: 1 });
+
+    const out = await service.updateSingleVariantPrice(roleSubject("manager"), single.id, 2500);
+    expect(out).toMatchObject({ id: v.id, price: 2500 });
+    await expect(
+      service.updateSingleVariantPrice(roleSubject("manager"), multi.id, 100),
+    ).rejects.toMatchObject({ code: "CATALOG_NOT_SINGLE_VARIANT" });
+    await expect(
+      service.updateSingleVariantPrice(roleSubject("editor"), single.id, 100),
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 });

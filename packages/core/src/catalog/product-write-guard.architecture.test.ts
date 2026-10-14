@@ -66,7 +66,13 @@ interface Export {
 /** Exporturile unui fișier de acțiuni/rute, cu permisiunea din `withPermission` unde există. */
 function exportsOf(content: string): Export[] {
   const out: Export[] = [];
-  const guarded = /export\s+const\s+(\w+)\s*=\s*withPermission\(\s*["']([\w.]+)["']/g;
+  // Între `withPermission(` și literalul permisiunii pot sta spații, linii noi și comentarii
+  // (forma din `categorii/actions.ts`): se recunosc, ca să nu devină „neprotejat” din întâmplare.
+  const gap = String.raw`(?:\s|//[^\n]*\n|/\*[\s\S]*?\*/)*`;
+  const guarded = new RegExp(
+    String.raw`export\s+const\s+(\w+)\s*=\s*withPermission\(${gap}["']([\w.]+)["']`,
+    "g",
+  );
   for (const m of content.matchAll(guarded)) {
     out.push({ name: m[1] as string, permission: m[2] as string });
   }
@@ -188,6 +194,26 @@ describe("findUnguardedProductWrites pe fișiere sintetice (testul pică când t
       },
     ]);
     expect(problems).toEqual([expect.stringContaining("«POST» modifică produse")]);
+  });
+
+  it("recunoaște permisiunea și când un comentariu stă între withPermission( și literal (forma din categorii)", () => {
+    const withComment = (permission: string) =>
+      action(
+        [
+          "export const rename = withPermission(",
+          "  // poarta cea mai largă",
+          "  /* și încă un comentariu */",
+          `  "${permission}",`,
+          "  async () => { await getProductService().rename(); },",
+          ");",
+        ].join("\n"),
+      );
+    // învelită cu products.*: nimic de raportat
+    expect(findUnguardedProductWrites([withComment("products.content.write")])).toEqual([]);
+    // altă zonă: se raportează ca permisiune greșită, nu ca „neprotejată” generic
+    expect(findUnguardedProductWrites([withComment("settings.write")])).toEqual([
+      expect.stringContaining("cere products.*"),
+    ]);
   });
 
   it("prinde și un export neînvelit dintr-un fișier în care altul e învelit", () => {
