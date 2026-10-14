@@ -160,3 +160,40 @@ export async function insertE2eMedia(
     return id;
   });
 }
+
+/**
+ * Creează un produs de test (slug `e2e-<sufix>`) care referă fișierul media cu numele original dat
+ * (cel încărcat în test), ca ștergerea lui din bibliotecă să fie refuzată. Returnează slug-ul.
+ */
+export async function attachMediaToE2eProduct(
+  originalName: string,
+  title: string,
+  slugSuffix: string,
+): Promise<string> {
+  const slug = `e2e-${slugSuffix}`;
+  await withClient(async (db) => {
+    const media = await db.query(
+      `select id from media where "originalName" = $1 order by "createdAt" desc limit 1`,
+      [originalName],
+    );
+    const mediaId = media.rows[0]?.id as string | undefined;
+    if (!mediaId) throw new Error(`Fișierul media „${originalName}” nu există în baza de test`);
+    const product = await db.query(
+      `insert into product (id, slug, title, "updatedAt") values (gen_random_uuid()::text, $1, $2, now()) returning id`,
+      [slug, title],
+    );
+    await db.query(
+      `insert into product_media (id, "productId", "mediaId", position) values (gen_random_uuid()::text, $1, $2, 0)`,
+      [product.rows[0]?.id as string, mediaId],
+    );
+  });
+  return slug;
+}
+
+/** Șterge produsele de test (slug `e2e-…`); legăturile lor media dispar în cascadă. */
+export async function removeE2eProducts(): Promise<number> {
+  return withClient(async (db) => {
+    const result = await db.query(`delete from product where slug like 'e2e-%'`);
+    return result.rowCount ?? 0;
+  });
+}

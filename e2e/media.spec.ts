@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-import { promoteE2eUser } from "../packages/core/test/e2e-support";
+import {
+  attachMediaToE2eProduct,
+  promoteE2eUser,
+  removeE2eProducts,
+} from "../packages/core/test/e2e-support";
 import { solidPng } from "./support/png";
 
 /**
@@ -159,6 +163,52 @@ test.describe("biblioteca media", () => {
     await expect(page.getByRole("dialog", { name: "Ștergi acest fișier?" })).toBeVisible();
     await page.getByRole("button", { name: "Șterge definitiv" }).click();
     await expect(page.getByRole("button", { name: `Deschide liner-${tag}.png` })).toHaveCount(0);
+  });
+
+  test("fișier folosit de un produs: ștergerea e refuzată cu lista produselor; după scoatere se șterge", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    await login(page, owner, "/admin/media");
+    const tag = randomBytes(3).toString("hex");
+    const fileName = `folosit-${tag}.png`;
+    await page.locator('input[type="file"]').setInputFiles([png(fileName, [120, 60, 200])]);
+    await expect(page.getByText("1 din 1 încărcate")).toBeVisible({ timeout: 60_000 });
+
+    const productTitle = `Pompă de test ${tag}`;
+    await attachMediaToE2eProduct(fileName, productTitle, tag);
+    try {
+      await page.goto(`/admin/media?q=${tag}`);
+      await page.getByRole("button", { name: `Deschide ${fileName}` }).click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByRole("button", { name: "Șterge…" }).click();
+      await page.getByRole("button", { name: "Șterge definitiv" }).click();
+
+      // Refuz explicit, cu produsul care îl folosește (și link spre el), nu o eroare generică.
+      const refusal = page.getByRole("dialog", { name: "Fișierul este folosit" });
+      await expect(refusal).toBeVisible();
+      await expect(refusal.getByText("Nu poate fi șters cât timp e folosit")).toBeVisible();
+      const link = refusal.getByRole("link", { name: `Produs: ${productTitle}` });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute("href", /^\/admin\/produse\/.+/);
+      await expect(refusal.getByRole("button", { name: "Șterge definitiv" })).toHaveCount(0);
+      await refusal.getByRole("button", { name: "Anulează" }).click();
+
+      // Fișierul e încă în bibliotecă.
+      await page.goto(`/admin/media?q=${tag}`);
+      await expect(page.locator("[data-media-card]")).toHaveCount(1);
+    } finally {
+      await removeE2eProducts();
+    }
+
+    // Produsul nu mai există: ștergerea reușește.
+    await page.goto(`/admin/media?q=${tag}`);
+    await page.getByRole("button", { name: `Deschide ${fileName}` }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Șterge…" }).click();
+    await page.getByRole("button", { name: "Șterge definitiv" }).click();
+    await expect(page.locator("[data-media-card]")).toHaveCount(0, { timeout: 15_000 });
   });
 
   test("Manager (doar media.read): vede biblioteca, fără butoane de scriere; serverul refuză oricum", async ({

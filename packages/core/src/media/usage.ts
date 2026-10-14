@@ -32,6 +32,11 @@ export class MediaUsageRegistry {
     return this.providers.size;
   }
 
+  /** Numele providerilor înregistrați (pentru teste și diagnostic). */
+  get names(): string[] {
+    return [...this.providers.keys()].sort();
+  }
+
   /** Locurile unde e folosit fiecare fișier, de la toți providerii. */
   async findUsages(mediaIds: readonly string[]): Promise<Map<string, MediaUsage[]>> {
     const out = new Map<string, MediaUsage[]>();

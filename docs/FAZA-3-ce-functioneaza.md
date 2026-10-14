@@ -37,8 +37,9 @@ Rezumat în limbaj simplu, pentru cine nu citește codul. Detaliile tehnice sunt
 ## Ce NU există încă
 
 - **Niciun formular nu folosește încă selectorul.** Primul loc unde apare e editorul de produs (Faza 4).
-- **Nu există încă furnizori de „utilizare”.** Mecanismul de verificare la ștergere e gata, dar nu există nimic care
-  să refere fișiere (produse: Faza 4; pagini și bannere: Faza 16). Până atunci, orice fișier se poate șterge.
+- **Furnizorii de „utilizare”:** produsele sunt acoperite din Faza 4 (punctul 2: un fișier folosit de un produs nu se
+  șterge, iar mesajul listează produsele). Imaginile categoriilor și logourile brandurilor (Faza 4, punctul 9) și
+  paginile și bannerele (Faza 16) vin cu furnizorii lor; până atunci nu pot referi fișiere.
 - **Fără acțiuni în masă** (ștergere, mutare, etichetare a mai multor fișiere deodată).
 - **Foldere: nu se pot șterge** (doar crea, redenumi, muta).
 - **Managerul nu poate încărca** (are doar citire); de reluat în Faza 16.

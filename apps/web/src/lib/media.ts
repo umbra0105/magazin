@@ -3,7 +3,7 @@ import {
   MediaLibraryService,
   MediaService,
   MediaUploadGuard,
-  MediaUsageRegistry,
+  createMediaUsageRegistry,
   MemoryDecodeLimiter,
   RedisDecodeLimiter,
   ResilientDecodeLimiter,
@@ -12,6 +12,7 @@ import {
   createPrismaProcessingStore,
   type DecodeLimiter,
   type MediaUploadDeps,
+  type MediaUsageRegistry,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { createMediaQueue, enqueueMediaProcessing, type MediaQueue } from "@ecom/jobs";
@@ -116,7 +117,7 @@ export function getMediaUploadDeps(): MediaUploadDeps {
  * un provider îl raportează folosit. Un singur obiect per proces.
  */
 export function getMediaUsageRegistry(): MediaUsageRegistry {
-  globalForMedia.__ecomMediaUsage ??= new MediaUsageRegistry();
+  globalForMedia.__ecomMediaUsage ??= createMediaUsageRegistry(getDb());
   return globalForMedia.__ecomMediaUsage;
 }
 

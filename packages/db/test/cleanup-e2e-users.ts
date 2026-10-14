@@ -10,6 +10,8 @@ export async function cleanupE2eUsers(databaseUrl: string | undefined): Promise<
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
   try {
+    // Produsele de test (slug `e2e-…`) referă fișiere media (FK Restrict): se șterg ÎNAINTEA fișierelor.
+    await client.query(`delete from product where slug like 'e2e-%'`);
     // Fișierele media încărcate de conturile de test (rândurile; obiectele stau în directorul
     // temporar al E2E, șters de global-teardown) și folderele rămase goale cu prefixul testelor.
     await client.query(

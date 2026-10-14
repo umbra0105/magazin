@@ -1,8 +1,8 @@
 # Jurnal de progres
 
 ## 2026-10-14 · Sesiunea 5 · Faza 4 (Catalog), Promptul 5 — ÎN LUCRU
-**Terminat (confirmat de utilizator):** punctele 0 (curățare `e2e-*` la început + măsurare RSS) și 0b (E2E pe build de producție; test unitar pentru randarea șabloanelor de email sub `tsx`)
-**În lucru:** punctul 1 (schema catalogului, cu `brandId` nullable) — [~], așteaptă confirmarea utilizatorului
+**Terminat (confirmat de utilizator):** punctele 0 (curățare `e2e-*` la început + măsurare RSS) 0b (E2E pe build de producție; test unitar pentru randarea șabloanelor de email sub `tsx`) și 1 (schema catalogului, migrația `catalog_core` aplicată de utilizator pe baza de dezvoltare)
+**În lucru:** punctul 2 (`ProductMediaUsageProvider`) — [~], așteaptă confirmarea utilizatorului
 **Blocat:** —
 **Plan aprobat de utilizator** (16 puncte + punctul 0, în `docs/06-todo-master.md`). Propunere de `git push` (doar la cererea utilizatorului) după punctele 2, 6, 10 și 14.
 
@@ -22,6 +22,15 @@
 - `e2e/media.spec.ts`: pasul de mutare în folder căuta fișierul pe prima pagină a bibliotecii partajate (cădea cu încărcări paralele); acum îl găsește după etichetă (`?q=<tag>`)
 - `.gitignore`: `/local-data` (exportul WooCommerce al utilizatorului, `local-data/woocommerce-export.csv`, nu se comite)
 - CI: pasul „Build” rămâne (verifică build-ul fără harness); E2E își face propriul build în `.next-e2e`, deci CI-ul are un build în plus (~1 min)
+
+**Punctul 2 — `ProductMediaUsageProvider`:**
+- `packages/core/src/catalog/media-usage.ts`: `createProductMediaUsageProvider(db)` (nume `product-media`) raportează, per fișier, produsul și/sau varianta care îl referă prin `ProductMedia`: `kind` `product` / `product_variant`, eticheta „Produs: <titlu>” (+ „, varianta <SKU>”, + „ (șters)” pentru soft delete) și link `/admin/produse/<id>`. Produsele șterse sunt raportate și ele, fiindcă FK-ul `Restrict` le-ar refuza oricum: biblioteca explică refuzul, nu cade cu o eroare de bază
+- `createMediaUsageRegistry(db)` construiește registrul cu providerii nucleului; `getMediaUsageRegistry()` din aplicație îl folosește (providerul nu depinde de cine apelează primul). `MEDIA_REFERENCING_MODELS` listează modelele Prisma care referă `Media` și providerul lor
+- **Testul de arhitectură** (`media-usage.integration.test.ts`): citește `schema.prisma`; dacă un model deține o cheie străină spre `Media` și nu e în `MEDIA_REFERENCING_MODELS` cu providerul înregistrat în registru, pică. Verificat și pe dos: cu înregistrarea scoasă, 3 teste pică (ștergerea refuzată, soft delete, registrul)
+- Teste: provider (produs, variantă, mai multe produse, fără utilizare), ștergere refuzată cu `MediaInUseError` și lista produselor, obiectul rămâne în storage, ștergere reușită după scoaterea din produs, soft delete; cablarea aplicației (`getMediaUsageRegistry().names` conține `product-media`, un singur registru); E2E în biblioteca media: dialogul „Fișierul este folosit” cu produsul și link, apoi ștergere reușită după ce produsul dispare. `cleanupE2eUsers` șterge întâi produsele `e2e-*` (FK `Restrict`)
+- Totaluri: unitare ✔ 603, integrare ✔ 222, E2E ✔ 42 (prod build), typecheck ✔, lint ✔
+- **Rămâne pentru Faza 16** (pagini, bannere) și punctul 9 (imaginea categoriei, logoul brandului): același tipar, câte un provider + intrare în `MEDIA_REFERENCING_MODELS`
+- Datoria „Provider de utilizare pentru produse (Faza 4)” din Faza 3: REZOLVATĂ aici
 
 **Punctul 1 — schema catalogului (migrația `20261014120000_catalog_core`):**
 - Tabele: `brand`, `category`, `product`, `product_category`, `product_variant`, `cost_price_history`, `price_history`, `product_media`. Mutate din punctele 3 și 6 în punctul 1 la cererea utilizatorului (vezi TODO)
