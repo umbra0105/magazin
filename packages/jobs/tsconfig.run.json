@@ -1,0 +1,11 @@
+{
+  // Doar pentru `tsx` la rulare (scripts/worker.mjs, scripts/e2e-server.mjs), nu pentru typecheck:
+  // `tsx` aplică opțiunile unui tsconfig doar fișierelor din `include`, iar workerul încarcă și
+  // șabloanele din `packages/emails` (JSX), care trebuie să primească tot `react-jsx`.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "jsx": "react-jsx"
+  },
+  "include": ["../*/src/**/*"]
+}

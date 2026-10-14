@@ -14,3 +14,6 @@ generated
 
 # Fișiere încărcate (STORAGE_DRIVER=local)
 /storage
+
+# Date locale ale utilizatorului (export WooCommerce etc.): nu se comit
+/local-data

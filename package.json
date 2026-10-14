@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node scripts/in.mjs apps/web node_modules/next/dist/bin/next dev",
     "dev:web": "node scripts/in.mjs apps/web node_modules/next/dist/bin/next dev",
-    "worker": "node --import tsx packages/jobs/src/main.ts",
+    "worker": "node scripts/worker.mjs",
     "dev:mail": "node --import tsx packages/core/scripts/dev-mail.ts",
     "build:web": "node scripts/in.mjs apps/web node_modules/next/dist/bin/next build",
     "check:local": "node scripts/run-all.mjs typecheck && node scripts/run-all.mjs lint && npm run lint:root && npm run format:check && npm run test",

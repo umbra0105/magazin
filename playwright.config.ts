@@ -59,11 +59,16 @@ assertTestRedis(s3RedisUrl);
 const s3Endpoint = (process.env["S3_ENDPOINT"] ?? "http://localhost:9000").replace(/\/+$/, "");
 
 const localServer = {
-  command: `node scripts/in.mjs apps/web node_modules/next/dist/bin/next dev --port ${port}`,
+  // Mod producție (`next build` + `next start` + worker separat), la fel local și în CI: memorie
+  // stabilă, fără compilare la cerere (vezi scripts/e2e-server.mjs).
+  command: `node scripts/e2e-server.mjs ${port}`,
   url: `http://localhost:${port}`,
   // Niciodată un server deja pornit: ar putea fi unul legat de baza de dezvoltare.
   reuseExistingServer: false,
-  timeout: 120_000,
+  // Include build-ul de producție.
+  timeout: 420_000,
+  // E2E_SERVER_LOGS=1: stdout-ul serverului și al workerului (durata build-ului, joburi) în rezultat.
+  stdout: process.env["E2E_SERVER_LOGS"] === "1" ? ("pipe" as const) : ("ignore" as const),
   env: {
     // Mediul serverului de test: baza și Redis-ul de test, nu cele din .env.
     DATABASE_URL: testDatabaseUrl,
@@ -81,10 +86,10 @@ const localServer = {
 
 const s3Server = {
   // Întâi bucketul de test (`storage:init`, idempotent), apoi serverul cu driverul S3.
-  command: `node --import tsx packages/core/scripts/storage-init.ts && node scripts/in.mjs apps/web node_modules/next/dist/bin/next dev --port ${s3Port}`,
+  command: `node --import tsx packages/core/scripts/storage-init.ts && node scripts/e2e-server.mjs ${s3Port}`,
   url: `http://localhost:${s3Port}`,
   reuseExistingServer: false,
-  timeout: 180_000,
+  timeout: 420_000,
   env: {
     DATABASE_URL: testDatabaseUrl,
     REDIS_URL: s3RedisUrl,
@@ -102,9 +107,9 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   globalTeardown: "./e2e/global-teardown.ts",
   fullyParallel: true,
-  // Un singur `next dev` servește toți lucrătorii; cu 6 (implicit pe 12 nuclee) compilarea la rece și
-  // cererile concurente depășeau timeout-urile, cu eșecuri diferite la fiecare rulare (auth, email,
-  // media). Local 2; în CI (Linux) rămâne valoarea implicită.
+  // Un singur server servește toți lucrătorii; pe `next dev` (înainte de modul producție), cu 6 (implicit
+  // pe 12 nuclee) compilarea la rece și cererile concurente depășeau timeout-urile. Local rămân 2
+  // (decizie utilizator); în CI (Linux) rămâne valoarea implicită.
   workers: process.env.CI ? undefined : 2,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

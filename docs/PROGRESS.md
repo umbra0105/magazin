@@ -1,8 +1,8 @@
 # Jurnal de progres
 
 ## 2026-10-14 · Sesiunea 5 · Faza 4 (Catalog), Promptul 5 — ÎN LUCRU
-**Terminat (confirmat de utilizator):** —
-**În lucru:** punctul 0 din 16 (curățare `e2e-*` la început + măsurare RSS) — [~], așteaptă confirmarea utilizatorului
+**Terminat (confirmat de utilizator):** punctul 0 (curățare `e2e-*` la început + măsurare RSS)
+**În lucru:** punctul 0b (E2E pe build de producție) — [~], așteaptă confirmarea utilizatorului
 **Blocat:** —
 **Plan aprobat de utilizator** (16 puncte + punctul 0, în `docs/06-todo-master.md`). Propunere de `git push` (doar la cererea utilizatorului) după punctele 2, 6, 10 și 14.
 
@@ -15,10 +15,19 @@
 - **Măsurare RSS** (`node scripts/measure-rss.mjs <pid> [secunde] [fișier.csv]`, doar citește; PID-ul trebuie dat explicit): serverul de test `next dev` (port 3100, pornit de Playwright) pornește la ~3,0–4,7 GB la ~40 s de la începutul suitei și urcă la **~6,0–6,9 GB** în ~2 minute (4 rulări: vârfuri 6,0 / 6,3 / 6,9 / 6,0 GB). Defalcarea pe procese arată UN SINGUR `node.exe` la 5–5,9 GB (nu memorie partajată numărată dublu); procesele-copil au 0,3–0,5 GB. Diferența față de „~0,7 GB în rulări normale” din jurnalul Fazei 3 nu a fost reprodusă: pe această mașină, cu 41 de teste, nu coboară sub 3 GB. **Problemă reală, nu o anomalie** (compilări `next dev` ale paginilor de admin acumulate în proces)
 - **Propunere (NEAPLICATĂ, la decizia utilizatorului):** E2E pe build de producție (`NEXT_DIST_DIR=.next-e2e next build` + `next start`, port propriu, fără compilare la cerere). Costul: ~1–2 min de build la fiecare rulare; câștig: memorie stabilă. Setările WSL nu se ating; dacă e nevoie, valori recomandate la cerere
 
+**Punctul 0b — E2E pe build de producție (decizia utilizatorului, după măsurare):**
+- `scripts/e2e-server.mjs <port>`: `next build` în `NEXT_DIST_DIR` propriu (refuză `.next`) + `next start` + workerul de cozi ca proces separat (ca în producție). Același mod local și în CI (`playwright.config.ts`, ambele servere: obișnuit pe 3100 și S3 pe 3101). `workers: 2` local rămâne. `E2E_SERVER_LOGS=1` arată stdout-ul serverului și workerului
+- **Înainte / după (aceeași suită, 41 de teste, aceeași mașină):** `next dev`: vârf **6,0–6,9 GB** (un singur proces `node.exe` la 5–5,9 GB), suita **3,4–4,4 min**. Producție: vârf **642 MB** pe tot arborele (next start ~450 MB, worker ~175–390 MB, launcher ~46 MB), suita **1,3 min** + build **43–51 s** o dată pe rulare. E2E S3 (`test:e2e:s3`) ✔ 1
+- **Defect real găsit și reparat:** `pnpm worker` (producție) nu putea trimite emailuri: `tsx` aplică `jsx: react-jsx` doar fișierelor din `include`-ul tsconfig-ului, iar din rădăcină (fără tsconfig) șabloanele din `packages/emails` primeau transformarea clasică: `SEND_FAILED: React is not defined`. În `next dev` nu se vedea (Next transpilează). Reparat: `packages/jobs/tsconfig.run.json` (include `../*/src/**/*`) prin `TSX_TSCONFIG_PATH`, în `scripts/worker.mjs` (`pnpm worker`) și în launcherul E2E
+- `e2e/media.spec.ts`: pasul de mutare în folder căuta fișierul pe prima pagină a bibliotecii partajate (cădea cu încărcări paralele); acum îl găsește după etichetă (`?q=<tag>`)
+- `.gitignore`: `/local-data` (exportul WooCommerce al utilizatorului, `local-data/woocommerce-export.csv`, nu se comite)
+- CI: pasul „Build” rămâne (verifică build-ul fără harness); E2E își face propriul build în `.next-e2e`, deci CI-ul are un build în plus (~1 min)
+
 **Datorie tehnică (Faza 4, în plus față de PROGRESS din Faza 3):**
+- Coada `emails` din Redis-ul de test păstrează joburile eșuate între rulări (retry cu backoff): după o defecțiune, rulările următoare reîncearcă joburi vechi. `globalSetup` nu golește cozile (de decis dacă merită)
 - Curățarea la început în integrare presupune că nu rulează simultan un E2E pe aceeași bază de test (regula „un server pe rând” o garantează); o rulare E2E paralelă ar pierde conturile create
 
-**De unde reiau:** punctul 0 așteaptă confirmarea; apoi punctul 1 (schema Product/ProductVariant/ProductMedia) și punctul 2 (provider media)
+**De unde reiau:** punctul 0b așteaptă confirmarea; apoi punctul 1 (schema Product/ProductVariant/ProductMedia) și punctul 2 (provider media)
 **Comandă de pornire:** `docker compose -f docker/docker-compose.dev.yml up -d` apoi `node scripts/run-all.mjs …` / `npm.cmd run …` (vezi tabelul din Faza 3)
 
 ## 2026-10-12 · Sesiunea 4 · Faza 3 (Media), Promptul 4 — TERMINATĂ ȘI VERIFICATĂ 🏁
@@ -47,7 +56,7 @@
 - **Scripturile de dezvoltare (Faza 21):** `scripts/in.mjs`, `scripts/run-all.mjs`, `scripts/e2e-s3.mjs`, `media:regenerate`, `storage:init` și celelalte scripturi `admin:*` / `db:*` trebuie mutate în afara pachetului distribuit sau documentate ca unelte de operare
 - **`pnpm.exe` blocat pe Windows-ul utilizatorului (mediu):** rulăm prin `node` și `npm.cmd` (vezi tabelul de mai sus). **CI:** scripturile rădăcinii rulează prin node, fără `turbo`, deci cache-ul turbo nu se mai folosește; CI-ul poate fi mai lent. De reevaluat dacă CI-ul devine prea lent (Faza 21)
 - **Acțiuni în masă** (ștergere, mutare, etichetare a mai multor fișiere) și **ștergerea de foldere:** nu există; de adăugat când apare nevoia (Faza 16, la paginile care folosesc biblioteca)
-- **Consum de memorie al `next dev` în timpul E2E (de analizat, nerezolvat):** într-o rulare, procesul serverului de test a ajuns la ~5,1 GB (în rulări normale ~0,7 GB). A coincis cu rulări blocate (cereri care nu mai răspund), cu crash-ul sesiunii (cod 0xC0000409) din timpul specului S3 și cu căderea Docker Desktop („unable to start”, VM-ul WSL oprit). Nu am stabilit cauza (compilări `next dev` acumulate, buffere sharp, presiune pe WSL). Propuneri, NEAPLICATE: (1) E2E pe build de producție (`next build` + `next start`, fără compilare la cerere, memorie stabilă), (2) limitarea memoriei WSL (`.wslconfig`, `memory=`/`swap=`) ca Docker să nu fie sufocat, (3) măsurarea RSS-ului serverului pe parcursul suitei pentru a vedea dacă crește monoton. De decis înainte de Faza 4, când suita crește
+- **REZOLVAT în Faza 4, punctul 0b (E2E pe build de producție, vârf 642 MB):** consum de memorie al `next dev` în timpul E2E (de analizat, nerezolvat):** într-o rulare, procesul serverului de test a ajuns la ~5,1 GB (în rulări normale ~0,7 GB). A coincis cu rulări blocate (cereri care nu mai răspund), cu crash-ul sesiunii (cod 0xC0000409) din timpul specului S3 și cu căderea Docker Desktop („unable to start”, VM-ul WSL oprit). Nu am stabilit cauza (compilări `next dev` acumulate, buffere sharp, presiune pe WSL). Propuneri, NEAPLICATE: (1) E2E pe build de producție (`next build` + `next start`, fără compilare la cerere, memorie stabilă), (2) limitarea memoriei WSL (`.wslconfig`, `memory=`/`swap=`) ca Docker să nu fie sufocat, (3) măsurarea RSS-ului serverului pe parcursul suitei pentru a vedea dacă crește monoton. De decis înainte de Faza 4, când suita crește
 - **MediaPicker nelegat de niciun formular:** primul consumator e editorul de produs (Faza 4); până atunci e verificat doar prin harness-ul E2E
 
 ## 2026-10-12 · Sesiunea 3 · Faza 2, Promptul 3 (autentificare, RBAC, admin) — TERMINATĂ ȘI VERIFICATĂ 🏁

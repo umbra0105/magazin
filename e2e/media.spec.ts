@@ -142,6 +142,9 @@ test.describe("biblioteca media", () => {
     await page.getByRole("button", { name: "Salvează", exact: true }).click();
     await expect(page.getByRole("link", { name: new RegExp(folderName) })).toBeVisible();
 
+    // Biblioteca e partajată cu testele paralele (alte încărcări împing fișierul pe pagina 2): îl găsim
+    // după etichetă, nu după poziția pe prima pagină.
+    await page.goto(`/admin/media?q=${tag}`);
     await page.getByRole("button", { name: `Deschide liner-${tag}.png` }).click();
     await page.getByRole("dialog").getByLabel("Folder").selectOption({ label: folderName });
     await page.getByRole("dialog").getByRole("button", { name: "Salvează", exact: true }).click();
