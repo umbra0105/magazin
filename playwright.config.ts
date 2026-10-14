@@ -102,6 +102,10 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   globalTeardown: "./e2e/global-teardown.ts",
   fullyParallel: true,
+  // Un singur `next dev` servește toți lucrătorii; cu 6 (implicit pe 12 nuclee) compilarea la rece și
+  // cererile concurente depășeau timeout-urile, cu eșecuri diferite la fiecare rulare (auth, email,
+  // media). Local 2; în CI (Linux) rămâne valoarea implicită.
+  workers: process.env.CI ? undefined : 2,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",

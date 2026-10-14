@@ -70,7 +70,9 @@ const png = (name: string, color: [number, number, number]) => ({
 });
 
 // Pe rând în fișier: testele încarcă imagini, iar limita globală e de 2 decodări simultane.
-test.describe.configure({ mode: "serial" });
+// Cu cache-ul `next dev` rece, testul „Owner” durează 1,2–1,3 min singur (compilarea rutelor noi + 3 imagini
+// procesate); limita implicită de 90 s lăsa prea puțină marjă și pica sporadic în suita completă.
+test.describe.configure({ mode: "serial", timeout: 180_000 });
 
 test.describe("biblioteca media", () => {
   test("Owner: încarcă 3 imagini, se procesează singure, editează, folder, caută, șterge", async ({

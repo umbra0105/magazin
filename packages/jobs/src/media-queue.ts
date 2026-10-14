@@ -49,28 +49,50 @@ export function createMediaQueue(
  *  - job principal în așteptare sau amânat: nu se adaugă nimic (va rula oricum cu datele curente);
  *  - job principal ACTIV (rulează chiar acum, deci nu va vedea cererea): se adaugă un job
  *    `media-<id>-rerun`, o singură dată. Lock-ul per fișier din procesor le face să ruleze pe rând.
+ *
+ * Starea unui job se citește în doi pași (`getJob`, apoi `getState`), iar jobul se poate termina
+ * (și șterge, `removeOnComplete`) între ei: starea e atunci `unknown`, iar `remove()` poate arunca.
+ * În cazul acesta NU se presupune că „va rula oricum”: se reevaluă de la capăt, cu număr mărginit de
+ * încercări, ca o cerere de regenerare să nu se piardă niciodată (rândul ar rămâne `pending`).
  */
 export async function enqueueMediaProcessing(queue: MediaQueue, mediaId: string): Promise<void> {
   const primaryId = `media-${mediaId}`;
   const rerunId = `${primaryId}-rerun`;
 
-  const primary = await queue.getJob(primaryId);
-  if (primary) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const primary = await queue.getJob(primaryId);
+    if (!primary) break; // nimic în curs: se adaugă jobul principal
+
     const state = await primary.getState();
+    if (state === "waiting" || state === "delayed" || state === "prioritized") return;
+    if (state === "waiting-children") return;
     if (state === "failed" || state === "completed") {
-      await primary.remove();
-    } else if (state !== "active") {
-      return; // waiting / delayed / prioritized: va procesa oricum starea curentă
-    } else {
+      try {
+        await primary.remove();
+      } catch {
+        // dispărut între timp (sau blocat): reevaluăm
+        continue;
+      }
+      break;
+    }
+    if (state === "active") {
       const rerun = await queue.getJob(rerunId);
       if (rerun) {
         const rerunState = await rerun.getState();
-        if (rerunState === "failed" || rerunState === "completed") await rerun.remove();
-        else return; // există deja o reluare programată după jobul activ
+        if (rerunState === "waiting" || rerunState === "delayed" || rerunState === "active") return;
+        if (rerunState === "failed" || rerunState === "completed") {
+          try {
+            await rerun.remove();
+          } catch {
+            continue;
+          }
+        }
+        // `unknown`: s-a șters între citiri; se adaugă una nouă mai jos
       }
       await queue.add("process", { mediaId }, { jobId: rerunId });
       return;
     }
+    // `unknown`: jobul s-a terminat și șters între `getJob` și `getState`; reevaluăm
   }
   await queue.add("process", { mediaId }, { jobId: primaryId });
 }

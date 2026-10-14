@@ -182,10 +182,16 @@ function setup(options: Setup) {
   };
 }
 
-async function waitFor(condition: () => boolean | Promise<boolean>, timeoutMs = 20_000) {
+async function waitFor(
+  condition: () => boolean | Promise<boolean>,
+  timeoutMs = 20_000,
+  what = "condiția așteptată",
+) {
   const start = Date.now();
   while (!(await condition())) {
-    if (Date.now() - start > timeoutMs) throw new Error("timeout așteptând condiția");
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(`timeout de ${timeoutMs} ms așteptând: ${what}`);
+    }
     await new Promise((r) => setTimeout(r, 50));
   }
 }
@@ -357,8 +363,23 @@ describe("coada media pe disc local (Redis + Postgres reale)", () => {
     expect(job?.attemptsMade).toBe(1);
   });
 
-  it("regenerarea din original: variante noi, cele vechi se scot din storage", async () => {
-    const storage = localStorage();
+  it("regenerarea din original: variante noi, cele vechi se scot din storage (după ce rândul arată cele noi)", async () => {
+    const real = localStorage();
+    // Ștergerile sunt încetinite, ca ordinea să fie observabilă determinist: rândul trece la
+    // `ready` cu variantele NOI înainte ca vechile să dispară, niciodată invers (un rând nu
+    // trebuie să indice vreodată fișiere șterse).
+    const deleteDelayMs = 250;
+    const storage = new Proxy(real, {
+      get(target, prop, receiver) {
+        if (prop === "delete") {
+          return async (key: string) => {
+            await new Promise((r) => setTimeout(r, deleteDelayMs));
+            return target.delete(key);
+          };
+        }
+        return Reflect.get(target, prop, receiver) as unknown;
+      },
+    });
     const t = setup({ storage });
     const id = await t.createMedia();
     await enqueueMediaProcessing(t.queue, id);
@@ -379,9 +400,45 @@ describe("coada media pe disc local (Redis + Postgres reale)", () => {
     });
     const after = ((await t.row(id)).variants as unknown as StoredVariant[]).map((v) => v.key);
     expect(after).toHaveLength(9);
+    // rândul indică fișiere care EXISTĂ; cele vechi încă nu au fost șterse (ștergerea e după rând)
     for (const key of after) expect(await storage.stat(key)).not.toBeNull();
-    for (const key of before) expect(await storage.stat(key)).toBeNull();
-  });
+    expect(await storage.stat(before[0] as string)).not.toBeNull();
+
+    // apoi dispar toate cele vechi (ștergerea e best-effort, după actualizarea rândului): așteptăm pe condiție
+    await waitFor(
+      async () => (await Promise.all(before.map((key) => real.stat(key)))).every((s) => s === null),
+      30_000,
+      "variantele vechi nu au fost scoase din storage după regenerare",
+    );
+  }, 45_000);
+
+  it("regenerări cerute imediat după «ready», repetat: nicio cerere nu se pierde (rândul nu rămâne pending)", async () => {
+    // Cererea vine exact când jobul se termină (ștergerea variantelor vechi, apoi finalizarea):
+    // fereastra în care starea jobului poate fi `unknown`. De 8 ori la rând, cu lățimi diferite.
+    const storage = localStorage();
+    const t = setup({ storage });
+    const id = await t.createMedia(300, 150);
+    await enqueueMediaProcessing(t.queue, id);
+    await waitFor(async () => (await t.row(id)).status === "ready", 20_000, "prima procesare");
+
+    for (let i = 1; i <= 8; i++) {
+      const thumb = 40 + i * 4;
+      t.setSettings({ thumbWidth: thumb, mediumWidth: 120, largeWidth: 240 });
+      await requestMediaProcessing(
+        { store: createPrismaProcessingStore(db), queue: mediaJobQueue(t.queue) },
+        id,
+      );
+      await waitFor(
+        async () => {
+          const row = await t.row(id);
+          const widths = (row.variants as unknown as StoredVariant[]).map((v) => v.width);
+          return row.status === "ready" && widths.includes(thumb);
+        },
+        20_000,
+        `regenerarea ${i} (thumb ${thumb}) a rămas nepreluată`,
+      );
+    }
+  }, 60_000);
 
   it("o regenerare cerută cât jobul rulează încă NU se pierde și nu rulează în paralel cu el", async () => {
     const real = localStorage();

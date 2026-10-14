@@ -9,6 +9,9 @@ import { extractTokenLink, waitForEmail } from "./support/mailpit";
  * primește rolul de Suport și intră doar în ce are voie; la deconectare pierde accesul.
  * Parola se generează la fiecare rulare; contul `e2e-*@example.test` se șterge la final.
  */
+// Același motiv ca în `media.spec.ts`: la rece durează ~1,3 min singur, aproape de limita de 90 s.
+test.setTimeout(180_000);
+
 test("Faza 2 cap-coadă: înregistrare → email → login → fără admin → rol Suport → doar ce are voie → logout → sesiune expirată", async ({
   page,
   request,
