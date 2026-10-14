@@ -39,7 +39,8 @@ describe("seed de bază (Postgres real, în tranzacție anulată)", () => {
       const afterFirst = await counts();
       const second = await runBaseSeed(tx);
       const afterSecond = await counts();
-      return { first, second, afterFirst, afterSecond };
+      const webChannels = await tx.salesChannel.count({ where: { code: "web", isSystem: true } });
+      return { first, second, afterFirst, afterSecond, webChannels };
     });
 
     const expectedLinks = DEFAULT_ROLES.reduce((n, r) => n + r.permissions.length, 0);
@@ -52,12 +53,16 @@ describe("seed de bază (Postgres real, în tranzacție anulată)", () => {
       branding: 1,
     });
     expect(out.first.brandingCreated).toBe(true);
+    // canalul de sistem nu se golește (trigger): la prima rulare pe o bază nouă se creează, altfel există deja
+    expect(out.first.salesChannels).toBeLessThanOrEqual(1);
+    expect(out.webChannels).toBe(1);
     expect(out.second).toEqual({
       permissions: 0,
       roles: 0,
       rolePermissions: 0,
       settings: 0,
       featureFlags: 0,
+      salesChannels: 0,
       brandingCreated: false,
     });
     expect(out.afterSecond).toEqual(out.afterFirst);

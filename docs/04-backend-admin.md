@@ -36,6 +36,13 @@ Address           customerId, type, firstName, lastName, company, vatId, regCom,
                   phone, county, city, street, number, details, postalCode, country, isDefault
 ```
 
+### Reguli pentru schema bazei
+
+- **CHECK compus = comparații explicite pe NULL.** Un CHECK al cărui rezultat e NULL TRECE (NULL nu e fals). `(x IS NULL AND y IS NULL) OR (x BETWEEN 0 AND 9 AND y BETWEEN 0 AND 9)` acceptă `x = 5, y = NULL`, fiindcă a doua ramură dă NULL. Corect: `(x IS NULL AND y IS NULL) OR (x IS NOT NULL AND y IS NOT NULL AND x BETWEEN … AND y BETWEEN …)`. Fiecare CHECK compus are un test cu cazul „una setată, una nulă” (exemple: `parts_diagram_hotspot_position_check`, `channel_listing_salePrice_check`).
+- Enum-urile sunt `TEXT` cu CHECK în migrație, cu lista și în constanta din `@ecom/core` (un test verifică potrivirea).
+- Sumele sunt `int` în bani; procentele `int` în puncte de bază; măsurile fizice `int` (grame, milimetri); valorile tehnice zecimale `NUMERIC`, niciodată `float`.
+- Unicitatea fără diferență de majuscule și cea condiționată (soft delete, NULL în părinte) se scriu ca indecși parțiali în migrație.
+
 ### Catalog
 ```
 Product           slug, title, subtitle, description(rich), status(draft|active|archived),

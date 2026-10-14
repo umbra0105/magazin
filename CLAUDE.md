@@ -213,6 +213,7 @@ strică munca lui fără ca eu să observ.
 
 - Nu instala librării grele fără să întrebi.
 - Nu schimba schema Prisma fără migrație.
+- Orice CHECK compus din schema bazei folosește comparații explicite (`IS NULL` / `IS NOT NULL`) pe fiecare coloană și are un test cu cazul „una setată, una nulă”. Un CHECK cu rezultat NULL TRECE: `(x IS NULL AND y IS NULL) OR (x BETWEEN 0 AND 9 AND y BETWEEN 0 AND 9)` acceptă `x = 5, y = NULL`.
 - Nu scrie logică de business în componente React.
 - Nu adăuga microservicii, GraphQL sau abstractizări „pentru viitor".
 - Nu genera sute de fișiere deodată. Lucrează incremental, cu commit-uri.

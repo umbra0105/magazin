@@ -3,6 +3,7 @@ import { configFromPreset, DEFAULT_PRESET } from "../branding/presets";
 import { brandingConfigSchema } from "../branding/tokens";
 import { FEATURE_FLAGS, FEATURE_KEYS } from "../features/registry";
 import { DEFAULT_ROLES, PERMISSIONS, PERMISSION_KEYS } from "../rbac/catalog";
+import { WEB_CHANNEL_CODE } from "../channels/constants";
 import { getSettingSchema, listSettingKeys } from "../settings/registry";
 
 /** Delegatul de DB al seed-ului: un PrismaClient sau clientul unei tranzacții. */
@@ -17,6 +18,7 @@ export interface BaseSeedResult {
   rolePermissions: number;
   settings: number;
   featureFlags: number;
+  salesChannels: number;
   brandingCreated: boolean;
 }
 
@@ -82,6 +84,12 @@ export async function runBaseSeed(db: SeedDb): Promise<BaseSeedResult> {
     skipDuplicates: true,
   });
 
+  // Canalul de sistem „web” (magazinul propriu): creat la instalare, nu se șterge. Numele e editabil.
+  const salesChannels = await db.salesChannel.createMany({
+    data: [{ code: WEB_CHANNEL_CODE, name: "Magazin web", isSystem: true }],
+    skipDuplicates: true,
+  });
+
   let brandingCreated = false;
   if (!(await db.branding.findUnique({ where: { id: "default" } }))) {
     const config = brandingConfigSchema.parse(configFromPreset(DEFAULT_PRESET));
@@ -107,6 +115,7 @@ export async function runBaseSeed(db: SeedDb): Promise<BaseSeedResult> {
     rolePermissions: rolePermissions.count,
     settings: settings.count,
     featureFlags: featureFlags.count,
+    salesChannels: salesChannels.count,
     brandingCreated,
   };
 }

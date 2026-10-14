@@ -281,25 +281,26 @@ model Brand {
 /// Categorie într-un arbore (`parentId`). `path` = calea de slug-uri (ex. `pompe/pompe-filtrare`),
 /// `depth` = adâncimea (0 = rădăcină); ambele sunt calculate de serviciu, nu editate direct.
 model Category {
-  id                       String            @id @default(cuid())
+  id                       String                   @id @default(cuid())
   parentId                 String?
-  parent                   Category?         @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children                 Category[]        @relation("CategoryTree")
+  parent                   Category?                @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children                 Category[]               @relation("CategoryTree")
   slug                     String
   name                     String
   description              String?
-  path                     String            @unique
-  depth                    Int               @default(0)
-  sortOrder                Int               @default(0)
+  path                     String                   @unique
+  depth                    Int                      @default(0)
+  sortOrder                Int                      @default(0)
   /// Produsele din categorie costă prețul public pentru toate grupurile (`09` §1)
-  excludeFromGroupDiscount Boolean           @default(false)
+  excludeFromGroupDiscount Boolean                  @default(false)
   seoTitle                 String?
   seoDescription           String?
-  legacyId                 String?           @unique
+  legacyId                 String?                  @unique
   legacyUrl                String?
   products                 ProductCategory[]
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
+  channelMaps              ChannelCategoryMapping[]
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
 
   @@index([parentId])
   @@map("category")
@@ -364,6 +365,7 @@ model Product {
   relations                ProductRelation[]     @relation("ProductRelations")
   relatedTo                ProductRelation[]     @relation("RelatedProducts")
   documents                ProductDocument[]
+  channelListings          ChannelListing[]
   partsDiagrams            PartsDiagramProduct[]
   hotspots                 PartsDiagramHotspot[]
   createdAt                DateTime              @default(now())
@@ -427,6 +429,7 @@ model ProductVariant {
   manufacturerPartNumber String?
   manufacturerName       String?
   optionValues           VariantOptionValue[]
+  channelListings        ChannelListing[]
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
@@ -745,4 +748,81 @@ model PartsDiagramHotspot {
   @@unique([diagramId, number])
   @@index([productId])
   @@map("parts_diagram_hotspot")
+}
+
+// ---------------------------------------------------------------------------
+// Canale de vânzare (Faza 4, punctul 5): web (implicit) și, mai târziu, eMAG
+// ---------------------------------------------------------------------------
+
+/// Canal de vânzare. `web` e creat de seed (sistem, nu se șterge). `config` conține DOAR setări
+/// nesecrete; cheile API ale unui canal extern stau criptate în `Integration`, nu aici.
+/// `requiresEan`/`requiresBrand`: canalul cere EAN pe variantă și brand pe produs LA PUBLICARE
+/// (eMAG); în rest, ambele rămân opționale în catalog.
+model SalesChannel {
+  id            String                   @id @default(cuid())
+  code          String                   @unique
+  name          String
+  isActive      Boolean                  @default(true)
+  /// Canalul de sistem (`web`): nu se poate șterge (trigger în migrație)
+  isSystem      Boolean                  @default(false)
+  requiresEan   Boolean                  @default(false)
+  requiresBrand Boolean                  @default(false)
+  config        Json                     @default("{}")
+  listings      ChannelListing[]
+  categoryMaps  ChannelCategoryMapping[]
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@map("sales_channel")
+}
+
+/// Oferta unei variante pe un canal. `price`/`salePrice`/`stock` sunt valorile specifice canalului
+/// (nule = cele ale magazinului). Pentru canalul `web` nu se creează rânduri (oferta e catalogul însuși).
+model ChannelListing {
+  id                 String         @id @default(cuid())
+  channelId          String
+  channel            SalesChannel   @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  productId          String
+  product            Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId          String
+  variant            ProductVariant @relation(fields: [variantId, productId], references: [id, productId], onDelete: Cascade)
+  /// ID-ul ofertei la canal (eMAG: id-ul ofertei)
+  externalId         String?
+  /// Identificatorul produsului în catalogul canalului (eMAG: part_number_key)
+  externalProductKey String?
+  /// "draft" | "pending" | "active" | "rejected" | "inactive" (CHECK în migrație)
+  status             String         @default("draft")
+  price              Int?
+  salePrice          Int?
+  stock              Int?
+  /// Ce a respins canalul și de ce: [{ code, message, field? }]
+  validationErrors   Json           @default("[]")
+  lastSyncAt         DateTime?
+  /// "ok" | "error" (CHECK în migrație)
+  lastSyncStatus     String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@unique([channelId, variantId])
+  @@index([productId])
+  @@index([channelId, status])
+  @@map("channel_listing")
+}
+
+/// Maparea unei categorii proprii la categoria canalului și a atributelor la caracteristicile lui.
+model ChannelCategoryMapping {
+  id                 String       @id @default(cuid())
+  channelId          String
+  channel            SalesChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  categoryId         String
+  category           Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  externalCategoryId String
+  /// { "<codul atributului nostru>": "<caracteristica canalului>" }
+  characteristicsMap Json         @default("{}")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([channelId, categoryId])
+  @@index([categoryId])
+  @@map("channel_category_mapping")
 }

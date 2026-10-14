@@ -2,7 +2,7 @@
 
 ## 2026-10-14 · Sesiunea 5 · Faza 4 (Catalog), Promptul 5 — ÎN LUCRU
 **Terminat (confirmat de utilizator):** punctele 0 (curățare `e2e-*` la început + măsurare RSS) 0b (E2E pe build de producție; test unitar pentru randarea șabloanelor de email sub `tsx`) și 1 (schema catalogului, migrația `catalog_core` aplicată de utilizator pe baza de dezvoltare)
-**În lucru:** punctul 4 (câmpuri de nișă și pregătitoare) — [~], așteaptă confirmarea utilizatorului
+**În lucru:** punctul 5 (tabelele de canal și `ChannelProvider`) — [~], așteaptă confirmarea utilizatorului
 **Blocat:** —
 **Plan aprobat de utilizator** (16 puncte + punctul 0, în `docs/06-todo-master.md`). Propunere de `git push` (doar la cererea utilizatorului) după punctele 2, 6, 10 și 14.
 
@@ -22,6 +22,16 @@
 - `e2e/media.spec.ts`: pasul de mutare în folder căuta fișierul pe prima pagină a bibliotecii partajate (cădea cu încărcări paralele); acum îl găsește după etichetă (`?q=<tag>`)
 - `.gitignore`: `/local-data` (exportul WooCommerce al utilizatorului, `local-data/woocommerce-export.csv`, nu se comite)
 - CI: pasul „Build” rămâne (verifică build-ul fără harness); E2E își face propriul build în `.next-e2e`, deci CI-ul are un build în plus (~1 min)
+
+**Punctul 5 — canale de vânzare (migrația `20261014220000_sales_channels`, neaplicată pe baza de dezvoltare):**
+- **Regulă permanentă (cerere utilizator, în CLAUDE.md și `docs/04` „Reguli pentru schema bazei”):** orice CHECK compus folosește comparații explicite `IS NULL`/`IS NOT NULL` și are un test cu cazul „una setată, una nulă”. Aplicată la `channel_listing_salePrice_check` (promoția cere prețul canalului), cu test explicit
+- `sales_channel`: `code` stabil unic, `isSystem` (canalul `web`, protejat de trigger la DELETE), `requiresEan`/`requiresBrand` (ce cere canalul LA PUBLICARE), `config` JSON **nesecret** (cheile API ale canalului stau criptate în `Integration`). **Canalul `web` e creat de seed-ul de bază** (idempotent; `BaseSeedResult.salesChannels`), nu de migrație
+- `channel_listing`: o ofertă per (canal, variantă) (FK compus variantă-produs), `externalId` unic pe canal când e setat, stări draft/pending/active/rejected/inactive, `lastSyncStatus` ok/error, preț/promoție/stoc ale canalului (nule = cele ale magazinului), `validationErrors` JSON; canalul cu oferte nu se șterge (`Restrict`), oferta dispare cu produsul/varianta
+- `channel_category_mapping`: o mapare per (canal, categorie), `characteristicsMap` JSON; dispare cu categoria sau canalul
+- `ChannelProvider` în `@ecom/core/channels`: doar interfața și tipurile (publishListing, syncStock, syncPrice, fetchOrders, acknowledgeOrder, pushAwb, pushInvoice, fetchReturns); implementarea eMAG e Faza 22b, în `packages/integrations`
+- **Regula păstrată:** `validateForPublication(channel, { ean, brandId })` returnează `EAN_MISSING` / `BRAND_MISSING` doar când canalul le cere; catalogul rămâne cu ambele opționale
+- **`Order.channelId`/`externalId`/`externalData`: mutate la Faza 9** (acord utilizator)
+- Teste: 5 unitare (regula de publicare), 8 de integrare pe constrângeri și seed. Totaluri: unitare ✔ 608, integrare ✔ 255, E2E ✔ 42 (prod build), typecheck ✔, lint ✔
 
 **Punctul 4 — documente, fișe explodate, GPSR (migrația `20261014200000_catalog_documents_gpsr`, neaplicată pe baza de dezvoltare):**
 - **Sensul relațiilor (confirmat de utilizator, documentat în `docs/04`):** `productId` = principal, `relatedProductId` = asociat; `compatible_with` = principalul e compatibil cu cel asociat; relația NU e simetrică automat, iar adminul (punctul 9/11) o arată din ambele părți
