@@ -21,3 +21,24 @@ export type StockStatus = (typeof STOCK_STATUSES)[number];
 
 export const COST_PRICE_SOURCES = ["manual", "import"] as const;
 export type CostPriceSource = (typeof COST_PRICE_SOURCES)[number];
+
+export const COLLECTION_TYPES = ["manual", "automated"] as const;
+export type CollectionType = (typeof COLLECTION_TYPES)[number];
+
+export const ATTRIBUTE_TYPES = ["text", "number", "select", "bool"] as const;
+export type AttributeType = (typeof ATTRIBUTE_TYPES)[number];
+
+/**
+ * Tipurile de relație între produse. `productId` e produsul principal, `relatedProductId` cel asociat;
+ * `spare_part` = piesa de schimb a principalului, `compatible_with` = principalul e compatibil cu cel
+ * asociat.
+ */
+export const PRODUCT_RELATION_TYPES = [
+  "similar",
+  "accessory",
+  "upsell",
+  "crosssell",
+  "spare_part",
+  "compatible_with",
+] as const;
+export type ProductRelationType = (typeof PRODUCT_RELATION_TYPES)[number];

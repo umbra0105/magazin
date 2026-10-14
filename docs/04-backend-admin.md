@@ -60,11 +60,12 @@ Category          parentId, slug, name, description, image, path, depth, sortOrd
 ProductCategory   productId, categoryId, isPrimary
 Brand             slug, name, logo, description
 Collection        slug, name, type(manual|automated), rules(JSON)
-Attribute         code, name, type(text|number|select|bool), isFilterable, unit
-AttributeValue    productId, attributeId, value
+Attribute         code, name, type(text|number|select|bool), isFilterable, unit(doar number), sortOrder
+AttributeOption   attributeId, value, position            (valorile unui atribut select)
+AttributeValue    productId, attributeId, textValue|numberValue(NUMERIC 18,4)|boolValue|optionId (exact una)
 Media             url, key, mime, width, height, size, alt, folder
 ProductMedia      productId, variantId?, mediaId, position
-ProductRelation   productId, relatedId, type(similar|accessory|upsell|crosssell)
+ProductRelation   productId, relatedProductId, type(similar|accessory|upsell|crosssell|spare_part|compatible_with), position
 DigitalProduct    productId, deliveryType, accessType, accessDays, maxDownloads
 DigitalAsset      productId, title, type(video|file|link), storageKey,
                   fileSize, duration, position, isPreview
@@ -170,8 +171,8 @@ GiftCard          code, initialValue, balance, expiresAt, status
 ShippingZone      name, countries, counties, cities
 ShippingMethod    zoneId, name, carrier, type(flat|weight|price|free|pickup),
                   price, rules(JSON), freeAbove, codFee, estimatedDays, isActive
-TaxClass          name, isDefault
-TaxRate           taxClassId, country, rate, name, isCompound
+TaxClass          code, name, isDefault           (pregătită; neexpusă în admin, nu schimbă calculul: cota = tax.standardRate)
+TaxRate           taxClassId, rateBps(int, 2100 = 21%), validFrom
 ```
 
 ### CMS și marketing

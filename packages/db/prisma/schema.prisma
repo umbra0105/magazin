@@ -308,41 +308,50 @@ model Category {
 /// simplu are o singură variantă implicită). `slug` e unic printre produsele neșterse (index parțial în
 /// migrație). `deletedAt` = soft delete.
 model Product {
-  id                       String            @id @default(cuid())
+  id                       String              @id @default(cuid())
   slug                     String
   title                    String
   subtitle                 String?
   description              String?
   /// "draft" | "active" | "archived" (CHECK în migrație)
-  status                   String            @default("draft")
+  status                   String              @default("draft")
   /// "physical" | "digital" (CHECK în migrație)
-  type                     String            @default("physical")
+  type                     String              @default("physical")
   /// Opțional: magazinul poate să nu folosească mărci. Obligatoriu doar la publicarea pe un canal care îl cere (eMAG).
   brandId                  String?
-  brand                    Brand?            @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  brand                    Brand?              @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  /// Pregătit pentru cote reduse; nefolosit (vezi `TaxClass`). Calculul folosește `tax.standardRate`.
+  taxClassId               String?
+  taxClass                 TaxClass?           @relation(fields: [taxClassId], references: [id], onDelete: Restrict)
   /// "standard" | "oversized" | "pallet" (CHECK în migrație). Regulile pe clase vin la Faza 12.
-  shippingClass            String            @default("standard")
-  requiresInstallation     Boolean           @default(false)
+  shippingClass            String              @default("standard")
+  requiresInstallation     Boolean             @default(false)
   /// Valoarea implicită vine din setarea `inventory.manageStock`; aici e suprascrierea per produs.
-  manageStock              Boolean           @default(true)
+  manageStock              Boolean             @default(true)
   /// "instock" | "outofstock" | "onbackorder" (CHECK); folosit când `manageStock = false`
-  stockStatus              String            @default("instock")
-  excludeFromGroupDiscount Boolean           @default(false)
+  stockStatus              String              @default("instock")
+  excludeFromGroupDiscount Boolean             @default(false)
   seoTitle                 String?
   seoDescription           String?
   publishedAt              DateTime?
-  sortOrder                Int               @default(0)
-  metadata                 Json              @default("{}")
-  legacyId                 String?           @unique
+  sortOrder                Int                 @default(0)
+  metadata                 Json                @default("{}")
+  legacyId                 String?             @unique
   legacyUrl                String?
   deletedAt                DateTime?
   variants                 ProductVariant[]
   categories               ProductCategory[]
   media                    ProductMedia[]
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
+  options                  ProductOption[]
+  attributes               AttributeValue[]
+  collections              CollectionProduct[]
+  relations                ProductRelation[]   @relation("ProductRelations")
+  relatedTo                ProductRelation[]   @relation("RelatedProducts")
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
 
   @@index([brandId])
+  @@index([taxClassId])
   @@index([status])
   @@index([deletedAt])
   @@map("product")
@@ -366,10 +375,10 @@ model ProductCategory {
 /// achiziție NET (fără TVA), ⚠️ DOAR pentru admin (`products.cost.view`): niciodată în API public, props
 /// către componente client, feed-uri, snapshot de comandă sau loguri.
 model ProductVariant {
-  id             String             @id @default(cuid())
+  id             String               @id @default(cuid())
   productId      String
-  product        Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sku            String             @unique
+  product        Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku            String               @unique
   /// GTIN (8-14 cifre). Nu e NOT NULL în bază (draft-uri, import); obligatoriu la publicarea pe eMAG.
   ean            String?
   /// Garanția în luni. Nu e NOT NULL în bază (valoarea implicită e o decizie de business); obligatorie la eMAG.
@@ -389,14 +398,15 @@ model ProductVariant {
   manageStock    Boolean?
   /// "instock" | "outofstock" | "onbackorder" (CHECK); suprascrie `Product.stockStatus` (null = moștenește)
   stockStatus    String?
-  position       Int                @default(0)
-  isDefault      Boolean            @default(false)
-  legacyId       String?            @unique
+  position       Int                  @default(0)
+  isDefault      Boolean              @default(false)
+  legacyId       String?              @unique
   media          ProductMedia[]
   costHistory    CostPriceHistory[]
   priceHistory   PriceHistory[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  optionValues   VariantOptionValue[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
   @@unique([id, productId])
   @@index([productId])
@@ -452,4 +462,190 @@ model ProductMedia {
   @@index([variantId])
   @@index([mediaId])
   @@map("product_media")
+}
+
+// ---------------------------------------------------------------------------
+// Catalog (Faza 4, punctul 3): opțiuni, colecții, atribute, relații, clase de taxare
+// ---------------------------------------------------------------------------
+
+/// Opțiune de variantă (ex. „Mărime”, „Culoare”) a unui produs. Numele e unic per produs (fără
+/// diferență de majuscule, index parțial în migrație).
+model ProductOption {
+  id        String               @id @default(cuid())
+  productId String
+  product   Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int                  @default(0)
+  values    OptionValue[]
+  variants  VariantOptionValue[]
+
+  @@unique([id, productId])
+  @@index([productId, position])
+  @@map("product_option")
+}
+
+model OptionValue {
+  id       String               @id @default(cuid())
+  optionId String
+  option   ProductOption        @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  value    String
+  position Int                  @default(0)
+  variants VariantOptionValue[]
+
+  @@unique([id, optionId])
+  @@index([optionId, position])
+  @@map("option_value")
+}
+
+/// Valoarea unei opțiuni pentru o variantă. Cheile compuse garantează în bază că varianta, opțiunea și
+/// valoarea sunt ale aceluiași produs și că o variantă are cel mult o valoare per opțiune (PK).
+model VariantOptionValue {
+  variantId     String
+  productId     String
+  optionId      String
+  optionValueId String
+  variant       ProductVariant @relation(fields: [variantId, productId], references: [id, productId], onDelete: Cascade)
+  option        ProductOption  @relation(fields: [optionId, productId], references: [id, productId], onDelete: Cascade)
+  value         OptionValue    @relation(fields: [optionValueId, optionId], references: [id, optionId], onDelete: NoAction)
+
+  @@id([variantId, optionId])
+  @@index([optionValueId])
+  @@map("variant_option_value")
+}
+
+/// Colecție de produse: `manual` (listă în `CollectionProduct`) sau `automated` (reguli în `rules`,
+/// evaluate de storefront în Faza 7).
+model Collection {
+  id             String              @id @default(cuid())
+  slug           String
+  name           String
+  description    String?
+  /// "manual" | "automated" (CHECK în migrație)
+  type           String              @default("manual")
+  rules          Json                @default("{}")
+  sortOrder      Int                 @default(0)
+  seoTitle       String?
+  seoDescription String?
+  legacyId       String?             @unique
+  products       CollectionProduct[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@map("collection")
+}
+
+model CollectionProduct {
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  position     Int        @default(0)
+
+  @@id([collectionId, productId])
+  @@index([productId])
+  @@map("collection_product")
+}
+
+/// Atribut tehnic. `type` = text | number | select | bool. Cele `number` au unitate de măsură (`unit`:
+/// m³/h, kW, m³) și, dacă `isFilterable`, se filtrează pe interval (slider) în Faza 7; valorile se
+/// stochează ca numere exacte (`numberValue`), nu ca text. `code` e cheia stabilă (import, filtre).
+model Attribute {
+  id           String            @id @default(cuid())
+  code         String            @unique
+  name         String
+  /// "text" | "number" | "select" | "bool" (CHECK în migrație)
+  type         String
+  /// Doar la `number` (CHECK în migrație)
+  unit         String?
+  isFilterable Boolean           @default(false)
+  sortOrder    Int               @default(0)
+  options      AttributeOption[]
+  values       AttributeValue[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@map("attribute")
+}
+
+/// Valoare permisă a unui atribut de tip `select`.
+model AttributeOption {
+  id          String           @id @default(cuid())
+  attributeId String
+  attribute   Attribute        @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  value       String
+  position    Int              @default(0)
+  values      AttributeValue[]
+
+  @@unique([id, attributeId])
+  @@index([attributeId, position])
+  @@map("attribute_option")
+}
+
+/// Valoarea unui atribut pe un produs. Exact UNA dintre `textValue`, `numberValue`, `boolValue`,
+/// `optionId` e setată (CHECK), iar un trigger din migrație cere ca ea să corespundă tipului atributului.
+/// `numberValue`: NUMERIC(18,4), exact (nu `float`).
+model AttributeValue {
+  id          String           @id @default(cuid())
+  productId   String
+  product     Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeId String
+  attribute   Attribute        @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+  textValue   String?
+  numberValue Decimal?         @db.Decimal(18, 4)
+  boolValue   Boolean?
+  optionId    String?
+  option      AttributeOption? @relation(fields: [optionId, attributeId], references: [id, attributeId], onDelete: Restrict)
+
+  @@unique([productId, attributeId])
+  @@index([attributeId, numberValue])
+  @@index([attributeId, optionId])
+  @@map("attribute_value")
+}
+
+/// Relație între produse. Sensul: `productId` e produsul „principal”, `relatedProductId` cel asociat:
+/// `accessory` / `upsell` / `crosssell` / `similar` (ale produsului principal), `spare_part` (piesa de
+/// schimb a produsului principal) și `compatible_with` (produsul principal e compatibil cu cel asociat).
+model ProductRelation {
+  id               String   @id @default(cuid())
+  productId        String
+  product          Product  @relation("ProductRelations", fields: [productId], references: [id], onDelete: Cascade)
+  relatedProductId String
+  relatedProduct   Product  @relation("RelatedProducts", fields: [relatedProductId], references: [id], onDelete: Cascade)
+  /// "similar" | "accessory" | "upsell" | "crosssell" | "spare_part" | "compatible_with" (CHECK)
+  type             String
+  position         Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  @@unique([productId, relatedProductId, type])
+  @@index([relatedProductId])
+  @@map("product_relation")
+}
+
+/// Clasă de taxare, PREGĂTITĂ pentru cote reduse pe viitor. DECIZIE (utilizator, Faza 4): produsele
+/// folosesc doar cota standard din setarea `tax.standardRate` (21%); `TaxClass`/`TaxRate` nu sunt
+/// expuse în admin, nu schimbă calculul prețurilor și nu se seedează nicio cotă (nimic hardcodat).
+model TaxClass {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  isDefault Boolean   @default(false)
+  rates     TaxRate[]
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("tax_class")
+}
+
+/// Cota unei clase de taxare, în puncte de bază (`2100` = 21%), valabilă de la `validFrom`.
+model TaxRate {
+  id         String   @id @default(cuid())
+  taxClassId String
+  taxClass   TaxClass @relation(fields: [taxClassId], references: [id], onDelete: Cascade)
+  rateBps    Int
+  validFrom  DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([taxClassId, validFrom])
+  @@map("tax_rate")
 }
