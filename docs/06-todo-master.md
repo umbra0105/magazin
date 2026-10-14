@@ -24,7 +24,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Întrebările pentru contabil din `10-decizii-deschise.md` Partea III (acum 14): răspunsurile primite sunt în `10`. **Rămân 🟡 deschise** #8 (voucher), #9 (TVA pe puncte) și valabilitatea voucherelor, de rezolvat până la Faza 15b; plus decizia despre digitalul din comanda mixtă cu ramburs, până la Faza 14b
 - [ ] Cumpără domeniul pentru instalarea de test _(necesar în Faza 10 pentru webhook-urile de plată în sandbox, dacă nu folosești un tunel; cel târziu Faza 21)_
 - [ ] Alege 3-5 magazine de referință pentru UX _(necesar în Faza 6)_
-- [ ] **Exportă produsele din site-ul existent** și verifică ce coloane obții _(necesar în Faza 4, la punctul de import CSV)_
+- [ ] **Exportă produsele din WordPress/WooCommerce** (CSV standard de export) și verifică ce coloane obții _(necesar în Faza 4, la punctul de import CSV)_
 - [ ] Pregătește 20 de produse reale pentru datele demo _(necesar în Faza 4, la testarea importului; cel târziu Faza 7)_
 
 ## FAZA 1 — Fundație · ~3-4 zile
@@ -77,34 +77,27 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] (8) Teste E2E, verificare manuală cap-coadă (`docs/FAZA-3-verificare-manuala.md`) și închiderea fazei (TODO, PROGRESS). **Include un test E2E de upload care rulează pe driverul S3 din CI** (serverul E2E cu `STORAGE_DRIVER=s3` pe MinIO, bucket creat cu `pnpm storage:init` în workflow; bucket cu „test” în nume), ca problemele care apar doar pe configurația reală (bucket lipsă, credențiale, path-style) să nu mai scape
 
 ## FAZA 4 — Catalog: model și admin · ~8-10 zile
-- [ ] ⚠️ **Provider de utilizare media pentru produse (cerință explicită, cu test):** `ProductMediaUsageProvider` (`MediaUsageProvider` din `@ecom/core`, înregistrat prin `getMediaUsageRegistry()`) care raportează, pentru fiecare fișier, produsele și variantele care îl referă prin `ProductMedia`. **Înregistrarea se face înaintea oricărei funcții care permite produselor să refere fișiere din bibliotecă** (selector, import CSV cu imagini prin URL). Test obligatoriu: un fișier folosit de un produs nu se poate șterge (refuz cu lista produselor, cu link spre produs), iar după ce e scos din produs se poate șterge; și un test care pică dacă `ProductMedia` există, dar providerul nu e înregistrat
-- [ ] ⚠️ **Permisiune separată pentru conținutul produsului** (ex. `products.content.write`): rolul Editor trebuie să poată edita descrierea și SEO-ul unui produs FĂRĂ să poată schimba prețuri, stoc sau costuri. De decis numele și maparea pe roluri (decizie utilizator); `products.write` rămâne pentru prețuri/variante. Actualizează catalogul RBAC, matricea din `docs/04` și testele
-- [ ] Schema: Product, Variant, Option, OptionValue, Category, Brand, Collection, Attribute, Media, ProductRelation, PriceHistory, TaxClass, TaxRate
-- [ ] Câmp `excludeFromGroupDiscount` pe produs și pe categorie
-- [ ] **`costPrice` (int, bani, FĂRĂ TVA) și `costPriceDate` pe variantă** + tabela `CostPriceHistory` (`09` §1). **Doar în admin**: nu apar în API public, props către componente client, feed-uri, `OrderLine.productSnapshot` sau loguri (adaugă `costPrice` în lista de câmpuri mascate din logger); permisiuni `products.cost.view` / `products.cost.edit`
-- [ ] Câmpurile de cost în tab-ul „Prețuri" al editorului de produs, vizibile doar cu permisiune (importul NIR vine în Faza 15)
-- [ ] **Clase de transport**: `weight`, `dimensions`, `shippingClass` (**doar `standard` / `oversized`**) — prețul vine din API-ul curierului (`15` §1)
-- [ ] Bifa `requiresInstallation` pe produs (`15` §4)
-- [ ] **Tab „Documente" pe produs** (`ProductDocument`: etichetă energetică, fișă tehnică, manual, CE) + `energyClass` și `eprelUrl` (`15` §2)
-- [ ] **Fișă explodată, varianta A**: `PartsDiagram` + tabel numerotat. Tabela `PartsDiagramHotspot` se creează acum, se folosește în Val 2 (`15` §5.2)
-- [ ] **Atribute numerice cu unitate de măsură**, filtrabile pe interval (`15` §3)
-- [ ] Relații `spare_part` și `compatible_with`, pe lângă `accessory` și `upsell`
-- [ ] Câmpuri pregătitoare: `expectedRestockDate`, `allowBackorder`, `Order.parentSubscriptionId`
-- [ ] **`manageStock` + `stockStatus`** pe produs: urmărire cantitativă SAU doar „în stoc / nu"
-- [ ] Tip de produs `physical` / `digital`
-- [ ] `manufacturerPartNumber` și `manufacturerName` pe variantă (piese de schimb)
-- [ ] Câmpuri pregătitoare pentru eMAG: `ean` și `warrantyMonths` pe variantă, `brandId` obligatoriu
-- [ ] **Tabelele de canal** (`SalesChannel`, `ChannelListing`, `ChannelCategoryMapping`) + interfața `ChannelProvider` — vezi `12` §5. ~1 zi acum, salvează săptămâni mai târziu.
-- [ ] Câmpuri GPSR (producător, persoană responsabilă UE, avertismente)
-- [ ] Categorii: arbore drag & drop, imagine, SEO
-- [ ] Branduri: CRUD
-- [ ] Editor produs pe taburi (General, Media, Prețuri, Variante, Stoc, Atribute, Categorii, SEO, GPSR, Asociate)
-- [ ] Generator de variante din opțiuni, editare în tabel
-- [ ] Listă produse cu filtre, căutare, editare inline, editare în masă
-- [ ] Duplicare, arhivare, soft delete
-- [ ] Import/export CSV + XLSX cu mapare, dry-run, raport de erori pe rând
-- [ ] ⚠️ **Import robust pentru migrarea celor ~500 de produse din site-ul vechi**: imagini prin URL, creare automată de categorii și branduri, atribute din coloane dinamice, toleranță la date murdare, import repetabil fără duplicate, reluabil după întrerupere
-- [ ] Șablon CSV descărcabil, documentat
+
+> **Plan aprobat de utilizator (Promptul 5).** Numerotarea de mai jos e cea din plan; un commit per punct. Propunere de `git push` (doar la cererea utilizatorului) după punctele 2, 6, 10 și 14.
+> **Decizii (utilizator):** `products.content.write` pentru Editor, Manager, Admin, Owner (descriere, SEO, media, documente; serverul respinge câmpurile de preț/stoc/cost, cu test explicit; matricea din `docs/04` §6 se actualizează la punctul 7) · `shippingClass` = `standard` / `oversized` / `pallet` (fără `requiresPalletDelivery`; regulile de preț și curier pe clase la Faza 12) · `ean` și `warrantyMonths` pe VARIANTĂ, cu editare comodă pe produs când are o singură variantă · migrarea e din **WordPress/WooCommerce** (nu OpenCart) · `legacyId`/`legacyUrl` pe produse, categorii, branduri (redirecționări 301 în Faza 17) · `PriceHistory` proiectat pentru „cel mai mic preț din ultimele 30 de zile” (Omnibus), cu test pe calcul.
+
+- [~] (0) Curățarea conturilor `e2e-*` la ÎNCEPUTUL rulării (E2E și integrare, cu garda de bază de test) + măsurarea RSS a serverului de test pe parcursul suitei (script mic, fără modificări în aplicație). Build de producție pentru E2E doar dacă măsurarea arată o problemă reală
+- [ ] (1) Schema `Product`, `ProductVariant`, `ProductMedia` + migrația (`ean`, `warrantyMonths`, `manageStock`/`stockStatus`, `type` physical/digital, `legacyId`/`legacyUrl`)
+- [ ] (2) ⚠️ **Provider de utilizare media pentru produse (cerință explicită, cu test):** `ProductMediaUsageProvider` (`MediaUsageProvider` din `@ecom/core`, înregistrat prin `getMediaUsageRegistry()`) care raportează, pentru fiecare fișier, produsele și variantele care îl referă prin `ProductMedia`. **Înregistrarea se face înaintea oricărei funcții care permite produselor să refere fișiere din bibliotecă** (selector, import CSV cu imagini prin URL). Test obligatoriu: un fișier folosit de un produs nu se poate șterge (refuz cu lista produselor, cu link spre produs), iar după ce e scos din produs se poate șterge; și un test care pică dacă `ProductMedia` există, dar providerul nu e înregistrat
+- [ ] (3) Schema restului catalogului: `Category`, `Brand`, `Collection`, `Attribute`/`AttributeValue` (numerice cu unitate, filtrabile pe interval, `15` §3), `ProductRelation` (`accessory`, `upsell`, `spare_part`, `compatible_with`), `TaxClass`/`TaxRate` (generice), opțiuni și valori de opțiune, `PriceHistory` (proiectat pentru „cel mai mic preț din ultimele 30 de zile”, cu test), `excludeFromGroupDiscount` pe produs și categorie, `legacyId`/`legacyUrl` pe categorii și branduri
+- [ ] (4) Câmpuri de nișă și pregătitoare: `weight`, `dimensions`, `shippingClass` (`standard`/`oversized`/`pallet`), `requiresInstallation` (`15` §4), `ProductDocument` + `energyClass`/`eprelUrl` (`15` §2), `PartsDiagram` + `PartsDiagramHotspot` (`15` §5.2), GPSR, `expectedRestockDate`, `allowBackorder`, `Order.parentSubscriptionId`, `manufacturerPartNumber`/`manufacturerName` pe variantă, `brandId` obligatoriu
+- [ ] (5) Tabelele de canal (`SalesChannel`, `ChannelListing`, `ChannelCategoryMapping`), canalul `web` implicit, interfața `ChannelProvider` (schelet, `12` §5), `channelId`/`externalId`/`externalData` pe `Order`
+- [ ] (6) **`costPrice` (int, bani, FĂRĂ TVA) și `costPriceDate` pe variantă** + `CostPriceHistory` (`09` §1). **Doar în admin**: nu apar în API public, props către componente client, feed-uri, `OrderLine.productSnapshot` sau loguri (`costPrice` în câmpurile mascate din logger); `products.cost.view` / `products.cost.edit`; test care garantează că nu apar în nicio proiecție publică
+- [ ] (7) ⚠️ **Permisiune separată pentru conținutul produsului:** `products.content.write` (Editor, Manager, Admin, Owner). `products.write` rămâne pentru prețuri/stoc/cost/variante. Serverul respinge câmpurile de preț, stoc și cost trimise de cineva cu doar `content.write` (test explicit). Actualizează catalogul RBAC, matricea din `docs/04` §6 și testele
+- [ ] (8) Servicii în `packages/core`: slug unic (cu sufix la coliziune), generator de variante, validări Zod, `auditLog`, invalidare cache; teste pe slug și pe variante
+- [ ] (9) Admin: categorii (arbore drag & drop, imagine, SEO) și branduri (CRUD)
+- [ ] (10) Admin: listă de produse cu filtre, căutare, paginare, editare inline și în masă (preț ±%, status, categorie)
+- [ ] (11) Admin: editor de produs pe taburi (General, Prețuri, Variante, Stoc, Atribute, Categorii, SEO, GPSR, Asociate, Documente); generator de variante din opțiuni cu editare în tabel; `ean`/`warrantyMonths` editabile direct pe produs când are o singură variantă; câmpurile de cost în tab-ul „Prețuri”, doar cu permisiune
+- [ ] (12) Tab-ul Media cu `MediaPicker` (primul consumator real; abia după punctul 2) 
+- [ ] (13) Duplicare, arhivare, soft delete
+- [ ] (14) Import/export CSV + XLSX generic, cu mapare de coloane, dry-run, raport de erori pe rând, upsert pe SKU, șablon CSV descărcabil și documentat
+- [ ] (15) ⚠️ **Profil de import WooCommerce** (peste formatul generic) pentru migrarea celor ~500 de produse: CSV standard de export (Type simple/variable/variation, Parent, SKU, Name, Description, Regular price, Sale price, Categories ierarhice, Tags, Images ca URL-uri, atribute), prețuri cu sau fără TVA (conversie cu cota din setări), creare automată de categorii și branduri, atribute din coloane dinamice, date murdare, import repetabil fără duplicate, reluabil, `legacyId`/`legacyUrl`. **Import de imagini prin URL cu protecție SSRF obligatorie:** doar https, listă de domenii permise configurabilă, refuz pentru adrese private/locale/metadata, limită de redirecționări, limită de mărime și tip, același pipeline de validare ca la upload (tip real din octeți, re-codificare, variante prin queue); test pentru fiecare refuz. Eșantionul real de 20 de produse vine de la utilizator înainte de acest punct
+- [ ] (16) E2E, verificare manuală cap-coadă (`docs/FAZA-4-verificare-manuala.md`) și închiderea fazei (TODO, PROGRESS)
 
 ## FAZA 5 — Stoc · ~3 zile
 - [ ] Schema: Warehouse, InventoryItem, StockMovement, StockReservation, BackInStockAlert
@@ -160,7 +153,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] **Tarife cerute în timp real de la API-ul agregatorului**, cu cache scurt și fallback pe taxă fixă dacă API-ul e picat
 - [ ] Pragul de transport gratuit **dezactivabil per clasă de transport și per produs**
 - [ ] **Cerere de ofertă instalare** în checkout: bifă nebifată implicit + câmp de observații, fără impact pe total (`15` §4)
-- [ ] Blocare automată a easybox-ului dacă în coș există un produs `oversized`
+- [ ] Blocare automată a easybox-ului dacă în coș există un produs `oversized` (sau `pallet`)
 - [ ] Mesaj explicit despre livrarea la nivelul solului, fără descărcare
 - [ ] Seed cu județele și localitățile din România (SIRUTA)
 - [ ] UI checkout pe pași accordion (`03-frontend.md` §2)
@@ -198,6 +191,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Emailul de confirmare conține informațiile precontractuale cerute de lege
 
 ## FAZA 12 — Livrare și AWB (agregator + Sameday) · ~5-6 zile
+- [ ] ⚠️ **Reguli de preț și de curier pe clase de transport** (`standard` / `oversized` / `pallet`, `shippingClass` din Faza 4): ce curier/serviciu primește `pallet`, dacă prețul vine tot din API, prag de transport gratuit per clasă, blocarea easybox-ului. De decis cu utilizatorul înainte de implementare
 - [ ] Interfață `ShippingProvider`
 - [ ] **Adaptor wootPRO**: AWB, etichetă, tracking, anulare, puncte de ridicare, tarife în timp real
 - [ ] **Adaptor Sameday direct**: pentru clienții cu contract propriu + **easybox cu hartă în checkout**
@@ -310,6 +304,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Feed Google Merchant + Facebook
 - [ ] GA4 + Meta Pixel + CAPI server-side, cu consimțământ
 - [ ] Sitemap dinamic, robots, structured data complet, redirect-uri 301
+- [ ] ⚠️ **Redirecționări 301 din adresele vechi WooCommerce la lansare** (din `legacyUrl` păstrat pe produse, categorii și branduri din Faza 4): tabel de redirecționări, test pe fiecare tip, raport de adrese vechi fără corespondent
 - [ ] Audit SEO intern în admin
 
 ## FAZA 18 — Instalator și neutralitate white-label · ~5-6 zile 🔑

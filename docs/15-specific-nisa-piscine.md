@@ -16,12 +16,13 @@ Observația ta e corectă și taie mult din plan. O pompă de 60 kg, 120×50×60
 
 **Deci: ceri prețul în timp real de la API-ul agregatorului**, trimițând greutatea reală și dimensiunile. Curierul calculează, tu afișezi. Zero tabele de tarife de întreținut, zero discrepanțe între ce afișezi și ce plătești.
 
-**De la patru clase de transport rămân două:**
+**Clase de transport (decizie utilizator, Faza 4: TREI valori):**
 
 | Clasă | Ce înseamnă |
 |---|---|
 | `standard` | Merge la easybox și la curier normal |
 | `oversized` | **Doar la adresă** — easybox-ul se ascunde automat. Prețul vine tot din API |
+| `pallet` | Produs livrat pe palet; clasă dedicată, înlocuiește `requiresPalletDelivery`. Ca și `oversized`, nu merge la easybox. **Regulile de preț și de curier pe clasă se stabilesc la Faza 12** (nimic implementat în Faza 4) |
 
 Bifa `oversized` rămâne necesară indiferent de preț: o pompă de 60 kg nu încape într-un locker, oricât de ieftin ar fi transportul.
 

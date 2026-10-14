@@ -40,7 +40,8 @@ Address           customerId, type, firstName, lastName, company, vatId, regCom,
 ```
 Product           slug, title, subtitle, description(rich), status(draft|active|archived),
                   brandId, taxClassId, type(physical|digital),
-                  requiresInstallation, shippingClass(standard|oversized),
+                  requiresInstallation, shippingClass(standard|oversized|pallet),
+                  legacyId?, legacyUrl?,
                   energyClass?, eprelUrl?,
                   manageStock(bool), stockStatus(instock|outofstock|onbackorder)
                   excludeFromGroupDiscount, warrantyMonths,

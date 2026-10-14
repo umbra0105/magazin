@@ -43,7 +43,7 @@ Fiecare fază are mai multe sesiuni. Estimările sunt orientative — unele vor 
 | **2** Autentificare | 2 | 3 | Te loghezi în `/admin`, roluri funcționale |
 | **3** Media | 2 | 4 | Încarci o imagine, se procesează, o vezi în bibliotecă |
 | **4** Catalog | 5-6 | 5 | Creezi un produs cu variante, imagini, atribute, documente |
-| **4** Import | 2 | 6 | **Imporți produsele din site-ul vechi** prin CSV |
+| **4** Import | 2 | 6 | **Imporți produsele din WooCommerce** prin CSV |
 | **5** Stoc | 2 | 7 | Bifa de gestiune stoc funcționează în ambele moduri |
 | **6** Design system | 3 | 8 | Header, footer, temă din admin, culori care se schimbă |
 | **7** Storefront | 4-5 | 9 | Vezi produsele pe site, filtrezi, deschizi o pagină de produs |
@@ -256,7 +256,7 @@ Nu sta să aștepți codul. Astea nu depind de Claude Code și îți economisesc
 | Când | Ce faci |
 |---|---|
 | Săptămâna 1 | Cele 11 întrebări pentru contabil. Deschizi conturile de test. |
-| Săptămânile 1-4 | **Exporți produsele din site-ul vechi** și le pregătești în format CSV |
+| Săptămânile 1-4 | **Exporți produsele din WooCommerce** și le pregătești în format CSV |
 | Săptămânile 2-8 | Descrieri, fotografii, specificații tehnice, fișe tehnice, etichete energetice |
 | Săptămânile 4-8 | Filmezi tutorialele video |
 | Săptămâna 8+ | Textele legale la avocat, pornind de la template-urile generate |

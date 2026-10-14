@@ -148,7 +148,7 @@ Admin:
 - Generator de variante din opțiuni, cu editare în tabel (preț, SKU, stoc, imagine)
 - Editare în masă (preț ±%, status, categorie)
 - Duplicare, arhivare, soft delete
-- Slug generat automat din titlu, editabil, unic per tenant
+- Slug generat automat din titlu, editabil, unic (nu există tenant: o instalare = un magazin)
 
 Adaugă și:
 - `Product.type` = physical | digital
@@ -158,7 +158,7 @@ Adaugă și:
 - `ProductVariant.costPrice` (int, în bani, FĂRĂ TVA, prețul de achiziție NIR) și `costPriceDate`, plus tabela `CostPriceHistory`. ⚠️ DOAR admin: niciodată în API public, props către componente client, feed-uri, `OrderLine.productSnapshot` sau loguri (adaugă `costPrice` la câmpurile mascate din logger). Permisiuni `products.cost.view` / `products.cost.edit`; câmpurile apar în tab-ul „Prețuri" doar cu permisiune. Importul NIR vine în Faza 15 (Promptul 21)
 - `ProductVariant.ean`, `Product.warrantyMonths` (obligatorii pentru eMAG mai târziu)
 - Specificul nișei (docs/15-specific-nisa-piscine.md): `weight`, `dimensions`,
-  `shippingClass` (standard|oversized|pallet|freight), `requiresPalletDelivery`,
+  `shippingClass` (standard|oversized|pallet; fără `requiresPalletDelivery`), `legacyId`/`legacyUrl`,
   `energyClass`, `energyLabelUrl`, `productSheetUrl`, `eprelId`
 - Atribute NUMERICE cu unitate de măsură (m³/h, kW, m³), filtrabile pe interval
 - Relații de produs: `spare_part` și `compatible_with`, pe lângă `accessory`/`upsell`
@@ -172,12 +172,13 @@ La fiecare salvare: auditLog + revalidateTag pentru paginile afectate.
 Scrie teste pentru generarea de variante și pentru unicitatea slug-urilor.
 ```
 
-### Prompt 6 — Import/export produse (migrarea din site-ul vechi)
+### Prompt 6 — Import/export produse (migrarea din WordPress/WooCommerce)
 ```
 Implementează import și export de produse.
 
 ⚠️ CONTEXT: acest import va fi folosit pentru migrarea a ~500 de produse dintr-un
-magazin existent. Se importă DOAR produsele — fără clienți, fără comenzi, fără
+magazin WordPress/WooCommerce (profil de import dedicat peste formatul generic; prețurile
+pot fi cu sau fără TVA, conversie cu cota din setări). Se importă DOAR produsele — fără clienți, fără comenzi, fără
 redirect-uri de URL. Fă-l robust: va rula pe date reale, murdare, de la început.
 
 - Export CSV și XLSX cu toate câmpurile, filtrabil (categorie, status, brand)
@@ -310,7 +311,7 @@ gratuit peste prag, ridicare personală), taxă de ramburs, estimare zile.
 SPECIFIC NIȘEI (docs/15 §1) — produsele sunt grele și voluminoase:
 - calculează GREUTATEA VOLUMETRICĂ ((L×l×h)/5000) și tarifează pe cea mai mare
   dintre greutatea reală și cea volumetrică
-- clase de transport per produs: standard / oversized / pallet / freight
+- clase de transport per produs: standard / oversized / pallet
 - „Livrare pe palet" ca metodă separată, cu preț și termen proprii
 - ascunde automat easybox-ul dacă în coș există un produs `oversized`
 - afișează explicit: livrarea se face la adresă, la nivelul solului, descărcarea

@@ -15,7 +15,7 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | ✅ | Livrare prin **Docker Compose** (pachet software, nu are legătură cu curierii) |
 | ✅ | **TU faci instalarea la client**, nu clientul singur. Instalatorul poate fi mai simplu: verificări de bază, fără „prost-rezistență" extremă. Economie: ~2-3 zile |
 | ✅ | **Primul magazin lansat e al tău.** Deci: construiești întâi magazinul funcțional, îl lansezi, abia apoi îl transformi în pachet instalabil |
-| ✅ | **Migrare din site-ul existent: doar produsele**, prin import CSV. Fără clienți, fără comenzi, fără redirect-uri de URL |
+| ✅ | **Migrare din WordPress/WooCommerce (nu din OpenCart): doar produsele**, prin import CSV/XLSX, cu profil dedicat WooCommerce peste formatul generic. Fără clienți, fără comenzi. **Redirecționări 301 din adresele vechi la lansare: DA** (decizie utilizator, Faza 4): produsele, categoriile și brandurile păstrează `legacyId` și `legacyUrl` (implementare în Faza 17). Prețurile din WooCommerce pot fi cu sau fără TVA: importul convertește cu cota din setări. Eșantion real de 20 de produse și clarificări (TVA, plugin-uri brand/EAN/SEO) vin de la utilizator înainte de punctul 12 |
 | ✅ | Catalog: **~500 de produse publicate** (din portofoliu de ~1.000) → **Postgres FTS e suficient**, fără Meilisearch în Val 1 |
 
 ## Prețuri
@@ -85,7 +85,7 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | ✅ | **Editor de temă Nivel 2**: culori, fonturi, logo, radius, variante de header și footer, layout de card, lățimi, dark mode, CSS custom, preview live (~6 zile) |
 | ✅ | Ai produse **peste 50 kg și 150 cm** → patru clase de transport, inclusiv palet și „cere ofertă" |
 | ✅ | **Cerere de ofertă instalare**, nu produs: bifă pe produs → bifă în checkout → contact telefonic manual, separat de comandă. Fără preț pe site |
-| ✅ | **Transport**: prețul vine din API-ul curierului. Doar două clase, `standard` și `oversized`. Fără metodă de palet separată |
+| ✅ | **Transport**: prețul vine din API-ul curierului. **Trei clase de transport: `standard`, `oversized` și `pallet`** (decizie utilizator, Faza 4: sunt produse livrate pe palet, marcate cu o clasă dedicată; `pallet` înlocuiește un eventual `requiresPalletDelivery`). Fără metodă de livrare separată pentru palet; regulile de preț și de curier pe clase se stabilesc la Faza 12 |
 | ✅ | **Fișă explodată: varianta A** — imagine + tabel numerotat cu adăugare în coș. Structura de date permite adăugarea hotspot-urilor ulterior, fără rescriere |
 | ✅ | Documente de produs (etichetă energetică, fișă tehnică, manual) — **încărcate manual**, prin tab „Documente" generic |
 | ✅ | **Selectorul de produs NU intră în core** — prea specific pentru un pachet white-label. Se face ca extensie, când vrei |
