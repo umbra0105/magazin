@@ -1,11 +1,13 @@
 import type { PrismaClient } from "@ecom/db";
 import { MediaUsageRegistry, type MediaUsage, type MediaUsageProvider } from "../media/usage";
 
-type Db = Pick<PrismaClient, "productMedia" | "partsDiagram">;
+type Db = Pick<PrismaClient, "productMedia" | "partsDiagram" | "category" | "brand">;
 
 export const PRODUCT_MEDIA_USAGE_PROVIDER = "product-media";
 
 export const PARTS_DIAGRAM_MEDIA_USAGE_PROVIDER = "parts-diagram-media";
+export const CATEGORY_MEDIA_USAGE_PROVIDER = "category-media";
+export const BRAND_MEDIA_USAGE_PROVIDER = "brand-media";
 
 /** Tipurile de utilizare raportate de provider (chei stabile, nu text afișat). */
 export const PRODUCT_USAGE_KINDS = { product: "product", variant: "product_variant" } as const;
@@ -69,6 +71,62 @@ export function createPartsDiagramMediaUsageProvider(db: Db): MediaUsageProvider
   };
 }
 
+/** Categoriile care folosesc fișierul ca imagine. Linkul duce la pagina categoriilor, cu editorul deschis. */
+export function createCategoryMediaUsageProvider(db: Db): MediaUsageProvider {
+  return {
+    name: CATEGORY_MEDIA_USAGE_PROVIDER,
+    async findUsages(mediaIds) {
+      const out = new Map<string, MediaUsage[]>();
+      if (mediaIds.length === 0) return out;
+      const rows = await db.category.findMany({
+        where: { imageMediaId: { in: [...mediaIds] } },
+        select: { id: true, name: true, imageMediaId: true },
+        orderBy: { name: "asc" },
+      });
+      for (const row of rows) {
+        if (!row.imageMediaId) continue;
+        out.set(row.imageMediaId, [
+          ...(out.get(row.imageMediaId) ?? []),
+          {
+            kind: "category",
+            label: `Categorie: ${row.name}`,
+            href: `/admin/categorii?edit=${row.id}`,
+          },
+        ]);
+      }
+      return out;
+    },
+  };
+}
+
+/** Brandurile care folosesc fișierul ca logo. */
+export function createBrandMediaUsageProvider(db: Db): MediaUsageProvider {
+  return {
+    name: BRAND_MEDIA_USAGE_PROVIDER,
+    async findUsages(mediaIds) {
+      const out = new Map<string, MediaUsage[]>();
+      if (mediaIds.length === 0) return out;
+      const rows = await db.brand.findMany({
+        where: { logoMediaId: { in: [...mediaIds] } },
+        select: { id: true, name: true, logoMediaId: true },
+        orderBy: { name: "asc" },
+      });
+      for (const row of rows) {
+        if (!row.logoMediaId) continue;
+        out.set(row.logoMediaId, [
+          ...(out.get(row.logoMediaId) ?? []),
+          {
+            kind: "brand",
+            label: `Brand: ${row.name}`,
+            href: `/admin/branduri?edit=${row.id}`,
+          },
+        ]);
+      }
+      return out;
+    },
+  };
+}
+
 /**
  * Modelele Prisma care referă `Media` printr-o relație și providerul care le raportează. E lista pe
  * care o verifică testul de arhitectură: un model nou care referă `Media` fără intrare aici (sau fără
@@ -78,6 +136,8 @@ export function createPartsDiagramMediaUsageProvider(db: Db): MediaUsageProvider
 export const MEDIA_REFERENCING_MODELS: Readonly<Record<string, string>> = {
   ProductMedia: PRODUCT_MEDIA_USAGE_PROVIDER,
   PartsDiagram: PARTS_DIAGRAM_MEDIA_USAGE_PROVIDER,
+  Category: CATEGORY_MEDIA_USAGE_PROVIDER,
+  Brand: BRAND_MEDIA_USAGE_PROVIDER,
 };
 
 /**
@@ -88,5 +148,7 @@ export function createMediaUsageRegistry(db: Db): MediaUsageRegistry {
   const registry = new MediaUsageRegistry();
   registry.register(createProductMediaUsageProvider(db));
   registry.register(createPartsDiagramMediaUsageProvider(db));
+  registry.register(createCategoryMediaUsageProvider(db));
+  registry.register(createBrandMediaUsageProvider(db));
   return registry;
 }

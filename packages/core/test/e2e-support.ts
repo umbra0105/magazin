@@ -197,3 +197,46 @@ export async function removeE2eProducts(): Promise<number> {
     return result.rowCount ?? 0;
   });
 }
+
+/**
+ * Leagă un produs de test (slug `e2e-<sufix>`) de categoria cu adresa dată (creată în test, cu slug
+ * `e2e-…`), ca ștergerea categoriei să fie refuzată cu numărul de produse.
+ */
+export async function attachProductToE2eCategory(
+  categorySlug: string,
+  title: string,
+  slugSuffix: string,
+): Promise<void> {
+  await withClient(async (db) => {
+    const category = await db.query(`select id from category where slug = $1 limit 1`, [
+      categorySlug,
+    ]);
+    const categoryId = category.rows[0]?.id as string | undefined;
+    if (!categoryId) throw new Error(`Categoria „${categorySlug}” nu există în baza de test`);
+    const product = await db.query(
+      `insert into product (id, slug, title, "updatedAt") values (gen_random_uuid()::text, $1, $2, now()) returning id`,
+      [`e2e-${slugSuffix}`, title],
+    );
+    await db.query(
+      `insert into product_category ("productId", "categoryId", "isPrimary") values ($1, $2, false)`,
+      [product.rows[0]?.id as string, categoryId],
+    );
+  });
+}
+
+/** Leagă un produs de test (slug `e2e-<sufix>`) de brandul cu adresa dată (creat în test). */
+export async function attachProductToE2eBrand(
+  brandSlug: string,
+  title: string,
+  slugSuffix: string,
+): Promise<void> {
+  await withClient(async (db) => {
+    const brand = await db.query(`select id from brand where slug = $1 limit 1`, [brandSlug]);
+    const brandId = brand.rows[0]?.id as string | undefined;
+    if (!brandId) throw new Error(`Brandul „${brandSlug}” nu există în baza de test`);
+    await db.query(
+      `insert into product (id, slug, title, "brandId", "updatedAt") values (gen_random_uuid()::text, $1, $2, $3, now())`,
+      [`e2e-${slugSuffix}`, title, brandId],
+    );
+  });
+}

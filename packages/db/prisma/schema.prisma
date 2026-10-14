@@ -244,6 +244,8 @@ model Media {
   uploadedBy      User?          @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   productMedia    ProductMedia[]
   partsDiagrams   PartsDiagram[]
+  categories      Category[]
+  brands          Brand[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -271,10 +273,14 @@ model Brand {
   seoDescription String?
   legacyId       String?   @unique
   legacyUrl      String?
+  /// Logoul din biblioteca media (FK Restrict + provider de utilizare media)
+  logoMediaId    String?
+  logoMedia      Media?    @relation(fields: [logoMediaId], references: [id], onDelete: Restrict)
   products       Product[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
+  @@index([logoMediaId])
   @@map("brand")
 }
 
@@ -297,12 +303,16 @@ model Category {
   seoDescription           String?
   legacyId                 String?                  @unique
   legacyUrl                String?
+  /// Imaginea categoriei din biblioteca media (FK Restrict + provider de utilizare media)
+  imageMediaId             String?
+  imageMedia               Media?                   @relation(fields: [imageMediaId], references: [id], onDelete: Restrict)
   products                 ProductCategory[]
   channelMaps              ChannelCategoryMapping[]
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
 
   @@index([parentId])
+  @@index([imageMediaId])
   @@map("category")
 }
 

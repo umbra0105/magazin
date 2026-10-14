@@ -17,6 +17,8 @@ export const PERMISSIONS = {
   "products.archive": "Arhivează și șterge produse",
   "products.cost.view": "Vede prețul de achiziție (NIR) al produselor",
   "products.cost.edit": "Modifică prețul de achiziție (NIR) al produselor",
+  "catalog.legacy.edit":
+    "Editează identificatorii și adresele din magazinul vechi (legacyId, legacyUrl) ale produselor, categoriilor și brandurilor",
   "inventory.read": "Vede stocul",
   "inventory.write": "Modifică stocul",
   "customers.read": "Vede clienții",

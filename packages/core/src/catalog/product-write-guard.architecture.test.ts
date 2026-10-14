@@ -36,13 +36,16 @@ const MODELS = [
   "collectionProduct",
   "partsDiagram",
   "channelListing",
+  // categorii și branduri (același regim de permisiuni products.*)
+  "category",
+  "brand",
 ];
 const PRISMA_WRITE = new RegExp(
   `\\.(?:${MODELS.join("|")})\\.(?:create|createMany|update|updateMany|upsert|delete|deleteMany)\\b`,
 );
 /** Serviciile catalogului care scriu (numele lor sunt o convenție: testul le caută). */
 const SERVICE_WRITE =
-  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|getProductService|getCostPriceService|getProductUpdateGuard|productService|costPriceService|productUpdateGuard)\b/;
+  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService)\b/;
 
 const WRITES_PRODUCTS = (content: string): boolean =>
   PRISMA_WRITE.test(content) || SERVICE_WRITE.test(content);
@@ -129,6 +132,19 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
     const settings = files.find((f) => f.path.endsWith("(admin)/admin/setari/actions.ts"));
     expect(settings).toBeDefined();
     expect(exportsOf(settings?.content ?? "").every((e) => e.permission !== null)).toBe(true);
+  });
+
+  it("acțiunile de categorii și branduri sunt recunoscute ca scrieri de catalog și sunt învelite cu products.*", () => {
+    for (const suffix of ["categorii/actions.ts", "branduri/actions.ts"]) {
+      const file = files.find((f) => f.path.endsWith("(admin)/admin/" + suffix));
+      expect(file, suffix).toBeDefined();
+      expect(WRITES_PRODUCTS(file?.content ?? ""), suffix).toBe(true);
+      const exported = exportsOf(file?.content ?? "");
+      expect(exported.length, suffix).toBeGreaterThanOrEqual(3);
+      for (const e of exported) {
+        expect(e.permission?.startsWith("products."), suffix + ": " + e.name).toBe(true);
+      }
+    }
   });
 
   it("nicio acțiune sau rută care modifică produse nu e neprotejată sau protejată cu altă permisiune", () => {

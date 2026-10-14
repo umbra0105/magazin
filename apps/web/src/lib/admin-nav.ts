@@ -9,6 +9,8 @@ export type AdminNavIcon =
   | "dashboard"
   | "orders"
   | "products"
+  | "categories"
+  | "brands"
   | "inventory"
   | "customers"
   | "discounts"
@@ -37,6 +39,8 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "dashboard", href: "/admin" },
   { id: "orders", href: "/admin/comenzi", permission: "orders.read" },
   { id: "products", href: "/admin/produse", permission: "products.read" },
+  { id: "categories", href: "/admin/categorii", permission: "products.read" },
+  { id: "brands", href: "/admin/branduri", permission: "products.read" },
   { id: "inventory", href: "/admin/stoc", permission: "inventory.read" },
   { id: "customers", href: "/admin/clienti", permission: "customers.read" },
   { id: "discounts", href: "/admin/reduceri", permission: "discounts.read" },

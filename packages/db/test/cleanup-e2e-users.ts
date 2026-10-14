@@ -12,6 +12,15 @@ export async function cleanupE2eUsers(databaseUrl: string | undefined): Promise<
   try {
     // Produsele de test (slug `e2e-…`) referă fișiere media (FK Restrict): se șterg ÎNAINTEA fișierelor.
     await client.query(`delete from product where slug like 'e2e-%'`);
+    // Categoriile și brandurile de test (slug `e2e-…`) pot referi fișiere media (FK Restrict): se șterg
+    // înaintea fișierelor. Categoriile se șterg frunzele întâi (părintele e Restrict).
+    for (let i = 0; i < 6; i++) {
+      const gone = await client.query(
+        `delete from category c where c.slug like 'e2e-%' and not exists (select 1 from category k where k."parentId" = c.id)`,
+      );
+      if ((gone.rowCount ?? 0) === 0) break;
+    }
+    await client.query(`delete from brand where slug like 'e2e-%'`);
     // Fișierele media încărcate de conturile de test (rândurile; obiectele stau în directorul
     // temporar al E2E, șters de global-teardown) și folderele rămase goale cu prefixul testelor.
     await client.query(

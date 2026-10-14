@@ -427,6 +427,16 @@ Vezi `09-preturi-si-parteneri.md` §5.
 - `products.write` o include pe `products.content.write` (cine poate modifica prețuri poate modifica și descrierea); invers nu;
 - orice server action sau endpoint care modifică produse trece prin `withPermission("products.…")` (test de arhitectură).
 
+**Categorii și branduri** (Faza 4, punctul 9) folosesc același model, fără permisiune dedicată de „catalog”:
+- **conținut** (nume, descriere, SEO, imagine/logo): `products.content.write` (Editor, Manager, Admin, Owner);
+- **structură** (creare, mutare, adresă, excluderea de la discountul de grup, ștergere): `products.write` (Manager, Admin, Owner);
+- **magazinul vechi** (`legacyId`, `legacyUrl`): în plus `catalog.legacy.edit`, pe care o au doar **Admin și Owner** (nu Manager). Permisiunea e nouă și dedicată: acești identificatori alimentează importul și redirecționările 301, deci nu sunt „conținut” și nici „structură” obișnuită;
+- toate acțiunile trec prin `withPermission("products.…")` (același test de arhitectură ca la produse), iar `FieldAccessGuard` verifică pe server câmpurile: cerere mixtă respinsă întreagă, 403 cu numele câmpurilor, audit `denied` fără valori.
+
+**Arborele de categorii:** adâncime maximă `MAX_CATEGORY_DEPTH = 4` (5 niveluri: rădăcina are adâncimea 0); adâncimea unui subarbore contează la mutare. Mutarea e validată pe server: fără cicluri (nu sub propriile subcategorii), fără categorie părinte a ei însăși, fără depășirea adâncimii, adresa unică între frații noului părinte. Adresa (slug) a unei categorii e unică între frați, fără diferență de majuscule (aceeași adresă e permisă sub părinți diferiți); `path` e unic. Ștergerea e refuzată cu număr: subcategorii și produse (separat cele șterse). Imaginea categoriei și logoul brandului sunt fișiere din bibliotecă (FK `Restrict`) cu provideri de utilizare media: un fișier folosit nu se șterge din bibliotecă, iar mesajul numește categoria/brandul.
+
+**Interfața arborelui:** glisare HTML5 nativă (peste un rând = subcategorie; sus/jos pe rând = reordonare) ȘI alternativă completă de tastatură: „Mută sus/jos”, „Mută…” (părinte permis + poziție), anunțuri `aria-live`.
+
 **Adresa (slug) a produsului** e unică pe TOATE produsele, inclusiv cele șterse (soft delete), fără diferență de majuscule: o adresă a unui produs șters nu se refolosește (restaurare, redirecționări 301). Generarea din titlu adaugă sufix numeric (`-2`, `-3`); o adresă introdusă manual care e ocupată e refuzată cu numele produsului care o deține.
 
 **Prețul de achiziție (`products.cost.view`)** îl văd doar Owner, Admin, Manager și Contabil; Editor, Suport și Depozit nu. Maparea completă rol → permisiuni este în `packages/core/src/rbac/catalog.ts` (sursa de adevăr pentru seed).
@@ -452,6 +462,7 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `products.archive` — Arhivează și șterge produse | ✓ | ✓ | ✓ |  |  |  |  |
 | `products.cost.view` — Vede prețul de achiziție (NIR) al produselor | ✓ | ✓ | ✓ |  |  |  | ✓ |
 | `products.cost.edit` — Modifică prețul de achiziție (NIR) al produselor | ✓ | ✓ |  |  |  |  |  |
+| `catalog.legacy.edit` — Editează identificatorii și adresele din magazinul vechi (legacyId, legacyUrl) ale produselor, categoriilor și brandurilor | ✓ | ✓ |  |  |  |  |  |
 | `inventory.read` — Vede stocul | ✓ | ✓ | ✓ |  |  | ✓ |  |
 | `inventory.write` — Modifică stocul | ✓ | ✓ | ✓ |  |  | ✓ |  |
 | `customers.read` — Vede clienții | ✓ | ✓ | ✓ |  | ✓ |  |  |

@@ -23,6 +23,10 @@ export {
 } from "./constants";
 export {
   createMediaUsageRegistry,
+  BRAND_MEDIA_USAGE_PROVIDER,
+  CATEGORY_MEDIA_USAGE_PROVIDER,
+  createBrandMediaUsageProvider,
+  createCategoryMediaUsageProvider,
   createPartsDiagramMediaUsageProvider,
   createProductMediaUsageProvider,
   PARTS_DIAGRAM_MEDIA_USAGE_PROVIDER,
@@ -93,3 +97,46 @@ export {
   type VariantRecord,
 } from "./product-store";
 export { ProductService, type ProductServiceDeps } from "./product-service";
+export {
+  childrenOf,
+  descendantIds,
+  MAX_CATEGORY_DEPTH,
+  pathFor,
+  planMove,
+  planRename,
+  subtreeHeight,
+  validateMove,
+  validParents,
+  type CategoryNode,
+  type MoveRefusal,
+  type NodeUpdate,
+} from "./category-tree";
+export { FieldAccessGuard, FieldsForbiddenError, type FieldGuardConfig } from "./field-guard";
+export {
+  createPrismaCategoryStore,
+  type CategoryRecord,
+  type CategoryStore,
+  type CategoryWithCount,
+  type NewCategoryData,
+} from "./category-store";
+export {
+  CATEGORY_CONTENT_FIELDS,
+  CATEGORY_LEGACY_FIELDS,
+  CategoryService,
+  categoryCreateSchema,
+  categoryMoveSchema,
+  categoryUpdateSchema,
+  type CategoryServiceDeps,
+} from "./category-service";
+export {
+  BRAND_CONTENT_FIELDS,
+  BRAND_LEGACY_FIELDS,
+  BrandService,
+  brandCreateSchema,
+  brandUpdateSchema,
+  createPrismaBrandStore,
+  type BrandRecord,
+  type BrandServiceDeps,
+  type BrandStore,
+  type BrandWithCount,
+} from "./brand-service";
