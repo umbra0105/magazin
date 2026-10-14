@@ -243,6 +243,7 @@ model Media {
   uploadedById    String?
   uploadedBy      User?          @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   productMedia    ProductMedia[]
+  partsDiagrams   PartsDiagram[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -308,35 +309,50 @@ model Category {
 /// simplu are o singură variantă implicită). `slug` e unic printre produsele neșterse (index parțial în
 /// migrație). `deletedAt` = soft delete.
 model Product {
-  id                       String              @id @default(cuid())
+  id                       String                @id @default(cuid())
   slug                     String
   title                    String
   subtitle                 String?
   description              String?
   /// "draft" | "active" | "archived" (CHECK în migrație)
-  status                   String              @default("draft")
+  status                   String                @default("draft")
   /// "physical" | "digital" (CHECK în migrație)
-  type                     String              @default("physical")
+  type                     String                @default("physical")
   /// Opțional: magazinul poate să nu folosească mărci. Obligatoriu doar la publicarea pe un canal care îl cere (eMAG).
   brandId                  String?
-  brand                    Brand?              @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  brand                    Brand?                @relation(fields: [brandId], references: [id], onDelete: Restrict)
   /// Pregătit pentru cote reduse; nefolosit (vezi `TaxClass`). Calculul folosește `tax.standardRate`.
   taxClassId               String?
-  taxClass                 TaxClass?           @relation(fields: [taxClassId], references: [id], onDelete: Restrict)
+  taxClass                 TaxClass?             @relation(fields: [taxClassId], references: [id], onDelete: Restrict)
   /// "standard" | "oversized" | "pallet" (CHECK în migrație). Regulile pe clase vin la Faza 12.
-  shippingClass            String              @default("standard")
-  requiresInstallation     Boolean             @default(false)
+  shippingClass            String                @default("standard")
+  requiresInstallation     Boolean               @default(false)
+  /// Clasa energetică afișată înaintea finalizării comenzii: A+++ … G (CHECK în migrație)
+  energyClass              String?
+  /// Link către înregistrarea EPREL (https, CHECK în migrație)
+  eprelUrl                 String?
+  /// GPSR: producătorul produsului (nume, adresă și contact)
+  gpsrManufacturerName     String?
+  gpsrManufacturerContact  String?
+  /// GPSR: persoana responsabilă din UE, dacă producătorul e din afara UE
+  gpsrResponsibleName      String?
+  gpsrResponsibleContact   String?
+  /// GPSR: avertismente de siguranță și instrucțiuni
+  safetyWarnings           String?
+  /// Câmpuri pregătitoare (Faza 5 / Val 2), nefolosite încă
+  expectedRestockDate      DateTime?
+  allowBackorder           Boolean               @default(false)
   /// Valoarea implicită vine din setarea `inventory.manageStock`; aici e suprascrierea per produs.
-  manageStock              Boolean             @default(true)
+  manageStock              Boolean               @default(true)
   /// "instock" | "outofstock" | "onbackorder" (CHECK); folosit când `manageStock = false`
-  stockStatus              String              @default("instock")
-  excludeFromGroupDiscount Boolean             @default(false)
+  stockStatus              String                @default("instock")
+  excludeFromGroupDiscount Boolean               @default(false)
   seoTitle                 String?
   seoDescription           String?
   publishedAt              DateTime?
-  sortOrder                Int                 @default(0)
-  metadata                 Json                @default("{}")
-  legacyId                 String?             @unique
+  sortOrder                Int                   @default(0)
+  metadata                 Json                  @default("{}")
+  legacyId                 String?               @unique
   legacyUrl                String?
   deletedAt                DateTime?
   variants                 ProductVariant[]
@@ -345,10 +361,13 @@ model Product {
   options                  ProductOption[]
   attributes               AttributeValue[]
   collections              CollectionProduct[]
-  relations                ProductRelation[]   @relation("ProductRelations")
-  relatedTo                ProductRelation[]   @relation("RelatedProducts")
-  createdAt                DateTime            @default(now())
-  updatedAt                DateTime            @updatedAt
+  relations                ProductRelation[]     @relation("ProductRelations")
+  relatedTo                ProductRelation[]     @relation("RelatedProducts")
+  documents                ProductDocument[]
+  partsDiagrams            PartsDiagramProduct[]
+  hotspots                 PartsDiagramHotspot[]
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
 
   @@index([brandId])
   @@index([taxClassId])
@@ -375,38 +394,41 @@ model ProductCategory {
 /// achiziție NET (fără TVA), ⚠️ DOAR pentru admin (`products.cost.view`): niciodată în API public, props
 /// către componente client, feed-uri, snapshot de comandă sau loguri.
 model ProductVariant {
-  id             String               @id @default(cuid())
-  productId      String
-  product        Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sku            String               @unique
+  id                     String               @id @default(cuid())
+  productId              String
+  product                Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku                    String               @unique
   /// GTIN (8-14 cifre). Nu e NOT NULL în bază (draft-uri, import); obligatoriu la publicarea pe eMAG.
-  ean            String?
+  ean                    String?
   /// Garanția în luni. Nu e NOT NULL în bază (valoarea implicită e o decizie de business); obligatorie la eMAG.
-  warrantyMonths Int?
-  price          Int
-  salePrice      Int?
-  saleStartsAt   DateTime?
-  saleEndsAt     DateTime?
-  costPrice      Int?
-  costPriceDate  DateTime?
+  warrantyMonths         Int?
+  price                  Int
+  salePrice              Int?
+  saleStartsAt           DateTime?
+  saleEndsAt             DateTime?
+  costPrice              Int?
+  costPriceDate          DateTime?
   /// Greutate în grame, dimensiuni în milimetri (întregi; transportul folosește max(real, volumetric))
-  weightGrams    Int?
-  lengthMm       Int?
-  widthMm        Int?
-  heightMm       Int?
+  weightGrams            Int?
+  lengthMm               Int?
+  widthMm                Int?
+  heightMm               Int?
   /// Suprascrierea per variantă a lui `Product.manageStock` (null = moștenește de la produs)
-  manageStock    Boolean?
+  manageStock            Boolean?
   /// "instock" | "outofstock" | "onbackorder" (CHECK); suprascrie `Product.stockStatus` (null = moștenește)
-  stockStatus    String?
-  position       Int                  @default(0)
-  isDefault      Boolean              @default(false)
-  legacyId       String?              @unique
-  media          ProductMedia[]
-  costHistory    CostPriceHistory[]
-  priceHistory   PriceHistory[]
-  optionValues   VariantOptionValue[]
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  stockStatus            String?
+  position               Int                  @default(0)
+  isDefault              Boolean              @default(false)
+  legacyId               String?              @unique
+  media                  ProductMedia[]
+  costHistory            CostPriceHistory[]
+  priceHistory           PriceHistory[]
+  /// Piese de schimb: codul și numele producătorului (căutare exactă pe cod; indexul trigram vine cu căutarea, Faza 7)
+  manufacturerPartNumber String?
+  manufacturerName       String?
+  optionValues           VariantOptionValue[]
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
 
   @@unique([id, productId])
   @@index([productId])
@@ -648,4 +670,79 @@ model TaxRate {
 
   @@unique([taxClassId, validFrom])
   @@map("tax_rate")
+}
+
+// ---------------------------------------------------------------------------
+// Catalog (Faza 4, punctul 4): documente, fișe explodate, câmpuri de nișă și GPSR
+// ---------------------------------------------------------------------------
+
+/// Document al produsului (etichetă energetică, fișă tehnică, manual, declarație CE...), încărcat manual.
+/// Fișierul stă în storage sub `storageKey` (nu în biblioteca de imagini: acolo intră doar imagini, iar
+/// documentele sunt de obicei PDF). `showInTab` = apare în tabul „Descărcări” de pe pagina produsului.
+model ProductDocument {
+  id           String   @id @default(cuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// "energy_label" | "product_sheet" | "manual" | "ce_declaration" | "datasheet" | "warranty" | "other" (CHECK)
+  type         String
+  title        String
+  storageKey   String   @unique
+  originalName String
+  mime         String
+  sizeBytes    Int
+  /// Cod de limbă din două litere (ro, en)
+  language     String   @default("ro")
+  position     Int      @default(0)
+  showInTab    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([productId, position])
+  @@map("product_document")
+}
+
+/// Fișa explodată: entitate proprie, atașabilă la mai multe produse (o familie de pompe are aceeași fișă
+/// pentru 6 modele). Imaginea e un fișier din bibliotecă (`mediaId`, cu provider de utilizare media).
+model PartsDiagram {
+  id        String                @id @default(cuid())
+  title     String
+  mediaId   String
+  media     Media                 @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  products  PartsDiagramProduct[]
+  hotspots  PartsDiagramHotspot[]
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@index([mediaId])
+  @@map("parts_diagram")
+}
+
+model PartsDiagramProduct {
+  diagramId String
+  diagram   PartsDiagram @relation(fields: [diagramId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([diagramId, productId])
+  @@index([productId])
+  @@map("parts_diagram_product")
+}
+
+/// Rândul numerotat al fișei (varianta A: tabel; `xBp`/`yBp` nule) și, în varianta B (Val 2), poziția
+/// punctului pe imagine, în sutimi de procent (0 = marginea stângă/de sus, 10000 = dreapta/jos).
+/// `productId` = piesa de schimb din catalog; `label` opțional, dacă diferă de numele produsului.
+model PartsDiagramHotspot {
+  id        String       @id @default(cuid())
+  diagramId String
+  diagram   PartsDiagram @relation(fields: [diagramId], references: [id], onDelete: Cascade)
+  number    Int
+  xBp       Int?
+  yBp       Int?
+  productId String
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String?
+
+  @@unique([diagramId, number])
+  @@index([productId])
+  @@map("parts_diagram_hotspot")
 }

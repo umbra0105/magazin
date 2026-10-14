@@ -1,5 +1,8 @@
 export {
   ATTRIBUTE_TYPES,
+  ENERGY_CLASSES,
+  PRODUCT_DOCUMENT_MIME_TYPES,
+  PRODUCT_DOCUMENT_TYPES,
   COLLECTION_TYPES,
   COST_PRICE_SOURCES,
   PRODUCT_RELATION_TYPES,
@@ -9,6 +12,8 @@ export {
   STOCK_STATUSES,
   type AttributeType,
   type CollectionType,
+  type EnergyClass,
+  type ProductDocumentType,
   type CostPriceSource,
   type ProductRelationType,
   type ProductStatus,
@@ -18,7 +23,9 @@ export {
 } from "./constants";
 export {
   createMediaUsageRegistry,
+  createPartsDiagramMediaUsageProvider,
   createProductMediaUsageProvider,
+  PARTS_DIAGRAM_MEDIA_USAGE_PROVIDER,
   MEDIA_REFERENCING_MODELS,
   PRODUCT_MEDIA_USAGE_PROVIDER,
   PRODUCT_USAGE_KINDS,

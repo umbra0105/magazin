@@ -2,7 +2,7 @@
 
 ## 2026-10-14 · Sesiunea 5 · Faza 4 (Catalog), Promptul 5 — ÎN LUCRU
 **Terminat (confirmat de utilizator):** punctele 0 (curățare `e2e-*` la început + măsurare RSS) 0b (E2E pe build de producție; test unitar pentru randarea șabloanelor de email sub `tsx`) și 1 (schema catalogului, migrația `catalog_core` aplicată de utilizator pe baza de dezvoltare)
-**În lucru:** punctul 3 (restul schemei catalogului) — [~], așteaptă confirmarea utilizatorului
+**În lucru:** punctul 4 (câmpuri de nișă și pregătitoare) — [~], așteaptă confirmarea utilizatorului
 **Blocat:** —
 **Plan aprobat de utilizator** (16 puncte + punctul 0, în `docs/06-todo-master.md`). Propunere de `git push` (doar la cererea utilizatorului) după punctele 2, 6, 10 și 14.
 
@@ -22,6 +22,18 @@
 - `e2e/media.spec.ts`: pasul de mutare în folder căuta fișierul pe prima pagină a bibliotecii partajate (cădea cu încărcări paralele); acum îl găsește după etichetă (`?q=<tag>`)
 - `.gitignore`: `/local-data` (exportul WooCommerce al utilizatorului, `local-data/woocommerce-export.csv`, nu se comite)
 - CI: pasul „Build” rămâne (verifică build-ul fără harness); E2E își face propriul build în `.next-e2e`, deci CI-ul are un build în plus (~1 min)
+
+**Punctul 4 — documente, fișe explodate, GPSR (migrația `20261014200000_catalog_documents_gpsr`, neaplicată pe baza de dezvoltare):**
+- **Sensul relațiilor (confirmat de utilizator, documentat în `docs/04`):** `productId` = principal, `relatedProductId` = asociat; `compatible_with` = principalul e compatibil cu cel asociat; relația NU e simetrică automat, iar adminul (punctul 9/11) o arată din ambele părți
+- `product_document`: tip generic (7 tipuri), `storageKey` unic, `mime` doar pdf/png/jpeg/webp (CHECK), `sizeBytes > 0`, limbă din două litere, `showInTab`. **Fișierul nu merge în biblioteca media** (acolo intră doar imagini, iar documentele sunt de obicei PDF): încărcarea PDF-urilor e un endpoint propriu, notat la punctul 11 (tip din octeți, limite, audit)
+- `energyClass` ∈ A+++…G (CHECK; scara veche și cea nouă), `eprelUrl` doar `https://` (CHECK; un link ajunge pe pagina produsului)
+- **GPSR:** `gpsrManufacturerName/Contact`, `gpsrResponsibleName/Contact` (persoana din UE), `safetyWarnings`; toate opționale (decizia de completare e a magazinului). Procedura de rechemare (recall) nu e per produs: rămâne o pagină/procedură a magazinului
+- `parts_diagram` (imagine = `mediaId`, **FK Restrict + `PartsDiagramMediaUsageProvider` înregistrat și în `MEDIA_REFERENCING_MODELS`**, deci testul de arhitectură din punctul 2 a cerut exact asta), `parts_diagram_product` (o fișă la mai multe produse), `parts_diagram_hotspot` (`number` > 0 unic pe fișă, `xBp`/`yBp` 0–10000 ambele sau niciuna; varianta A le lasă nule). Feature flag-ul `partsDiagrams` din `docs/15` NU e creat încă (se adaugă cu UI-ul: punctul 11 / Faza 7)
+- `product_variant.manufacturerPartNumber/manufacturerName` + index pe `lower(manufacturerPartNumber)`; **indexul trigram pentru căutare vine cu căutarea (Faza 7)**, ca să nu cerem extensia `pg_trgm` înainte să fie folosită
+- `Product.expectedRestockDate`, `Product.allowBackorder` (pregătitoare, nefolosite). Sunt pe produs; dacă Faza 5 cere nivel de variantă, se mută atunci
+- **`Order.parentSubscriptionId`: mutat la Faza 9** (nu există tabela `Order`)
+- Bug prins de test și reparat înainte de commit: un CHECK de tipul `(x IS NULL AND y IS NULL) OR (x BETWEEN … AND y BETWEEN …)` lasă să treacă `x` setat și `y` nul (NULL nu respinge un CHECK); a doua ramură are acum `IS NOT NULL` explicit. Celelalte CHECK-uri compuse din migrațiile 1 și 3 au fost verificate: au deja comparații explicite pe NULL
+- Teste: 9 noi (clasă energetică/EPREL, GPSR, cod producător, documente, fișă explodată cu provider). Totaluri: unitare ✔ 603, integrare ✔ 247, E2E ✔ 42 (prod build), typecheck ✔, lint ✔
 
 **Punctul 3 — restul schemei (migrația `20261014180000_catalog_options_attributes`, neaplicată pe baza de dezvoltare):**
 - **Decizie (utilizator): TVA.** Produsele folosesc DOAR cota standard din `tax.standardRate` (21%). `TaxClass`/`TaxRate` există în schemă, pregătite pentru cote reduse pe viitor, dar NU sunt expuse în admin, NU schimbă calculul prețurilor și nu se seedează nicio clasă sau cotă (nimic hardcodat; un test verifică că tabelele sunt goale după migrare). `Product.taxClassId` e nullable și nefolosit. Cota se stochează în puncte de bază (`rateBps`, 2100 = 21%), între 0 și 10000; o singură clasă implicită

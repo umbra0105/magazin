@@ -63,8 +63,9 @@ ProductDocument
   type      'energy_label' | 'product_sheet' | 'manual' | 'ce_declaration'
             | 'datasheet' | 'warranty' | 'other'
   title     "Etichetă energetică" / "Manual de utilizare"
-  fileUrl
-  language  'ro' | 'en'
+  storageKey, originalName, mime, sizeBytes   (fișierul în storage; PDF sau imagine; NU în biblioteca media,
+                                               care primește doar imagini)
+  language  cod din două litere ('ro', 'en')
   position
   showInTab bool     apare în tabul de descărcări de pe pagina de produs
 ```
@@ -165,13 +166,13 @@ E o jumătate de zi care face diferența între „instalatorul găsește piesa 
 ```
 PartsDiagram              entitate proprie, reutilizabilă
   title                   "Pompă seria XYZ — vedere explodată"
-  imageUrl                imaginea de la producător
-  productIds[]            se poate atașa la mai multe produse din aceeași familie
+  mediaId                 imaginea de la producător, din biblioteca media (cu provider de utilizare)
+  produse                 PartsDiagramProduct: se poate atașa la mai multe produse din aceeași familie
 
 PartsDiagramHotspot
   diagramId
   number                  numărul de pe desen: 1, 2, 3...
-  x, y                    poziția în procente, ca să fie responsive
+  xBp, yBp                poziția în sutimi de procent (0–10000), ca să fie responsive; nule la varianta A
   productId               produsul din catalog
   label                   opțional, dacă vrei alt nume decât cel al produsului
 ```

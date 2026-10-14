@@ -42,14 +42,17 @@ Product           slug, title, subtitle, description(rich), status(draft|active|
                   brandId?(opțional; obligatoriu doar la publicarea pe eMAG), taxClassId, type(physical|digital),
                   requiresInstallation, shippingClass(standard|oversized|pallet),
                   legacyId?, legacyUrl?,
-                  energyClass?, eprelUrl?,
+                  energyClass?(A+++…G), eprelUrl?(https),
+                  gpsrManufacturerName?, gpsrManufacturerContact?,
+                  gpsrResponsibleName?, gpsrResponsibleContact?, safetyWarnings?,
                   manageStock(bool), stockStatus(instock|outofstock|onbackorder)
-                  excludeFromGroupDiscount, warrantyMonths,
+                  excludeFromGroupDiscount, expectedRestockDate?, allowBackorder,
                   publishedAt, sortOrder, metadata(JSON)
-ProductVariant    productId, sku, ean, barcode, manufacturerPartNumber, manufacturerName,
-                  price, compareAtPrice,
+ProductVariant    productId, sku, ean?, warrantyMonths?, manufacturerPartNumber?, manufacturerName?,
+                  price, salePrice?, saleStartsAt?, saleEndsAt?,
                   costPrice(NET, fără TVA, DOAR admin), costPriceDate,
-                  weight, dimensions, position, isDefault
+                  weightGrams, lengthMm, widthMm, heightMm, manageStock?, stockStatus?,
+                  position, isDefault, legacyId?
                   (price = BRUT, cu TVA inclus, int în bani)
 CostPriceHistory  variantId, costPrice, effectiveDate, source(manual|import), importId?, createdAt
                   (doar admin; costPrice nu apare în API public, snapshot, feed-uri sau loguri)
@@ -66,6 +69,10 @@ AttributeValue    productId, attributeId, textValue|numberValue(NUMERIC 18,4)|bo
 Media             url, key, mime, width, height, size, alt, folder
 ProductMedia      productId, variantId?, mediaId, position
 ProductRelation   productId, relatedProductId, type(similar|accessory|upsell|crosssell|spare_part|compatible_with), position
+                  Sensul: productId = produsul PRINCIPAL, relatedProductId = ASOCIATUL (spare_part: piesa de
+                  schimb a principalului; compatible_with: principalul e compatibil cu cel asociat). Relația
+                  NU e simetrică automat: se creează într-un singur sens. Adminul (editorul de produs, tabul
+                  „Asociate”) o arată din ambele părți: „Asociate acestui produs” și „Acest produs e asociat la”.
 DigitalProduct    productId, deliveryType, accessType, accessDays, maxDownloads
 DigitalAsset      productId, title, type(video|file|link), storageKey,
                   fileSize, duration, position, isPreview
@@ -119,9 +126,12 @@ VoucherTransaction voucherId, orderId, amount, balanceAfter
                   → detalii în 14-loializare-si-vouchere.md
 
 ProductDocument   productId, type(energy_label|product_sheet|manual|ce_declaration|
-                  datasheet|warranty|other), title, fileUrl, language, position, showInTab
-PartsDiagram      title, imageUrl, productIds[]
-PartsDiagramHotspot diagramId, number, x, y, productId, label
+                  datasheet|warranty|other), title, storageKey, originalName, mime(pdf|png|jpeg|webp),
+                  sizeBytes, language(ro), position, showInTab
+PartsDiagram      title, mediaId (imagine din bibliotecă; cu provider de utilizare media)
+PartsDiagramProduct diagramId, productId           (o fișă la mai multe produse)
+PartsDiagramHotspot diagramId, number, xBp?, yBp?, productId, label?
+                  (xBp/yBp: sutimi de procent 0–10000; ambele sau niciuna; varianta A: nule)
                   → detalii în 15-specific-nisa-piscine.md
 
 SalesChannel      code(web|emag), name, isActive, config
