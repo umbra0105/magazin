@@ -1,5 +1,26 @@
 # Jurnal de progres
 
+## 2026-10-14 · Sesiunea 5 · Faza 4 (Catalog), Promptul 5 — ÎN LUCRU
+**Terminat (confirmat de utilizator):** —
+**În lucru:** punctul 0 din 16 (curățare `e2e-*` la început + măsurare RSS) — [~], așteaptă confirmarea utilizatorului
+**Blocat:** —
+**Plan aprobat de utilizator** (16 puncte + punctul 0, în `docs/06-todo-master.md`). Propunere de `git push` (doar la cererea utilizatorului) după punctele 2, 6, 10 și 14.
+
+**Decizii (utilizator):** `products.content.write` pentru Editor, Manager, Admin, Owner (serverul respinge câmpurile de preț/stoc/cost, test explicit, matricea din `docs/04` §6 la punctul 7) · `shippingClass` = `standard`/`oversized`/`pallet`, fără `requiresPalletDelivery` (regulile pe clase la Faza 12) · `ean` și `warrantyMonths` pe variantă · migrare din WordPress/WooCommerce (nu OpenCart), profil de import dedicat, prețuri cu/fără TVA convertite cu cota din setări · `legacyId`/`legacyUrl` + redirecționări 301 (Faza 17) · `PriceHistory` pentru „cel mai mic preț din 30 de zile” (Omnibus) · import de imagini prin URL cu protecție SSRF
+**Documente corectate (commit `643f405`):** `docs/04`, `06`, `07`, `10`, `15`, `16` (shippingClass cu `pallet`, WooCommerce în loc de „site-ul vechi”, „unic per tenant”, `Media` scos din lista de schemă a Fazei 4)
+
+**Punctul 0 — rezultat:**
+- `cleanupE2eUsers` rulează acum și la ÎNCEPUTUL fiecărei rulări: în `globalSetup` E2E și în `globalSetup` de integrare (garda „test” în nume e în funcție). Test de integrare nou (`cleanup-e2e-users.integration.test.ts`: șterge e2e-*, lasă celelalte conturi, refuză baza fără „test”). Verificat real: un cont `e2e-*` rămas intenționat a fost șters la începutul rulării E2E
+- Rezultate: typecheck ✔ (10 pachete) · lint ✔ · unitare ✔ 592 · integrare ✔ 197 (35 fișiere) · E2E obișnuit ✔ 41 (rulat de 4 ori)
+- **Măsurare RSS** (`node scripts/measure-rss.mjs <pid> [secunde] [fișier.csv]`, doar citește; PID-ul trebuie dat explicit): serverul de test `next dev` (port 3100, pornit de Playwright) pornește la ~3,0–4,7 GB la ~40 s de la începutul suitei și urcă la **~6,0–6,9 GB** în ~2 minute (4 rulări: vârfuri 6,0 / 6,3 / 6,9 / 6,0 GB). Defalcarea pe procese arată UN SINGUR `node.exe` la 5–5,9 GB (nu memorie partajată numărată dublu); procesele-copil au 0,3–0,5 GB. Diferența față de „~0,7 GB în rulări normale” din jurnalul Fazei 3 nu a fost reprodusă: pe această mașină, cu 41 de teste, nu coboară sub 3 GB. **Problemă reală, nu o anomalie** (compilări `next dev` ale paginilor de admin acumulate în proces)
+- **Propunere (NEAPLICATĂ, la decizia utilizatorului):** E2E pe build de producție (`NEXT_DIST_DIR=.next-e2e next build` + `next start`, port propriu, fără compilare la cerere). Costul: ~1–2 min de build la fiecare rulare; câștig: memorie stabilă. Setările WSL nu se ating; dacă e nevoie, valori recomandate la cerere
+
+**Datorie tehnică (Faza 4, în plus față de PROGRESS din Faza 3):**
+- Curățarea la început în integrare presupune că nu rulează simultan un E2E pe aceeași bază de test (regula „un server pe rând” o garantează); o rulare E2E paralelă ar pierde conturile create
+
+**De unde reiau:** punctul 0 așteaptă confirmarea; apoi punctul 1 (schema Product/ProductVariant/ProductMedia) și punctul 2 (provider media)
+**Comandă de pornire:** `docker compose -f docker/docker-compose.dev.yml up -d` apoi `node scripts/run-all.mjs …` / `npm.cmd run …` (vezi tabelul din Faza 3)
+
 ## 2026-10-12 · Sesiunea 4 · Faza 3 (Media), Promptul 4 — TERMINATĂ ȘI VERIFICATĂ 🏁
 **Terminat (confirmat de utilizator):** punctele 1 (schema, migrația, `media.read`), 2 (adaptor de storage, MinIO în CI), 4 (procesare în queue; CI verde pe cfebd5b) și 3 (upload prin server; verificat în browser: 201 pending, 503 fără bucket, 415, 413, 401/403, audit success/denied/failed)
 **Terminat și confirmat:** și punctele 5, 6, 7 (MediaPicker, confirmat de utilizator; E2E picker + bibliotecă 10/10)

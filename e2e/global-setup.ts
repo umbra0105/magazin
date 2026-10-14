@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 import { clearE2eRateLimits } from "../packages/core/test/e2e-support";
-import { setTestSetting } from "../packages/db/test/cleanup-e2e-users";
+import { cleanupE2eUsers, setTestSetting } from "../packages/db/test/cleanup-e2e-users";
 import { prepareTestDatabase } from "../packages/db/test/prepare-test-database";
 
 /**
@@ -15,6 +15,12 @@ export default async function globalSetup(): Promise<void> {
     process.env["TEST_REDIS_URL"],
     resolve(process.cwd(), "packages", "db"),
   );
+
+  // Rulările E2E oprite din afară nu apucă `global-teardown`: conturile `e2e-*` rămase sunt curățate
+  // la începutul rulării, nu doar la final (garda „test” e în funcție).
+  const leftover = await cleanupE2eUsers(process.env["TEST_DATABASE_URL"]);
+  if (leftover > 0)
+    console.log(`[e2e] șterse ${leftover} conturi e2e-* rămase din rulări anterioare`);
 
   // Un proxy de încredere: Next adaugă singur `X-Forwarded-For` (IP-ul socketului) când lipsește, iar
   // testele trimit propriul antet ca să aibă IP-uri distincte (limitele pe IP nu se amestecă).

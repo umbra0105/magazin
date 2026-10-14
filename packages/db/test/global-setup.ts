@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { cleanupE2eUsers } from "./cleanup-e2e-users";
 import { prepareTestDatabase } from "./prepare-test-database";
 
 /**
@@ -12,4 +13,9 @@ export default async function setup(): Promise<void> {
     process.env["TEST_REDIS_URL"],
     fileURLToPath(new URL("..", import.meta.url)),
   );
+  // Conturile `e2e-*` rămase după o rulare E2E oprită din afară (global-teardown nu a apucat să
+  // ruleze) strică testele care numără utilizatori/roluri (ex. rbac/revoke). Garda „test” e în funcție.
+  const removed = await cleanupE2eUsers(process.env["TEST_DATABASE_URL"]);
+  if (removed > 0)
+    console.log(`[teste] șterse ${removed} conturi e2e-* rămase din rulări anterioare`);
 }
