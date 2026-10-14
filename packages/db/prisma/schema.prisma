@@ -307,8 +307,8 @@ model Category {
 }
 
 /// Produsul vandabil. Prețurile, EAN-ul, garanția, greutatea și costul stau pe VARIANTĂ (un produs
-/// simplu are o singură variantă implicită). `slug` e unic printre produsele neșterse (index parțial în
-/// migrație). `deletedAt` = soft delete.
+/// simplu are o singură variantă implicită). `slug` e unic pe TOATE produsele, inclusiv cele șterse (index
+/// `product_slug_key`, fără diferență de majuscule). `deletedAt` = soft delete.
 model Product {
   id                       String                @id @default(cuid())
   slug                     String

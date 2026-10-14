@@ -427,6 +427,8 @@ Vezi `09-preturi-si-parteneri.md` §5.
 - `products.write` o include pe `products.content.write` (cine poate modifica prețuri poate modifica și descrierea); invers nu;
 - orice server action sau endpoint care modifică produse trece prin `withPermission("products.…")` (test de arhitectură).
 
+**Adresa (slug) a produsului** e unică pe TOATE produsele, inclusiv cele șterse (soft delete), fără diferență de majuscule: o adresă a unui produs șters nu se refolosește (restaurare, redirecționări 301). Generarea din titlu adaugă sufix numeric (`-2`, `-3`); o adresă introdusă manual care e ocupată e refuzată cu numele produsului care o deține.
+
 **Prețul de achiziție (`products.cost.view`)** îl văd doar Owner, Admin, Manager și Contabil; Editor, Suport și Depozit nu. Maparea completă rol → permisiuni este în `packages/core/src/rbac/catalog.ts` (sursa de adevăr pentru seed).
 
 **Accesul în admin** cere permisiunea explicită `admin.access`. O au cele 7 roluri de sistem (Owner o are implicit, ca pe toate). Un rol fără `admin.access` (de ex. un rol personalizat) și un client fără roluri NU intră în `/admin`, iar `can()` e fals pentru orice altă permisiune fără ea.

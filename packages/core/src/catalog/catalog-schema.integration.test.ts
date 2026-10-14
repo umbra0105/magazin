@@ -171,21 +171,22 @@ describe("catalog: variante și sume", () => {
 });
 
 describe("catalog: slug-uri, branduri, categorii, legacy", () => {
-  it("slug-ul produsului e unic printre cele neșterse (fără diferență de majuscule), reutilizabil după soft delete", async () => {
+  it("slug-ul produsului e unic pe TOATE produsele (fără diferență de majuscule), inclusiv cele șterse", async () => {
     await violation(async (tx) => {
       const brand = await newBrand(tx);
       await tx.product.create({ data: { slug: "pompa-x", title: "A", brandId: brand.id } });
       await tx.product.create({ data: { slug: "POMPA-X", title: "B", brandId: brand.id } });
-    }, "product_slug_active_key");
+    }, "product_slug_key");
 
-    await inRolledBackTransaction(db, async (tx) => {
+    // un produs șters (soft delete) își păstrează adresa: nu se refolosește
+    await violation(async (tx) => {
       const brand = await newBrand(tx);
       const first = await tx.product.create({
         data: { slug: "pompa-y", title: "A", brandId: brand.id },
       });
       await tx.product.update({ where: { id: first.id }, data: { deletedAt: new Date() } });
       await tx.product.create({ data: { slug: "pompa-y", title: "B", brandId: brand.id } });
-    });
+    }, "product_slug_key");
   });
 
   it("brandul e opțional (produs fără brand), dar un brand inexistent e refuzat și nu se șterge cât are produse", async () => {

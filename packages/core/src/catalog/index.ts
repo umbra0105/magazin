@@ -58,3 +58,38 @@ export {
   type ProductUpdateGuardDeps,
   type ProductUpdatePayload,
 } from "./product-write";
+export { CATALOG_TAG, CatalogError, effectivePrice, productCacheTags } from "./catalog-support";
+export { generateUniqueSlug, isValidSlug, slugify, SLUG_MAX_LENGTH, SLUG_PATTERN } from "./slug";
+export {
+  buildSkus,
+  combinationKey,
+  generateCombinations,
+  MAX_OPTIONS_PER_PRODUCT,
+  MAX_VALUES_PER_OPTION,
+  MAX_VARIANTS_PER_PRODUCT,
+  normalizeOptions,
+  planVariantSync,
+  VariantGenerationError,
+  type OptionInput,
+  type VariantCombination,
+  type VariantSyncPlan,
+} from "./variant-generator";
+export {
+  MAX_MONEY,
+  parseInput,
+  productCreateSchema,
+  productUpdateSchema,
+  variantInputSchema,
+  variantUpdateSchema,
+  type ProductCreateInput,
+  type ProductUpdateInput,
+  type VariantInput,
+  type VariantUpdateInput,
+} from "./product-schemas";
+export {
+  createPrismaProductStore,
+  type ProductRecord,
+  type ProductStore,
+  type VariantRecord,
+} from "./product-store";
+export { ProductService, type ProductServiceDeps } from "./product-service";
