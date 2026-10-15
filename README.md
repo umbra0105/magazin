@@ -89,6 +89,7 @@ Toate scripturile din rădăcină merg la fel cu `pnpm <script>` și cu `npm run
 | `pnpm media:regenerate <id, --failed, --stale, --all>` | regenerează variantele imaginilor din original (workerul le procesează)                                  |
 | `pnpm media:recent`                                    | doar citire: ultimele 5 fișiere media (id, status, dimensiuni, blurhash, variante, eroare)               |
 | `pnpm dev:preset`                                      | doar dev: aplică un preset de temă (`minimal`/`bold`/`editorial`, `--dark`)                              |
+| `npm run docs:sweep-orphans`                           | raport cu fișierele de documente rămase fără rând (`-- --delete` le șterge; doar `private/product-documents/`, doar cele mai vechi de 1 oră) |
 | `pnpm admin:create`                                    | creează contul Owner; interactiv, parola fără echo (rulează `db:seed` întâi)                             |
 | `pnpm admin:unlock <email>`                            | deblochează un cont blocat după prea multe încercări de login                                            |
 | `pnpm dev:age-session <email> <ore>`                   | DOAR dezvoltare: îmbătrânește sesiunile unui utilizator (test expirare admin); refuză în producție       |

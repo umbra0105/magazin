@@ -32,6 +32,16 @@ export function visibilityOf(key: string): Visibility {
   return first;
 }
 
+/**
+ * Validează un prefix de listare: ca o cheie, dar terminat cu `/` și cu cel puțin un segment după
+ * `public/` sau `private/` (nu se poate lista rădăcina unui spațiu întreg printr-o greșeală).
+ */
+export function assertValidPrefix(prefix: string): void {
+  if (typeof prefix !== "string" || !prefix.endsWith("/")) throw invalid("prefix fără slash final");
+  visibilityOf(`${prefix}x`);
+  if (prefix.split("/").filter(Boolean).length < 2) throw invalid("prefix prea larg");
+}
+
 export function assertValidKey(key: string): void {
   visibilityOf(key);
 }

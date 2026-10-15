@@ -2,16 +2,22 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   type S3ClientConfig,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { Readable } from "node:stream";
-import { isPublicKey, visibilityOf } from "./keys";
+import { assertValidPrefix, isPublicKey, visibilityOf } from "./keys";
 import { assertExpiry } from "./local-driver";
 import {
+  DEFAULT_LIST_LIMIT,
+  MAX_LIST_LIMIT,
   StorageError,
+  type ListOptions,
+  type ListResult,
+  type ListedObject,
   type PutOptions,
   type SignedUrlOptions,
   type StorageDriver,
@@ -123,6 +129,37 @@ export class S3StorageDriver implements StorageDriver {
     } catch (error) {
       throw failed("Ștergerea din S3 a eșuat", error);
     }
+  }
+
+  async list(prefix: string, options: ListOptions = {}): Promise<ListResult> {
+    assertValidPrefix(prefix);
+    const limit = Math.min(Math.max(options.limit ?? DEFAULT_LIST_LIMIT, 1), MAX_LIST_LIMIT);
+    const objects: ListedObject[] = [];
+    let token: string | undefined;
+    try {
+      do {
+        const out = await this.client.send(
+          new ListObjectsV2Command({
+            Bucket: this.options.bucket,
+            Prefix: prefix,
+            ContinuationToken: token,
+            MaxKeys: Math.min(limit + 1 - objects.length, 1000),
+          }),
+        );
+        for (const item of out.Contents ?? []) {
+          if (!item.Key) continue;
+          objects.push({
+            key: item.Key,
+            size: item.Size ?? 0,
+            lastModified: item.LastModified ?? new Date(0),
+          });
+        }
+        token = out.IsTruncated ? out.NextContinuationToken : undefined;
+      } while (token && objects.length <= limit);
+    } catch (error) {
+      throw failed("Listarea din S3 a eșuat", error);
+    }
+    return { objects: objects.slice(0, limit), truncated: objects.length > limit };
   }
 
   publicUrl(key: string): string {

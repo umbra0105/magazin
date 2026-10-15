@@ -1,4 +1,4 @@
-export { buildKey, isPublicKey, visibilityOf } from "./keys";
+export { assertValidPrefix, buildKey, isPublicKey, visibilityOf } from "./keys";
 export { createStorage, resolveStorageDir } from "./create-storage";
 export {
   ensurePublicReadPolicy,
@@ -17,8 +17,13 @@ export {
 export { S3StorageDriver, contentDisposition, type S3StorageOptions } from "./s3-driver";
 export { deriveSigningKey, signClaims, verifyClaims, type SignedUrlClaims } from "./signing";
 export {
+  DEFAULT_LIST_LIMIT,
+  MAX_LIST_LIMIT,
   StorageError,
   isStorageError,
+  type ListOptions,
+  type ListResult,
+  type ListedObject,
   type PutOptions,
   type SignedUrlOptions,
   type StorageDriver,

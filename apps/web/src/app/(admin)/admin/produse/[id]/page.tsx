@@ -14,6 +14,7 @@ import {
   getProductRelationsService,
   getProductService,
 } from "@/lib/catalog";
+import { getProductDocumentsService } from "@/lib/product-documents";
 import { getSettings } from "@/lib/services";
 import { formatZonedLocal } from "@/lib/zoned-time";
 import { getMessages } from "@/messages";
@@ -32,6 +33,8 @@ const TAB_IDS = [
   "categorii",
   "atribute",
   "asociate",
+  "documente",
+  "conformitate",
   "media",
   "seo",
 ] as const;
@@ -73,24 +76,28 @@ export default async function ProductEditorPage({
     variantData,
     attributeEntries,
     relationRows,
+    documentRows,
     brands,
     categoryRows,
     tax,
     regional,
     inventory,
     catalog,
+    documentSettings,
   ] = await Promise.all([
     assignments.getCategories(subject, id),
     assignments.listMedia(subject, id),
     getProductService().getVariantsForEdit(subject, id),
     getProductAttributesService().get(subject, id),
     getProductRelationsService().list(subject, id),
+    getProductDocumentsService().list(subject, id),
     getBrandService().list(subject),
     getCategoryService().tree(subject),
     getSettings().getGroup("tax"),
     getSettings().getGroup("regional"),
     getSettings().getGroup("inventory"),
     getSettings().getGroup("catalog"),
+    getSettings().getGroup("documents"),
   ]);
 
   const nodes: CategoryNode[] = categoryRows.map((c) => ({
@@ -158,7 +165,25 @@ export default async function ProductEditorPage({
           stockStatus: product.stockStatus,
           seoTitle: product.seoTitle,
           seoDescription: product.seoDescription,
+          energyClass: product.energyClass,
+          eprelUrl: product.eprelUrl,
+          gpsrManufacturerName: product.gpsrManufacturerName,
+          gpsrManufacturerContact: product.gpsrManufacturerContact,
+          gpsrResponsibleName: product.gpsrResponsibleName,
+          gpsrResponsibleContact: product.gpsrResponsibleContact,
+          safetyWarnings: product.safetyWarnings,
         }}
+        documents={documentRows.map((doc) => ({
+          id: doc.id,
+          type: doc.type,
+          title: doc.title,
+          originalName: doc.originalName,
+          mime: doc.mime,
+          sizeBytes: doc.sizeBytes,
+          language: doc.language,
+          showInTab: doc.showInTab,
+        }))}
+        documentMaxMb={Math.max(1, Math.floor(documentSettings.maxUploadBytes / (1024 * 1024)))}
         variants={editorVariants}
         variantOptions={variantData.options}
         attributes={attributeEntries.map((entry) => ({

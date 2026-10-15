@@ -19,17 +19,19 @@ export class MediaUploadGuard {
   constructor(
     private readonly store: CounterStore,
     private readonly settings: UploadRateSettings,
+    /** Spațiul de nume al contoarelor: documentele nu împart limita cu biblioteca media. */
+    private readonly namespace: string = "media",
   ) {}
 
   async checkUpload(userId: string, ip: string | null): Promise<void> {
     const { uploadMaxAttempts: max, uploadWindowMinutes: win } = this.settings;
-    await this.hit(`media-upload:user:${userId}`, max, win);
-    if (ip) await this.hit(`media-upload:ip:${ip}`, max * 2, win);
+    await this.hit(`${this.namespace}-upload:user:${userId}`, max, win);
+    if (ip) await this.hit(`${this.namespace}-upload:ip:${ip}`, max * 2, win);
   }
 
   async allowRefusedAudit(ip: string | null): Promise<boolean> {
     const { refusedAuditMaxAttempts: max, uploadWindowMinutes: win } = this.settings;
-    const key = ip ? `media-refused:ip:${ip}` : "media-refused:-";
+    const key = ip ? `${this.namespace}-refused:ip:${ip}` : `${this.namespace}-refused:-`;
     const limit = ip ? max : max * 10;
     const { count } = await this.store.increment(key, win * 60);
     return count <= limit;

@@ -36,6 +36,7 @@
     "storage:init": "node --import tsx packages/core/scripts/storage-init.ts",
     "media:regenerate": "node --import tsx packages/jobs/scripts/media-regenerate.ts",
     "media:recent": "node --import tsx packages/core/scripts/media-recent.ts",
+    "docs:sweep-orphans": "node --import tsx packages/core/scripts/docs-sweep-orphans.ts",
     "turbo:lint": "turbo run lint",
     "turbo:typecheck": "turbo run typecheck",
     "turbo:build": "turbo run build",

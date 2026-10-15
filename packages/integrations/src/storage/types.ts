@@ -19,6 +19,28 @@ export interface StoredObject {
   contentType: string;
 }
 
+/** Un obiect din listare: cheia, mărimea și momentul ultimei scrieri. */
+export interface ListedObject {
+  key: string;
+  size: number;
+  lastModified: Date;
+}
+
+export interface ListOptions {
+  /** Cel mult atâtea obiecte (implicit 1000, maxim 10000). */
+  limit?: number;
+}
+
+export interface ListResult {
+  /** În ordinea cheilor. */
+  objects: ListedObject[];
+  /** Au mai rămas obiecte dincolo de `limit`. */
+  truncated: boolean;
+}
+
+export const DEFAULT_LIST_LIMIT = 1000;
+export const MAX_LIST_LIMIT = 10_000;
+
 export interface SignedUrlOptions {
   /** 1 secundă … 7 zile. Obligatoriu: nu există link semnat fără expirare. */
   expiresInSeconds: number;
@@ -56,6 +78,12 @@ export interface StorageDriver {
 
   /** Link cu expirare scurtă, valabil pentru orice cheie (publică sau privată). */
   signedUrl(key: string, options: SignedUrlOptions): Promise<string>;
+
+  /**
+   * Obiectele de sub un prefix (`public/...` sau `private/...`, terminat cu `/`), în ordinea
+   * cheilor. Pentru întreținere (curățarea orfanilor), nu pentru cereri de utilizator.
+   */
+  list(prefix: string, options?: ListOptions): Promise<ListResult>;
 }
 
 export type StorageErrorCode =

@@ -123,6 +123,20 @@ export const settingGroups = {
     webpQuality: z.number().int().min(1).max(100).default(80),
     jpegQuality: z.number().int().min(1).max(100).default(82),
   },
+  documents: {
+    /** Mărimea maximă a unui document de produs (PDF sau imagine), în octeți (implicit 15 MB; plafon 50 MB). */
+    maxUploadBytes: z
+      .number()
+      .int()
+      .min(1024)
+      .max(50 * 1024 * 1024)
+      .default(15 * 1024 * 1024),
+    /** Încărcări de documente per utilizator în fereastră (contor separat de cel al bibliotecii media). */
+    uploadMaxAttempts: z.number().int().min(1).max(10_000).default(30),
+    uploadWindowMinutes: z.number().int().min(1).max(1440).default(10),
+    /** Încercări refuzate (origine, sesiune, permisiune) pe IP care mai intră în jurnalul de audit. */
+    refusedAuditMaxAttempts: z.number().int().min(1).max(10_000).default(20),
+  },
   monitoring: {
     /** DSN Sentry. Gol = Sentry complet inactiv. Nu e secret (se trimite și în browser). */
     sentryDsn: z

@@ -1,12 +1,17 @@
 import { createReadStream } from "node:fs";
-import { mkdir, readFile, rename, rm, stat as fsStat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, stat as fsStat, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname, resolve, sep } from "node:path";
 import type { Readable } from "node:stream";
-import { isPublicKey, visibilityOf } from "./keys";
+import { assertValidPrefix, isPublicKey, visibilityOf } from "./keys";
 import { signClaims } from "./signing";
 import {
+  DEFAULT_LIST_LIMIT,
+  MAX_LIST_LIMIT,
   StorageError,
+  type ListOptions,
+  type ListResult,
+  type ListedObject,
   type PutOptions,
   type SignedUrlOptions,
   type StorageDriver,
@@ -138,6 +143,43 @@ export class LocalStorageDriver implements StorageDriver {
     });
     if (options.downloadFilename) params.set("dl", options.downloadFilename);
     return `${this.options.appUrl}/${this.signedPath}/${encodePath(key)}?${params.toString()}`;
+  }
+
+  async list(prefix: string, options: ListOptions = {}): Promise<ListResult> {
+    assertValidPrefix(prefix);
+    const limit = Math.min(Math.max(options.limit ?? DEFAULT_LIST_LIMIT, 1), MAX_LIST_LIMIT);
+    const dir = resolve(this.root, ...prefix.split("/").filter(Boolean));
+    if (dir !== this.root && !dir.startsWith(this.root + sep)) {
+      throw new StorageError("STORAGE_INVALID_KEY", "Prefix de storage invalid: iese din rădăcină");
+    }
+    const found: ListedObject[] = [];
+    const walk = async (current: string, keyPrefix: string): Promise<void> => {
+      let entries;
+      try {
+        entries = await readdir(current, { withFileTypes: true });
+      } catch (error) {
+        if (isNotFound(error)) return;
+        throw new StorageError("STORAGE_FAILED", "Listarea de pe discul local a eșuat", {
+          cause: errorMessage(error),
+        });
+      }
+      for (const entry of entries) {
+        const key = `${keyPrefix}${entry.name}`;
+        if (entry.isDirectory()) {
+          await walk(resolve(current, entry.name), `${key}/`);
+        } else if (
+          entry.isFile() &&
+          !entry.name.endsWith(META_SUFFIX) &&
+          !entry.name.endsWith(".tmp")
+        ) {
+          const info = await fsStat(resolve(current, entry.name));
+          found.push({ key, size: info.size, lastModified: info.mtime });
+        }
+      }
+    };
+    await walk(dir, prefix);
+    found.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    return { objects: found.slice(0, limit), truncated: found.length > limit };
   }
 
   /** Calea de pe disc pentru o cheie validată; apărare în adâncime peste validarea cheii. */

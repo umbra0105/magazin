@@ -481,3 +481,83 @@ export async function readE2eVariantSkus(productSlug: string): Promise<string[]>
     return (result.rows as { sku: string }[]).map((r) => r.sku);
   });
 }
+
+/** Documentele unui produs de probă, citite direct din bază (inclusiv cheia de stocare). */
+export async function readE2eDocuments(productSlug: string): Promise<
+  {
+    id: string;
+    title: string;
+    type: string;
+    mime: string;
+    sizeBytes: number;
+    storageKey: string;
+  }[]
+> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select d.id, d.title, d.type, d.mime, d."sizeBytes", d."storageKey"
+       from product_document d
+       where d."productId" = (select id from product where slug = $1)
+       order by d.position`,
+      [productSlug],
+    );
+    return result.rows as {
+      id: string;
+      title: string;
+      type: string;
+      mime: string;
+      sizeBytes: number;
+      storageKey: string;
+    }[];
+  });
+}
+
+/** Cheia există în stocarea locală a serverului E2E? (`E2E_STORAGE_DIR`, setat de configul Playwright.) */
+export async function e2eStorageFileExists(key: string): Promise<boolean> {
+  const { access } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const dir = process.env["E2E_STORAGE_DIR"];
+  if (!dir) throw new Error("E2E_STORAGE_DIR lipsește");
+  try {
+    await access(join(dir, ...key.split("/")));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Câte rânduri din `media` au această cheie (documentele NU trebuie să apară în biblioteca media). */
+export async function countE2eMediaWithKey(key: string): Promise<number> {
+  return withClient(async (db) => {
+    const result = await db.query(`select count(*)::int as n from media where "storageKey" = $1`, [
+      key,
+    ]);
+    return (result.rows[0] as { n: number }).n;
+  });
+}
+
+/** Câmpurile de conformitate ale unui produs de probă. */
+export async function readE2eConformity(productSlug: string): Promise<{
+  energyClass: string | null;
+  eprelUrl: string | null;
+  gpsrManufacturerName: string | null;
+  gpsrResponsibleName: string | null;
+  safetyWarnings: string | null;
+} | null> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select "energyClass", "eprelUrl", "gpsrManufacturerName", "gpsrResponsibleName", "safetyWarnings"
+       from product where slug = $1`,
+      [productSlug],
+    );
+    return (
+      (result.rows[0] as {
+        energyClass: string | null;
+        eprelUrl: string | null;
+        gpsrManufacturerName: string | null;
+        gpsrResponsibleName: string | null;
+        safetyWarnings: string | null;
+      }) ?? null
+    );
+  });
+}

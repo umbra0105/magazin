@@ -128,4 +128,52 @@ describe("LocalStorageDriver", () => {
       );
     }
   });
+
+  describe("list(prefix)", () => {
+    it("listează recursiv doar sub prefix, în ordinea cheilor, fără fișierele de metadate", async () => {
+      await driver.put("private/lst/b.pdf", Buffer.from("b"), { contentType: "application/pdf" });
+      await driver.put("private/lst/a.pdf", Buffer.from("aa"), { contentType: "application/pdf" });
+      await driver.put("private/lst/sub/c.png", Buffer.from("ccc"), { contentType: "image/png" });
+      await driver.put("private/lstx/other.pdf", Buffer.from("x"), {
+        contentType: "application/pdf",
+      });
+      await driver.put("public/lst/pub.png", Buffer.from("p"), { contentType: "image/png" });
+
+      const out = await driver.list("private/lst/");
+      expect(out.truncated).toBe(false);
+      expect(out.objects.map((o) => o.key)).toEqual([
+        "private/lst/a.pdf",
+        "private/lst/b.pdf",
+        "private/lst/sub/c.png",
+      ]);
+      expect(out.objects.map((o) => o.size)).toEqual([2, 1, 3]);
+      for (const o of out.objects) {
+        expect(o.lastModified).toBeInstanceOf(Date);
+        expect(o.key).not.toContain(".meta.json");
+      }
+    });
+
+    it("respectă limita și raportează truncated; un prefix inexistent dă listă goală", async () => {
+      const out = await driver.list("private/lst/", { limit: 2 });
+      expect(out.objects).toHaveLength(2);
+      expect(out.truncated).toBe(true);
+      expect(await driver.list("private/nu-exista/")).toEqual({ objects: [], truncated: false });
+    });
+
+    it("refuză prefixe invalide: fără slash final, traversare, prea larg, în afara spațiilor", async () => {
+      for (const bad of [
+        "private/lst",
+        "../etc/",
+        "private/../x/",
+        "private/",
+        "public/",
+        "tmp/x/",
+        "",
+      ]) {
+        await expect(driver.list(bad), JSON.stringify(bad)).rejects.toMatchObject({
+          code: "STORAGE_INVALID_KEY",
+        });
+      }
+    });
+  });
 });

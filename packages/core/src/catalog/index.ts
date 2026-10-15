@@ -201,3 +201,28 @@ export {
 export { DECIMAL_SCALE, formatDecimalDisplay, parseDecimalInput } from "./decimal";
 export type { VariantPlanPreview } from "./product-service";
 export type { VariantWithOptions } from "./product-store";
+export {
+  DOCUMENT_ERROR_STATUS,
+  DOCUMENT_KEY_PREFIX,
+  DOCUMENT_LINK_SECONDS,
+  DocumentError,
+  MAX_DOCUMENTS_PER_PRODUCT,
+  ProductDocumentsService,
+  createPrismaProductDocumentStore,
+  findPdfActiveContent,
+  isDocumentError,
+  isPdf,
+  sweepOrphanDocuments,
+  type DocumentErrorCode,
+  type DocumentRecord,
+  type OrphanReport,
+  type ProductDocumentStore,
+  type ProductDocumentsDeps,
+} from "./product-documents";
+export {
+  handleProductDocumentDownload,
+  handleProductDocumentUpload,
+  type DocumentSettings,
+  type ProductDocumentDownloadDeps,
+  type ProductDocumentUploadDeps,
+} from "./product-document-handler";

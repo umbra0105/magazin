@@ -48,7 +48,7 @@ const PRISMA_WRITE = new RegExp(
 );
 /** Serviciile catalogului care scriu (numele lor sunt o convenție: testul le caută). */
 const SERVICE_WRITE =
-  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService|ProductAssignmentsService|getProductAssignmentsService|productAssignmentsService|getPurchasePriceService|purchasePriceService|AttributeService|getAttributeService|attributeService|ProductAttributesService|getProductAttributesService|productAttributesService|ProductRelationsService|getProductRelationsService|productRelationsService)\b/;
+  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService|ProductAssignmentsService|getProductAssignmentsService|productAssignmentsService|getPurchasePriceService|purchasePriceService|AttributeService|getAttributeService|attributeService|ProductAttributesService|getProductAttributesService|productAttributesService|ProductDocumentsService|getProductDocumentsService|productDocumentsService|ProductRelationsService|getProductRelationsService|productRelationsService)\b/;
 
 const WRITES_PRODUCTS = (content: string): boolean =>
   PRISMA_WRITE.test(content) || SERVICE_WRITE.test(content);
@@ -176,6 +176,12 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
         "deleteProductVariant",
       ],
       "purchase-actions.ts": ["savePurchasePrice"],
+      // blocul 11c: documentele (încărcarea are ruta ei, acoperită de testul rutelor de upload)
+      "document-actions.ts": [
+        "updateProductDocument",
+        "deleteProductDocument",
+        "reorderProductDocuments",
+      ],
     };
     for (const [suffix, names] of Object.entries(expected)) {
       const file = files.find((f) => f.path.endsWith("(admin)/admin/produse/" + suffix));

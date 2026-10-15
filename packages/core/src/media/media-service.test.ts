@@ -29,6 +29,9 @@ class MemoryStorage implements StorageDriver {
   publicUrl(key: string): string {
     return `https://magazin.test/media/${key.slice("public/".length)}`;
   }
+  async list(): Promise<{ objects: []; truncated: false }> {
+    return { objects: [], truncated: false };
+  }
   async signedUrl(): Promise<string> {
     throw new Error("nefolosit");
   }

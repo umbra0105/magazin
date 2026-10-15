@@ -18,6 +18,24 @@ export interface EditorProduct {
   stockStatus: string;
   seoTitle: string | null;
   seoDescription: string | null;
+  energyClass: string | null;
+  eprelUrl: string | null;
+  gpsrManufacturerName: string | null;
+  gpsrManufacturerContact: string | null;
+  gpsrResponsibleName: string | null;
+  gpsrResponsibleContact: string | null;
+  safetyWarnings: string | null;
+}
+
+export interface EditorDocument {
+  id: string;
+  type: string;
+  title: string;
+  originalName: string;
+  mime: string;
+  sizeBytes: number;
+  language: string;
+  showInTab: boolean;
 }
 
 export interface EditorVariant {

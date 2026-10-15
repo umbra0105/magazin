@@ -144,4 +144,25 @@ describe("S3StorageDriver pe MinIO (bucket de test)", () => {
     expect(text).not.toContain("alt-secret-gresit");
     expect(text).not.toContain(options.accessKeyId);
   });
+
+  it("list: doar obiectele de sub prefix, în ordinea cheilor, cu mărime și dată; respectă limita", async () => {
+    const a = keyOf("private", "lst/a.pdf");
+    const b = keyOf("private", "lst/b.pdf");
+    const inner = keyOf("private", "lst/sub/c.png");
+    const other = keyOf("private", "lst-alt/x.pdf");
+    await driver.put(a, Buffer.from("aa"), { contentType: "application/pdf" });
+    await driver.put(b, Buffer.from("b"), { contentType: "application/pdf" });
+    await driver.put(inner, Buffer.from("ccc"), { contentType: "image/png" });
+    await driver.put(other, Buffer.from("x"), { contentType: "application/pdf" });
+
+    const out = await driver.list(`private/${run}/lst/`);
+    expect(out.truncated).toBe(false);
+    expect(out.objects.map((o) => o.key)).toEqual([a, b, inner]);
+    expect(out.objects.map((o) => o.size)).toEqual([2, 1, 3]);
+    expect(out.objects[0]?.lastModified).toBeInstanceOf(Date);
+
+    const limited = await driver.list(`private/${run}/lst/`, { limit: 2 });
+    expect(limited.objects).toHaveLength(2);
+    expect(limited.truncated).toBe(true);
+  });
 });

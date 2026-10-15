@@ -6,9 +6,12 @@ import { Badge, Tabs, type TabItem } from "@ecom/ui";
 import { getMessages } from "@/messages";
 import { AttributesTab } from "./attributes-tab";
 import { CategoriesTab, type CategoryOption } from "./categories-tab";
+import { ConformityTab } from "./conformity-tab";
+import { DocumentsTab } from "./documents-tab";
 import type {
   EditorAttribute,
   EditorCaps,
+  EditorDocument,
   EditorMediaItem,
   EditorOption,
   EditorProduct,
@@ -38,6 +41,9 @@ export interface ProductEditorProps {
   variantOptions: readonly EditorOption[];
   attributes: readonly EditorAttribute[];
   relations: readonly EditorRelation[];
+  documents: readonly EditorDocument[];
+  /** Mărimea maximă a unui document, în MB (din setări; serverul o aplică oricum). */
+  documentMaxMb: number;
   caps: EditorCaps;
   pricing: {
     vatRateBps: number;
@@ -76,6 +82,8 @@ function EditorBody({
   variantOptions,
   attributes,
   relations,
+  documents,
+  documentMaxMb,
   caps,
   pricing,
   storeManagesStock,
@@ -156,6 +164,25 @@ function EditorBody({
       label: e.tabs.related,
       badge: undefined,
       panel: <RelationsTab productId={product.id} initial={relations} caps={caps} />,
+    },
+    {
+      id: "documente",
+      label: e.tabs.documents,
+      badge: undefined,
+      panel: (
+        <DocumentsTab
+          productId={product.id}
+          initial={documents}
+          maxUploadMb={documentMaxMb}
+          caps={caps}
+        />
+      ),
+    },
+    {
+      id: "conformitate",
+      label: e.tabs.conformity,
+      badge: badge("conformity"),
+      panel: <ConformityTab product={product} caps={caps} />,
     },
     {
       id: "media",

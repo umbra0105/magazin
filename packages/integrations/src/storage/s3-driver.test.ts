@@ -45,6 +45,14 @@ describe("S3StorageDriver (fără rețea)", () => {
     });
   });
 
+  it("list refuză prefixele invalide înainte de orice cerere de rețea", async () => {
+    for (const bad of ["private/docs", "../x/", "private/", ""]) {
+      await expect(driver.list(bad), JSON.stringify(bad)).rejects.toMatchObject({
+        code: "STORAGE_INVALID_KEY",
+      });
+    }
+  });
+
   it("publicUrl trece prin aplicație fără S3_PUBLIC_URL și prin CDN cu el", () => {
     expect(driver.publicUrl("public/media/2026/10/a.avif")).toBe(
       "https://magazin.test/media/media/2026/10/a.avif",

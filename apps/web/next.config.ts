@@ -45,6 +45,12 @@ const nextConfig: NextConfig = {
       { source: "/api/admin/:path*", headers: privateNoIndex },
     ];
   },
+  experimental: {
+    // Cu middleware, Next păstrează în memorie corpul cererilor și îl TRUNCHIAZĂ la 10 MB în tăcere.
+    // Încărcările (media, documente) pot avea până la 50 MB (plafonul setărilor); limita reală o
+    // aplică handlerele, pe flux, cu eroare clară. Fără asta, un PDF de 12 MB ar fi salvat tăiat.
+    middlewareClientMaxBodySize: "51mb",
+  },
   serverExternalPackages: [
     "pg",
     "ioredis",
