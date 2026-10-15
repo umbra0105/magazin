@@ -561,3 +561,29 @@ export async function readE2eConformity(productSlug: string): Promise<{
     );
   });
 }
+
+/** Rândul media încărcat sub un nume dat (cel mai recent): mărimea originalului curățat și dimensiunile. */
+export async function readE2eMediaByName(originalName: string): Promise<{
+  status: string;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+  storageKey: string;
+} | null> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select status, "sizeBytes", width, height, "storageKey" from media
+       where "originalName" = $1 order by "createdAt" desc limit 1`,
+      [originalName],
+    );
+    return (
+      (result.rows[0] as {
+        status: string;
+        sizeBytes: number;
+        width: number | null;
+        height: number | null;
+        storageKey: string;
+      }) ?? null
+    );
+  });
+}

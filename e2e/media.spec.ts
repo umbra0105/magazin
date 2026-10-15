@@ -1,11 +1,14 @@
 import { randomBytes } from "node:crypto";
+import { stat } from "node:fs/promises";
+import { join } from "node:path";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import {
   attachMediaToE2eProduct,
   promoteE2eUser,
+  readE2eMediaByName,
   removeE2eProducts,
 } from "../packages/core/test/e2e-support";
-import { solidPng } from "./support/png";
+import { noisePng, solidPng } from "./support/png";
 
 /**
  * Biblioteca media, în browser: încărcare multiplă cu progres, procesare în fundal (workerul din
@@ -311,5 +314,50 @@ test.describe("biblioteca media", () => {
     );
     expect(overflow).toBeLessThanOrEqual(0);
     await expect(page.getByRole("button", { name: "Alege fișiere" })).toBeVisible();
+  });
+
+  test("imagine de ~12 MB (între 10 și 20 MB): încărcată ÎNTREAGĂ, originalul stocat are mărimea și dimensiunile corecte", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    // Regresie: cu un middleware în aplicație, Next trunchia în tăcere corpul cererilor la 10 MB
+    // (`experimental.middlewareClientMaxBodySize`). O imagine trunchiată ar fi dat „corupt” sau un
+    // original de ~10 MB; aici cerem mărimea întreagă și dimensiunile exacte.
+    const owner = await createAccount(request, baseURL as string, "owner");
+    await login(page, owner, "/admin/media");
+    const name = `mare-${randomBytes(3).toString("hex")}.png`;
+    const bytes = noisePng(2000, 2000);
+    expect(bytes.length).toBeGreaterThan(10 * 1024 * 1024);
+    expect(bytes.length).toBeLessThan(20 * 1024 * 1024); // limita media implicită: 20 MB
+
+    let status = 0;
+    for (let attempt = 0; attempt < 10 && status !== 201; attempt++) {
+      const response = await page.request.post(`${baseURL}/api/media`, {
+        headers: { origin: baseURL as string, "x-file-name": name },
+        data: bytes,
+      });
+      status = response.status();
+      // 503 = MEDIA_BUSY (limita globală de decodări): se reîncearcă; altceva e o eroare reală
+      if (status === 503) await new Promise((r) => setTimeout(r, 2000));
+      else expect(status).toBe(201);
+    }
+    expect(status).toBe(201);
+
+    const row = await readE2eMediaByName(name);
+    expect(row).not.toBeNull();
+    expect(row?.width).toBe(2000);
+    expect(row?.height).toBe(2000);
+    expect(row?.sizeBytes).toBeGreaterThan(10 * 1024 * 1024);
+    // mărimea din bază = mărimea fișierului de pe disc (originalul curățat), nu una „tăiată”
+    const onDisk = await stat(
+      join(process.env["E2E_STORAGE_DIR"] as string, ...(row?.storageKey as string).split("/")),
+    );
+    expect(onDisk.size).toBe(row?.sizeBytes);
+
+    // se procesează normal (variante) și devine „gata”
+    await expect
+      .poll(async () => (await readE2eMediaByName(name))?.status, { timeout: 90_000 })
+      .toBe("ready");
   });
 });
