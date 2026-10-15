@@ -9,6 +9,7 @@ export const FEATURE_FLAGS = {
   multiWarehouse: "Multi-depozit",
   loyalty: "Puncte de loialitate",
   vouchers: "Vouchere cadou",
+  partsDiagrams: "Fișe explodate (piese de schimb)",
 } as const;
 
 export type FeatureKey = keyof typeof FEATURE_FLAGS;

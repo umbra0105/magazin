@@ -3,12 +3,14 @@ import {
   AttributeService,
   BrandService,
   CategoryService,
+  PartsDiagramService,
   ProductAttributesService,
   ProductRelationsService,
   ProductAssignmentsService,
   ProductListService,
   ProductService,
   createPrismaAttributeStore,
+  createPrismaPartsDiagramStore,
   createPrismaBrandStore,
   createPrismaCategoryStore,
   createPrismaProductAttributeStore,
@@ -21,7 +23,7 @@ import { getDb } from "@ecom/db";
 import { getLogger } from "@ecom/shared";
 import { getAudit } from "./admin-writes";
 import { getStorage } from "./media";
-import { getSettings } from "./services";
+import { getFeatureFlags, getSettings } from "./services";
 
 const globalForCatalog = globalThis as unknown as {
   __ecomCategories?: CategoryService;
@@ -32,6 +34,7 @@ const globalForCatalog = globalThis as unknown as {
   __ecomAttributes?: AttributeService;
   __ecomProductAttributes?: ProductAttributesService;
   __ecomRelations?: ProductRelationsService;
+  __ecomPartsDiagrams?: PartsDiagramService;
 };
 
 /**
@@ -134,4 +137,20 @@ export function getProductRelationsService(): ProductRelationsService {
     logger: getLogger(),
   });
   return globalForCatalog.__ecomRelations;
+}
+
+/**
+ * Fișele explodate. Serviciul verifică singur flag-ul `partsDiagrams` la fiecare operație (oprit =
+ * `FEATURE_DISABLED`), în plus față de meniu și rute (404), ca nicio cale de cod să nu ocolească regula.
+ */
+export function getPartsDiagramService(): PartsDiagramService {
+  globalForCatalog.__ecomPartsDiagrams ??= new PartsDiagramService({
+    store: createPrismaPartsDiagramStore(getDb()),
+    storage: getStorage(),
+    audit: getAudit(),
+    isEnabled: () => getFeatureFlags().isEnabled("partsDiagrams"),
+    invalidate,
+    logger: getLogger(),
+  });
+  return globalForCatalog.__ecomPartsDiagrams;
 }

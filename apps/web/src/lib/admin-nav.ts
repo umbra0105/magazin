@@ -12,6 +12,7 @@ export type AdminNavIcon =
   | "categories"
   | "brands"
   | "attributes"
+  | "partsDiagrams"
   | "inventory"
   | "customers"
   | "discounts"
@@ -43,6 +44,12 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "categories", href: "/admin/categorii", permission: "products.read" },
   { id: "brands", href: "/admin/branduri", permission: "products.read" },
   { id: "attributes", href: "/admin/atribute", permission: "products.read" },
+  {
+    id: "partsDiagrams",
+    href: "/admin/fise-explodate",
+    permission: "products.read",
+    feature: "partsDiagrams",
+  },
   { id: "inventory", href: "/admin/stoc", permission: "inventory.read" },
   { id: "customers", href: "/admin/clienti", permission: "customers.read" },
   { id: "discounts", href: "/admin/reduceri", permission: "discounts.read" },

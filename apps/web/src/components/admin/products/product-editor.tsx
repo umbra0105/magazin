@@ -24,6 +24,7 @@ import { MediaTab } from "./media-tab";
 import { PricingTab } from "./pricing-tab";
 import { RelationsTab } from "./relations-tab";
 import { SeoTab } from "./seo-tab";
+import { SparePartsTab, type SparePartsDiagram } from "./spare-parts-tab";
 import { StockTab } from "./stock-tab";
 import { UnsavedChangesProvider, useDirtyKeys } from "./unsaved-changes";
 import { VariantsTab } from "./variants-tab";
@@ -44,6 +45,11 @@ export interface ProductEditorProps {
   documents: readonly EditorDocument[];
   /** Mărimea maximă a unui document, în MB (din setări; serverul o aplică oricum). */
   documentMaxMb: number;
+  /** Fișele explodate; `null` cu flag-ul `partsDiagrams` oprit (tabul nu apare deloc). */
+  spareParts: {
+    attached: readonly SparePartsDiagram[];
+    available: readonly SparePartsDiagram[];
+  } | null;
   caps: EditorCaps;
   pricing: {
     vatRateBps: number;
@@ -84,6 +90,7 @@ function EditorBody({
   relations,
   documents,
   documentMaxMb,
+  spareParts,
   caps,
   pricing,
   storeManagesStock,
@@ -165,6 +172,23 @@ function EditorBody({
       badge: undefined,
       panel: <RelationsTab productId={product.id} initial={relations} caps={caps} />,
     },
+    ...(spareParts
+      ? [
+          {
+            id: "piese",
+            label: e.tabs.spareParts,
+            badge: undefined,
+            panel: (
+              <SparePartsTab
+                productId={product.id}
+                initialAttached={spareParts.attached}
+                initialAvailable={spareParts.available}
+                caps={caps}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       id: "documente",
       label: e.tabs.documents,

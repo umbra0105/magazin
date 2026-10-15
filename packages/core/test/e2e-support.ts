@@ -587,3 +587,70 @@ export async function readE2eMediaByName(originalName: string): Promise<{
     );
   });
 }
+
+const trackedDiagrams = new Set<string>();
+
+/** Înregistrează o fișă explodată creată prin interfață (după titlu), ca să fie curățată la final. */
+export function trackE2eDiagram(title: string): void {
+  trackedDiagrams.add(title);
+}
+
+/** Șterge fișele de test ale acestui worker (hotspot-urile și asocierile se șterg în cascadă). */
+export async function removeE2eDiagrams(): Promise<void> {
+  const titles = [...trackedDiagrams];
+  trackedDiagrams.clear();
+  if (titles.length === 0) return;
+  await withClient(async (db) => {
+    await db.query(`delete from parts_diagram where title = any($1::text[])`, [titles]);
+  });
+}
+
+/** O fișă explodată: hotspot-urile (cu produsul ca adresă) și produsele asociate, citite din bază. */
+export async function readE2eDiagram(title: string): Promise<{
+  id: string;
+  hotspots: {
+    number: number;
+    xBp: number | null;
+    yBp: number | null;
+    label: string | null;
+    productSlug: string | null;
+  }[];
+  productSlugs: string[];
+} | null> {
+  return withClient(async (db) => {
+    const diagram = await db.query(`select id from parts_diagram where title = $1 limit 1`, [
+      title,
+    ]);
+    const row = diagram.rows[0] as { id: string } | undefined;
+    if (!row) return null;
+    const hotspots = await db.query(
+      `select h.number, h."xBp", h."yBp", h.label, p.slug as "productSlug"
+       from parts_diagram_hotspot h left join product p on p.id = h."productId"
+       where h."diagramId" = $1 order by h.number`,
+      [row.id],
+    );
+    const products = await db.query(
+      `select p.slug from parts_diagram_product l join product p on p.id = l."productId"
+       where l."diagramId" = $1 order by p.slug`,
+      [row.id],
+    );
+    return {
+      id: row.id,
+      hotspots: hotspots.rows as {
+        number: number;
+        xBp: number | null;
+        yBp: number | null;
+        label: string | null;
+        productSlug: string | null;
+      }[],
+      productSlugs: (products.rows as { slug: string }[]).map((r) => r.slug),
+    };
+  });
+}
+
+/** Șterge DEFINITIV un produs de probă (nu soft delete), ca să verifice `ON DELETE SET NULL` pe hotspot. */
+export async function hardDeleteE2eProduct(slug: string): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`delete from product where slug = $1`, [slug]);
+  });
+}

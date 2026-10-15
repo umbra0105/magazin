@@ -751,8 +751,10 @@ model PartsDiagramHotspot {
   number    Int
   xBp       Int?
   yBp       Int?
-  productId String
-  product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Piesa din catalog. Nulă când produsul a fost șters definitiv: hotspot-ul rămâne în fișă (se
+  /// vede ca „fără produs” în editor), nu dispare odată cu produsul.
+  productId String?
+  product   Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
   label     String?
 
   @@unique([diagramId, number])

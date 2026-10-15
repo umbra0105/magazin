@@ -48,7 +48,7 @@ export function createProductMediaUsageProvider(db: Db): MediaUsageProvider {
   };
 }
 
-/** Fișele explodate care folosesc fișierul ca imagine. Fără link: editorul lor vine mai târziu. */
+/** Fișele explodate care folosesc fișierul ca imagine; linkul duce la editorul fișei. */
 export function createPartsDiagramMediaUsageProvider(db: Db): MediaUsageProvider {
   return {
     name: PARTS_DIAGRAM_MEDIA_USAGE_PROVIDER,
@@ -57,13 +57,17 @@ export function createPartsDiagramMediaUsageProvider(db: Db): MediaUsageProvider
       if (mediaIds.length === 0) return out;
       const rows = await db.partsDiagram.findMany({
         where: { mediaId: { in: [...mediaIds] } },
-        select: { mediaId: true, title: true },
+        select: { id: true, mediaId: true, title: true },
         orderBy: { title: "asc" },
       });
       for (const row of rows) {
         out.set(row.mediaId, [
           ...(out.get(row.mediaId) ?? []),
-          { kind: "parts_diagram", label: `Fișă explodată: ${row.title}` },
+          {
+            kind: "parts_diagram",
+            label: `Fișă explodată: ${row.title}`,
+            href: `/admin/fise-explodate/${row.id}`,
+          },
         ]);
       }
       return out;

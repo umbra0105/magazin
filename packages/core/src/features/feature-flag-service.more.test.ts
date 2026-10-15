@@ -31,11 +31,11 @@ describe("FeatureFlagService: detalii", () => {
     expect(FEATURE_FLAGS_CACHE_TTL_SECONDS).toBe(300);
   });
 
-  it("list() întoarce toate cele 6 flag-uri cu etichete în română și starea corectă", async () => {
+  it("list() întoarce toate cele 7 flag-uri cu etichete în română și starea corectă", async () => {
     const { service, rows } = setup();
     rows.set("wishlist", true);
     const list = await service.list();
-    expect(list).toHaveLength(6);
+    expect(list).toHaveLength(7);
     expect(list.find((flag) => flag.key === "wishlist")).toEqual({
       key: "wishlist",
       label: "Listă de dorințe",
@@ -67,6 +67,7 @@ describe("FeatureFlagService: detalii", () => {
       multiWarehouse: false,
       loyalty: true,
       vouchers: false,
+      partsDiagrams: false,
     });
   });
 });

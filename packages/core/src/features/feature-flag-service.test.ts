@@ -54,6 +54,7 @@ describe("FeatureFlagService", () => {
       "multiWarehouse",
       "loyalty",
       "vouchers",
+      "partsDiagrams",
     ]);
     expect((await service.list()).every((flag) => !flag.enabled)).toBe(true);
   });

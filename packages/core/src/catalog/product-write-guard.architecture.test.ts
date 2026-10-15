@@ -42,13 +42,16 @@ const MODELS = [
   // atribute (definiții și opțiuni)
   "attribute",
   "attributeOption",
+  // fișele explodate
+  "partsDiagramHotspot",
+  "partsDiagramProduct",
 ];
 const PRISMA_WRITE = new RegExp(
   `\\.(?:${MODELS.join("|")})\\.(?:create|createMany|update|updateMany|upsert|delete|deleteMany)\\b`,
 );
 /** Serviciile catalogului care scriu (numele lor sunt o convenție: testul le caută). */
 const SERVICE_WRITE =
-  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService|ProductAssignmentsService|getProductAssignmentsService|productAssignmentsService|getPurchasePriceService|purchasePriceService|AttributeService|getAttributeService|attributeService|ProductAttributesService|getProductAttributesService|productAttributesService|ProductDocumentsService|getProductDocumentsService|productDocumentsService|ProductRelationsService|getProductRelationsService|productRelationsService)\b/;
+  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService|ProductAssignmentsService|getProductAssignmentsService|productAssignmentsService|getPurchasePriceService|purchasePriceService|AttributeService|getAttributeService|attributeService|ProductAttributesService|getProductAttributesService|productAttributesService|ProductDocumentsService|getProductDocumentsService|productDocumentsService|PartsDiagramService|getPartsDiagramService|partsDiagramService|ProductRelationsService|getProductRelationsService|productRelationsService)\b/;
 
 const WRITES_PRODUCTS = (content: string): boolean =>
   PRISMA_WRITE.test(content) || SERVICE_WRITE.test(content);
@@ -212,6 +215,28 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
       ].sort(),
     );
     for (const e of exported) expect(e.permission, e.name).toBe("products.write");
+  });
+
+  it("acțiunile fișelor explodate sunt recunoscute ca scrieri de catalog și cer products.*", () => {
+    const file = files.find((f) => f.path.endsWith("(admin)/admin/fise-explodate/actions.ts"));
+    expect(file).toBeDefined();
+    expect(WRITES_PRODUCTS(file?.content ?? "")).toBe(true);
+    const exported = exportsOf(file?.content ?? "");
+    expect(exported.map((e) => e.name).sort()).toEqual(
+      [
+        "createDiagram",
+        "updateDiagram",
+        "deleteDiagram",
+        "attachDiagramProduct",
+        "detachDiagramProduct",
+        "saveDiagramHotspot",
+        "deleteDiagramHotspot",
+        "searchDiagramProducts",
+      ].sort(),
+    );
+    for (const e of exported) {
+      expect(e.permission?.startsWith("products."), e.name).toBe(true);
+    }
   });
 
   it("nicio acțiune sau rută care modifică produse nu e neprotejată sau protejată cu altă permisiune", () => {

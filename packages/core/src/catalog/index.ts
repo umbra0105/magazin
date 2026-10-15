@@ -226,3 +226,18 @@ export {
   type ProductDocumentDownloadDeps,
   type ProductDocumentUploadDeps,
 } from "./product-document-handler";
+export {
+  BASIS_POINTS_MAX,
+  FeatureDisabledError,
+  MAX_HOTSPOTS_PER_DIAGRAM,
+  MAX_HOTSPOT_NUMBER,
+  PartsDiagramService,
+  createPrismaPartsDiagramStore,
+  type DiagramDetail,
+  type DiagramHotspot,
+  type DiagramImage,
+  type DiagramListItem,
+  type DiagramProductSummary,
+  type PartsDiagramServiceDeps,
+  type PartsDiagramStore,
+} from "./parts-diagram-service";

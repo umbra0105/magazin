@@ -12,10 +12,11 @@ import {
   getProductAssignmentsService,
   getProductAttributesService,
   getProductRelationsService,
+  getPartsDiagramService,
   getProductService,
 } from "@/lib/catalog";
 import { getProductDocumentsService } from "@/lib/product-documents";
-import { getSettings } from "@/lib/services";
+import { getFeatureFlags, getSettings } from "@/lib/services";
 import { formatZonedLocal } from "@/lib/zoned-time";
 import { getMessages } from "@/messages";
 
@@ -33,6 +34,7 @@ const TAB_IDS = [
   "categorii",
   "atribute",
   "asociate",
+  "piese",
   "documente",
   "conformitate",
   "media",
@@ -68,6 +70,43 @@ export default async function ProductEditorPage({
   }
   const { product } = loaded;
   if (product.deletedAt) notFound();
+
+  // Fișele explodate: doar cu flag-ul pornit (altfel tabul nu există și serviciul nici nu e chemat)
+  let spareParts: {
+    attached: {
+      id: string;
+      title: string;
+      hotspotCount: number;
+      productCount: number;
+      imageUrl: string | null;
+    }[];
+    available: {
+      id: string;
+      title: string;
+      hotspotCount: number;
+      productCount: number;
+      imageUrl: string | null;
+    }[];
+  } | null = null;
+  if (await getFeatureFlags().isEnabled("partsDiagrams")) {
+    const diagrams = getPartsDiagramService();
+    const [attachedRows, allRows] = await Promise.all([
+      diagrams.forProduct(subject, id),
+      diagrams.list(subject),
+    ]);
+    const shape = (d: (typeof allRows)[number]) => ({
+      id: d.id,
+      title: d.title,
+      hotspotCount: d.hotspotCount,
+      productCount: d.productCount,
+      imageUrl: d.image.url,
+    });
+    const attachedIds = new Set(attachedRows.map((d) => d.id));
+    spareParts = {
+      attached: attachedRows.map(shape),
+      available: allRows.filter((d) => !attachedIds.has(d.id)).map(shape),
+    };
+  }
 
   const assignments = getProductAssignmentsService();
   const [
@@ -183,6 +222,7 @@ export default async function ProductEditorPage({
           language: doc.language,
           showInTab: doc.showInTab,
         }))}
+        spareParts={spareParts}
         documentMaxMb={Math.max(1, Math.floor(documentSettings.maxUploadBytes / (1024 * 1024)))}
         variants={editorVariants}
         variantOptions={variantData.options}

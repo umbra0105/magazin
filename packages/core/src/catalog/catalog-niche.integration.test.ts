@@ -246,9 +246,12 @@ describe("fișa explodată", () => {
       });
       const usages = await createMediaUsageRegistry(tx).findUsages([media.id]);
       expect(usages.get(media.id)).toEqual([
-        { kind: "parts_diagram", label: "Fișă explodată: Fișa pompei" },
+        {
+          kind: "parts_diagram",
+          label: "Fișă explodată: Fișa pompei",
+          href: `/admin/fise-explodate/${diagram.id}`,
+        },
       ]);
-      expect(diagram.id).toBeTruthy();
     });
     await violation(async (tx) => {
       const media = await newMedia(tx);
