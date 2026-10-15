@@ -654,3 +654,158 @@ export async function hardDeleteE2eProduct(slug: string): Promise<void> {
     await db.query(`delete from product where slug = $1`, [slug]);
   });
 }
+
+/**
+ * Starea de ciclu de viață a unui produs de probă (după adresă), din bază: stare, coș de gunoi,
+ * variantele (cod, EAN, dacă au preț de achiziție), istoricele și identificatorii din magazinul vechi.
+ */
+export async function readE2eLifecycle(slug: string): Promise<{
+  id: string;
+  title: string;
+  status: string;
+  deleted: boolean;
+  legacyId: string | null;
+  energyClass: string | null;
+  variants: { sku: string; ean: string | null; hasCost: boolean; hasCostDate: boolean }[];
+  priceHistoryRows: number;
+  costHistoryRows: number;
+  documentCount: number;
+} | null> {
+  return withClient(async (db) => {
+    const product = await db.query(
+      `select id, title, status, "deletedAt", "legacyId", "energyClass" from product where slug = $1`,
+      [slug],
+    );
+    const row = product.rows[0] as
+      | {
+          id: string;
+          title: string;
+          status: string;
+          deletedAt: Date | null;
+          legacyId: string | null;
+          energyClass: string | null;
+        }
+      | undefined;
+    if (!row) return null;
+    const variants = await db.query(
+      `select sku, ean, "costPrice" is not null as "hasCost", "costPriceDate" is not null as "hasCostDate"
+       from product_variant where "productId" = $1 order by position`,
+      [row.id],
+    );
+    const price = await db.query(
+      `select count(*)::int as n from price_history h join product_variant v on v.id = h."variantId" where v."productId" = $1`,
+      [row.id],
+    );
+    const cost = await db.query(
+      `select count(*)::int as n from cost_price_history h join product_variant v on v.id = h."variantId" where v."productId" = $1`,
+      [row.id],
+    );
+    const documents = await db.query(
+      `select count(*)::int as n from product_document where "productId" = $1`,
+      [row.id],
+    );
+    return {
+      id: row.id,
+      title: row.title,
+      status: row.status,
+      deleted: row.deletedAt !== null,
+      legacyId: row.legacyId,
+      energyClass: row.energyClass,
+      variants: variants.rows as {
+        sku: string;
+        ean: string | null;
+        hasCost: boolean;
+        hasCostDate: boolean;
+      }[],
+      priceHistoryRows: price.rows[0]?.n as number,
+      costHistoryRows: cost.rows[0]?.n as number,
+      documentCount: documents.rows[0]?.n as number,
+    };
+  });
+}
+
+/** Adaugă ceva de „specific modelului” unui produs de probă, ca duplicarea să probeze că NU se copiază. */
+export async function setE2eModelSpecifics(
+  slug: string,
+  data: { ean: string; energyClass: string; legacyId: string; documentTitle: string },
+): Promise<void> {
+  await withClient(async (db) => {
+    const product = await db.query(
+      `update product set "energyClass" = $2, "legacyId" = $3, "eprelUrl" = 'https://eprel.ec.europa.eu/qr/987654'
+       where slug = $1 returning id`,
+      [slug, data.energyClass, data.legacyId],
+    );
+    const id = product.rows[0]?.id as string;
+    await db.query(`update product_variant set ean = $2 where "productId" = $1`, [id, data.ean]);
+    await db.query(
+      `insert into product_document (id, "productId", type, title, "storageKey", "originalName", mime, "sizeBytes", language, position, "showInTab", "createdAt", "updatedAt")
+       values (gen_random_uuid()::text, $1, 'manual', $2, $3, 'manual.pdf', 'application/pdf', 10, 'ro', 0, true, now(), now())`,
+      [
+        id,
+        data.documentTitle,
+        `private/product-documents/e2e-${Math.random().toString(36).slice(2)}.pdf`,
+      ],
+    );
+  });
+}
+
+/**
+ * Câte evenimente de audit cu acțiunea dată îi privesc pe produsele cu adresele date: pe entitate
+ * (operațiile pe un produs) sau în lista de id-uri a evenimentului agregat (operațiile pe selecție).
+ */
+export async function countE2eProductAuditEvents(
+  action: string,
+  productSlugs: readonly string[],
+): Promise<number> {
+  return withClient(async (db) => {
+    const ids = await db.query(`select id from product where slug = any($1::text[])`, [
+      [...productSlugs],
+    ]);
+    const list = ids.rows.map((r: { id: string }) => r.id);
+    if (list.length === 0) return 0;
+    const result = await db.query(
+      `select count(*)::int as n from audit_log a
+       where a.action = $1 and a.outcome = 'success'
+         and (a."entityId" = any($2::text[])
+              or exists (select 1 from unnest($2::text[]) as x(id) where a.after::text like '%"' || x.id || '"%'))`,
+      [action, list],
+    );
+    return result.rows[0]?.n as number;
+  });
+}
+
+/**
+ * Creează o fișă explodată (titlul urmărit pentru curățare) cu un hotspot legat de produsul dat,
+ * pe o imagine falsă `ready` încărcată de contul de test. Întoarce id-ul fișei.
+ */
+export async function seedE2eDiagramWithHotspot(
+  ownerEmail: string,
+  productSlug: string,
+  diagramTitle: string,
+): Promise<string> {
+  const mediaId = await insertE2eMedia(ownerEmail, {
+    name: `e2e-${diagramTitle}.png`,
+    status: "ready",
+  });
+  trackedDiagrams.add(diagramTitle);
+  return withClient(async (db) => {
+    const product = await db.query(`select id from product where slug = $1`, [productSlug]);
+    const productId = product.rows[0]?.id as string;
+    const diagram = await db.query(
+      `insert into parts_diagram (id, title, "mediaId", "createdAt", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, now(), now()) returning id`,
+      [diagramTitle, mediaId],
+    );
+    const diagramId = diagram.rows[0]?.id as string;
+    await db.query(`insert into parts_diagram_product ("diagramId", "productId") values ($1, $2)`, [
+      diagramId,
+      productId,
+    ]);
+    await db.query(
+      `insert into parts_diagram_hotspot (id, "diagramId", number, "xBp", "yBp", "productId", label)
+       values (gen_random_uuid()::text, $1, 7, 2500, 4000, $2, null)`,
+      [diagramId, productId],
+    );
+    return diagramId;
+  });
+}

@@ -30,6 +30,10 @@ export const PRODUCT_LIST_SORTS = [
 ] as const;
 export type ProductListSort = (typeof PRODUCT_LIST_SORTS)[number];
 
+/** Vederea listei: produsele active (implicit) sau coșul de gunoi (șterse soft). */
+export const PRODUCT_LIST_VIEWS = ["active", "deleted"] as const;
+export type ProductListView = (typeof PRODUCT_LIST_VIEWS)[number];
+
 export const PRODUCT_LIST_PAGE_SIZES = [25, 50, 100] as const;
 export const DEFAULT_PRODUCT_LIST_PAGE_SIZE = 25;
 export const MAX_SEARCH_LENGTH = 100;
@@ -44,6 +48,7 @@ export interface ProductListQuery {
   page: number;
   pageSize: number;
   sort: ProductListSort;
+  view: ProductListView;
 }
 
 type RawParams = Readonly<Record<string, string | string[] | undefined>>;
@@ -73,6 +78,7 @@ export function parseProductListQuery(params: RawParams): ProductListQuery {
       ? size
       : DEFAULT_PRODUCT_LIST_PAGE_SIZE,
     sort: oneOf(one(params["sort"]), PRODUCT_LIST_SORTS) ?? "updated_desc",
+    view: oneOf(one(params["view"]), PRODUCT_LIST_VIEWS) ?? "active",
   };
 }
 
@@ -98,6 +104,8 @@ export interface ProductListRow {
   categoryNames: string[];
   thumb: string | null;
   updatedAt: Date;
+  /** Data mutării în coșul de gunoi (doar în vederea „deleted”). */
+  deletedAt: Date | null;
 }
 
 export interface ProductListPage {
@@ -127,7 +135,9 @@ type Db = Pick<PrismaClient, "product" | "category">;
 export function createPrismaProductListStore(db: Db): ProductListStore {
   return {
     async list(query) {
-      const and: Prisma.ProductWhereInput[] = [{ deletedAt: null }];
+      const and: Prisma.ProductWhereInput[] = [
+        { deletedAt: query.view === "deleted" ? { not: null } : null },
+      ];
 
       if (query.q) {
         and.push({
@@ -200,6 +210,7 @@ export function createPrismaProductListStore(db: Db): ProductListStore {
             manageStock: true,
             stockStatus: true,
             updatedAt: true,
+            deletedAt: true,
             brand: { select: { name: true } },
             variants: {
               orderBy: [{ isDefault: "desc" }, { position: "asc" }],
@@ -252,6 +263,7 @@ export function createPrismaProductListStore(db: Db): ProductListStore {
             categoryNames: p.categories.map((c) => c.category.name),
             thumbSource: media && media.status === "ready" ? media : null,
             updatedAt: p.updatedAt,
+            deletedAt: p.deletedAt,
           };
         }),
       };

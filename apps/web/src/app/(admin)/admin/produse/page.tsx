@@ -64,6 +64,7 @@ export default async function ProductsPage({
   };
   walk(null);
 
+  const trash = query.view === "deleted";
   const canWrite = can(subject, "products.write");
   const canEditContent = can(subject, "products.content.write");
 
@@ -83,10 +84,12 @@ export default async function ProductsPage({
     categoryNames: r.categoryNames,
     thumb: r.thumb,
     updatedAt: r.updatedAt.toISOString(),
+    deletedAt: r.deletedAt ? r.deletedAt.toISOString() : null,
   }));
 
   const hrefWith = (target: number): string => {
     const search = new URLSearchParams();
+    if (trash) search.set("view", "deleted");
     if (query.q) search.set("q", query.q);
     if (query.categoryId) search.set("category", query.categoryId);
     if (query.brandId) search.set("brand", query.brandId);
@@ -121,6 +124,27 @@ export default async function ProductsPage({
           )}
         </div>
         <p className="text-sm text-muted-foreground">{m.description}</p>
+        <nav aria-label={m.views.label} className="mt-2 flex gap-2" data-product-views>
+          <Link
+            href="/admin/produse"
+            aria-current={trash ? undefined : "page"}
+            className={buttonVariants({ variant: trash ? "outline" : "default", size: "sm" })}
+          >
+            {m.views.active}
+          </Link>
+          <Link
+            href="/admin/produse?view=deleted"
+            aria-current={trash ? "page" : undefined}
+            className={buttonVariants({ variant: trash ? "default" : "outline", size: "sm" })}
+          >
+            {m.views.deleted}
+          </Link>
+        </nav>
+        {trash && (
+          <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
+            {m.views.deletedNote}
+          </p>
+        )}
         {!canWrite && !canEditContent && (
           <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
             {m.readOnly}
@@ -139,6 +163,7 @@ export default async function ProductsPage({
         role="search"
         className="flex flex-col gap-3 rounded-md border border-border p-3"
       >
+        {trash && <input type="hidden" name="view" value="deleted" />}
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex min-w-[16rem] flex-1 flex-col gap-1">
             <Label htmlFor="product-q">{m.search.label}</Label>
@@ -153,7 +178,10 @@ export default async function ProductsPage({
           </div>
           <Button type="submit">{m.search.submit}</Button>
           {filtered && (
-            <Link href="/admin/produse" className={buttonVariants({ variant: "outline" })}>
+            <Link
+              href={trash ? "/admin/produse?view=deleted" : "/admin/produse"}
+              className={buttonVariants({ variant: "outline" })}
+            >
               {m.search.reset}
             </Link>
           )}
@@ -243,7 +271,13 @@ export default async function ProductsPage({
 
       {rows.length === 0 ? (
         <p className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-          {filtered ? m.emptyFiltered : m.empty}
+          {trash
+            ? filtered
+              ? m.views.emptyDeletedFiltered
+              : m.views.emptyDeleted
+            : filtered
+              ? m.emptyFiltered
+              : m.empty}
         </p>
       ) : (
         <ProductTable
@@ -255,6 +289,7 @@ export default async function ProductsPage({
           maxBulk={MAX_BULK_PRODUCTS}
           categories={categories}
           brands={brands.map((b) => ({ id: b.id, name: b.name }))}
+          view={trash ? "deleted" : "active"}
         />
       )}
 

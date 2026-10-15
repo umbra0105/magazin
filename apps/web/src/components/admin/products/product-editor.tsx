@@ -20,6 +20,7 @@ import type {
   PickOption,
 } from "./editor-types";
 import { GeneralTab } from "./general-tab";
+import { ProductLifecycleBar } from "./product-lifecycle-bar";
 import { MediaTab } from "./media-tab";
 import { PricingTab } from "./pricing-tab";
 import { RelationsTab } from "./relations-tab";
@@ -235,6 +236,13 @@ function EditorBody({
           <h1 className="text-2xl font-semibold">{e.editTitle(product.title)}</h1>
           <Badge>{(m.statuses as Record<string, string>)[product.status] ?? product.status}</Badge>
         </div>
+        {caps.canWrite && (
+          <ProductLifecycleBar
+            productId={product.id}
+            title={product.title}
+            status={product.status}
+          />
+        )}
         {!caps.canWrite && caps.canContent && (
           <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
             {e.notices.contentOnly}

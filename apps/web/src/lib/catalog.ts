@@ -7,6 +7,7 @@ import {
   ProductAttributesService,
   ProductRelationsService,
   ProductAssignmentsService,
+  ProductLifecycleService,
   ProductListService,
   ProductService,
   createPrismaAttributeStore,
@@ -16,6 +17,7 @@ import {
   createPrismaProductAttributeStore,
   createPrismaProductRelationStore,
   createPrismaProductAssignmentStore,
+  createPrismaProductLifecycleStore,
   createPrismaProductListStore,
   createPrismaProductStore,
 } from "@ecom/core";
@@ -30,6 +32,7 @@ const globalForCatalog = globalThis as unknown as {
   __ecomBrands?: BrandService;
   __ecomProducts?: ProductService;
   __ecomProductList?: ProductListService;
+  __ecomLifecycle?: ProductLifecycleService;
   __ecomAssignments?: ProductAssignmentsService;
   __ecomAttributes?: AttributeService;
   __ecomProductAttributes?: ProductAttributesService;
@@ -82,6 +85,25 @@ export function getProductService(): ProductService {
     logger: getLogger(),
   });
   return globalForCatalog.__ecomProducts;
+}
+
+/**
+ * Ciclul de viață al produsului: duplicare, arhivare, coș de gunoi, ștergere definitivă. Fișierele
+ * documentelor unui produs șters definitiv se șterg din storage după tranzacție.
+ */
+export function getProductLifecycleService(): ProductLifecycleService {
+  globalForCatalog.__ecomLifecycle ??= new ProductLifecycleService({
+    store: createPrismaProductLifecycleStore(getDb()),
+    products: createPrismaProductStore(getDb()),
+    audit: getAudit(),
+    deleteFiles: async (keys) => {
+      const storage = getStorage();
+      for (const key of keys) await storage.delete(key);
+    },
+    invalidate,
+    logger: getLogger(),
+  });
+  return globalForCatalog.__ecomLifecycle;
 }
 
 /** Lista de produse din admin (căutare, filtre, paginare; doar `thumb`, fără cost). */

@@ -34,8 +34,12 @@ const gtin = z
   .trim()
   .regex(/^[0-9]{8,14}$/, "EAN-ul are 8–14 cifre");
 
+/** Limite de lungime partajate cu duplicarea (sufixele de copie nu trebuie să le depășească). */
+export const PRODUCT_TITLE_MAX_LENGTH = 200;
+export const SKU_MAX_LENGTH = 64;
+
 const variantFields = {
-  sku: z.string().trim().min(1).max(64),
+  sku: z.string().trim().min(1).max(SKU_MAX_LENGTH),
   ean: gtin.nullable().optional(),
   warrantyMonths: z.number().int().min(0).max(240).nullable().optional(),
   price: money,
@@ -99,7 +103,7 @@ export const variantUpdateSchema = z
   });
 
 const productFields = {
-  title: z.string().trim().min(1, "Titlul e obligatoriu").max(200),
+  title: z.string().trim().min(1, "Titlul e obligatoriu").max(PRODUCT_TITLE_MAX_LENGTH),
   slug: slug.optional(),
   subtitle: optionalText(300),
   description: z.string().max(100_000).nullable().optional(),

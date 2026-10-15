@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { can, childrenOf, type CategoryNode } from "@ecom/core";
+import { can, childrenOf, hasCopySkuMarker, type CategoryNode } from "@ecom/core";
 import { percentToBasisPoints } from "@ecom/shared/vat";
 import { PurchasePanel } from "@/components/admin/products/purchase-panel";
 import { ProductEditor } from "@/components/admin/products/product-editor";
@@ -183,6 +183,16 @@ export default async function ProductEditorPage({
 
   return (
     <div className="flex flex-col gap-4">
+      {one(query["copied"]) === "1" && (
+        <p role="status" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+          {m.lifecycle.duplicatedNotes(Number(one(query["docs"]) ?? 0) || 0)}
+        </p>
+      )}
+      {variants.some((v) => hasCopySkuMarker(v.sku)) && (
+        <p role="note" data-copy-note className="rounded-md border border-border p-3 text-sm">
+          {m.editor.copyNote}
+        </p>
+      )}
       {one(query["created"]) === "1" && (
         <p role="status" className="rounded-md border border-border bg-border/30 p-3 text-sm">
           {m.editor.created}

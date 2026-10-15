@@ -103,6 +103,29 @@ export {
 } from "./product-store";
 export { ProductService, type ProductServiceDeps } from "./product-service";
 export {
+  copySkus,
+  copyTitle,
+  DUPLICATE_SKU_SUFFIX,
+  DUPLICATE_TITLE_SUFFIX,
+  hasCopySkuMarker,
+  isSellable,
+} from "./product-lifecycle-rules";
+export {
+  createPrismaProductLifecycleStore,
+  type DuplicateCommand,
+  type DuplicateOutcome,
+  type LifecycleProductRow,
+  type ProductLifecycleStore,
+  type PurgeImpact,
+  type TransitionCommand,
+} from "./product-lifecycle-store";
+export {
+  ProductLifecycleService,
+  type DuplicateResult,
+  type LifecycleResult,
+  type ProductLifecycleDeps,
+} from "./product-lifecycle";
+export {
   createPrismaProductAssignmentStore,
   ProductAssignmentsService,
   type AssignedCategory,
@@ -160,12 +183,14 @@ export {
   parseProductListQuery,
   PRODUCT_LIST_PAGE_SIZES,
   PRODUCT_LIST_SORTS,
+  PRODUCT_LIST_VIEWS,
   pickThumbUrl,
   ProductListService,
   type ProductListPage,
   type ProductListQuery,
   type ProductListRow,
   type ProductListSort,
+  type ProductListView,
   type ProductListStore,
 } from "./product-list";
 export {

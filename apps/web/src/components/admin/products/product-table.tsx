@@ -6,8 +6,15 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Badge, Button, Dialog, Input, Label, Select } from "@ecom/ui";
 import { bulkUpdateProducts, updateProductInline } from "@/app/(admin)/admin/produse/actions";
+import { duplicateProduct } from "@/app/(admin)/admin/produse/lifecycle-actions";
 import { formatMoney, formatMoneyInput, parseMoneyInput } from "@/lib/money-input";
 import { getMessages } from "@/messages";
+import {
+  LifecycleConfirmDialog,
+  PurgeDialog,
+  lifecycleErrorText,
+  type LifecycleOperation,
+} from "./lifecycle-dialogs";
 
 const m = getMessages().admin.products;
 
@@ -31,6 +38,8 @@ export interface ProductTableRow {
   categoryNames: string[];
   thumb: string | null;
   updatedAt: string;
+  /** Data mutării în coșul de gunoi (doar în vederea „deleted”). */
+  deletedAt: string | null;
 }
 
 export interface ProductTableProps {
@@ -44,6 +53,8 @@ export interface ProductTableProps {
   maxBulk: number;
   categories: { id: string; label: string }[];
   brands: { id: string; name: string }[];
+  /** „active” (implicit) sau „deleted” (coșul de gunoi: restaurare și ștergere definitivă). */
+  view: "active" | "deleted";
 }
 
 type InlineField = "title" | "status" | "stockStatus" | "price";
@@ -68,6 +79,7 @@ export function ProductTable({
   maxBulk,
   categories,
   brands,
+  view,
 }: ProductTableProps) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -79,7 +91,13 @@ export function ProductTable({
   const [bulkValue, setBulkValue] = useState("");
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [lifecycle, setLifecycle] = useState<{
+    operation: LifecycleOperation;
+    ids: string[];
+  } | null>(null);
+  const [purging, setPurging] = useState<{ id: string; title: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const trash = view === "deleted";
 
   const selectedRows = useMemo(() => rows.filter((r) => selected.has(r.id)), [rows, selected]);
   const allSelected = rows.length > 0 && selectedRows.length === rows.length;
@@ -123,6 +141,33 @@ export function ProductTable({
         setRowError(m.errors.generic);
       }
     });
+  };
+
+  const duplicate = (row: ProductTableRow) => {
+    setRowError(null);
+    startTransition(async () => {
+      try {
+        const result = await duplicateProduct({ id: row.id });
+        if (result.ok) {
+          router.push(`/admin/produse/${result.id}?copied=1&docs=${result.skipped.documents}`);
+        } else {
+          setRowError(lifecycleErrorText(result));
+        }
+      } catch {
+        setRowError(m.errors.generic);
+      }
+    });
+  };
+
+  const lifecycleProducts = (ids: readonly string[]) =>
+    rows.filter((r) => ids.includes(r.id)).map((r) => ({ id: r.id, title: r.title }));
+
+  const onLifecycleDone = (operation: LifecycleOperation, count: number) => {
+    setLifecycle(null);
+    setSelected(new Set());
+    setBulkError(null);
+    setAnnouncement(m.lifecycle.done[operation](count));
+    router.refresh();
   };
 
   const buildChanges = (): Record<string, unknown> | null => {
@@ -327,89 +372,151 @@ export function ProductTable({
               {m.bulk.clear}
             </Button>
           </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="bulk-kind">{m.bulk.action}</Label>
-              <Select
-                id="bulk-kind"
-                value={bulkKind}
-                onChange={(e) => {
-                  setBulkKind(e.target.value as BulkKind | "");
-                  setBulkValue("");
-                  setBulkError(null);
-                }}
+          <div
+            role="group"
+            aria-label={m.lifecycle.group}
+            className="flex flex-wrap items-center gap-2"
+            data-lifecycle-bar
+          >
+            {trash ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pending || selectedRows.length > maxBulk}
+                onClick={() =>
+                  setLifecycle({ operation: "restore", ids: selectedRows.map((r) => r.id) })
+                }
               >
-                <option value="">{m.bulk.choose}</option>
-                {Object.entries(m.bulk.actions).map(([value, text]) => (
-                  <option key={value} value={value}>
-                    {text}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            {bulkKind !== "" && (
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="bulk-value">{m.bulk.value}</Label>
-                {bulkKind === "priceAdjust" ? (
-                  <Input
-                    id="bulk-value"
-                    value={bulkValue}
-                    onChange={(e) => setBulkValue(e.target.value)}
-                    inputMode="decimal"
-                    placeholder="10"
-                    aria-describedby="bulk-percent-help"
-                  />
-                ) : (
-                  <Select
-                    id="bulk-value"
-                    value={bulkValue}
-                    onChange={(e) => setBulkValue(e.target.value)}
-                  >
-                    {bulkKind !== "brand" && <option value="">{m.bulk.choose}</option>}
-                    {bulkKind === "brand" && <option value="">{m.bulk.noBrand}</option>}
-                    {bulkKind === "status" &&
-                      Object.entries(m.statuses).map(([v, t]) => (
-                        <option key={v} value={v}>
-                          {t}
-                        </option>
-                      ))}
-                    {bulkKind === "shippingClass" &&
-                      Object.entries(m.shipping).map(([v, t]) => (
-                        <option key={v} value={v}>
-                          {t}
-                        </option>
-                      ))}
-                    {bulkKind === "stockStatus" &&
-                      Object.entries(m.stock).map(([v, t]) => (
-                        <option key={v} value={v}>
-                          {t}
-                        </option>
-                      ))}
-                    {bulkKind === "brand" &&
-                      brands.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    {bulkKind === "addCategory" &&
-                      categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.label}
-                        </option>
-                      ))}
-                  </Select>
-                )}
-                {bulkKind === "priceAdjust" && (
-                  <p id="bulk-percent-help" className="text-xs text-muted-foreground">
-                    {m.bulk.percent}
-                  </p>
-                )}
-              </div>
+                {m.lifecycle.actions.restore}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    pending ||
+                    selectedRows.length > maxBulk ||
+                    selectedRows.some((r) => r.status === "archived")
+                  }
+                  onClick={() =>
+                    setLifecycle({ operation: "archive", ids: selectedRows.map((r) => r.id) })
+                  }
+                >
+                  {m.lifecycle.actions.archive}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    pending ||
+                    selectedRows.length > maxBulk ||
+                    selectedRows.some((r) => r.status !== "archived")
+                  }
+                  onClick={() =>
+                    setLifecycle({ operation: "unarchive", ids: selectedRows.map((r) => r.id) })
+                  }
+                >
+                  {m.lifecycle.actions.unarchive}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pending || selectedRows.length > maxBulk}
+                  onClick={() =>
+                    setLifecycle({ operation: "delete", ids: selectedRows.map((r) => r.id) })
+                  }
+                >
+                  {m.lifecycle.actions.delete}
+                </Button>
+              </>
             )}
-            <Button onClick={requestApply} disabled={pending || bulkKind === ""}>
-              {m.bulk.apply}
-            </Button>
           </div>
+          {!trash && (
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="bulk-kind">{m.bulk.action}</Label>
+                <Select
+                  id="bulk-kind"
+                  value={bulkKind}
+                  onChange={(e) => {
+                    setBulkKind(e.target.value as BulkKind | "");
+                    setBulkValue("");
+                    setBulkError(null);
+                  }}
+                >
+                  <option value="">{m.bulk.choose}</option>
+                  {Object.entries(m.bulk.actions).map(([value, text]) => (
+                    <option key={value} value={value}>
+                      {text}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {bulkKind !== "" && (
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="bulk-value">{m.bulk.value}</Label>
+                  {bulkKind === "priceAdjust" ? (
+                    <Input
+                      id="bulk-value"
+                      value={bulkValue}
+                      onChange={(e) => setBulkValue(e.target.value)}
+                      inputMode="decimal"
+                      placeholder="10"
+                      aria-describedby="bulk-percent-help"
+                    />
+                  ) : (
+                    <Select
+                      id="bulk-value"
+                      value={bulkValue}
+                      onChange={(e) => setBulkValue(e.target.value)}
+                    >
+                      {bulkKind !== "brand" && <option value="">{m.bulk.choose}</option>}
+                      {bulkKind === "brand" && <option value="">{m.bulk.noBrand}</option>}
+                      {bulkKind === "status" &&
+                        Object.entries(m.statuses).map(([v, t]) => (
+                          <option key={v} value={v}>
+                            {t}
+                          </option>
+                        ))}
+                      {bulkKind === "shippingClass" &&
+                        Object.entries(m.shipping).map(([v, t]) => (
+                          <option key={v} value={v}>
+                            {t}
+                          </option>
+                        ))}
+                      {bulkKind === "stockStatus" &&
+                        Object.entries(m.stock).map(([v, t]) => (
+                          <option key={v} value={v}>
+                            {t}
+                          </option>
+                        ))}
+                      {bulkKind === "brand" &&
+                        brands.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name}
+                          </option>
+                        ))}
+                      {bulkKind === "addCategory" &&
+                        categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.label}
+                          </option>
+                        ))}
+                    </Select>
+                  )}
+                  {bulkKind === "priceAdjust" && (
+                    <p id="bulk-percent-help" className="text-xs text-muted-foreground">
+                      {m.bulk.percent}
+                    </p>
+                  )}
+                </div>
+              )}
+              <Button onClick={requestApply} disabled={pending || bulkKind === ""}>
+                {m.bulk.apply}
+              </Button>
+            </div>
+          )}
           {bulkError && (
             <p role="alert" data-problem className="text-sm text-danger">
               {bulkError}
@@ -517,14 +624,54 @@ export function ProductTable({
                     <div className="flex flex-col">
                       <span className="flex items-center font-medium">
                         {row.title}
-                        {(canEditContent || canWrite) && editButton(row, "title", m.inline.title)}
-                        <Link
-                          href={`/admin/produse/${row.id}`}
-                          aria-label={m.editor.editLink(row.title)}
-                          className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline"
-                        >
-                          {m.editor.open}
-                        </Link>
+                        {!trash &&
+                          (canEditContent || canWrite) &&
+                          editButton(row, "title", m.inline.title)}
+                        {!trash && (
+                          <Link
+                            href={`/admin/produse/${row.id}`}
+                            aria-label={m.editor.editLink(row.title)}
+                            className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline"
+                          >
+                            {m.editor.open}
+                          </Link>
+                        )}
+                        {!trash && canWrite && (
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() => duplicate(row)}
+                            aria-label={m.lifecycle.duplicateFor(row.title)}
+                            data-duplicate={row.id}
+                            className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline disabled:opacity-60"
+                          >
+                            {m.lifecycle.duplicate}
+                          </button>
+                        )}
+                        {trash && canWrite && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => setLifecycle({ operation: "restore", ids: [row.id] })}
+                              aria-label={`${m.lifecycle.actions.restore}: ${row.title}`}
+                              data-restore={row.id}
+                              className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline disabled:opacity-60"
+                            >
+                              {m.lifecycle.actions.restore}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => setPurging({ id: row.id, title: row.title })}
+                              aria-label={`${m.lifecycle.actions.purge} ${row.title}`}
+                              data-purge={row.id}
+                              className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline disabled:opacity-60"
+                            >
+                              {m.lifecycle.actions.purge}
+                            </button>
+                          </>
+                        )}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {[
@@ -545,7 +692,10 @@ export function ProductTable({
                   ) : (
                     <span className="flex items-center">
                       {priceText(row)}
-                      {canWrite && row.singleVariantId && editButton(row, "price", m.inline.price)}
+                      {!trash &&
+                        canWrite &&
+                        row.singleVariantId &&
+                        editButton(row, "price", m.inline.price)}
                     </span>
                   )}
                 </td>
@@ -557,7 +707,7 @@ export function ProductTable({
                       <Badge variant={STATUS_VARIANT[row.status] ?? "neutral"}>
                         {label(m.statuses, row.status)}
                       </Badge>
-                      {canWrite && editButton(row, "status", m.inline.status)}
+                      {!trash && canWrite && editButton(row, "status", m.inline.status)}
                     </span>
                   )}
                 </td>
@@ -568,7 +718,7 @@ export function ProductTable({
                     <span className="flex flex-col">
                       <span className="flex items-center">
                         {label(m.stock, row.stockStatus)}
-                        {canWrite && editButton(row, "stockStatus", m.inline.stock)}
+                        {!trash && canWrite && editButton(row, "stockStatus", m.inline.stock)}
                       </span>
                       {row.manageStock && (
                         <span className="text-xs text-muted-foreground">
@@ -580,15 +730,38 @@ export function ProductTable({
                 </td>
                 <td className="p-3">{label(m.shipping, row.shippingClass)}</td>
                 <td className="p-3 text-muted-foreground">
-                  {new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
-                    new Date(row.updatedAt),
-                  )}
+                  {trash && row.deletedAt
+                    ? m.views.deletedAt(
+                        new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
+                          new Date(row.deletedAt),
+                        ),
+                      )
+                    : new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
+                        new Date(row.updatedAt),
+                      )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <LifecycleConfirmDialog
+        operation={lifecycle?.operation ?? "archive"}
+        products={lifecycle ? lifecycleProducts(lifecycle.ids) : []}
+        open={lifecycle !== null}
+        onClose={() => setLifecycle(null)}
+        onDone={(count) => lifecycle && onLifecycleDone(lifecycle.operation, count)}
+      />
+      <PurgeDialog
+        product={purging}
+        onClose={() => setPurging(null)}
+        onDone={(title) => {
+          setPurging(null);
+          setAnnouncement(m.lifecycle.done.purge(title));
+          router.refresh();
+        }}
+      />
 
       <Dialog
         open={confirmOpen}

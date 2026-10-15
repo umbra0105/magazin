@@ -17,7 +17,16 @@ describe("parseProductListQuery", () => {
       page: 1,
       pageSize: DEFAULT_PRODUCT_LIST_PAGE_SIZE,
       sort: "updated_desc",
+      view: "active",
     });
+  });
+
+  it("vederea „deleted” (coșul de gunoi) se recunoaște; orice altceva revine la „active”", () => {
+    expect(parseProductListQuery({ view: "deleted" }).view).toBe("deleted");
+    expect(parseProductListQuery({ view: ["deleted", "x"] }).view).toBe("deleted");
+    for (const view of ["all", "trash", "", "DELETED", "deleted; drop"]) {
+      expect(parseProductListQuery({ view }).view, view).toBe("active");
+    }
   });
 
   it("citește filtrele valide, inclusiv valori în array (primul)", () => {
@@ -32,6 +41,7 @@ describe("parseProductListQuery", () => {
         page: "3",
         size: "50",
         sort: "title_asc",
+        view: "deleted",
       }),
     ).toEqual({
       q: "pompă 12kW",
@@ -43,6 +53,7 @@ describe("parseProductListQuery", () => {
       page: 3,
       pageSize: 50,
       sort: "title_asc",
+      view: "deleted",
     });
   });
 

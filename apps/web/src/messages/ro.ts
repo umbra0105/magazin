@@ -621,8 +621,94 @@ export const ro = {
         close: "Închide",
         done: (n: number) => `${n === 1 ? "Modificat" : "Modificate"}: ${produse(n)}.`,
       },
+      views: {
+        label: "Vedere",
+        active: "Produse",
+        deleted: "Coș de gunoi",
+        deletedNote:
+          "Produsele din coșul de gunoi nu apar în magazin și nu se pot edita. Le poți restaura, sau le poți șterge definitiv (ireversibil).",
+        deletedAt: (date: string) => `Șters la ${date}`,
+        emptyDeleted: "Coșul de gunoi e gol.",
+        emptyDeletedFiltered: "Niciun produs din coșul de gunoi nu corespunde căutării.",
+      },
+      lifecycle: {
+        group: "Ciclul de viață",
+        duplicate: "Duplică",
+        duplicateFor: (name: string) => `Duplică produsul ${name}`,
+        duplicating: "Se duplică…",
+        duplicated: (title: string) => `Copia „${title}” a fost creată ca ciornă.`,
+        duplicatedNotes: (documents: number) =>
+          documents > 0
+            ? `Documentele (${documents}) NU s-au copiat: sunt specifice modelului. Nici prețul de achiziție, stocul, EAN-ul, clasa energetică și linkul EPREL nu se copiază.`
+            : "Prețul de achiziție, stocul, EAN-ul, clasa energetică și linkul EPREL nu se copiază.",
+        actions: {
+          archive: "Arhivează",
+          unarchive: "Dezarhivează",
+          delete: "Mută în coșul de gunoi",
+          restore: "Restaurează",
+          purge: "Șterge definitiv…",
+        },
+        confirm: {
+          title: (action: string, n: number) =>
+            `${action}: ${n} ${n === 1 ? "produs" : "produse"}?`,
+          archive:
+            "Produsele arhivate dispar din magazin și de pe canalele de vânzare, dar rămân în admin (filtru „Arhivat”). Le poți dezarhiva oricând; revin ca ciornă.",
+          unarchive: "Produsele revin ca ciornă (nu apar în magazin până nu le activezi explicit).",
+          delete:
+            "Produsele ies din magazin și din lista de produse și merg în coșul de gunoi. Adresa și codurile (SKU) rămân rezervate. Le poți restaura oricând; revin cu starea pe care o aveau.",
+          restore:
+            "Produsele revin în lista de produse, cu starea pe care o aveau înainte de ștergere (un produs activ reapare în magazin).",
+          allOrNothing:
+            "Acțiunea se aplică tuturor produselor selectate sau niciunuia și se înregistrează în jurnalul de audit.",
+          cancel: "Anulează",
+          apply: "Confirm",
+          applying: "Se aplică…",
+          close: "Închide",
+        },
+        done: {
+          archive: (n: number) => `${n === 1 ? "Arhivat" : "Arhivate"}: ${produse(n)}.`,
+          unarchive: (n: number) => `${n === 1 ? "Dezarhivat" : "Dezarhivate"}: ${produse(n)}.`,
+          delete: (n: number) => `Mutate în coșul de gunoi: ${produse(n)}.`,
+          restore: (n: number) => `${n === 1 ? "Restaurat" : "Restaurate"}: ${produse(n)}.`,
+          purge: (name: string) => `Produsul „${name}” a fost șters definitiv.`,
+        },
+        purge: {
+          title: (name: string) => `Ștergi definitiv „${name}”?`,
+          description:
+            "Ștergerea definitivă nu se poate anula. Produsul trebuie să fie în coșul de gunoi.",
+          loading: "Se calculează ce se șterge…",
+          willDelete: "Se șterg odată cu produsul:",
+          line: {
+            variants: (n: number) => (n === 1 ? "1 variantă" : `${n} variante`),
+            media: (n: number) => `${n} legături cu imagini (fișierele din bibliotecă rămân)`,
+            documents: (n: number) => `${n} documente (fișierele se șterg din stocare)`,
+            attributes: (n: number) => `${n} valori de atribute`,
+            categories: (n: number) => `${n} asocieri cu categorii`,
+            relations: (n: number) => `${n} relații cu alte produse`,
+            relatedBy: (n: number) => `${n} relații ale altor produse către acesta`,
+            collections: (n: number) => `${n} apartenențe la colecții`,
+            channelListings: (n: number) => `${n} oferte de canal (neactive)`,
+          },
+          diagrams: "Fișe explodate la care e asociat (asocierea dispare, fișa rămâne):",
+          hotspots:
+            "Hotspot-uri care rămân în fișă, dar FĂRĂ produs (se văd ca „fără produs” în editorul fișei):",
+          hotspotLine: (diagram: string, number: number) => `${diagram}, hotspot ${number}`,
+          blocked: (n: number) =>
+            `Nu poți șterge definitiv: produsul are ${n} oferte active sau în așteptare pe canale de vânzare. Retrage-le întâi.`,
+          confirmLabel: (slug: string) => `Scrie adresa produsului (${slug}) pentru confirmare`,
+          confirmHelp:
+            "Ștergerea definitivă cere adresa exactă a produsului, ca să nu se facă din greșeală.",
+          submit: "Șterge definitiv",
+          submitting: "Se șterge…",
+          cancel: "Anulează",
+          close: "Închide",
+        },
+      },
       editor: {
         newButton: "Produs nou",
+        copyNote:
+          "Acesta e o copie: codurile (SKU) marcate „-COPIE” sunt generate automat. Completează-le în tabul Prețuri sau Variante, apoi completează EAN-ul, documentele, clasa energetică și linkul EPREL, specifice acestui model.",
+        deletedNote: "Produsul e în coșul de gunoi.",
         open: "Deschide",
         breadcrumbEdit: "Editare produs",
         createTitle: "Produs nou",
@@ -1040,6 +1126,14 @@ export const ro = {
         CATALOG_BULK_PRICE_OUT_OF_RANGE:
           "Ajustarea ar duce unele variante la preț 0 sau peste plafonul de sume (sau o variantă are deja prețul 0). Nu s-a modificat nimic; scoate produsele respective din selecție.",
         CATALOG_SKU_CONFLICT: "Codul SKU e deja folosit de altă variantă.",
+        CATALOG_LIFECYCLE_INVALID:
+          "Unele produse selectate nu pot primi această acțiune (starea lor s-a schimbat sau nu mai există). Reîncarcă lista; nu s-a modificat nimic.",
+        CATALOG_PRODUCT_NOT_DELETED:
+          "Produsul nu e în coșul de gunoi. Mută-l mai întâi acolo, apoi îl poți șterge definitiv.",
+        CATALOG_PURGE_CONFIRM_MISMATCH:
+          "Adresa tastată nu coincide cu a produsului. Nu s-a șters nimic.",
+        CATALOG_PRODUCT_REFERENCED:
+          "Produsul e folosit în alte înregistrări (oferte pe canale sau comenzi) și nu poate fi șters definitiv. Rămâne în coșul de gunoi.",
         DOCUMENT_NOT_FOUND: "Documentul nu mai există. Reîncarcă pagina.",
         DOCUMENT_LIMIT: "Un produs poate avea cel mult 50 de documente.",
         CATALOG_VARIANT_LAST:
