@@ -67,7 +67,7 @@
       "eslint --fix --no-warn-ignored",
       "prettier --write"
     ],
-    "*.{json,css,yml,yaml}": [
+    "*.{json,css,yml,yaml,md,mdx,mts,cts,cjs}": [
       "prettier --write"
     ]
   }
