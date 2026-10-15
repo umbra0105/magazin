@@ -1,7 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { getProductAssignmentsService, getProductService } from "@/lib/catalog";
+import {
+  getProductAssignmentsService,
+  getProductAttributesService,
+  getProductListService,
+  getProductRelationsService,
+  getProductService,
+} from "@/lib/catalog";
+import { parseMoneyInput } from "@/lib/money-input";
 import { productFailure as failure } from "@/lib/product-action-support";
 import { getSettings } from "@/lib/services";
 import { withPermission } from "@/lib/session";
@@ -143,4 +150,194 @@ export const checkProductSlug = withPermission(
     }
   },
   { action: "product.slug.check", entity: "product" },
+);
+
+// ---------------------------------------------------------------------------
+// Blocul 11b: atribute, relații, variante. Toate cer `products.write` (în poartă și în servicii).
+// ---------------------------------------------------------------------------
+
+const optionInput = z.object({
+  name: z.string().max(100),
+  values: z.array(z.string().max(100)).max(60),
+});
+
+export const saveProductAttributes = withPermission(
+  "products.write",
+  async (input: unknown, subject) => {
+    try {
+      const parsed = z.object({ id, values: z.unknown() }).parse(input);
+      const entries = await getProductAttributesService().set(subject, parsed.id, {
+        values: parsed.values,
+      });
+      return {
+        ok: true as const,
+        values: entries.map((e) => ({ attributeId: e.attribute.id, value: e.value })),
+      };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "product.attributes.update", entity: "product" },
+);
+
+/** Relațiile unui produs, în forma trimisă clientului (fără câmpuri interne). */
+function relationRows(
+  rows: Awaited<ReturnType<ReturnType<typeof getProductRelationsService>["list"]>>,
+) {
+  return rows.map((r) => ({
+    id: r.id,
+    type: r.type,
+    position: r.position,
+    direction: r.direction,
+    product: r.product,
+  }));
+}
+
+export const addProductRelation = withPermission(
+  "products.write",
+  async (input: unknown, subject) => {
+    try {
+      const parsed = z.object({ id, relatedProductId: id, type: z.string().max(40) }).parse(input);
+      const rows = await getProductRelationsService().add(subject, parsed.id, {
+        relatedProductId: parsed.relatedProductId,
+        type: parsed.type,
+      });
+      return { ok: true as const, relations: relationRows(rows) };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "product.relation.add", entity: "product" },
+);
+
+export const removeProductRelation = withPermission(
+  "products.write",
+  async (input: unknown, subject) => {
+    try {
+      const parsed = z.object({ id, relationId: id }).parse(input);
+      const rows = await getProductRelationsService().remove(subject, parsed.id, parsed.relationId);
+      return { ok: true as const, relations: relationRows(rows) };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "product.relation.remove", entity: "product" },
+);
+
+export const reorderProductRelations = withPermission(
+  "products.write",
+  async (input: unknown, subject) => {
+    try {
+      const parsed = z
+        .object({ id, type: z.string().max(40), orderedIds: z.array(id).max(60) })
+        .parse(input);
+      const rows = await getProductRelationsService().reorder(subject, parsed.id, {
+        type: parsed.type,
+        orderedIds: parsed.orderedIds,
+      });
+      return { ok: true as const, relations: relationRows(rows) };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "product.relation.reorder", entity: "product" },
+);
+
+/** Căutarea produsului asociat: titlu, SKU, EAN sau cod producător (aceeași căutare ca în listă). */
+export const searchRelatedProducts = withPermission(
+  "products.read",
+  async (input: unknown, subject) => {
+    try {
+      const parsed = z.object({ q: z.string().max(100), excludeId: id }).parse(input);
+      if (parsed.q.trim().length < 2) return { ok: true as const, results: [] };
+      const { page } = await getProductListService().list(subject, {
+        q: parsed.q,
+        size: "25",
+      });
+      return {
+        ok: true as const,
+        results: page.rows
+          .filter((row) => row.id !== parsed.excludeId)
+          .map((row) => ({ id: row.id, title: row.title, sku: row.sku, status: row.status })),
+      };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "product.relation.search", entity: "product" },
+);
+
+export const previewProductVariants = withPermission(
+  "products.write",
+  async (input: unknown, subject) => {
+    try {
+      const parsed = z
+        .object({
+          id,
+          options: z.array(optionInput).max(10),
+          baseSku: z.string().max(64).optional(),
+        })
+        .parse(input);
+      const plan = await getProductService().previewVariantPlan(subject, parsed.id, {
+        options: parsed.options,
+        ...(parsed.baseSku?.trim() && { baseSku: parsed.baseSku.trim() }),
+      });
+      return { ok: true as const, plan };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "product.variants.preview", entity: "product" },
+);
+
+export const generateProductVariants = withPermission(
+  "products.write",
+  async (input: unknown, subject) => {
+    try {
+      const parsed = z
+        .object({
+          id,
+          options: z.array(optionInput).max(10),
+          price: z.string().max(40),
+          baseSku: z.string().max(64).optional(),
+        })
+        .parse(input);
+      const price = parseMoneyInput(parsed.price);
+      if (price === null) {
+        return {
+          ok: false as const,
+          code: "VALIDATION_ERROR",
+          fields: { price: "Introdu un preț valid, cu cel mult 2 zecimale." },
+        };
+      }
+      const result = await getProductService().generateVariants(subject, parsed.id, {
+        options: parsed.options,
+        price,
+        ...(parsed.baseSku?.trim() && { baseSku: parsed.baseSku.trim() }),
+      });
+      return {
+        ok: true as const,
+        created: result.created.length,
+        existing: result.existing,
+        orphaned: result.orphaned,
+      };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "product.variants.generate", entity: "product" },
+);
+
+export const deleteProductVariant = withPermission(
+  "products.write",
+  async (input: unknown, subject) => {
+    try {
+      const parsed = z.object({ variantId: id }).parse(input);
+      const result = await getProductService().deleteVariant(subject, parsed.variantId);
+      return { ok: true as const, remaining: result.remaining };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "product.variant.delete", entity: "product_variant" },
 );

@@ -39,13 +39,16 @@ const MODELS = [
   // categorii și branduri (același regim de permisiuni products.*)
   "category",
   "brand",
+  // atribute (definiții și opțiuni)
+  "attribute",
+  "attributeOption",
 ];
 const PRISMA_WRITE = new RegExp(
   `\\.(?:${MODELS.join("|")})\\.(?:create|createMany|update|updateMany|upsert|delete|deleteMany)\\b`,
 );
 /** Serviciile catalogului care scriu (numele lor sunt o convenție: testul le caută). */
 const SERVICE_WRITE =
-  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService|ProductAssignmentsService|getProductAssignmentsService|productAssignmentsService|getPurchasePriceService|purchasePriceService)\b/;
+  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService|ProductAssignmentsService|getProductAssignmentsService|productAssignmentsService|getPurchasePriceService|purchasePriceService|AttributeService|getAttributeService|attributeService|ProductAttributesService|getProductAttributesService|productAttributesService|ProductRelationsService|getProductRelationsService|productRelationsService)\b/;
 
 const WRITES_PRODUCTS = (content: string): boolean =>
   PRISMA_WRITE.test(content) || SERVICE_WRITE.test(content);
@@ -162,6 +165,15 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
         "saveProductCategories",
         "saveProductMedia",
         "checkProductSlug",
+        // blocul 11b
+        "saveProductAttributes",
+        "addProductRelation",
+        "removeProductRelation",
+        "reorderProductRelations",
+        "searchRelatedProducts",
+        "previewProductVariants",
+        "generateProductVariants",
+        "deleteProductVariant",
       ],
       "purchase-actions.ts": ["savePurchasePrice"],
     };
@@ -175,6 +187,25 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
         expect(e.permission?.startsWith("products."), suffix + ": " + e.name).toBe(true);
       }
     }
+  });
+
+  it("acțiunile paginii Atribute sunt recunoscute ca scrieri de catalog și toate cer products.write", () => {
+    const file = files.find((f) => f.path.endsWith("(admin)/admin/atribute/actions.ts"));
+    expect(file).toBeDefined();
+    expect(WRITES_PRODUCTS(file?.content ?? "")).toBe(true);
+    const exported = exportsOf(file?.content ?? "");
+    expect(exported.map((e) => e.name).sort()).toEqual(
+      [
+        "addAttributeOption",
+        "createAttribute",
+        "deleteAttribute",
+        "deleteAttributeOption",
+        "renameAttributeOption",
+        "reorderAttributeOptions",
+        "updateAttribute",
+      ].sort(),
+    );
+    for (const e of exported) expect(e.permission, e.name).toBe("products.write");
   });
 
   it("nicio acțiune sau rută care modifică produse nu e neprotejată sau protejată cu altă permisiune", () => {

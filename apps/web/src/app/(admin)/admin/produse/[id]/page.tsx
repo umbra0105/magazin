@@ -10,6 +10,8 @@ import {
   getBrandService,
   getCategoryService,
   getProductAssignmentsService,
+  getProductAttributesService,
+  getProductRelationsService,
   getProductService,
 } from "@/lib/catalog";
 import { getSettings } from "@/lib/services";
@@ -22,7 +24,17 @@ export const metadata: Metadata = { title: m.editor.breadcrumbEdit };
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-const TAB_IDS = ["general", "preturi", "stoc", "categorii", "media", "seo"] as const;
+const TAB_IDS = [
+  "general",
+  "preturi",
+  "variante",
+  "stoc",
+  "categorii",
+  "atribute",
+  "asociate",
+  "media",
+  "seo",
+] as const;
 
 const one = (value: string | string[] | undefined): string | null =>
   (Array.isArray(value) ? value[0] : value) ?? null;
@@ -51,21 +63,35 @@ export default async function ProductEditorPage({
     if ((error as { code?: unknown } | null)?.code === "CATALOG_PRODUCT_NOT_FOUND") notFound();
     throw error;
   }
-  const { product, variants } = loaded;
+  const { product } = loaded;
   if (product.deletedAt) notFound();
 
   const assignments = getProductAssignmentsService();
-  const [assigned, mediaItems, brands, categoryRows, tax, regional, inventory, catalog] =
-    await Promise.all([
-      assignments.getCategories(subject, id),
-      assignments.listMedia(subject, id),
-      getBrandService().list(subject),
-      getCategoryService().tree(subject),
-      getSettings().getGroup("tax"),
-      getSettings().getGroup("regional"),
-      getSettings().getGroup("inventory"),
-      getSettings().getGroup("catalog"),
-    ]);
+  const [
+    assigned,
+    mediaItems,
+    variantData,
+    attributeEntries,
+    relationRows,
+    brands,
+    categoryRows,
+    tax,
+    regional,
+    inventory,
+    catalog,
+  ] = await Promise.all([
+    assignments.getCategories(subject, id),
+    assignments.listMedia(subject, id),
+    getProductService().getVariantsForEdit(subject, id),
+    getProductAttributesService().get(subject, id),
+    getProductRelationsService().list(subject, id),
+    getBrandService().list(subject),
+    getCategoryService().tree(subject),
+    getSettings().getGroup("tax"),
+    getSettings().getGroup("regional"),
+    getSettings().getGroup("inventory"),
+    getSettings().getGroup("catalog"),
+  ]);
 
   const nodes: CategoryNode[] = categoryRows.map((c) => ({
     id: c.id,
@@ -86,6 +112,7 @@ export default async function ProductEditorPage({
   walk(null);
 
   const zone = regional.timezone;
+  const variants = variantData.variants;
   const editorVariants: EditorVariant[] = variants.map((v) => ({
     id: v.id,
     sku: v.sku,
@@ -96,6 +123,9 @@ export default async function ProductEditorPage({
     saleStartsAtLocal: v.saleStartsAt ? formatZonedLocal(v.saleStartsAt, zone) : null,
     saleEndsAtLocal: v.saleEndsAt ? formatZonedLocal(v.saleEndsAt, zone) : null,
     isDefault: v.isDefault,
+    weightGrams: v.weightGrams,
+    manufacturerPartNumber: v.manufacturerPartNumber,
+    label: v.selections.map((s) => `${s.option}: ${s.value}`).join(", "),
   }));
 
   const tabParam = one(query["tab"]);
@@ -130,6 +160,24 @@ export default async function ProductEditorPage({
           seoDescription: product.seoDescription,
         }}
         variants={editorVariants}
+        variantOptions={variantData.options}
+        attributes={attributeEntries.map((entry) => ({
+          id: entry.attribute.id,
+          code: entry.attribute.code,
+          name: entry.attribute.name,
+          type: entry.attribute.type,
+          unit: entry.attribute.unit,
+          isFilterable: entry.attribute.isFilterable,
+          options: entry.attribute.options.map((o) => ({ id: o.id, value: o.value })),
+          value: entry.value,
+        }))}
+        relations={relationRows.map((rel) => ({
+          id: rel.id,
+          type: rel.type,
+          position: rel.position,
+          direction: rel.direction,
+          product: rel.product,
+        }))}
         brands={brands.map((b) => ({ id: b.id, label: b.name }))}
         categoryOptions={categoryOptions}
         assigned={{ ids: assigned.map((c) => c.categoryId), primaryId: primary }}

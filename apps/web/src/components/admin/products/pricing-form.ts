@@ -24,6 +24,8 @@ export interface PricingTexts {
   windowOrder: string;
   eanInvalid: string;
   warrantyInvalid: string;
+  /** Doar la formularul de variantă din tabul Variante. */
+  weightInvalid?: string;
 }
 
 export function validatePricing(
@@ -71,6 +73,15 @@ export function validatePricing(
       errors["warrantyMonths"] = text.warrantyInvalid;
     }
   }
+  if (touched("weightGrams") && values["weightGrams"] !== undefined) {
+    const raw = values["weightGrams"].trim();
+    if (raw !== "") {
+      const grams = Number(raw);
+      if (!/^d+$/.test(raw) || !Number.isSafeInteger(grams) || grams < 1 || grams > 10_000_000) {
+        errors["weightGrams"] = text.weightInvalid ?? text.priceInvalid;
+      }
+    }
+  }
   return errors;
 }
 
@@ -103,6 +114,16 @@ export function buildVariantPatch(
       case "warrantyMonths":
         patch["warrantyMonths"] =
           values.warrantyMonths.trim() === "" ? null : Number(values.warrantyMonths);
+        break;
+      case "weightGrams":
+        patch["weightGrams"] =
+          (values["weightGrams"] ?? "").trim() === "" ? null : Number(values["weightGrams"]);
+        break;
+      case "manufacturerPartNumber":
+        patch["manufacturerPartNumber"] =
+          (values["manufacturerPartNumber"] ?? "").trim() === ""
+            ? null
+            : (values["manufacturerPartNumber"] ?? "").trim();
         break;
       default:
         break;

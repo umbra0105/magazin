@@ -4,20 +4,26 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge, Tabs, type TabItem } from "@ecom/ui";
 import { getMessages } from "@/messages";
+import { AttributesTab } from "./attributes-tab";
 import { CategoriesTab, type CategoryOption } from "./categories-tab";
 import type {
+  EditorAttribute,
   EditorCaps,
   EditorMediaItem,
+  EditorOption,
   EditorProduct,
+  EditorRelation,
   EditorVariant,
   PickOption,
 } from "./editor-types";
 import { GeneralTab } from "./general-tab";
 import { MediaTab } from "./media-tab";
 import { PricingTab } from "./pricing-tab";
+import { RelationsTab } from "./relations-tab";
 import { SeoTab } from "./seo-tab";
 import { StockTab } from "./stock-tab";
 import { UnsavedChangesProvider, useDirtyKeys } from "./unsaved-changes";
+import { VariantsTab } from "./variants-tab";
 
 const m = getMessages().admin.products;
 const e = m.editor;
@@ -29,6 +35,9 @@ export interface ProductEditorProps {
   categoryOptions: readonly CategoryOption[];
   assigned: { ids: string[]; primaryId: string | null };
   media: readonly EditorMediaItem[];
+  variantOptions: readonly EditorOption[];
+  attributes: readonly EditorAttribute[];
+  relations: readonly EditorRelation[];
   caps: EditorCaps;
   pricing: {
     vatRateBps: number;
@@ -64,6 +73,9 @@ function EditorBody({
   categoryOptions,
   assigned,
   media,
+  variantOptions,
+  attributes,
+  relations,
   caps,
   pricing,
   storeManagesStock,
@@ -97,6 +109,24 @@ function EditorBody({
       ),
     },
     {
+      id: "variante",
+      label: e.tabs.variants,
+      badge: badge("variants"),
+      panel: (
+        <VariantsTab
+          productId={product.id}
+          variants={variants}
+          options={variantOptions}
+          caps={caps}
+          context={{
+            currency: pricing.currency,
+            locale: pricing.locale,
+            timezone: pricing.timezone,
+          }}
+        />
+      ),
+    },
+    {
       id: "stoc",
       label: e.tabs.stock,
       badge: badge("stock"),
@@ -114,6 +144,18 @@ function EditorBody({
           caps={caps}
         />
       ),
+    },
+    {
+      id: "atribute",
+      label: e.tabs.attributes,
+      badge: badge("attributes"),
+      panel: <AttributesTab productId={product.id} attributes={attributes} caps={caps} />,
+    },
+    {
+      id: "asociate",
+      label: e.tabs.related,
+      badge: undefined,
+      panel: <RelationsTab productId={product.id} initial={relations} caps={caps} />,
     },
     {
       id: "media",

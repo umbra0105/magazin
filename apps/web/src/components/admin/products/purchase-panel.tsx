@@ -32,15 +32,22 @@ export async function PurchasePanel({
   const service = getPurchasePriceService();
   const today = new Date().toISOString().slice(0, 10);
 
-  const rows = await Promise.all(
+  const loaded = await Promise.all(
     variants.map(async (variant) => {
-      const [current, history] = await Promise.all([
-        service.getCost(subject, variant.id),
-        service.getHistory(subject, variant.id),
-      ]);
-      return { variant, current, history: history.slice(0, 10) };
+      try {
+        const [current, history] = await Promise.all([
+          service.getCost(subject, variant.id),
+          service.getHistory(subject, variant.id),
+        ]);
+        return { variant, current, history: history.slice(0, 10) };
+      } catch (error) {
+        // o variantă ștearsă între citirea listei și această randare: se omite, nu strică pagina
+        if ((error as { code?: unknown } | null)?.code === "CATALOG_VARIANT_NOT_FOUND") return null;
+        throw error;
+      }
     }),
   );
+  const rows = loaded.filter((row) => row !== null);
 
   const message =
     status === "saved"

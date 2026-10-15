@@ -403,3 +403,81 @@ export async function readE2eProduct(slug: string): Promise<{
     };
   });
 }
+
+const trackedAttributes = new Set<string>();
+
+/** Înregistrează un atribut creat prin interfață (cod `e2e_…`), ca să fie curățat la final. */
+export function trackE2eAttribute(code: string): void {
+  trackedAttributes.add(code);
+}
+
+/**
+ * Șterge atributele de test ale acestui worker, cu valorile lor (după ștergerea produselor). Valorile
+ * au FK `Restrict` spre atribut, deci se șterg întâi.
+ */
+export async function removeE2eAttributes(): Promise<void> {
+  const codes = [...trackedAttributes];
+  trackedAttributes.clear();
+  if (codes.length === 0) return;
+  await withClient(async (db) => {
+    await db.query(
+      `delete from attribute_value where "attributeId" in (select id from attribute where code = any($1::text[]))`,
+      [codes],
+    );
+    await db.query(`delete from attribute where code = any($1::text[])`, [codes]);
+  });
+}
+
+/** Valorile atributelor unui produs (cod → text/număr exact/da-nu/opțiune), citite direct din bază. */
+export async function readE2eAttributeValues(
+  productSlug: string,
+): Promise<Record<string, string | boolean | null>> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select a.code, v."textValue" as text, v."numberValue"::text as number, v."boolValue" as bool, o.value as option
+       from attribute_value v
+       join attribute a on a.id = v."attributeId"
+       left join attribute_option o on o.id = v."optionId"
+       where v."productId" = (select id from product where slug = $1)`,
+      [productSlug],
+    );
+    const out: Record<string, string | boolean | null> = {};
+    for (const row of result.rows as {
+      code: string;
+      text: string | null;
+      number: string | null;
+      bool: boolean | null;
+      option: string | null;
+    }[]) {
+      out[row.code] = row.text ?? row.number ?? row.bool ?? row.option;
+    }
+    return out;
+  });
+}
+
+/** Relațiile unui produs ca principal: „tip→titlul asociatului”, în ordinea pozițiilor. */
+export async function readE2eRelations(productSlug: string): Promise<string[]> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select r.type, p.title from product_relation r
+       join product p on p.id = r."relatedProductId"
+       where r."productId" = (select id from product where slug = $1)
+       order by r.type, r.position`,
+      [productSlug],
+    );
+    return (result.rows as { type: string; title: string }[]).map((r) => `${r.type}→${r.title}`);
+  });
+}
+
+/** SKU-urile variantelor unui produs de probă, în ordinea afișării. */
+export async function readE2eVariantSkus(productSlug: string): Promise<string[]> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select sku from product_variant
+       where "productId" = (select id from product where slug = $1)
+       order by "isDefault" desc, position`,
+      [productSlug],
+    );
+    return (result.rows as { sku: string }[]).map((r) => r.sku);
+  });
+}

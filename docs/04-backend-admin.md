@@ -427,6 +427,24 @@ Vezi `09-preturi-si-parteneri.md` §5.
 - `products.write` o include pe `products.content.write` (cine poate modifica prețuri poate modifica și descrierea); invers nu;
 - orice server action sau endpoint care modifică produse trece prin `withPermission("products.…")` (test de arhitectură).
 
+**Atribute, relații și variante, blocul 11b** (Faza 4). Toate cer `products.write` (permisiune dedicată nu se justifică: sunt date de catalog la același nivel cu prețul și starea; Editorul de conținut le vede doar pentru citire). Toate acțiunile sunt `withPermission("products.*")` (testul `product-write-guard` le enumeră exact).
+
+- **Atribute** — pagina `/admin/atribute` (vizibilă cu `products.read`, scriere cu `products.write`). Definiție: nume, **cod stabil** (litere mici, cifre, `_`; nu se mai schimbă după creare), tip `text` / `number` / `select` (listă) / `bool`, unitate (doar la numerice), filtrabil (nu la text liber), ordine, opțiuni (la listă; unice fără diferență de majuscule, ordonabile). **Tipul nu se mai schimbă cât atributul are valori** (mesaj cu numărul de produse); fără valori, tipul se schimbă și unitatea/opțiunile care nu mai corespund se curăță. **Ștergerea** atributului sau a unei opțiuni folosite e refuzată cu numărul de produse.
+- **Valori pe produs** — tabul Atribute: control potrivit tipului, unitatea în etichetă; numerele se introduc cu virgulă sau punct (cel mult 4 zecimale), se trimit ca TEXT și se stochează EXACT (`NUMERIC(18,4)`, fără `float`; `0,1` rămâne `0.1000`); golul șterge valoarea; cererea e parțială și respinsă întreagă la o valoare greșită. Baza are în plus CHECK-ul „exact o coloană setată” și triggerul care potrivește coloana cu tipul.
+- **Relații** — tabul Asociate. Un rând NESIMETRIC: `productId` (principal) → `relatedProductId` (asociat), cu un tip:
+
+| tip | sens (principal → asociat) |
+|---|---|
+| `similar` | alternative asemănătoare („ți-ar mai putea plăcea”) |
+| `accessory` | asociatul e accesoriu al principalului |
+| `upsell` | asociatul e o variantă superioară, propusă în locul principalului |
+| `crosssell` | asociatul completează principalul, propus la coș |
+| `spare_part` | asociatul e piesă de schimb a principalului |
+| `compatible_with` | principalul se montează/funcționează cu asociatul |
+
+  „A accessory B” NU înseamnă „B accessory A”. În admin, relația apare din ambele părți: la A ca „din acest produs către altele” (ordonabilă), la B ca „din alte produse către acesta”; ștergerea merge din oricare parte (același rând). Reguli: fără auto-relație (și CHECK în bază), fără dubluri (unic pe principal + asociat + tip; aceeași pereche poate avea tipuri diferite), produse existente și neșterse, cel mult 50 pe tip. Căutarea produsului asociat: titlu, SKU, EAN sau cod producător (aceeași ca în listă), cu cel puțin 2 caractere, fără produsul însuși.
+- **Variante** — tabul Variante: tabel cu editare în rând (SKU unic, EAN, garanție, preț, preț redus cu fereastră în ora magazinului, greutate, cod producător; aceleași reguli ca la Prețuri). **Generatorul** compară opțiunile cu variantele existente și adaugă DOAR combinațiile care lipsesc, cu aceleași limite (3 opțiuni, 50 de valori, 100 de variante). **Previzualizarea** (fără scriere) arată ce se creează (cu SKU-uri), ce există și ce variante cu opțiuni rămân „orfane”: acestea NU se șterg niciodată automat; se șterg explicit, cu confirmare, din tabel (nu se poate șterge ultima variantă; dacă era implicită, prima rămasă o preia; legăturile de opțiuni, imaginile și istoricele variantei se șterg în cascadă). Variantele fără opțiuni (produs simplu) rămân neatinse. Prețul de achiziție nu apare în acest tab (panoul de server din Prețuri, pe fiecare variantă).
+
 **Editorul de produs, blocul 11a** (Faza 4): `/admin/produse/nou` (creare rapidă: titlu, SKU, preț, brand, categorie, clasă de livrare; produsul se creează ca ciornă, cu o variantă, categoria în aceeași tranzacție) și `/admin/produse/[id]` (taburi: General, Prețuri, Stoc, Categorii, Media, SEO; Variante, Atribute, Asociate în 11b; Documente, GPSR/energie, Fișă explodată în 11c). Ce vede și ce poate face fiecare rol, pe tab:
 
 | Tab / câmp | Fără drept (ex. Suport) | `products.read` (Depozit) | `products.content.write` (Editor) | `products.write` (Manager, Admin, Owner) |

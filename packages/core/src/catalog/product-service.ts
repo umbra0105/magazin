@@ -29,14 +29,31 @@ import type {
   ProductStore,
   VariantFieldsData,
   VariantRecord,
+  VariantWithOptions,
 } from "./product-store";
 import { generateUniqueSlug, isValidSlug, slugify } from "./slug";
 import {
   buildSkus,
+  combinationKey,
   generateCombinations,
   planVariantSync,
   type OptionInput,
 } from "./variant-generator";
+
+/** Planul unei sincronizări de variante, FĂRĂ scriere (previzualizarea din tabul Variante). */
+export interface VariantPlanPreview {
+  /** Variantele care s-ar crea, cu SKU-urile propuse. */
+  toCreate: { sku: string; selections: { option: string; value: string }[] }[];
+  /** Câte combinații există deja (nu se ating). */
+  existing: number;
+  /**
+   * Variantele existente cu opțiuni care NU mai corespund niciunei combinații dorite. NU se șterg:
+   * rămân ca atare până le ștergi explicit.
+   */
+  orphaned: { variantId: string; sku: string; label: string }[];
+  /** Variante fără nicio opțiune (ex. cea a unui produs simplu): rămân neatinse. */
+  withoutOptions: number;
+}
 
 /**
  * Serviciul de catalog: creare și modificare de produse și variante, generare de variante.
@@ -446,6 +463,108 @@ export class ProductService {
     });
     if (created.length > 0) await this.invalidate(productCacheTags(product));
     return { created, existing: plan.existing.length, orphaned: plan.orphaned.length };
+  }
+
+  /** Variantele cu opțiunile lor și opțiunile produsului, pentru tabul Variante (cere `products.read`). */
+  async getVariantsForEdit(
+    subject: PermissionSubject | null,
+    productId: string,
+  ): Promise<{ variants: VariantWithOptions[]; options: { name: string; values: string[] }[] }> {
+    assertCan(subject, "products.read");
+    const [variants, options] = await Promise.all([
+      this.deps.store.listVariantsDetailed(productId),
+      this.deps.store.listOptions(productId),
+    ]);
+    return { variants, options };
+  }
+
+  /**
+   * Ce ar face generatorul cu aceste opțiuni, fără să scrie nimic: ce variante s-ar crea (cu SKU-uri),
+   * ce există deja și ce variante cu opțiuni rămân „orfane” (nu se șterg niciodată automat). Aceleași
+   * limite ca la generare (opțiuni, valori, variante). Cere `products.write`.
+   */
+  async previewVariantPlan(
+    subject: PermissionSubject | null,
+    productId: string,
+    request: { options: readonly OptionInput[]; baseSku?: string },
+  ): Promise<VariantPlanPreview> {
+    assertCan(subject, "products.write");
+    const product = await this.deps.store.getProduct(productId);
+    if (!product) throw PRODUCT_NOT_FOUND();
+
+    const combos = generateCombinations(request.options);
+    const variants = await this.deps.store.listVariantsDetailed(productId);
+    const keyOf = (v: VariantWithOptions) => combinationKey(v.selections);
+    const keys = variants.map(keyOf).filter((k) => k !== "");
+    const plan = planVariantSync(combos, keys);
+
+    let toCreate: VariantPlanPreview["toCreate"] = [];
+    if (plan.toCreate.length > 0) {
+      const base =
+        request.baseSku?.trim() ||
+        (await this.deps.store.getDefaultSku(productId)) ||
+        slugify(product.title).toUpperCase();
+      let taken = new Set<string>();
+      let skus = buildSkus(base, plan.toCreate, taken);
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const clash = await this.deps.store.findExistingSkus(skus);
+        if (clash.length === 0) break;
+        taken = new Set([...taken, ...clash]);
+        skus = buildSkus(base, plan.toCreate, taken);
+      }
+      toCreate = plan.toCreate.map((combo, i) => ({
+        sku: skus[i] as string,
+        selections: [...combo.selections],
+      }));
+    }
+    const orphanKeys = new Set(plan.orphaned);
+    return {
+      toCreate,
+      existing: plan.existing.length,
+      orphaned: variants
+        .filter((v) => orphanKeys.has(keyOf(v)))
+        .map((v) => ({
+          variantId: v.id,
+          sku: v.sku,
+          label: v.selections.map((s) => `${s.option}: ${s.value}`).join(", "),
+        })),
+      withoutOptions: variants.filter((v) => keyOf(v) === "").length,
+    };
+  }
+
+  /**
+   * Șterge EXPLICIT o variantă (acțiune cu confirmare în interfață). Nu se poate șterge ultima
+   * variantă a produsului; dacă era cea implicită, prima rămasă o preia. Legăturile ei de opțiuni,
+   * media și istoricele de preț se șterg odată cu ea. Cere `products.write`.
+   */
+  async deleteVariant(
+    subject: PermissionSubject | null,
+    variantId: string,
+  ): Promise<{ remaining: number }> {
+    assertCan(subject, "products.write");
+    const variant = await this.deps.store.getVariant(variantId);
+    if (!variant) throw new CatalogError("CATALOG_VARIANT_NOT_FOUND", "Varianta nu există");
+    const siblings = await this.deps.store.listVariantsOf(variant.productId);
+    if (siblings.length <= 1) {
+      throw new CatalogError(
+        "CATALOG_VARIANT_LAST",
+        "Nu poți șterge ultima variantă: un produs are nevoie de cel puțin una",
+      );
+    }
+    const deleted = await this.deps.store.deleteVariant(variantId);
+    if (!deleted) throw new CatalogError("CATALOG_VARIANT_NOT_FOUND", "Varianta nu există");
+    await this.deps.audit.record({
+      actorId: subject.userId,
+      actorLabel: subject.email,
+      action: "product.variant.delete",
+      entity: "product_variant",
+      entityId: variantId,
+      before: { sku: deleted.sku, wasDefault: deleted.wasDefault },
+      after: { remaining: deleted.remaining },
+    });
+    const product = await this.deps.store.getProduct(deleted.productId);
+    await this.invalidate(product ? productCacheTags(product) : [CATALOG_TAG]);
+    return { remaining: deleted.remaining };
   }
 
   /**

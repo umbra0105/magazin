@@ -58,6 +58,11 @@ export interface VariantRecord {
   isDefault: boolean;
 }
 
+/** Varianta cu alegerile ei de opțiuni, în ordinea opțiunilor produsului. */
+export interface VariantWithOptions extends VariantRecord {
+  selections: { option: string; value: string }[];
+}
+
 export interface SlugOwner {
   id: string;
   title: string;
@@ -131,6 +136,17 @@ export interface ProductStore {
   getDefaultSku(productId: string): Promise<string | null>;
   /** Variantele unui produs, în ordinea afișării. */
   listVariantsOf(productId: string): Promise<VariantRecord[]>;
+  /** Variantele cu alegerile lor de opțiuni (pentru tabul Variante). */
+  listVariantsDetailed(productId: string): Promise<VariantWithOptions[]>;
+  /** Opțiunile produsului cu valorile lor, în ordine. */
+  listOptions(productId: string): Promise<{ name: string; values: string[] }[]>;
+  /**
+   * Șterge o variantă (legăturile ei de opțiuni, media și istoricele se șterg în cascadă). Dacă era
+   * implicită, prima rămasă devine implicită, în aceeași tranzacție. Întoarce ce s-a șters.
+   */
+  deleteVariant(
+    id: string,
+  ): Promise<{ productId: string; sku: string; wasDefault: boolean; remaining: number } | null>;
   /** Produsele cerute (existente), cu variantele lor. */
   getManyWithVariants(
     ids: readonly string[],
@@ -318,6 +334,68 @@ export function createPrismaProductStore(db: Db): ProductStore {
         where: { productId },
         orderBy: [{ isDefault: "desc" }, { position: "asc" }],
         select: variantSelect,
+      });
+    },
+
+    async listVariantsDetailed(productId) {
+      const rows = await db.productVariant.findMany({
+        where: { productId },
+        orderBy: [{ isDefault: "desc" }, { position: "asc" }],
+        select: {
+          ...variantSelect,
+          optionValues: {
+            select: {
+              option: { select: { name: true, position: true } },
+              value: { select: { value: true } },
+            },
+          },
+        },
+      });
+      return rows.map(({ optionValues, ...variant }) => ({
+        ...variant,
+        selections: [...optionValues]
+          .sort((a, b) => a.option.position - b.option.position)
+          .map((ov) => ({ option: ov.option.name, value: ov.value.value })),
+      }));
+    },
+
+    async listOptions(productId) {
+      const rows = await db.productOption.findMany({
+        where: { productId },
+        orderBy: { position: "asc" },
+        select: {
+          name: true,
+          values: { orderBy: { position: "asc" }, select: { value: true } },
+        },
+      });
+      return rows.map((o) => ({ name: o.name, values: o.values.map((v) => v.value) }));
+    },
+
+    async deleteVariant(id) {
+      return inTransaction(db, async (tx) => {
+        const variant = await tx.productVariant.findUnique({
+          where: { id },
+          select: { id: true, productId: true, sku: true, isDefault: true },
+        });
+        if (!variant) return null;
+        await tx.productVariant.delete({ where: { id } });
+        const remaining = await tx.productVariant.findMany({
+          where: { productId: variant.productId },
+          orderBy: { position: "asc" },
+          select: { id: true },
+        });
+        if (variant.isDefault && remaining[0]) {
+          await tx.productVariant.update({
+            where: { id: remaining[0].id },
+            data: { isDefault: true },
+          });
+        }
+        return {
+          productId: variant.productId,
+          sku: variant.sku,
+          wasDefault: variant.isDefault,
+          remaining: remaining.length,
+        };
       });
     },
 

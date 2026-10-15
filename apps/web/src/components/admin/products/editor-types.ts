@@ -32,6 +32,35 @@ export interface EditorVariant {
   saleStartsAtLocal: string | null;
   saleEndsAtLocal: string | null;
   isDefault: boolean;
+  weightGrams: number | null;
+  manufacturerPartNumber: string | null;
+  /** Alegerile de opțiuni, ca text („Culoare: Alb”); gol la o variantă fără opțiuni. */
+  label: string;
+}
+
+export interface EditorOption {
+  name: string;
+  values: string[];
+}
+
+export interface EditorAttribute {
+  id: string;
+  code: string;
+  name: string;
+  type: "text" | "number" | "select" | "bool";
+  unit: string | null;
+  isFilterable: boolean;
+  options: { id: string; value: string }[];
+  /** Text, număr canonic („12.5”), id de opțiune sau da/nu; `null` = necompletat. */
+  value: string | boolean | null;
+}
+
+export interface EditorRelation {
+  id: string;
+  type: string;
+  position: number;
+  direction: "outgoing" | "incoming";
+  product: { id: string; title: string; sku: string | null; status: string; deleted: boolean };
 }
 
 export interface EditorCaps {

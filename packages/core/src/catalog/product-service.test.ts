@@ -260,9 +260,42 @@ class MemoryStore implements ProductStore {
     return rows.map((row) => {
       const v = this.seedVariant(productId, { sku: row.sku, price: row.price });
       keys.push(combinationKey(row.selections));
+      this.selections.set(
+        v.id,
+        row.selections.map((s) => ({ option: s.option, value: s.value })),
+      );
       this.priceHistory.push({ variantId: v.id, price: row.price, at });
       return v;
     });
+  }
+
+  selections = new Map<string, { option: string; value: string }[]>();
+
+  async listVariantsDetailed(productId: string) {
+    return (await this.listVariantsOf(productId)).map((v) => ({
+      ...v,
+      selections: this.selections.get(v.id) ?? [],
+    }));
+  }
+
+  async listOptions(): Promise<{ name: string; values: string[] }[]> {
+    return [];
+  }
+
+  async deleteVariant(id: string) {
+    const v = this.variants.get(id);
+    if (!v) return null;
+    this.variants.delete(id);
+    const remaining = await this.listVariantsOf(v.productId);
+    if (v.isDefault && remaining[0]) {
+      this.variants.set(remaining[0].id, { ...remaining[0], isDefault: true });
+    }
+    return {
+      productId: v.productId,
+      sku: v.sku,
+      wasDefault: v.isDefault,
+      remaining: remaining.length,
+    };
   }
 }
 
@@ -1094,6 +1127,98 @@ describe("creare cu categorii și citire pentru editor", () => {
     });
     await expect(service.getForEdit(roleSubject("owner"), "lipsa")).rejects.toMatchObject({
       code: "CATALOG_PRODUCT_NOT_FOUND",
+    });
+  });
+});
+
+describe("variante: previzualizarea planului și ștergerea explicită", () => {
+  const colors = (...values: string[]) => [{ name: "Culoare", values }];
+
+  it("previzualizarea nu scrie nimic: variante de creat cu SKU, existente, orfane, fără opțiuni", async () => {
+    const { store, service } = setup();
+    const p = store.seedProduct({ slug: "pv", title: "Pompă" });
+    store.seedVariant(p.id, { sku: "POMPA-1", isDefault: true });
+
+    const before = store.variants.size;
+    const plan = await service.previewVariantPlan(roleSubject("manager"), p.id, {
+      options: colors("Alb", "Albastru"),
+    });
+    expect(store.variants.size).toBe(before);
+    expect(plan.toCreate.map((v) => v.sku)).toEqual(["POMPA-1-ALB", "POMPA-1-ALBASTRU"]);
+    expect(plan.existing).toBe(0);
+    expect(plan.orphaned).toEqual([]);
+    expect(plan.withoutOptions).toBe(1);
+  });
+
+  it("după generare, schimbarea opțiunilor raportează orfanele și NU le șterge", async () => {
+    const { store, service } = setup();
+    const p = store.seedProduct({ slug: "pw", title: "Pompă" });
+    store.seedVariant(p.id, { sku: "POMPA-1", isDefault: true });
+    const manager = roleSubject("manager");
+    await service.generateVariants(manager, p.id, {
+      options: colors("Alb", "Albastru"),
+      price: 5000,
+      baseSku: "POMPA",
+    });
+    const count = store.variants.size;
+
+    const plan = await service.previewVariantPlan(manager, p.id, {
+      options: colors("Alb", "Roșu"),
+      baseSku: "POMPA",
+    });
+    expect(plan.existing).toBe(1);
+    expect(plan.toCreate.map((v) => v.selections[0]?.value)).toEqual(["Roșu"]);
+    expect(plan.orphaned).toEqual([
+      expect.objectContaining({ sku: "POMPA-ALBASTRU", label: "Culoare: Albastru" }),
+    ]);
+    expect(store.variants.size).toBe(count); // nimic șters
+  });
+
+  it("limitele generatorului se aplică și la previzualizare; cere products.write", async () => {
+    const { store, service } = setup();
+    const p = store.seedProduct({ slug: "px", title: "X" });
+    store.seedVariant(p.id, { sku: "X-1" });
+    const many = Array.from({ length: 11 }, (_, i) => `v${i}`);
+    await expect(
+      service.previewVariantPlan(roleSubject("manager"), p.id, {
+        options: [
+          { name: "A", values: many },
+          { name: "B", values: many },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: "CATALOG_VARIANT_LIMIT" });
+    await expect(
+      service.previewVariantPlan(roleSubject("manager"), p.id, {
+        options: ["A", "B", "C", "D"].map((name) => ({ name, values: ["1"] })),
+      }),
+    ).rejects.toMatchObject({ code: "CATALOG_OPTIONS_LIMIT" });
+    await expect(
+      service.previewVariantPlan(roleSubject("editor"), p.id, { options: colors("Alb") }),
+    ).rejects.toMatchObject({ code: "AUTH_FORBIDDEN" });
+  });
+
+  it("ștergerea explicită: refuză ultima variantă, preia implicita, auditează, cere products.write", async () => {
+    const { store, service, auditRows } = setup();
+    const p = store.seedProduct({ slug: "pd", title: "D" });
+    const first = store.seedVariant(p.id, { sku: "D-1", isDefault: true, position: 0 });
+    const second = store.seedVariant(p.id, { sku: "D-2", position: 1 });
+    const manager = roleSubject("manager");
+
+    await expect(service.deleteVariant(roleSubject("editor"), first.id)).rejects.toMatchObject({
+      code: "AUTH_FORBIDDEN",
+    });
+
+    const out = await service.deleteVariant(manager, first.id);
+    expect(out).toEqual({ remaining: 1 });
+    expect(store.variants.has(first.id)).toBe(false);
+    expect(store.variants.get(second.id)?.isDefault).toBe(true);
+    expect(auditRows.some((r) => r.action === "product.variant.delete")).toBe(true);
+
+    await expect(service.deleteVariant(manager, second.id)).rejects.toMatchObject({
+      code: "CATALOG_VARIANT_LAST",
+    });
+    await expect(service.deleteVariant(manager, "lipsa")).rejects.toMatchObject({
+      code: "CATALOG_VARIANT_NOT_FOUND",
     });
   });
 });

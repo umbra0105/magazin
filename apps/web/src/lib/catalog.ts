@@ -1,12 +1,18 @@
 import { revalidateTag } from "next/cache";
 import {
+  AttributeService,
   BrandService,
   CategoryService,
+  ProductAttributesService,
+  ProductRelationsService,
   ProductAssignmentsService,
   ProductListService,
   ProductService,
+  createPrismaAttributeStore,
   createPrismaBrandStore,
   createPrismaCategoryStore,
+  createPrismaProductAttributeStore,
+  createPrismaProductRelationStore,
   createPrismaProductAssignmentStore,
   createPrismaProductListStore,
   createPrismaProductStore,
@@ -23,6 +29,9 @@ const globalForCatalog = globalThis as unknown as {
   __ecomProducts?: ProductService;
   __ecomProductList?: ProductListService;
   __ecomAssignments?: ProductAssignmentsService;
+  __ecomAttributes?: AttributeService;
+  __ecomProductAttributes?: ProductAttributesService;
+  __ecomRelations?: ProductRelationsService;
 };
 
 /**
@@ -91,4 +100,38 @@ export function getProductAssignmentsService(): ProductAssignmentsService {
     logger: getLogger(),
   });
   return globalForCatalog.__ecomAssignments;
+}
+
+/** Definițiile atributelor (pagina Atribute). Un singur serviciu per proces. */
+export function getAttributeService(): AttributeService {
+  globalForCatalog.__ecomAttributes ??= new AttributeService({
+    store: createPrismaAttributeStore(getDb()),
+    audit: getAudit(),
+    invalidate,
+    logger: getLogger(),
+  });
+  return globalForCatalog.__ecomAttributes;
+}
+
+/** Valorile atributelor pe produs (tabul Atribute). */
+export function getProductAttributesService(): ProductAttributesService {
+  globalForCatalog.__ecomProductAttributes ??= new ProductAttributesService({
+    store: createPrismaProductAttributeStore(getDb()),
+    attributes: createPrismaAttributeStore(getDb()),
+    audit: getAudit(),
+    invalidate,
+    logger: getLogger(),
+  });
+  return globalForCatalog.__ecomProductAttributes;
+}
+
+/** Relațiile dintre produse (tabul Asociate). */
+export function getProductRelationsService(): ProductRelationsService {
+  globalForCatalog.__ecomRelations ??= new ProductRelationsService({
+    store: createPrismaProductRelationStore(getDb()),
+    audit: getAudit(),
+    invalidate,
+    logger: getLogger(),
+  });
+  return globalForCatalog.__ecomRelations;
 }

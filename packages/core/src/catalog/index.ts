@@ -168,3 +168,36 @@ export {
   type ProductListSort,
   type ProductListStore,
 } from "./product-list";
+export {
+  AttributeService,
+  ATTRIBUTE_CODE_PATTERN,
+  MAX_ATTRIBUTE_OPTIONS,
+  attributeCreateSchema,
+  attributeUpdateSchema,
+  createPrismaAttributeStore,
+  type AttributeOptionRecord,
+  type AttributeRecord,
+  type AttributeServiceDeps,
+  type AttributeStore,
+} from "./attribute-service";
+export {
+  MAX_TEXT_ATTRIBUTE_LENGTH,
+  ProductAttributesService,
+  createPrismaProductAttributeStore,
+  type AttributeValue,
+  type ProductAttributeEntry,
+  type ProductAttributeStore,
+  type ProductAttributesDeps,
+} from "./product-attributes";
+export {
+  MAX_RELATIONS_PER_TYPE,
+  ProductRelationsService,
+  createPrismaProductRelationStore,
+  type ProductRelationStore,
+  type ProductRelationsDeps,
+  type RelatedProductSummary,
+  type RelationRecord,
+} from "./product-relations";
+export { DECIMAL_SCALE, formatDecimalDisplay, parseDecimalInput } from "./decimal";
+export type { VariantPlanPreview } from "./product-service";
+export type { VariantWithOptions } from "./product-store";
