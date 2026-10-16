@@ -163,6 +163,19 @@ există `tenantId`. În schimb:
 - Webhook-urile: verificare semnătură + idempotență, întotdeauna.
 - Side-effects (email, AWB, factură) prin queue, niciodată sincron în tranzacție.
 
+### Fișiere CSV pentru Excel — regulă permanentă
+
+- Orice fișier CSV destinat deschiderii în Excel (șablon, raport, export de produse, comenzi, clienți,
+  facturi etc.) se generează cu **BOM UTF-8 + prima linie `sep=;`**, EXCLUSIV prin funcția comună
+  (`toCsv` / `csvResponse` din `packages/core/src/catalog/import/import-csv.ts`), cu antet în română.
+  Nu se scrie CSV de mână în altă parte; testul de arhitectură `csv-generation` pică la orice ocolire.
+- Orice import de CSV acceptă acel prefix (`extractSepLine`) și un CSV salvat din Excel (Windows-1250,
+  separator «,», câmpuri în ghilimele).
+- Motiv: Excel-ul utilizatorului are separatorul de listă «,», deci fără linia `sep=;` coloanele unui CSV
+  cu «;» apar lipite. Regula nu se mai reamintește: se aplică la 14b, 15 și oriunde apare un CSV descărcabil.
+- La fiecare punct cu un CSV descărcabil, în **👉 VERIFICĂ TU** intră pasul: «deschide CSV-ul cu
+  dublu-click în Excel și vezi coloanele separate».
+
 ### Comenzi utile
 
 - `pnpm dev` — pornește aplicația
