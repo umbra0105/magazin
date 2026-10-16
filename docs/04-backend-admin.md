@@ -514,7 +514,7 @@ Vezi `09-preturi-si-parteneri.md` §5.
 - **Salvare:** pe tab; clientul trimite DOAR câmpurile modificate. Serverul validează cu Zod strict și trece cererea prin `ProductUpdateGuard`; o cerere mixtă (conținut + câmp restricționat) se respinge întreagă, cu audit `denied` și doar numele câmpurilor.
 - **Prețuri:** introducere în lei cu cel mult 2 zecimale (→ bani fără `float`); previzualizare „fără TVA” din `tax.standardRate` (funcție pură `netFromGross` în `packages/shared`); prețul redus ≤ prețul întreg; fereastra de promoție în ORA MAGAZINULUI (`regional.timezone`), sfârșitul după început.
 - **Regula de activare:** la trecerea în „Activ” (și la activarea în masă), variantele fără garanție proprie primesc `catalog.defaultWarrantyMonths` (implicit 24, din registrul de setări; editabilă prin acțiunea `updateSetting` până apare pagina de setări). EAN-ul și brandul nu sunt obligatorii.
-- **Protecție la pierderea modificărilor:** `beforeunload`, link-urile interne și butonul „înapoi” cer confirmare cât timp un tab e modificat; indicatorul „●” apare pe tab.
+- **Protecție la pierderea modificărilor:** `beforeunload` (dialogul nativ al browserului), iar link-urile interne și butonul „înapoi” cer confirmare într-un dialog propriu al aplicației, în română (nu `window.confirm`) cât timp un tab e modificat; indicatorul „●” apare pe tab.
 - **Accesibilitate:** etichete legate de câmp, erori legate prin `aria-describedby`/`aria-invalid` cu focus pe primul câmp greșit, taburi WAI-ARIA (săgeți, Home, End), reordonarea imaginilor cu butoane și anunț `aria-live`.
 
 **Lista de produse și editarea în masă** (Faza 4, punctul 10):
@@ -583,6 +583,8 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `audit.read` — Vede jurnalul de audit | ✓ | ✓ |  |  |  |  |  |
 | `system.update` — Actualizează sistemul și rulează mentenanță | ✓ |  |  |  |  |  |  |
 <!-- rbac-matrix:end -->
+
+**`products.export` (punctul 14b): cine o are și de ce.** Owner, Admin și Manager (rolurile care pot modifica și importa catalogul). Nu o au Depozit și Editor, deși văd lista (`products.read`): exportul scoate tot catalogul într-un click, cu ciorne, date interne și identificatori, deci cere o poartă proprie, nu `products.read`; `products.write` ar fi cuplat exportul de dreptul de a modifica. Exportul nu conține niciodată prețul de achiziție, nici pentru cine are `products.cost.view`. O instalare veche primește permisiunea la rularea seed-ului (`db:seed`).
 
 Permisiuni ca string-uri: `admin.access`, `orders.read`, `orders.write`, `companies.approve`, `pricelists.write`, `orders.refund`, `orders.cancel`, `products.write`, `inventory.write`, `customers.read_pii`, `settings.write`, `integrations.write`, `users.manage`, `reports.financial`. Verificare **pe server**, la fiecare acțiune.
 
