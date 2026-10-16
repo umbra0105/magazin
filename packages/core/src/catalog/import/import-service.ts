@@ -93,6 +93,8 @@ export interface ImportAnalysis {
   fileName: string;
   format: ImportFormat;
   delimiter: CsvDelimiter | null;
+  /** De unde vine delimitatorul: linia «sep=» a fișierului, alegerea ta sau detectarea. */
+  delimiterSource: "sep-line" | "chosen" | "detected" | null;
   encoding: "utf-8" | "windows-1250" | null;
   headers: string[];
   /** Primele rânduri de date, cu celulele scurtate, pentru previzualizare. */
@@ -254,6 +256,7 @@ export class ProductImportService {
       fileName: record.fileName,
       format: table.format,
       delimiter: table.delimiter,
+      delimiterSource: table.delimiterSource,
       encoding: table.encoding,
       headers: table.headers,
       sample: table.rows

@@ -262,20 +262,25 @@ export function ProductImportWizard({
             <p className="text-sm text-muted-foreground">{m.upload.templateHelp}</p>
             <div className="flex flex-wrap gap-2">
               <a
-                href="/api/admin/product-imports/template?format=csv"
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-                download
-              >
-                {m.upload.templateCsv}
-              </a>
-              <a
                 href="/api/admin/product-imports/template?format=xlsx"
-                className={buttonVariants({ variant: "outline", size: "sm" })}
+                className={buttonVariants({ variant: "default", size: "sm" })}
                 download
+                data-template="xlsx"
               >
                 {m.upload.templateXlsx}
               </a>
+              <a
+                href="/api/admin/product-imports/template?format=csv"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+                download
+                data-template="csv"
+              >
+                {m.upload.templateCsv}
+              </a>
             </div>
+            <p className="text-sm text-muted-foreground" data-excel-help>
+              {m.upload.excelHelp}
+            </p>
           </div>
           <form
             className="flex flex-col gap-3"
@@ -339,6 +344,9 @@ export function ProductImportWizard({
                 ))}
               </Select>
               <p id="import-delimiter-help" className="text-xs text-muted-foreground">
+                {analysis.delimiterSource
+                  ? `${m.mapping.delimiterSource[analysis.delimiterSource]} `
+                  : ""}
                 {m.mapping.delimiterHelp}
               </p>
             </div>

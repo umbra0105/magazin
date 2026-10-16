@@ -25,6 +25,7 @@ function table(headers: string[], rows: string[][]): ParsedTable {
   return {
     format: "csv",
     delimiter: ";",
+    delimiterSource: "detected",
     encoding: "utf-8",
     headers,
     rows,

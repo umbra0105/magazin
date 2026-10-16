@@ -1190,7 +1190,9 @@ export const ro = {
         templateHelp:
           "Descarcă șablonul (antet, două rânduri de exemplu și instrucțiunile fiecărui câmp), completează-l și încarcă-l.",
         templateCsv: "Șablon CSV",
-        templateXlsx: "Șablon XLSX",
+        templateXlsx: "Șablon XLSX (recomandat)",
+        excelHelp:
+          "Dacă deschizi CSV-ul în Excel și coloanele apar lipite, folosește Date → Din text/CSV și alege delimitatorul „;”. Sau folosește șablonul XLSX.",
         rules: [
           "Un rând = un produs, identificat prin SKU: SKU existent se actualizează, SKU nou creează un produs nou (ciornă, o singură variantă).",
           "Se modifică doar coloanele pe care le mapezi. O celulă goală lasă valoarea neschimbată; „-” (o liniuță singură) șterge valoarea, unde se poate.",
@@ -1206,8 +1208,12 @@ export const ro = {
         rows: (n: number) => `${n} ${n === 1 ? "rând de date" : "rânduri de date"}`,
         delimiter: "Delimitator",
         delimiters: { ",": "Virgulă ( , )", ";": "Punct și virgulă ( ; )", "\t": "Tab" },
-        delimiterHelp:
-          "Detectat din fișier. Dacă previzualizarea arată coloanele lipite, schimbă-l.",
+        delimiterHelp: "Dacă previzualizarea arată coloanele lipite, schimbă delimitatorul.",
+        delimiterSource: {
+          "sep-line": "Indicat de fișier (linia «sep=»).",
+          chosen: "Ales de tine.",
+          detected: "Detectat din primul rând al fișierului.",
+        },
         encoding: (name: string) => `Codificare: ${name}`,
         column: "Coloană din fișier",
         sample: "Primele valori",

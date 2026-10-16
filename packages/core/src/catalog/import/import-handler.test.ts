@@ -47,6 +47,7 @@ const analysis: ImportAnalysis = {
   fileName: "f.csv",
   format: "csv",
   delimiter: ";",
+  delimiterSource: "detected",
   encoding: "utf-8",
   headers: ["SKU"],
   sample: [],
@@ -237,7 +238,9 @@ describe("șablon și raport", () => {
     const csvBytes = new Uint8Array(await csv.arrayBuffer());
     // BOM UTF-8 (EF BB BF), apoi antetul
     expect([...csvBytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    expect(new TextDecoder().decode(csvBytes.subarray(3, 14))).toBe("SKU;Titlu;S");
+    expect(new TextDecoder().decode(csvBytes.subarray(3, 21))).toBe(
+      "sep=;" + String.fromCharCode(13, 10) + "SKU;Titlu;S",
+    );
 
     const xlsx = await handleProductImportTemplate(templateRequest("xlsx"), {
       getSubject: getSubject(manager),

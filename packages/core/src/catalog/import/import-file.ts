@@ -42,6 +42,8 @@ export interface ParsedTable {
   format: ImportFormat;
   /** Doar la CSV. */
   delimiter: CsvDelimiter | null;
+  /** De unde vine delimitatorul CSV: linia «sep=», ales explicit sau detectat din antet. */
+  delimiterSource: "sep-line" | "chosen" | "detected" | null;
   encoding: "utf-8" | "windows-1250" | null;
   headers: string[];
   /** Rândurile de date, fără cele complet goale; fiecare are exact `headers.length` celule. */
@@ -80,6 +82,21 @@ export function detectFormat(bytes: Uint8Array): ImportFormat {
   return "csv";
 }
 
+/**
+ * Windows-1250 nu are ș/ț cu virgulă (U+0219, U+021B, forma corectă în română), ci doar ş/ţ cu sedilă
+ * (U+015F, U+0163), pe care Excel le scrie în locul lor. Dintr-un fișier Windows-1250 ele se normalizează
+ * la forma corectă, ca titlurile și căutările să nu aibă două variante ale aceleiași litere.
+ */
+const CEDILLA_TO_COMMA: Readonly<Record<number, string>> = {
+  0x15f: String.fromCharCode(0x219),
+  0x163: String.fromCharCode(0x21b),
+  0x15e: String.fromCharCode(0x218),
+  0x162: String.fromCharCode(0x21a),
+};
+
+const fixCedillas = (text: string): string =>
+  text.replace(/[ŞşŢţ]/g, (char) => CEDILLA_TO_COMMA[char.charCodeAt(0)] ?? char);
+
 /** Text din octeți: UTF-8 strict (BOM scos); dacă nu e valid, Windows-1250. */
 export function decodeCsvText(bytes: Uint8Array): {
   text: string;
@@ -88,8 +105,31 @@ export function decodeCsvText(bytes: Uint8Array): {
   try {
     return { text: new TextDecoder("utf-8", { fatal: true }).decode(bytes), encoding: "utf-8" };
   } catch {
-    return { text: new TextDecoder("windows-1250").decode(bytes), encoding: "windows-1250" };
+    return {
+      text: fixCedillas(new TextDecoder("windows-1250").decode(bytes)),
+      encoding: "windows-1250",
+    };
   }
+}
+
+const SEP_LINE = /^sep=(.)[ \t]*(?:\r\n|\n|\r)/i;
+
+/**
+ * Prima linie «sep=<un caracter>» (convenția Excel pentru fișiere CSV: spune ce separator să folosească
+ * la deschiderea cu dublu-click, indiferent de setările regionale). Dacă există, e scoasă din text, iar
+ * caracterul ei e delimitatorul. Un caracter pe care importul nu îl poate folosi se refuză cu mesaj clar.
+ */
+export function extractSepLine(text: string): { text: string; delimiter: CsvDelimiter | null } {
+  const match = SEP_LINE.exec(text);
+  if (!match) return { text, delimiter: null };
+  const char = match[1] as string;
+  if (!(CSV_DELIMITERS as readonly string[]).includes(char)) {
+    return fail(
+      "IMPORT_FILE_UNSUPPORTED",
+      "Linia «sep=» indică un delimitator pe care importul nu îl acceptă. Folosește virgulă, punct și virgulă sau tab.",
+    );
+  }
+  return { text: text.slice(match[0].length), delimiter: char as CsvDelimiter };
 }
 
 /** Delimitatorul cel mai frecvent în primul rând (în afara ghilimelelor); la egalitate, `;` apoi `,`. */
@@ -280,7 +320,7 @@ const stripControl = (value: string): string =>
 /** Antet + rânduri de date din înregistrări brute, cu limite, rânduri goale sărite și lățime uniformă. */
 function toTable(
   records: readonly (readonly string[])[],
-  base: Pick<ParsedTable, "format" | "delimiter" | "encoding" | "warnings">,
+  base: Pick<ParsedTable, "format" | "delimiter" | "delimiterSource" | "encoding" | "warnings">,
   limits: ImportLimits,
 ): ParsedTable {
   const clean = (value: string): string => stripControl(value).trim();
@@ -336,8 +376,13 @@ export async function parseImportFile(
 ): Promise<ParsedTable> {
   const format = detectFormat(bytes);
   if (format === "csv") {
-    const { text, encoding } = decodeCsvText(bytes);
-    const delimiter = options.delimiter ?? detectDelimiter(text);
+    const decoded = decodeCsvText(bytes);
+    const { encoding } = decoded;
+    const sep = extractSepLine(decoded.text);
+    const text = sep.text;
+    // alegerea explicită a administratorului bate linia «sep=», care bate detectarea
+    const delimiter = options.delimiter ?? sep.delimiter ?? detectDelimiter(text);
+    const delimiterSource = options.delimiter ? "chosen" : sep.delimiter ? "sep-line" : "detected";
     const warnings =
       encoding === "windows-1250"
         ? [
@@ -346,7 +391,7 @@ export async function parseImportFile(
         : [];
     return toTable(
       parseCsv(text, delimiter, limits),
-      { format, delimiter, encoding, warnings },
+      { format, delimiter, delimiterSource, encoding, warnings },
       limits,
     );
   }
@@ -374,5 +419,9 @@ export async function parseImportFile(
     }
     return row.map(cellToText);
   });
-  return toTable(records, { format, delimiter: null, encoding: null, warnings: [] }, limits);
+  return toTable(
+    records,
+    { format, delimiter: null, delimiterSource: null, encoding: null, warnings: [] },
+    limits,
+  );
 }

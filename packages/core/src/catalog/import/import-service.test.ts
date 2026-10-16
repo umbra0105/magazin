@@ -24,7 +24,9 @@ import {
   type ImportPlan,
   type ImportSnapshot,
 } from "./import-plan";
+import { encodeWindows1250 } from "../../../test/windows-1250";
 import { DEFAULT_IMPORT_LIMITS } from "./import-file";
+import { buildTemplate } from "./import-template";
 
 function subjectFor(roleKey: string, userId = `u-${roleKey}`): PermissionSubject {
   const role = DEFAULT_ROLES.find((r) => r.key === roleKey);
@@ -252,6 +254,58 @@ describe("aplicarea rând cu rând", () => {
     });
     // retenția: raportul rămâne 24 h după final
     expect(record.expiresAt.getTime()).toBe(NOW.getTime() + 24 * 3_600_000);
+  });
+});
+
+describe("CSV salvat din Excel (separator «,», Windows-1250)", () => {
+  it("se încarcă, se mapează automat, se verifică și se aplică; diacriticele ajung corecte (ș, ț cu virgulă)", async () => {
+    const ctx = setup();
+    const ti = String.fromCharCode(0x21b);
+    const si = String.fromCharCode(0x219);
+    const excel = [
+      '"SKU","Titlu","Preț (lei, cu TVA)"',
+      `"A1","Pomp${String.fromCharCode(0x103)} de circula${ti}ie ${si}i filtru","1299,50"`,
+    ].join("\r\n");
+    const analysis = await ctx.service.register(manager, {
+      bytes: encodeWindows1250(excel),
+      fileName: "din-excel.csv",
+    });
+    expect(analysis).toMatchObject({
+      delimiter: ",",
+      delimiterSource: "detected",
+      encoding: "windows-1250",
+    });
+    expect(analysis.warnings[0]).toMatch(/Windows-1250/);
+    expect(analysis.headers[2]).toBe("Preț (lei, cu TVA)");
+    expect(analysis.columns.map((c) => c.field)).toEqual(["sku", "title", "price"]);
+
+    const validation = await ctx.service.validate(manager, {
+      importId: analysis.importId,
+      columns: analysis.columns.map((c) => c.field),
+    });
+    expect(validation.report.counts).toMatchObject({ new: 1, errors: 0 });
+    // fișierul stocat rămâne în octeții lui originali; delimitatorul detectat se salvează pentru aplicare
+    expect(ctx.store.records.get(analysis.importId)?.delimiter).toBe(",");
+    await ctx.service.apply(manager, {
+      importId: analysis.importId,
+      confirm: true,
+      expectedPlanHash: validation.planHash,
+    });
+    expect(ctx.creates[0]).toMatchObject({
+      title: `Pompă de circula${ti}ie ${si}i filtru`,
+      variants: [{ sku: "A1", price: 129_950 }],
+    });
+  });
+
+  it("șablonul CSV al aplicației (cu linia sep=) se încarcă înapoi: delimitatorul vine din fișier", async () => {
+    const ctx = setup();
+    const analysis = await ctx.service.register(manager, {
+      bytes: await buildTemplate("csv"),
+      fileName: "sablon.csv",
+    });
+    expect(analysis).toMatchObject({ delimiter: ";", delimiterSource: "sep-line", warnings: [] });
+    expect(analysis.headers[0]).toBe("SKU");
+    expect(analysis.rowCount).toBe(2);
   });
 });
 

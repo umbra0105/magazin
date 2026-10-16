@@ -612,7 +612,7 @@ describe("import pe baza reală", () => {
       await service.validate(manager, { importId: analysis.importId, columns: MAP });
       const { csv: text, fileName } = await service.reportCsv(manager, analysis.importId);
       expect(fileName).toBe("raport-import-produse.csv");
-      expect(text.startsWith("﻿")).toBe(true);
+      expect(text.startsWith(String.fromCharCode(0xfeff) + "sep=;\r\nRând;SKU;")).toBe(true);
       expect(text).toContain("Rând;SKU;Rezultat;Motiv");
       expect(text).toContain(`BAD-${tag};eroare;`);
       expect(text).toContain(`AR-${tag};ignorat;`);

@@ -1,7 +1,10 @@
 import { strToU8, unzipSync, zipSync } from "fflate";
 import writeExcelFile from "write-excel-file/node";
 import { describe, expect, it } from "vitest";
+import { encodeWindows1250 } from "../../../test/windows-1250";
 import { toCsv } from "./import-csv";
+import { IMPORT_FIELDS, suggestMapping } from "./import-fields";
+import { buildTemplate } from "./import-template";
 import {
   DEFAULT_IMPORT_LIMITS,
   detectDelimiter,
@@ -271,6 +274,127 @@ describe("protecție împotriva arhivelor-bombă", () => {
   });
 });
 
+describe("linia «sep=» (convenția Excel)", () => {
+  it("șablonul CSV generat de aplicație se importă fără avertismente; «sep=» nu devine antet", async () => {
+    const template = await buildTemplate("csv");
+    // BOM UTF-8, apoi linia sep=
+    expect([...template.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(new TextDecoder().decode(template.subarray(3, 12))).toBe("sep=;\r\nSK");
+    const table = await parseImportFile(template, limits);
+    expect(table).toMatchObject({
+      delimiter: ";",
+      delimiterSource: "sep-line",
+      encoding: "utf-8",
+      warnings: [],
+    });
+    expect(table.headers).toEqual(IMPORT_FIELDS.map((f) => f.label));
+    expect(table.headers[0]).toBe("SKU");
+    expect(table.rows).toHaveLength(2);
+    // antetul rămâne rândul 1 (Excel nu afișează linia sep=)
+    expect(table.rowNumbers).toEqual([2, 3]);
+    expect(suggestMapping(table.headers).map((c) => c.field)).toEqual(
+      IMPORT_FIELDS.map((f) => f.key),
+    );
+  });
+
+  it("respectă un alt caracter: «sep=,» și «sep=<tab>», chiar dacă primul rând ar sugera altceva", async () => {
+    const comma = await parseImportFile(bytes("sep=,\r\na;b;c,d\r\n1;2;3,4\r\n"), limits);
+    expect(comma).toMatchObject({ delimiter: ",", delimiterSource: "sep-line" });
+    expect(comma.headers).toEqual(["a;b;c", "d"]);
+    const tab = await parseImportFile(bytes("sep=\t\nSKU\tTitlu\nA1\tb\n"), limits);
+    expect(tab).toMatchObject({ delimiter: "\t", delimiterSource: "sep-line" });
+    expect(tab.headers).toEqual(["SKU", "Titlu"]);
+    // majuscule, spații după, linie nouă CR
+    const odd = await parseImportFile(bytes("SEP=;  \rSKU;Titlu\rA1;b\r"), limits);
+    expect(odd).toMatchObject({ delimiter: ";", headers: ["SKU", "Titlu"] });
+  });
+
+  it("alegerea explicită a delimitatorului bate linia sep=, iar linia tot nu devine antet", async () => {
+    const table = await parseImportFile(bytes("sep=;\r\nSKU,Titlu\r\nA1,b\r\n"), limits, {
+      delimiter: ",",
+    });
+    expect(table).toMatchObject({ delimiter: ",", delimiterSource: "chosen" });
+    expect(table.headers).toEqual(["SKU", "Titlu"]);
+  });
+
+  it("un delimitator pe care importul nu îl poate folosi e refuzat cu mesaj clar", async () => {
+    await expect(
+      parseImportFile(bytes("sep=|\r\nSKU|Titlu\r\nA|b\r\n"), limits),
+    ).rejects.toMatchObject({ code: "IMPORT_FILE_UNSUPPORTED" });
+  });
+
+  it("un fișier fără linie sep= merge ca până acum (delimitator detectat), iar un antet care seamănă nu e afectat", async () => {
+    const plain = await parseImportFile(bytes("SKU;Titlu\r\nA1;b\r\n"), limits);
+    expect(plain).toMatchObject({ delimiter: ";", delimiterSource: "detected" });
+    expect(plain.headers).toEqual(["SKU", "Titlu"]);
+    // «sep» fără «=», sau cu mai multe caractere după «=», sunt antete obișnuite
+    const lookalike = await parseImportFile(bytes("sep;Titlu\r\nA1;b\r\n"), limits);
+    expect(lookalike.headers).toEqual(["sep", "Titlu"]);
+    const multi = await parseImportFile(bytes("sep=ab,Titlu\r\nA1,b\r\n"), limits);
+    expect(multi.headers).toEqual(["sep=ab", "Titlu"]);
+    // fără linie nouă după «sep=;» nu e o linie sep=
+    expect((await parseImportFile(bytes("sep=;,x\r\nA,b\r\n"), limits)).headers[0]).toMatch(
+      /^sep=/,
+    );
+  });
+});
+
+describe("CSV salvat din Excel pe un calculator cu separatorul «,» (Windows-1250)", () => {
+  // ț și ș cu virgulă (forma corectă); Excel le salvează cu sedilă (ţ, ş), codul 0xFE / 0xBA
+  const ti = String.fromCharCode(0x21b);
+  const si = String.fromCharCode(0x219);
+  const excelCsv = [
+    '"SKU","Titlu","Preț (lei, cu TVA)","Categorii"',
+    `"A1","Pompă de circula${ti}ie, ${si}i filtru","1299,50","Pompe > Circula${ti}ie"`,
+    `"A2","Filtru","150,5",""`,
+  ].join("\r\n");
+
+  it("antetul în ghilimele cu virgulă înăuntru, diacritice românești și zecimale cu virgulă se citesc corect", async () => {
+    const table = await parseImportFile(encodeWindows1250(excelCsv), limits);
+    expect(table).toMatchObject({
+      format: "csv",
+      delimiter: ",",
+      delimiterSource: "detected",
+      encoding: "windows-1250",
+    });
+    expect(table.warnings[0]).toMatch(/Windows-1250/);
+    expect(table.headers).toEqual(["SKU", "Titlu", "Preț (lei, cu TVA)", "Categorii"]);
+    expect(table.rows[0]).toEqual([
+      "A1",
+      `Pompă de circula${ti}ie, ${si}i filtru`,
+      "1299,50",
+      `Pompe > Circula${ti}ie`,
+    ]);
+    expect(table.rows[1]).toEqual(["A2", "Filtru", "150,5", ""]);
+    // antetul cu virgulă în interior se recunoaște ca preț
+    expect(suggestMapping(table.headers).map((c) => c.field)).toEqual([
+      "sku",
+      "title",
+      "price",
+      "categories",
+    ]);
+  });
+
+  it("ş și ţ cu sedilă (singurele din Windows-1250) devin ș și ț cu virgulă, forma corectă", async () => {
+    const table = await parseImportFile(
+      encodeWindows1250(`SKU,Titlu\r\nA1,${String.fromCharCode(0x15f, 0x163, 0x15e, 0x162)}\r\n`),
+      limits,
+    );
+    expect(table.rows[0]?.[1]).toBe(String.fromCharCode(0x219, 0x21b, 0x218, 0x21a));
+  });
+
+  it("același fișier, salvat de Excel ca «CSV UTF-8», dă aceleași valori", async () => {
+    const utf8 = await parseImportFile(
+      new TextEncoder().encode(String.fromCharCode(0xfeff) + excelCsv),
+      limits,
+    );
+    const legacy = await parseImportFile(encodeWindows1250(excelCsv), limits);
+    expect(utf8.rows).toEqual(legacy.rows);
+    expect(utf8.headers).toEqual(legacy.headers);
+    expect(utf8.encoding).toBe("utf-8");
+  });
+});
+
 describe("toCsv", () => {
   it("pune ghilimele unde trebuie și neutralizează celulele care ar fi formule", () => {
     const text = toCsv(
@@ -278,12 +402,15 @@ describe("toCsv", () => {
         ["a", 'b"c', "d;e", "f\ng"],
         ["=SUM(A1)", "+1", "-1", "@x"],
       ],
-      { delimiter: ";", bom: false },
+      { delimiter: ";", bom: false, sep: false },
     );
     expect(text).toBe(`a;"b""c";"d;e";"f\ng"\r\n'=SUM(A1);'+1;'-1;'@x\r\n`);
   });
 
-  it("începe cu BOM UTF-8 implicit", () => {
-    expect(toCsv([["a"]]).startsWith("﻿")).toBe(true);
+  it("începe implicit cu BOM UTF-8 și linia «sep=», apoi rândurile (Excel deschide corect fișierul)", () => {
+    const bom = String.fromCharCode(0xfeff);
+    expect(toCsv([["a", "b"]])).toBe(`${bom}sep=;\r\na;b\r\n`);
+    expect(toCsv([["a", "b"]], { delimiter: "," })).toBe(`${bom}sep=,\r\na,b\r\n`);
+    expect(toCsv([["a"]], { bom: false })).toBe("sep=;\r\na\r\n");
   });
 });

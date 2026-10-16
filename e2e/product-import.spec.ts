@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { encodeWindows1250 } from "../packages/core/test/windows-1250";
 import {
   e2eXlsx,
   e2eXlsxBomb,
@@ -116,6 +117,16 @@ test.describe("import de produse", () => {
     const template = await page.request.get("/api/admin/product-imports/template?format=csv");
     expect(template.status()).toBe(200);
     expect(template.headers()["content-disposition"]).toContain("sablon-import-produse.csv");
+    // șablonul CSV începe cu BOM UTF-8 și cu linia «sep=;»: Excel îl deschide cu coloanele separate
+    const templateBytes = new Uint8Array(await template.body());
+    expect([...templateBytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(new TextDecoder().decode(templateBytes.subarray(3, 9))).toBe(
+      "sep=;" + String.fromCharCode(13),
+    );
+    // XLSX-ul apare primul și recomandat, CSV-ul al doilea, cu instrucțiunea pentru Excel
+    await expect(page.locator("[data-template]").first()).toHaveAttribute("data-template", "xlsx");
+    await expect(page.locator("[data-template]").first()).toContainText("recomandat");
+    await expect(page.locator("[data-excel-help]")).toContainText("Date → Din text/CSV");
     const templateXlsx = await page.request.get("/api/admin/product-imports/template?format=xlsx");
     expect(e2eZipNames(new Uint8Array(await templateXlsx.body()))).toContain("xl/workbook.xml");
 
@@ -141,7 +152,7 @@ test.describe("import de produse", () => {
 
     // maparea: câmpurile recunoscute; coloana de cost e blocată și nemapabilă
     await expect(page.getByRole("heading", { name: "Mapează coloanele" })).toBeVisible();
-    await expect(page.getByText("Delimitator")).toBeVisible();
+    await expect(page.getByText("Delimitator", { exact: true })).toBeVisible();
     await expect(page.getByLabel("Importă în câmpul: Preț achiziție")).toBeDisabled();
     await expect(page.locator('[data-blocked="cost"]')).toContainText("Nu se importă niciodată");
     await expect(page.getByLabel("Importă în câmpul: SKU")).toHaveValue("sku");
@@ -230,6 +241,65 @@ test.describe("import de produse", () => {
     await page.getByRole("button", { name: "Renunț la import" }).click();
     await expect(page.getByRole("heading", { name: "Alege fișierul" })).toBeVisible();
     expect(await readE2eImport(secondId)).toBeNull();
+  });
+
+  test("CSV salvat din Excel (separator «,», Windows-1250, antet în ghilimele) și șablonul CSV al aplicației se importă corect", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    const tag = randomBytes(3).toString("hex");
+    const ti = String.fromCharCode(0x21b);
+    const si = String.fromCharCode(0x219);
+    const sku = `E2E-${tag.toUpperCase()}-XL`;
+    const title = `E2E ${tag} Pomp${String.fromCharCode(0x103)} de circula${ti}ie ${si}i filtru`;
+    trackE2eProduct(`e2e-${tag}-pompa-de-circulatie-si-filtru`);
+    await login(page, owner, "/admin/produse/import");
+
+    // ce salvează Excel în limba română la «CSV (delimitat prin virgulă)»: Windows-1250, câmpuri în ghilimele
+    const excel = ['"SKU","Titlu","Preț (lei, cu TVA)"', `"${sku}","${title}","1299,50"`].join(
+      String.fromCharCode(13, 10),
+    );
+    await upload(page, {
+      name: `e2e-${tag}-excel.csv`,
+      buffer: Buffer.from(encodeWindows1250(excel)),
+    });
+    await expect(page.getByRole("heading", { name: "Mapează coloanele" })).toBeVisible();
+    await expect(page.getByLabel("Delimitator")).toHaveValue(",");
+    await expect(page.getByText("Codificare: windows-1250")).toBeVisible();
+    await expect(page.getByText("l-am citit ca Windows-1250")).toBeVisible();
+    await expect(page.getByLabel("Importă în câmpul: Preț (lei, cu TVA)")).toHaveValue("price");
+    await page.locator("[data-import-check]").click();
+    await expect(count(page, "new")).toHaveText("1");
+    await page.locator("[data-import-apply]").click();
+    await page
+      .getByRole("dialog", { name: "Aplici importul?" })
+      .locator("[data-import-confirm]")
+      .click();
+    await expect(page.locator("[data-import-done]")).toBeVisible();
+    // diacriticele ajung corect (ș, ț cu virgulă), prețul cu virgulă zecimală e exact
+    expect(await readE2eVariantBySku(sku)).toMatchObject({
+      title,
+      price: 129_950,
+      status: "draft",
+    });
+    await page.getByRole("button", { name: "Import nou" }).click();
+
+    // șablonul CSV al aplicației, încărcat înapoi: delimitatorul vine din linia «sep=», fără avertismente
+    const template = await page.request.get("/api/admin/product-imports/template?format=csv");
+    await upload(page, {
+      name: `e2e-${tag}-sablon.csv`,
+      buffer: Buffer.from(await template.body()),
+    });
+    await expect(page.getByRole("heading", { name: "Mapează coloanele" })).toBeVisible();
+    await expect(page.getByLabel("Delimitator")).toHaveValue(";");
+    await expect(page.getByText("Indicat de fișier (linia «sep=»)")).toBeVisible();
+    await expect(page.getByText("l-am citit ca Windows-1250")).toHaveCount(0);
+    await expect(page.getByLabel("Importă în câmpul: SKU")).toHaveValue("sku");
+    await expect(page.getByRole("columnheader", { name: "Coloană din fișier" })).toBeVisible();
+    await expect(page.getByRole("rowheader", { name: /^sep=/ })).toHaveCount(0);
+    await page.getByRole("button", { name: "Renunț la import" }).click();
   });
 
   test("coloana de cost nu se poate mapa: nici din interfață, nici forțând cererea; maparea corectă merge", async ({
