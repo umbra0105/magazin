@@ -1,8 +1,8 @@
 "use client";
 
 import { Upload, X } from "lucide-react";
-import { useId, useRef, useState } from "react";
-import { Button, Progress, cn } from "@ecom/ui";
+import { useId, useState } from "react";
+import { Button, FileInput, Progress, cn } from "@ecom/ui";
 import { getMessages } from "@/messages";
 import type { UploadErrorKey, UploadItem } from "@/lib/media-uploader";
 import { formatBytes } from "./media-types";
@@ -36,7 +36,6 @@ export function UploadPanel({
   onClear: () => void;
 }) {
   const inputId = useId();
-  const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const done = items.filter((i) => i.status === "done").length;
 
@@ -64,22 +63,17 @@ export function UploadPanel({
           {m.upload.dropHere}
         </h2>
         <p className="text-xs text-muted-foreground">{m.upload.or} </p>
-        <input
-          ref={input}
+        <FileInput
           id={inputId}
-          type="file"
           multiple
           accept={accept}
-          className="sr-only"
-          onChange={(e) => {
-            const files = [...(e.target.files ?? [])];
+          buttonLabel={m.upload.choose}
+          hideStatus
+          clearAfterChange
+          onFilesChange={(files) => {
             if (files.length > 0) onFiles(files);
-            e.target.value = ""; // permite alegerea aceluiași fișier încă o dată
           }}
         />
-        <Button variant="outline" onClick={() => input.current?.click()}>
-          {m.upload.choose}
-        </Button>
         <p className="text-xs text-muted-foreground">{rules}</p>
       </div>
 

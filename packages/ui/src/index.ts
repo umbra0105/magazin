@@ -17,3 +17,5 @@ export { Select, type SelectProps } from "./components/select";
 export { Textarea, type TextareaProps } from "./components/textarea";
 export { Dialog, type DialogProps } from "./components/dialog";
 export { Tabs, type TabItem, type TabsProps } from "./components/tabs";
+export { FileInput, type FileInputProps } from "./components/file-input";
+export { describeFiles, formatFileSize } from "./lib/file-size";

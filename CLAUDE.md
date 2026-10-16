@@ -176,6 +176,14 @@ există `tenantId`. În schimb:
 - La fiecare punct cu un CSV descărcabil, în **👉 VERIFICĂ TU** intră pasul: «deschide CSV-ul cu
   dublu-click în Excel și vezi coloanele separate».
 
+### Câmpuri de fișier — regulă permanentă
+
+- **Nu se folosește niciodată `<input type="file">` direct.** Se folosește `FileInput` din `@ecom/ui`:
+  câmpul nativ arată «Choose File / No file chosen» în limba browserului (nu în română) și e greu de
+  distins pe fundal alb. `FileInput` păstrează câmpul real (ascuns vizual, dar accesibil de la tastatură,
+  trimis în formulare, cu `ref`), cu buton vizibil și texte în română, iar fișierul ales și mărimea lui
+  sunt într-o regiune `aria-live`. Testul de arhitectură `file-input` pică la orice câmp de fișier nativ.
+
 ### Comenzi utile
 
 - `pnpm dev` — pornește aplicația

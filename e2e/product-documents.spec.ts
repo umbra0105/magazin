@@ -161,13 +161,9 @@ test.describe("documente de produs", () => {
     expect(await e2eStorageFileExists(stored?.storageKey as string)).toBe(false);
 
     // înlocuire: fișier nou, cheie nouă, cel vechi dispare
-    const chooser = page.waitForEvent("filechooser");
     await page
-      .getByRole("button", { name: "Înlocuiește fișierul pentru Manual de utilizare" })
-      .click();
-    await (
-      await chooser
-    ).setFiles({ name: "v2.pdf", mimeType: "application/pdf", buffer: pdf("", 20) });
+      .getByLabel("Înlocuiește fișierul pentru Manual de utilizare")
+      .setInputFiles({ name: "v2.pdf", mimeType: "application/pdf", buffer: pdf("", 20) });
     await expect(page.getByRole("status").filter({ hasText: "înlocuit" })).toBeVisible();
     const [replaced] = await readE2eDocuments(slug);
     expect(replaced?.id).toBe(doc?.id);

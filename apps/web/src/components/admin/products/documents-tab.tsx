@@ -3,7 +3,7 @@
 import { ArrowDown, ArrowUp, Download, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent } from "react";
-import { Button, Dialog, Input, Select } from "@ecom/ui";
+import { Button, Dialog, FileInput, Input, Select } from "@ecom/ui";
 import {
   deleteProductDocument,
   reorderProductDocuments,
@@ -70,8 +70,8 @@ export function DocumentsTab({
 
   // formularul de încărcare
   const fileRef = useRef<HTMLInputElement>(null);
-  const replaceRef = useRef<HTMLInputElement>(null);
-  const replaceTarget = useRef<string | null>(null);
+  // schimbarea cheii golește câmpul de fișier (și textul cu fișierul ales) după o încărcare reușită
+  const [fileKey, setFileKey] = useState(0);
   const [type, setType] = useState<DocumentType>("manual");
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState<Language>("ro");
@@ -126,18 +126,15 @@ export function DocumentsTab({
       setDocuments((current) => [...current, result.document]);
       setStatus(d.uploaded);
       setTitle("");
-      if (fileRef.current) fileRef.current.value = "";
+      setFileKey((key) => key + 1);
       router.refresh();
     } else {
       setProblem(result.message);
     }
   };
 
-  const onReplace = async (file: File | undefined) => {
-    const target = replaceTarget.current;
-    replaceTarget.current = null;
-    if (replaceRef.current) replaceRef.current.value = "";
-    if (!file || !target) return;
+  const onReplace = async (target: string, file: File | undefined) => {
+    if (!file) return;
     setStatus(null);
     setProblem(null);
     if (file.size > maxUploadMb * 1024 * 1024) {
@@ -218,12 +215,11 @@ export function DocumentsTab({
             error={fileError ?? undefined}
           >
             {(control) => (
-              <input
+              <FileInput
                 {...control}
+                key={fileKey}
                 ref={fileRef}
-                type="file"
                 accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
-                className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-2"
               />
             )}
           </Field>
@@ -282,16 +278,6 @@ export function DocumentsTab({
           </div>
         </form>
       )}
-
-      {/* câmp de fișier ascuns, pentru „Înlocuiește fișierul” */}
-      <input
-        ref={replaceRef}
-        type="file"
-        hidden
-        accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
-        onChange={(ev) => void onReplace(ev.target.files?.[0])}
-        data-replace-input
-      />
 
       {documents.length === 0 ? (
         <p className="text-sm text-muted-foreground">{d.empty}</p>
@@ -369,18 +355,18 @@ export function DocumentsTab({
                       >
                         <Pencil aria-hidden className="h-4 w-4" />
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
+                      <FileInput
+                        id={`doc-replace-${doc.id}`}
+                        hideStatus
+                        clearAfterChange
                         disabled={uploading}
-                        aria-label={d.replace(doc.title)}
-                        onClick={() => {
-                          replaceTarget.current = doc.id;
-                          replaceRef.current?.click();
-                        }}
+                        accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
+                        onFilesChange={(files) => void onReplace(doc.id, files[0])}
+                        data-replace-input
                       >
                         <RefreshCw aria-hidden className="h-4 w-4" />
-                      </Button>
+                        <span className="sr-only">{d.replace(doc.title)}</span>
+                      </FileInput>
                       <Button
                         type="button"
                         variant="outline"

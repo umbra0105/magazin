@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { ImportAnalysis, ImportReport, ImportStatusView, ImportValidation } from "@ecom/core";
-import { Button, Dialog, Label, Select, buttonVariants } from "@ecom/ui";
+import { Button, Dialog, FileInput, Label, Select, buttonVariants } from "@ecom/ui";
 import {
   analyzeProductImport,
   applyProductImport,
@@ -291,13 +291,11 @@ export function ProductImportWizard({
           >
             <div className="flex flex-col gap-1">
               <Label htmlFor="import-file">{m.upload.file}</Label>
-              <input
+              <FileInput
                 id="import-file"
                 ref={fileInput}
-                type="file"
                 accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 aria-describedby="import-file-help"
-                className="text-sm"
               />
               <p id="import-file-help" className="text-xs text-muted-foreground">
                 {m.upload.help(maxUploadMb)}

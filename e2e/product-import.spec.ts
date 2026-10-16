@@ -316,6 +316,52 @@ test.describe("import de produse", () => {
     await page.getByRole("button", { name: "Renunț la import" }).click();
   });
 
+  test("câmpul de fișier: buton vizibil în română, accesibil de la tastatură, cu fișierul ales anunțat", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    await login(page, owner, "/admin/produse/import");
+
+    // în română, ca buton vizibil; fără textele native ale browserului
+    const button = page.locator('label[for="import-file"]', { hasText: "Alege fișierul" });
+    await expect(button).toBeVisible();
+    await expect(button).toHaveText("Alege fișierul");
+    const status = page.locator("#import-file ~ [role=status]");
+    await expect(status).toHaveText("Niciun fișier ales");
+    expect(await page.locator("main").innerText()).not.toMatch(/Choose File|No file chosen/i);
+
+    // de la tastatură: câmpul real primește focusul, butonul arată inelul de focus, Spațiu deschide fereastra
+    const input = page.locator("#import-file");
+    await input.focus();
+    // focusul ajunge pe câmp prin tastatură (Shift+Tab, apoi Tab), ca inelul «focus-visible» să se aplice
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(input).toBeFocused();
+    await expect(button).not.toHaveCSS("box-shadow", "none");
+    const chooser = page.waitForEvent("filechooser");
+    await page.keyboard.press("Space");
+    const picked = await chooser;
+    expect(picked.isMultiple()).toBe(false);
+    await picked.setFiles({
+      name: "produse-ales.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        "SKU;Titlu" + String.fromCharCode(13, 10) + "A1;b" + String.fromCharCode(13, 10),
+      ),
+    });
+
+    // fișierul ales și mărimea lui, într-o regiune anunțată de cititoarele de ecran
+    await expect(status).toHaveText("produse-ales.csv (17 B)");
+    await expect(status).toHaveAttribute("aria-live", "polite");
+    await expect(input).toHaveAttribute("aria-describedby", /.+/);
+    await page.screenshot({
+      path: "test-results/file-input.png",
+      clip: { x: 0, y: 0, width: 1280, height: 720 },
+    });
+  });
+
   test("coloana de cost nu se poate mapa: nici din interfață, nici forțând cererea; maparea corectă merge", async ({
     page,
     request,
