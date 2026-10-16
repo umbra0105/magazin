@@ -360,3 +360,5 @@ export {
 } from "./export/export-handler";
 export { createProductExportService, type ProductExportRuntimeDeps } from "./export/export-runtime";
 export { csvStreamResponse } from "./import/import-csv";
+export type { WooAnalysis } from "./import/woo/woo-analysis";
+export type { WooOptions, WooReportSection, WooStats } from "./import/woo/woo-types";

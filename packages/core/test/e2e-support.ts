@@ -940,3 +940,91 @@ export async function readE2eExportAudit(
     return result.rows as { outcome: string; after: Record<string, unknown> | null }[];
   });
 }
+
+/**
+ * Șterge TOT ce creează fixture-ul WooCommerce sintetic (`woo-fixture.ts`): produsele după SKU, apoi
+ * categoriile (copiii înaintea părinților), brandurile și atributul «material». Rulat înainte și după
+ * testele de import WooCommerce, ca un test picat să nu lase resturi.
+ */
+export async function removeE2eWooFixtureData(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `delete from product where id in (
+         select "productId" from product_variant
+         where sku = any($1::text[]) or "legacyId" = any($2::text[])
+       ) or "legacyId" = any($2::text[])`,
+      [
+        ["FIX-101", "00123", "WC-103", "FIX-104", "FIX-VAR-05", "FIX-VAR-075"],
+        ["101", "102", "103", "104", "200", "201", "202"],
+      ],
+    );
+    await db.query(`delete from attribute where code = 'material'`);
+    await db.query(
+      `delete from category where name = any($1::text[]) and not exists (select 1 from category c where c."parentId" = category.id)`,
+      [["Pompe de circulație", "Filtre cu nisip", "Accesorii, diverse"]],
+    );
+    await db.query(
+      `delete from category where name = any($1::text[]) and not exists (select 1 from category c where c."parentId" = category.id)`,
+      [["Pompe", "Filtrare", "Accesorii"]],
+    );
+    await db.query(`delete from brand where name = any($1::text[])`, [
+      ["Marca Fixture A", "Marca Fixture B"],
+    ]);
+  });
+}
+
+/** Starea produselor create de fixture-ul WooCommerce, citită direct din bază (fără costul). */
+export async function readE2eWooFixtureState(): Promise<{
+  products: number;
+  categories: string[];
+  brands: string[];
+  firstStatus: string | null;
+  firstLegacyId: string | null;
+  firstDescription: string | null;
+  attribute: { type: string } | null;
+  variableOptions: number;
+}> {
+  return withClient(async (db) => {
+    const first = await db.query(
+      `select p.status, p."legacyId", p.description from product p
+       join product_variant v on v."productId" = p.id where v.sku = 'FIX-101'`,
+    );
+    const products = await db.query(
+      `select count(distinct "productId")::int as n from product_variant
+       where sku = any($1::text[])`,
+      [["FIX-101", "00123", "WC-103", "FIX-104", "FIX-VAR-05", "FIX-VAR-075"]],
+    );
+    const categories = await db.query(
+      `select name from category where name = any($1::text[]) order by name`,
+      [
+        [
+          "Pompe",
+          "Pompe de circulație",
+          "Filtrare",
+          "Filtre cu nisip",
+          "Accesorii",
+          "Accesorii, diverse",
+        ],
+      ],
+    );
+    const brands = await db.query(
+      `select name from brand where name = any($1::text[]) order by name`,
+      [["Marca Fixture A", "Marca Fixture B"]],
+    );
+    const attribute = await db.query(`select type from attribute where code = 'material'`);
+    const options = await db.query(
+      `select count(*)::int as n from product_option o
+       join product_variant v on v."productId" = o."productId" where v.sku = 'FIX-VAR-05'`,
+    );
+    return {
+      products: (products.rows[0]?.n as number) ?? 0,
+      categories: categories.rows.map((r) => r.name as string),
+      brands: brands.rows.map((r) => r.name as string),
+      firstStatus: (first.rows[0]?.status as string | undefined) ?? null,
+      firstLegacyId: (first.rows[0]?.legacyId as string | null | undefined) ?? null,
+      firstDescription: (first.rows[0]?.description as string | null | undefined) ?? null,
+      attribute: attribute.rows[0] ? { type: attribute.rows[0].type as string } : null,
+      variableOptions: (options.rows[0]?.n as number) ?? 0,
+    };
+  });
+}

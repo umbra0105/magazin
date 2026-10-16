@@ -147,7 +147,7 @@ export const settingGroups = {
       .default(10 * 1024 * 1024),
     /** Rânduri de date acceptate într-un import. */
     maxRows: z.number().int().min(1).max(20_000).default(5000),
-    maxColumns: z.number().int().min(2).max(200).default(60),
+    maxColumns: z.number().int().min(2).max(200).default(200),
     /** Caractere într-o celulă (implicit cât descrierea unui produs). */
     maxCellLength: z.number().int().min(100).max(100_000).default(100_000),
     /** Conținut decomprimat acceptat dintr-un XLSX (protecție împotriva arhivelor-bombă). */

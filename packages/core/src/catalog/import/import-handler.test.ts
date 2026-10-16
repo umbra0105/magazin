@@ -54,6 +54,7 @@ const analysis: ImportAnalysis = {
   rowCount: 1,
   columns: [],
   warnings: [],
+  woo: null,
 };
 
 function memoryAudit() {

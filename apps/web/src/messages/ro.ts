@@ -355,6 +355,8 @@ export const ro = {
       contentOnly:
         "Poți edita numele, descrierea, SEO-ul și imaginea categoriilor. Structura (creare, mutare, adresă, ștergere) cere permisiunea de gestionare a produselor.",
       create: "Categorie nouă",
+      nameCharsWarning:
+        "Numele conține «>» sau «|» (separatoarele din import/export): redenumește categoria ca să se poată reimporta.",
       empty: "Nu există nicio categorie încă.",
       treeLabel: "Arborele de categorii",
       rootDrop: "Trage aici pentru a muta la rădăcină",
@@ -1247,6 +1249,97 @@ export const ro = {
         ],
         noFile: "Alege mai întâi un fișier.",
         failed: "Fișierul nu a putut fi încărcat.",
+      },
+      profile: {
+        legend: "Formatul fișierului",
+        generic: "Generic (șablonul aplicației)",
+        genericHelp:
+          "Un rând = un produs, iar coloanele se mapează la pasul următor. Merge cu șablonul de mai jos sau cu un export al aplicației.",
+        woocommerce: "WooCommerce (export de produse)",
+        woocommerceHelp:
+          "Exportul standard de produse din WooCommerce (CSV). Coloanele se recunosc singure. Categoriile, brandurile și atributele lipsă se creează, dar numai după ce le vezi listate la verificare și confirmi. Produsele noi intră ca ciornă. Imaginile și stocul nu se importă.",
+        notWoo:
+          "Fișierul nu pare un export WooCommerce de produse (lipsesc coloanele ID, Tip, Nume sau Preț). Alege formatul «Generic» sau exportă din nou din WooCommerce.",
+      },
+      woo: {
+        heading: "Profil WooCommerce",
+        intro:
+          "Coloanele s-au recunoscut automat. Alege opțiunile de mai jos; la pasul următor vezi ce se creează și ce se schimbă, fără nicio modificare în catalog.",
+        rowTypes: (types: string) => `Rânduri după tip: ${types}`,
+        typeLabels: {
+          simple: "simple",
+          variable: "variabile",
+          variation: "variații",
+          grouped: "grupate (ignorate)",
+          external: "externe (ignorate)",
+        } as Record<string, string>,
+        status: {
+          label: "Păstrează starea din fișier (publicat → activ)",
+          help: "Dezactivat (recomandat): toate produsele NOI intră ca ciornă, oricare ar fi starea din WooCommerce. Activat: produsele publicate devin active (și primesc garanția implicită). Produsele existente nu își schimbă starea decât dacă bifezi.",
+        },
+        units: {
+          heading: "Unități",
+          weight: "Greutatea din fișier e în",
+          dimensions: "Dimensiunile din fișier sunt în",
+          fromHeader: (unit: string) => `Din antetul fișierului: ${unit}.`,
+          weightOptions: { kg: "kilograme (kg)", g: "grame (g)" },
+          dimensionOptions: { cm: "centimetri (cm)", mm: "milimetri (mm)", m: "metri (m)" },
+        },
+        shipping: {
+          heading: "Clase de livrare",
+          help: "Corespondența dintre clasele din WooCommerce și cele ale aplicației. O clasă fără corespondent primește «standard» la produsele noi, cu avertisment.",
+          column: "Clasa din WooCommerce",
+          target: "Clasa din aplicație",
+          none: "— Fără corespondent (standard, cu avertisment) —",
+          classes: {
+            standard: "Standard",
+            oversized: "Supradimensionat",
+            pallet: "Paletizat",
+          } as Record<string, string>,
+          products: (n: number) => (n === 1 ? "1 rând" : `${n} rânduri`),
+        },
+        attributes: {
+          heading: "Atribute",
+          help: "Atributele care NU sunt opțiuni de variație. Un atribut nou se creează ca text și apare listat la verificare; îl poți lega de un atribut existent sau îl poți ignora.",
+          column: "Atributul din fișier",
+          target: "În aplicație",
+          create: "Creează atribut nou (text)",
+          ignore: "Ignoră atributul",
+          existing: (name: string) => `Atribut existent: ${name}`,
+          products: (n: number) => (n === 1 ? "1 rând" : `${n} rânduri`),
+        },
+        columns: {
+          heading: "Coloane ignorate",
+          help: "Aceste coloane din fișier nu se importă în acest pas.",
+          blocked:
+            "Coloane de cost sau furnizor (BLOCATE: nu se citesc, nu apar în raport sau jurnal): ",
+        },
+        report: {
+          heading: "Ce se creează odată cu produsele",
+          categories: (n: number) => `${n} categorii de creat`,
+          brands: (n: number) => `${n} branduri de creat`,
+          attributes: (n: number) => `${n} atribute de creat`,
+          none: "Nimic de creat: categoriile, brandurile și atributele există deja.",
+          confirmNote: "Crearea lor se face la aplicare, înaintea produselor, doar dacă confirmi.",
+          statsHeading: "Alte constatări",
+          stats: {
+            descriptionsSanitized: "Descrieri reduse la text simplu",
+            descriptionTables: "Tabele reduse la linii",
+            descriptionLinks: "Linkuri reduse la text",
+            descriptionImages: "Imagini scoase din descrieri",
+            descriptionShortcodes: "Shortcode-uri WordPress scoase",
+            unknownShippingClasses: "Rânduri cu clasă de livrare necunoscută",
+            variations: "Variații",
+            unresolvedRelations: "Relații nerezolvate (omise)",
+            skuFallbacks: "Produse fără SKU (primesc WC-<ID>)",
+            legacyNotSaved: "ID-uri din magazinul vechi nesalvate",
+          } as Record<string, string>,
+          rowTypes: "Tipuri de rânduri în fișier",
+        },
+        apply: (categories: number, brands: number, attributes: number) =>
+          categories + brands + attributes === 0
+            ? ""
+            : `Se vor crea ${categories} categorii, ${brands} branduri și ${attributes} atribute înaintea produselor.`,
       },
       mapping: {
         heading: "Mapează coloanele",

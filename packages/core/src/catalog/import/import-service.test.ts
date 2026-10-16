@@ -57,6 +57,13 @@ class MemoryStore implements ProductImportStore {
     brandIndex: buildBrandIndex([]),
   };
   private n = 0;
+  /** Profilul WooCommerce nu e acoperit de aceste teste (are testele lui); magazinul de test nu-l folosește. */
+  woo = {
+    listAttributes: async () => [],
+  } as unknown as ProductImportStore["woo"];
+  async loadWooSnapshot(): Promise<never> {
+    throw new Error("profilul WooCommerce nu e folosit în aceste teste");
+  }
 
   async create(data: NewImport) {
     const record: ImportRecord = {

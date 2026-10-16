@@ -8,6 +8,9 @@ import {
   type ImportSnapshot,
 } from "./import-plan";
 import type { ImportFormat } from "./import-file";
+import type { WooPlanExtras, WooOptions, WooReportSection } from "./woo/woo-types";
+import { createWooQueries, type WooLookups, type WooQueries } from "./woo/woo-store";
+import type { WooSnapshot } from "./woo/woo-plan";
 
 /**
  * Accesul la date pentru importul de produse: starea importului (`ProductImport`) și instantaneul
@@ -32,9 +35,26 @@ export interface ImportReport {
   /** Rândurile cu ceva de spus (fără cele «neschimbate»); tăiat la `REPORT_ENTRY_LIMIT`. */
   entries: ImportReportEntry[];
   truncated: boolean;
+  /** Doar la profilul WooCommerce: ce se creează, statistici, coloane ignorate. */
+  woo?: WooReportSection;
 }
 
 export const REPORT_ENTRY_LIMIT = 2000;
+
+/**
+ * Maparea salvată la verificare: lista câmpurilor pe coloane (importul generic) sau profilul WooCommerce cu
+ * opțiunile alese (coloanele se recunosc după antet, deci nu se salvează).
+ */
+export type ImportMappingRecord =
+  (ImportFieldKey | null)[] | { profile: "woocommerce"; options: WooOptions };
+
+export function isWooMapping(
+  mapping: ImportMappingRecord | null,
+): mapping is { profile: "woocommerce"; options: WooOptions } {
+  return mapping !== null && !Array.isArray(mapping) && mapping.profile === "woocommerce";
+}
+
+export type { WooPlanExtras };
 
 export interface ImportRecord {
   id: string;
@@ -46,7 +66,7 @@ export interface ImportRecord {
   fileHash: string;
   storageKey: string | null;
   delimiter: string | null;
-  mapping: (ImportFieldKey | null)[] | null;
+  mapping: ImportMappingRecord | null;
   planHash: string | null;
   rowCount: number;
   processedRows: number;
@@ -103,6 +123,10 @@ export interface ProductImportStore {
     skus: readonly string[];
     slugs: readonly string[];
   }): Promise<ImportSnapshot>;
+  /** Instantaneul pentru profilul WooCommerce: cel generic + categorii, branduri, atribute, relații etc. */
+  loadWooSnapshot(lookups: WooLookups): Promise<WooSnapshot>;
+  /** Interogări și scrieri ale profilului WooCommerce (ID din magazinul vechi, căutări după SKU / ID). */
+  woo: WooQueries;
 }
 
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -145,7 +169,14 @@ const chunks = <T>(items: readonly T[], size: number): T[][] => {
 };
 
 export function createPrismaProductImportStore(db: Db): ProductImportStore {
-  return {
+  const woo = createWooQueries(db);
+  const store: ProductImportStore = {
+    woo,
+    async loadWooSnapshot(lookups) {
+      const base = await store.loadSnapshot({ skus: lookups.skus, slugs: [] });
+      return { ...base, woo: await woo.loadExtras(base, lookups) };
+    },
+
     async create(data) {
       const row = await db.productImport.create({
         data: { ...data, status: "uploaded" },
@@ -295,4 +326,5 @@ export function createPrismaProductImportStore(db: Db): ProductImportStore {
       };
     },
   };
+  return store;
 }

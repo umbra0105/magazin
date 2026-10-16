@@ -82,6 +82,8 @@ export interface NewVariantRow {
   data: VariantFieldsData;
   /** Prețul efectiv la creare (pentru istoricul Omnibus). */
   effectivePrice: number;
+  /** Doar la produsele cu opțiuni: valoarea fiecărei opțiuni pentru această variantă. */
+  selections?: readonly { option: string; value: string }[];
 }
 
 export interface GeneratedVariantRow {
@@ -122,6 +124,8 @@ export interface ProductStore {
     variants: readonly NewVariantRow[],
     at: Date,
     categoryIds?: readonly string[],
+    /** Opțiunile produsului (cu valorile lor), create odată cu el; variantele le aleg prin `selections`. */
+    options?: readonly { name: string; values: readonly string[] }[],
   ): Promise<{ product: ProductRecord; variants: VariantRecord[] }>;
   updateProduct(id: string, data: Partial<ProductFieldsData>): Promise<ProductRecord>;
   /** `priceRecord` != null: scrie în istoric noul preț efectiv, în aceeași tranzacție. */
@@ -254,7 +258,7 @@ export function createPrismaProductStore(db: Db): ProductStore {
       return rows.map((r) => r.sku);
     },
 
-    async createProduct(data, variants, at, categoryIds = []) {
+    async createProduct(data, variants, at, categoryIds = [], options = []) {
       return inTransaction(db, async (tx) => {
         const product = await tx.product.create({ data, select: productSelect });
         for (const [index, categoryId] of categoryIds.entries()) {
@@ -262,12 +266,47 @@ export function createPrismaProductStore(db: Db): ProductStore {
             data: { productId: product.id, categoryId, isPrimary: index === 0 },
           });
         }
+        // opțiuni și valori (doar la produsele variabile)
+        const lower = (value: string): string => value.toLocaleLowerCase("ro");
+        const optionIds = new Map<string, string>();
+        const valueIds = new Map<string, string>();
+        for (const [optionIndex, option] of options.entries()) {
+          const createdOption = await tx.productOption.create({
+            data: { productId: product.id, name: option.name, position: optionIndex },
+          });
+          optionIds.set(lower(option.name), createdOption.id);
+          for (const [valueIndex, value] of option.values.entries()) {
+            const createdValue = await tx.optionValue.create({
+              data: { optionId: createdOption.id, value, position: valueIndex },
+            });
+            valueIds.set(
+              `${lower(option.name)}${String.fromCharCode(0)}${lower(value)}`,
+              createdValue.id,
+            );
+          }
+        }
         const created: VariantRecord[] = [];
         for (const [index, row] of variants.entries()) {
           const variant = await tx.productVariant.create({
             data: { ...row.data, productId: product.id, position: row.data.position ?? index },
             select: variantSelect,
           });
+          for (const selection of row.selections ?? []) {
+            const optionId = optionIds.get(lower(selection.option));
+            const valueId = valueIds.get(
+              `${lower(selection.option)}${String.fromCharCode(0)}${lower(selection.value)}`,
+            );
+            if (!optionId || !valueId)
+              throw new Error("opțiune sau valoare lipsă la crearea produsului");
+            await tx.variantOptionValue.create({
+              data: {
+                variantId: variant.id,
+                productId: product.id,
+                optionId,
+                optionValueId: valueId,
+              },
+            });
+          }
           await tx.priceHistory.create({
             data: { variantId: variant.id, price: row.effectivePrice, effectiveFrom: at },
           });

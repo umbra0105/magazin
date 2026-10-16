@@ -32,7 +32,7 @@ export interface ImportLimits {
 
 export const DEFAULT_IMPORT_LIMITS: ImportLimits = {
   maxRows: 5000,
-  maxColumns: 60,
+  maxColumns: 200,
   maxCellLength: 100_000,
   maxUncompressedBytes: 60 * 1024 * 1024,
   maxZipEntries: 100,

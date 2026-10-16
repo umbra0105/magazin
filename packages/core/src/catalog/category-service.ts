@@ -37,6 +37,14 @@ export const CATEGORY_CONTENT_FIELDS = [
   "seoDescription",
   "imageMediaId",
 ] as const;
+/**
+ * «>» și «|» sunt separatoarele importului și exportului (niveluri de cale și categorii multiple într-o
+ * celulă), deci nu pot apărea în numele unei categorii: o categorie cu ele n-ar putea fi reimportată.
+ */
+export const CATEGORY_FORBIDDEN_NAME_CHARS = /[>|]/;
+export const CATEGORY_NAME_FORBIDDEN_MESSAGE =
+  "Numele categoriei nu poate conține caracterele «>» și «|» (sunt separatoarele din import și export)";
+
 export const CATEGORY_LEGACY_FIELDS = ["legacyId", "legacyUrl"] as const;
 
 const LABELS: Readonly<Record<string, string>> = {
@@ -176,6 +184,9 @@ export class CategoryService {
     ) {
       assertCan(subject, "catalog.legacy.edit");
     }
+    if (CATEGORY_FORBIDDEN_NAME_CHARS.test(data.name)) {
+      throw new CatalogError("CATEGORY_NAME_INVALID", CATEGORY_NAME_FORBIDDEN_MESSAGE);
+    }
     await this.assertImage(data.imageMediaId);
 
     const all = asNodes(await this.deps.store.listAll());
@@ -251,6 +262,15 @@ export class CategoryService {
       const before = await this.deps.store.get(id);
       if (!before)
         throw new CatalogError("CATEGORY_NOT_FOUND", REFUSAL_MESSAGES.CATEGORY_NOT_FOUND);
+      // doar o redenumire spre un nume interzis se refuză: o categorie veche cu «>» sau «|» poate fi editată
+      // în rest, iar redenumirea ei curată e permisă
+      if (
+        patch.name !== undefined &&
+        patch.name !== before.name &&
+        CATEGORY_FORBIDDEN_NAME_CHARS.test(patch.name)
+      ) {
+        throw new CatalogError("CATEGORY_NAME_INVALID", CATEGORY_NAME_FORBIDDEN_MESSAGE);
+      }
       await this.assertImage(patch.imageMediaId);
 
       const slugChanged =

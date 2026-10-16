@@ -219,6 +219,11 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                 )}
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-medium">{row.name}</span>
+                  {/[>|]/.test(row.name) && (
+                    <span role="note" data-category-name-warning className="text-xs text-danger">
+                      {m.nameCharsWarning}
+                    </span>
+                  )}
                   <span className="truncate text-xs text-muted-foreground">
                     /{row.path} · {m.products(row.productCount)} · {m.level(row.depth)}
                   </span>

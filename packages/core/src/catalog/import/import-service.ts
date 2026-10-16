@@ -4,13 +4,15 @@ import { z } from "zod";
 import type { StorageDriver } from "@ecom/integrations";
 import { DomainError, type getLogger } from "@ecom/shared";
 import type { AuditService } from "../../audit/audit-service";
-import { assertCan, type PermissionSubject } from "../../rbac/can";
+import { assertCan, can, type PermissionSubject } from "../../rbac/can";
+import { SHIPPING_CLASSES } from "../constants";
 import { CATALOG_TAG } from "../catalog-support";
 import type { ProductAssignmentsService } from "../product-assignments";
 import { parseInput } from "../product-schemas";
 import type { ProductService } from "../product-service";
 import {
   IMPORT_FIELD_KEYS,
+  foldText,
   isCostLikeFieldKey,
   suggestMapping,
   type ImportFieldKey,
@@ -33,8 +35,15 @@ import {
   type ImportPlan,
   type PlannedRow,
 } from "./import-plan";
+import { WooApplier, type WooApplyDeps } from "./woo/woo-apply";
+import { describeWoo, type WooAnalysis } from "./woo/woo-analysis";
+import { detectWooColumns, looksLikeWooExport } from "./woo/woo-columns";
+import { collectWooLookups, planWoo } from "./woo/woo-plan";
+import type { WooOptions } from "./woo/woo-types";
 import {
   REPORT_ENTRY_LIMIT,
+  isWooMapping,
+  type ImportMappingRecord,
   type ImportRecord,
   type ImportReport,
   type ImportReportEntry,
@@ -76,8 +85,16 @@ export interface ProductImportDeps {
   storage: Pick<StorageDriver, "put" | "get" | "delete">;
   audit: AuditService;
   /** Servicii cu AUDIT TĂCUT: importul scrie un singur eveniment agregat. */
-  products: Pick<ProductService, "create" | "update" | "updateVariant">;
+  products: Pick<ProductService, "create" | "update" | "updateVariant"> &
+    Partial<Pick<ProductService, "createVariable">>;
   assignments: Pick<ProductAssignmentsService, "setCategories">;
+  /** Serviciile profilului WooCommerce (categorii, branduri, atribute, relații); fără ele profilul e indisponibil. */
+  woo?: Pick<
+    WooApplyDeps,
+    "categories" | "brands" | "attributeDefs" | "attributeValues" | "relations"
+  > & {
+    getTimezone: () => Promise<string>;
+  };
   getSettings: () => Promise<ImportSettings>;
   /** Pentru jobul din fundal: utilizatorul care a pornit importul, cu permisiunile curente. */
   loadSubject?: (userId: string) => Promise<PermissionSubject | null>;
@@ -101,6 +118,8 @@ export interface ImportAnalysis {
   rowCount: number;
   columns: SuggestedColumn[];
   warnings: string[];
+  /** Fișierul arată ca un export WooCommerce: ce conține și opțiunile propuse pentru profilul WooCommerce. */
+  woo: WooAnalysis | null;
 }
 
 export interface ImportValidation {
@@ -134,6 +153,33 @@ const validateSchema = z.strictObject({
   columns: columnsSchema,
   delimiter: z.enum([",", ";", "\t"]).nullable().optional(),
 });
+const wooOptionsSchema = z.strictObject({
+  keepStatus: z.boolean(),
+  weightUnit: z.enum(["kg", "g"]),
+  dimensionUnit: z.enum(["cm", "mm", "m"]),
+  shippingClassMap: z.record(z.string().min(1).max(100), z.enum(SHIPPING_CLASSES)),
+  attributeTargets: z.record(z.string().min(1).max(100), z.string().min(1).max(60)),
+});
+const wooValidateSchema = z.strictObject({
+  importId: z.string().min(1).max(40),
+  profile: z.literal("woocommerce"),
+  options: wooOptionsSchema,
+  delimiter: z.enum([",", ";", "\t"]).nullable().optional(),
+});
+
+/** Cheile din opțiuni se normalizează ca în fișier (fără majuscule și diacritice). */
+function normalizeWooOptions(options: z.output<typeof wooOptionsSchema>): WooOptions {
+  const fold = (map: Record<string, string>): Record<string, string> =>
+    Object.fromEntries(Object.entries(map).map(([key, value]) => [foldText(key), value]));
+  return {
+    keepStatus: options.keepStatus,
+    weightUnit: options.weightUnit,
+    dimensionUnit: options.dimensionUnit,
+    shippingClassMap: fold(options.shippingClassMap) as WooOptions["shippingClassMap"],
+    attributeTargets: fold(options.attributeTargets),
+  };
+}
+
 const applySchema = z.strictObject({
   importId: z.string().min(1).max(40),
   confirm: z.literal(true, { error: "Confirmarea explicită lipsește" }),
@@ -187,6 +233,17 @@ export function buildReport(
     fileWarnings: plan.fileWarnings,
     entries: ordered.slice(0, REPORT_ENTRY_LIMIT),
     truncated: ordered.length > REPORT_ENTRY_LIMIT,
+    ...(plan.woo && {
+      woo: {
+        categoriesToCreate: plan.woo.creations.categories.map((c) => c.names.join(" > ")),
+        brandsToCreate: plan.woo.creations.brands.map((b) => b.name),
+        attributesToCreate: plan.woo.creations.attributes.map((a) => a.name),
+        stats: plan.woo.stats,
+        rowTypes: plan.woo.rowTypes,
+        ignoredColumns: plan.woo.ignoredColumns,
+        blockedColumns: plan.woo.blockedColumns,
+      },
+    }),
   };
 }
 
@@ -249,7 +306,11 @@ export class ProductImportService {
     return expired.length;
   }
 
-  private analysisOf(record: ImportRecord, table: ParsedTable): ImportAnalysis {
+  private async analysisOf(record: ImportRecord, table: ParsedTable): Promise<ImportAnalysis> {
+    const detected = detectWooColumns(table.headers);
+    const woo = looksLikeWooExport(detected)
+      ? describeWoo(table, await this.deps.store.woo.listAttributes(), detected)
+      : null;
     return {
       importId: record.id,
       fileName: record.fileName,
@@ -268,6 +329,7 @@ export class ProductImportService {
       rowCount: table.rows.length,
       columns: suggestMapping(table.headers),
       warnings: table.warnings,
+      woo,
     };
   }
 
@@ -303,7 +365,7 @@ export class ProductImportService {
         rowCount: table.rows.length,
         expiresAt: new Date(this.now().getTime() + settings.retentionHours * 3_600_000),
       });
-      return this.analysisOf(record, table);
+      return await this.analysisOf(record, table);
     } catch (error) {
       await this.deleteFile(key);
       throw error;
@@ -336,14 +398,29 @@ export class ProductImportService {
 
   private async planFor(
     record: ImportRecord,
-    columns: readonly (ImportFieldKey | null)[],
+    mapping: ImportMappingRecord,
     delimiter: CsvDelimiter | undefined,
+    subject: PermissionSubject,
   ): Promise<{ table: ParsedTable; plan: ImportPlan }> {
     const bytes = await this.readStored(record);
     const table = await parseImportFile(bytes, await this.limits(), delimiter ? { delimiter } : {});
-    const mapping = this.mappingOf(columns);
-    const snapshot = await this.deps.store.loadSnapshot(collectLookups(table, mapping));
-    return { table, plan: planImport(table, mapping, snapshot) };
+    if (isWooMapping(mapping)) {
+      if (!this.deps.woo) {
+        throw new ImportError(
+          "IMPORT_PROFILE_UNAVAILABLE",
+          "Profilul WooCommerce nu este disponibil",
+        );
+      }
+      const snapshot = await this.deps.store.loadWooSnapshot(collectWooLookups(table));
+      const plan = planWoo(table, mapping.options, snapshot, {
+        timezone: await this.deps.woo.getTimezone(),
+        canSetLegacy: can(subject, "catalog.legacy.edit"),
+      });
+      return { table, plan };
+    }
+    const generic = this.mappingOf(mapping);
+    const snapshot = await this.deps.store.loadSnapshot(collectLookups(table, generic));
+    return { table, plan: planImport(table, generic, snapshot) };
   }
 
   /** Pasul 3 (dry-run): planifică fără să scrie nimic în catalog și salvează maparea și amprenta. */
@@ -359,18 +436,29 @@ export class ProductImportService {
         "Prețul de achiziție nu se importă și nu poate fi mapat pe niciun câmp.",
       );
     }
-    const request = parseInput(validateSchema, input);
+    const wooRequest =
+      (input as { profile?: unknown } | null)?.profile === "woocommerce"
+        ? parseInput(wooValidateSchema, input)
+        : null;
+    const genericRequest = wooRequest ? null : parseInput(validateSchema, input);
+    const request = (wooRequest ?? genericRequest) as {
+      importId: string;
+      delimiter?: string | null;
+    };
     const record = await this.own(subject, request.importId);
     if (record.status !== "uploaded" && record.status !== "validated") {
       throw new ImportError("IMPORT_STATE_INVALID", "Importul a pornit deja");
     }
     const delimiter = (request.delimiter ?? undefined) as CsvDelimiter | undefined;
-    const { table, plan } = await this.planFor(record, request.columns, delimiter);
+    const mapping: ImportMappingRecord = wooRequest
+      ? { profile: "woocommerce", options: normalizeWooOptions(wooRequest.options) }
+      : [...(genericRequest as z.output<typeof validateSchema>).columns];
+    const { table, plan } = await this.planFor(record, mapping, delimiter, subject);
 
     const report = buildReport(plan);
     await this.deps.store.update(record.id, {
       status: "validated",
-      mapping: [...request.columns],
+      mapping,
       delimiter: delimiter ?? record.delimiter,
       planHash: plan.fingerprint,
       rowCount: table.rows.length,
@@ -407,7 +495,7 @@ export class ProductImportService {
       );
     }
     const delimiter = (record.delimiter ?? undefined) as CsvDelimiter | undefined;
-    const { plan } = await this.planFor(record, record.mapping, delimiter);
+    const { plan } = await this.planFor(record, record.mapping, delimiter, subject);
     if (plan.fingerprint !== record.planHash) {
       throw new ImportError(
         "IMPORT_STALE",
@@ -477,7 +565,7 @@ export class ProductImportService {
     try {
       if (!record.mapping) throw new ImportError("IMPORT_STATE_INVALID", "Importul nu are mapare");
       const delimiter = (record.delimiter ?? undefined) as CsvDelimiter | undefined;
-      const { plan } = await this.planFor(record, record.mapping, delimiter);
+      const { plan } = await this.planFor(record, record.mapping, delimiter, subject);
       // la prima pornire, planul trebuie să fie cel verificat; la reluare (job căzut la mijloc) o parte
       // din rânduri sunt deja aplicate, deci planul diferă firesc și se continuă cu starea curentă
       if (!resuming && plan.fingerprint !== record.planHash) {
@@ -508,13 +596,39 @@ export class ProductImportService {
     const startedAt = this.now();
     await this.deps.store.update(record.id, { startedAt, processedRows: 0 });
 
+    const woo = plan.woo ? this.wooApplier() : null;
+    const wooRun = woo ? await woo.prepare(subject, plan) : null;
     const finalRows: PlannedRow[] = [];
     let done = 0;
     for (const row of plan.rows) {
-      finalRows.push(row.op ? await this.applyRow(subject, row) : row);
+      if (row.op && woo && wooRun && row.op.kind.startsWith("woo-")) {
+        finalRows.push(await woo.applyRow(subject, row, wooRun));
+      } else {
+        finalRows.push(row.op ? await this.applyRow(subject, row) : row);
+      }
       done++;
       if (done % PROGRESS_EVERY === 0) {
         await this.deps.store.update(record.id, { processedRows: done });
+      }
+    }
+
+    if (woo && wooRun) {
+      // relațiile, într-o a doua trecere: toate produsele din fișier există acum
+      const warnings = await woo.finish(subject, wooRun);
+      for (let i = 0; i < finalRows.length; i++) {
+        const row = finalRows[i] as PlannedRow;
+        const extra = warnings.get(row.row) ?? [];
+        const already = new Set(row.messages.map((m) => m.text));
+        const fresh = extra.filter((text) => !already.has(text));
+        if (fresh.length > 0) {
+          finalRows[i] = {
+            ...row,
+            messages: [
+              ...row.messages,
+              ...fresh.map((text) => ({ level: "warning" as const, text })),
+            ],
+          };
+        }
       }
     }
 
@@ -577,6 +691,26 @@ export class ProductImportService {
     return report;
   }
 
+  private wooApplier(): WooApplier {
+    const woo = this.deps.woo;
+    if (!woo)
+      throw new ImportError(
+        "IMPORT_PROFILE_UNAVAILABLE",
+        "Profilul WooCommerce nu este disponibil",
+      );
+    return new WooApplier({
+      products: this.deps.products,
+      assignments: this.deps.assignments,
+      categories: woo.categories,
+      brands: woo.brands,
+      attributeDefs: woo.attributeDefs,
+      attributeValues: woo.attributeValues,
+      relations: woo.relations,
+      store: this.deps.store,
+      logger: this.deps.logger,
+    });
+  }
+
   /** Un rând: o eroare îl marchează „eroare” cu motivul, fără să oprească importul. */
   private async applyRow(subject: PermissionSubject, row: PlannedRow): Promise<PlannedRow> {
     const op = row.op;
@@ -592,6 +726,8 @@ export class ProductImportService {
         }
         return row;
       }
+      // operațiile profilului WooCommerce se aplică în `WooApplier`
+      if (op.kind !== "update") return row;
       if (op.variantPatch)
         await this.deps.products.updateVariant(subject, op.variantId, op.variantPatch);
       if (op.productPatch) await this.deps.products.update(subject, op.productId, op.productPatch);

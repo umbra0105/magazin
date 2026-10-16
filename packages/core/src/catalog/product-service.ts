@@ -36,6 +36,7 @@ import {
   buildSkus,
   combinationKey,
   generateCombinations,
+  normalizeOptions,
   planVariantSync,
   type OptionInput,
 } from "./variant-generator";
@@ -198,8 +199,84 @@ export class ProductService {
     subject: PermissionSubject | null,
     input: unknown,
   ): Promise<{ product: ProductRecord; variants: VariantRecord[] }> {
+    return this.createInternal(subject, input, []);
+  }
+
+  /**
+   * Creează un produs CU opțiuni (produs variabil): opțiunile și valorile lor, plus alegerea fiecărei
+   * variante (`selections`, după SKU), într-o singură tranzacție. Folosit de importul WooCommerce. Fiecare
+   * variantă trebuie să aleagă exact o valoare din fiecare opțiune, iar combinațiile sunt unice.
+   */
+  async createVariable(
+    subject: PermissionSubject | null,
+    input: unknown,
+    options: readonly OptionInput[],
+    selections: ReadonlyMap<string, readonly { option: string; value: string }[]>,
+  ): Promise<{ product: ProductRecord; variants: VariantRecord[] }> {
+    const clean = normalizeOptions(options);
+    const combos = new Set<string>();
+    for (const [sku, chosen] of selections) {
+      if (chosen.length !== clean.length) {
+        throw new CatalogError(
+          "CATALOG_OPTIONS_INVALID",
+          `Varianta ${sku} trebuie să aleagă o valoare pentru fiecare opțiune`,
+        );
+      }
+      for (const option of clean) {
+        const pick = chosen.find(
+          (c) => c.option.toLocaleLowerCase("ro") === option.name.toLocaleLowerCase("ro"),
+        );
+        if (
+          !pick ||
+          !option.values.some(
+            (v) => v.toLocaleLowerCase("ro") === pick.value.toLocaleLowerCase("ro"),
+          )
+        ) {
+          throw new CatalogError(
+            "CATALOG_OPTIONS_INVALID",
+            `Varianta ${sku} are o valoare necunoscută pentru «${option.name}»`,
+          );
+        }
+      }
+      const key = chosen
+        .map((c) => `${c.option}=${c.value}`.toLocaleLowerCase("ro"))
+        .sort()
+        .join("|");
+      if (combos.has(key)) {
+        throw new CatalogError(
+          "CATALOG_OPTIONS_INVALID",
+          "Două variante au aceeași combinație de opțiuni",
+        );
+      }
+      combos.add(key);
+    }
+    return this.createInternal(subject, input, clean, selections);
+  }
+
+  private async createInternal(
+    subject: PermissionSubject | null,
+    input: unknown,
+    options: readonly OptionInput[],
+    selections?: ReadonlyMap<string, readonly { option: string; value: string }[]>,
+  ): Promise<{ product: ProductRecord; variants: VariantRecord[] }> {
     assertCan(subject, "products.write");
     const data: ProductCreateInput = parseInput(productCreateSchema, input);
+    if (selections) {
+      const skus = new Set(data.variants.map((v) => v.sku));
+      for (const sku of selections.keys()) {
+        if (!skus.has(sku))
+          throw new CatalogError(
+            "CATALOG_OPTIONS_INVALID",
+            "Alegere pentru o variantă care nu există",
+          );
+      }
+      if (selections.size !== skus.size) {
+        throw new CatalogError(
+          "CATALOG_OPTIONS_INVALID",
+          "Fiecare variantă trebuie să-și aleagă opțiunile",
+        );
+      }
+    }
 
     const skus = data.variants.map((v) => v.sku);
     await this.assertSkusFree(skus);
@@ -226,6 +303,7 @@ export class ProductService {
       const rest: Record<string, unknown> = { ...v };
       delete rest["isDefault"];
       return {
+        ...(selections && { selections: selections.get(v.sku) ?? [] }),
         data: {
           ...(rest as unknown as VariantFieldsData),
           isDefault: defaultIndex === -1 ? index === 0 : index === defaultIndex,
@@ -252,6 +330,7 @@ export class ProductService {
       rows,
       at,
       categoryIds,
+      options,
     );
 
     await this.deps.audit.record({

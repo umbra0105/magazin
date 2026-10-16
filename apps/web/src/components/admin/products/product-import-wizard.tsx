@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import type { ImportAnalysis, ImportReport, ImportStatusView, ImportValidation } from "@ecom/core";
+import type {
+  ImportAnalysis,
+  ImportReport,
+  ImportStatusView,
+  ImportValidation,
+  WooOptions,
+} from "@ecom/core";
 import { Button, Dialog, FileInput, Label, Select, buttonVariants } from "@ecom/ui";
 import {
   analyzeProductImport,
@@ -12,8 +18,11 @@ import {
   validateProductImport,
 } from "@/app/(admin)/admin/produse/import/actions";
 import { getMessages } from "@/messages";
+import { WooOptionsPanel, WooReportExtras } from "./product-import-woo";
 
 const m = getMessages().admin.productImport;
+
+type Profile = "generic" | "woocommerce";
 
 type Step = "upload" | "mapping" | "check" | "running" | "done";
 
@@ -40,6 +49,8 @@ export function ProductImportWizard({
   const [step, setStep] = useState<Step>("upload");
   const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null);
   const [columns, setColumns] = useState<string[]>([]);
+  const [profile, setProfile] = useState<Profile>("generic");
+  const [wooOptions, setWooOptions] = useState<WooOptions | null>(null);
   const [validation, setValidation] = useState<ImportValidation | null>(null);
   const [status, setStatus] = useState<ImportStatusView | null>(null);
   const [finalReport, setFinalReport] = useState<ImportReport | null>(null);
@@ -53,12 +64,15 @@ export function ProductImportWizard({
   const adopt = (next: ImportAnalysis) => {
     setAnalysis(next);
     setColumns(next.columns.map((c) => c.field ?? ""));
+    // opțiunile se păstrează între reanalizări (alt delimitator); la un fișier nou pornesc de la propuneri
+    setWooOptions((current) => current ?? next.woo?.defaults ?? null);
   };
 
   const reset = () => {
     setStep("upload");
     setAnalysis(null);
     setColumns([]);
+    setWooOptions(null);
     setValidation(null);
     setStatus(null);
     setFinalReport(null);
@@ -86,8 +100,14 @@ export function ProductImportWizard({
         message?: string;
       };
       if (response.ok && body.import) {
-        adopt(body.import);
-        setStep("mapping");
+        if (profile === "woocommerce" && !body.import.woo) {
+          // fișierul nu e un export WooCommerce: se renunță la import și se rămâne la pasul 1
+          void cancelProductImport({ importId: body.import.importId }).catch(() => undefined);
+          setProblem(m.profile.notWoo);
+        } else {
+          adopt(body.import);
+          setStep("mapping");
+        }
       } else {
         setProblem(
           errorText({ code: body.code ?? "", ...(body.message && { message: body.message }) }),
@@ -119,11 +139,20 @@ export function ProductImportWizard({
     setProblem(null);
     startTransition(async () => {
       try {
-        const result = await validateProductImport({
-          importId: analysis.importId,
-          columns: columns.map((c) => (c === "" ? null : c)),
-          ...(analysis.delimiter && { delimiter: analysis.delimiter }),
-        });
+        const result = await validateProductImport(
+          profile === "woocommerce" && wooOptions
+            ? {
+                importId: analysis.importId,
+                profile: "woocommerce",
+                options: wooOptions,
+                ...(analysis.delimiter && { delimiter: analysis.delimiter }),
+              }
+            : {
+                importId: analysis.importId,
+                columns: columns.map((c) => (c === "" ? null : c)),
+                ...(analysis.delimiter && { delimiter: analysis.delimiter }),
+              },
+        );
         if (result.ok) {
           setValidation(result.validation);
           setStep("check");
@@ -208,7 +237,8 @@ export function ProductImportWizard({
     };
   }, [step, importId, poll]);
 
-  const skuMapped = columns.includes("sku");
+  const wooProfile = profile === "woocommerce" && analysis?.woo != null && wooOptions != null;
+  const skuMapped = wooProfile || columns.includes("sku");
   const nothingToApply =
     validation !== null && validation.report.counts.new + validation.report.counts.updated === 0;
 
@@ -283,12 +313,37 @@ export function ProductImportWizard({
             </p>
           </div>
           <form
+            noValidate
             className="flex flex-col gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               void upload();
             }}
           >
+            <fieldset className="flex flex-col gap-2" data-import-profile>
+              <legend className="mb-1 text-sm font-medium">{m.profile.legend}</legend>
+              {(
+                [
+                  ["generic", m.profile.generic, m.profile.genericHelp],
+                  ["woocommerce", m.profile.woocommerce, m.profile.woocommerceHelp],
+                ] as const
+              ).map(([value, label, help]) => (
+                <label key={value} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="import-profile"
+                    value={value}
+                    className="mt-1 size-4 shrink-0 accent-primary"
+                    checked={profile === value}
+                    onChange={() => setProfile(value)}
+                  />
+                  <span className="flex flex-col">
+                    <span className="font-medium">{label}</span>
+                    <span className="text-xs text-muted-foreground">{help}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
             <div className="flex flex-col gap-1">
               <Label htmlFor="import-file">{m.upload.file}</Label>
               <FileInput
@@ -313,7 +368,7 @@ export function ProductImportWizard({
       {step === "mapping" && analysis && (
         <section aria-labelledby="imp-mapping" className="flex flex-col gap-4">
           <h2 id="imp-mapping" className="text-lg font-semibold">
-            {m.mapping.heading}
+            {wooProfile ? m.woo.heading : m.mapping.heading}
           </h2>
           <p className="text-sm">
             {m.mapping.detected(analysis.fileName, analysis.format.toUpperCase())} ·{" "}
@@ -349,77 +404,88 @@ export function ProductImportWizard({
               </p>
             </div>
           )}
-          <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full min-w-[40rem] text-left text-sm">
-              <thead className="border-b border-border bg-border/30">
-                <tr>
-                  <th scope="col" className="p-3 font-medium">
-                    {m.mapping.column}
-                  </th>
-                  <th scope="col" className="p-3 font-medium">
-                    {m.mapping.sample}
-                  </th>
-                  <th scope="col" className="p-3 font-medium">
-                    {m.mapping.target}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {analysis.headers.map((header, index) => {
-                  const blocked = analysis.columns[index]?.blocked ?? null;
-                  const id = `import-col-${index}`;
-                  return (
-                    <tr
-                      key={`${index}-${header}`}
-                      className="border-b border-border align-top last:border-0"
-                    >
-                      <th scope="row" className="p-3 font-medium">
-                        {header || `(coloana ${index + 1})`}
-                      </th>
-                      <td className="p-3 text-muted-foreground">
-                        {analysis.sample
-                          .slice(0, 3)
-                          .map((row) => row[index] ?? "")
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </td>
-                      <td className="p-3">
-                        <Label htmlFor={id} className="sr-only">
-                          {`${m.mapping.target}: ${header}`}
-                        </Label>
-                        <Select
-                          id={id}
-                          value={blocked ? "" : (columns[index] ?? "")}
-                          disabled={blocked !== null}
-                          onChange={(e) =>
-                            setColumns((current) =>
-                              current.map((c, i) => (i === index ? e.target.value : c)),
-                            )
-                          }
-                        >
-                          <option value="">{m.mapping.ignore}</option>
-                          {fields.map((f) => (
-                            <option key={f.key} value={f.key}>
-                              {f.label}
-                            </option>
-                          ))}
-                        </Select>
-                        {blocked && (
-                          <p className="mt-1 text-xs text-muted-foreground" data-blocked={blocked}>
-                            {blocked === "cost"
-                              ? m.mapping.blockedCost
-                              : blocked === "readonly"
-                                ? m.mapping.blockedReadonly
-                                : m.mapping.blockedImages}
-                          </p>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          {wooProfile && analysis.woo && wooOptions ? (
+            <WooOptionsPanel
+              analysis={analysis.woo}
+              options={wooOptions}
+              onChange={setWooOptions}
+            />
+          ) : (
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="w-full min-w-[40rem] text-left text-sm">
+                <thead className="border-b border-border bg-border/30">
+                  <tr>
+                    <th scope="col" className="p-3 font-medium">
+                      {m.mapping.column}
+                    </th>
+                    <th scope="col" className="p-3 font-medium">
+                      {m.mapping.sample}
+                    </th>
+                    <th scope="col" className="p-3 font-medium">
+                      {m.mapping.target}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analysis.headers.map((header, index) => {
+                    const blocked = analysis.columns[index]?.blocked ?? null;
+                    const id = `import-col-${index}`;
+                    return (
+                      <tr
+                        key={`${index}-${header}`}
+                        className="border-b border-border align-top last:border-0"
+                      >
+                        <th scope="row" className="p-3 font-medium">
+                          {header || `(coloana ${index + 1})`}
+                        </th>
+                        <td className="p-3 text-muted-foreground">
+                          {analysis.sample
+                            .slice(0, 3)
+                            .map((row) => row[index] ?? "")
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </td>
+                        <td className="p-3">
+                          <Label htmlFor={id} className="sr-only">
+                            {`${m.mapping.target}: ${header}`}
+                          </Label>
+                          <Select
+                            id={id}
+                            value={blocked ? "" : (columns[index] ?? "")}
+                            disabled={blocked !== null}
+                            onChange={(e) =>
+                              setColumns((current) =>
+                                current.map((c, i) => (i === index ? e.target.value : c)),
+                              )
+                            }
+                          >
+                            <option value="">{m.mapping.ignore}</option>
+                            {fields.map((f) => (
+                              <option key={f.key} value={f.key}>
+                                {f.label}
+                              </option>
+                            ))}
+                          </Select>
+                          {blocked && (
+                            <p
+                              className="mt-1 text-xs text-muted-foreground"
+                              data-blocked={blocked}
+                            >
+                              {blocked === "cost"
+                                ? m.mapping.blockedCost
+                                : blocked === "readonly"
+                                  ? m.mapping.blockedReadonly
+                                  : m.mapping.blockedImages}
+                            </p>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
           {!skuMapped && (
             <p role="note" className="text-sm text-danger">
               {m.mapping.required}
@@ -477,6 +543,13 @@ export function ProductImportWizard({
           >
             <p className="rounded-md border border-border p-3 text-sm" data-import-summary>
               {m.apply.summary(validation.report.counts.new, validation.report.counts.updated)}
+              {validation.report.woo
+                ? ` ${m.woo.apply(
+                    validation.report.woo.categoriesToCreate.length,
+                    validation.report.woo.brandsToCreate.length,
+                    validation.report.woo.attributesToCreate.length,
+                  )}`
+                : ""}
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="outline" onClick={() => setConfirmOpen(false)}>
@@ -569,6 +642,7 @@ function ReportView({ report, importId }: { report: ImportReport; importId: stri
           </div>
         ))}
       </dl>
+      {report.woo && <WooReportExtras woo={report.woo} />}
       {report.fileWarnings.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold">{c.fileWarnings}</h3>

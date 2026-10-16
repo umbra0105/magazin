@@ -441,6 +441,20 @@ Vezi `09-preturi-si-parteneri.md` §5.
 - **Șablon:** generat din `IMPORT_FIELDS` (aceeași definiție ca importul; test că antetul fiecărui câmp se mapează automat pe el însuși): CSV (BOM + `;`) și XLSX (cu foaia «Instrucțiuni»), cu antet și două rânduri de exemplu.
 - **Permisiuni:** totul cere `products.write` (importul atinge preț, stare și structură; un Editor cu doar `products.content.write` nu poate importa). Importul aparține celui care a încărcat fișierul.
 
+**Profilul de import WooCommerce, punctul 15a** (Faza 4). Se alege la pasul 1 al paginii `/admin/produse/import` (Generic / WooCommerce) și rulează peste infrastructura importului generic (aceeași rută de încărcare, aceeași verificare legată de amprentă, același raport, același job în fundal). Codul: `packages/core/src/catalog/import/woo/`.
+
+- **Pași:** încărcare (fișierul se analizează: tipuri de rânduri, clase de livrare, atribute, unități, coloane ignorate/blocate) → opțiuni (starea, unitățile, corespondența claselor de livrare, atributele) → verificare (dry-run, fără nicio scriere, cu LISTA a ce se creează) → confirmare → aplicare. Profilul și opțiunile se salvează în `ProductImport.mapping` (JSON): lista de câmpuri (generic) sau `{ profile: "woocommerce", options }`.
+- **Coloane:** recunoscute după antet (română sau engleză; `woo-columns.ts`). Ignorate cu motiv: stoc, etichete, setări WooCommerce, produse digitale, meta personalizate, imagini (se importă separat, la 15b). BLOCATE: orice antet de cost/furnizor/intrare, nu se citesc. Unitatea de greutate/dimensiuni din antet se verifică față de opțiunea aleasă (unități nesuportate: lbs, oz, in → refuz clar).
+- **Reguli:** SKU = cheia (fără SKU: `WC-<ID>`, cu avertisment); celulă goală = neschimbat; produsele noi = ciornă (starea din fișier doar la cerere); `legacyId` din ID (cere `catalog.legacy.edit`), `legacyUrl` gol; greutate kg→g și dimensiuni cm→mm exact (pe șirul de cifre); promoția cu datele ei în fusul magazinului; categorii «Părinte > Copil, Altă» cu virgula escapată «\,»; `>` și `|` interzise în numele categoriilor.
+- **Ce se creează:** categoriile, brandurile și atributele LIPSĂ, doar după verificare și confirmare, înaintea produselor, prin serviciile catalogului (regulile arborelui se respectă). Atributele noi sunt text. Potrivire fără diferență de majuscule/diacritice.
+- **Produse variabile:** `variable` + `variation` → produs cu opțiuni (max 3 opțiuni, 50 de valori, 100 de variante) și variante, într-o singură tranzacție; întreg sau deloc. Variație nouă la un produs existent: eroare clară. Grupate/externe/alte tipuri: ignorate cu motiv.
+- **Relații:** Upsells/Vânzări încrucișate, în a doua trecere (după ce toate produsele din fișier există); ținte nerezolvate = avertisment.
+- **Descrieri:** `htmlToPlainText` (text simplu; fără HTML în baza de date). Descrierea bogată (HTML sanitizat) e un punct separat înainte de Faza 6.
+- **Idempotență:** a doua rulare = «neschimbat» pe toate rândurile valide.
+- **Istoric de prețuri (Omnibus):** un produs creat primește UN punct în `PriceHistory`, la data importului, cu prețul efectiv de atunci. Punct de decizie înainte de lansare.
+- **Permisiuni:** `products.write` (ca la importul generic); `catalog.legacy.edit` doar pentru ID-ul din magazinul vechi.
+- **Limite:** `import.maxColumns` 200 (exporturile WooCommerce au 80+ coloane; pragul efectiv nu coboară sub 200), 5.000 de rânduri (variațiile se numără).
+
 **Export de produse în CSV/XLSX, punctul 14b** (Faza 4). Butonul «Exportă…» din lista de produse (`ProductExportDialog`), ruta `POST /api/admin/product-exports` (`handleProductExport`) și serviciul `ProductExportService` (`packages/core/src/catalog/export/`).
 
 - **Domeniul:** produsele selectate în pagină (cel mult 200), toate produsele care respectă filtrele curente (aceeași condiție ca lista: `buildProductListWhere`) sau tot catalogul. Coșul de gunoi este EXCLUS implicit; se include explicit (sau se exportă din vederea «Coș de gunoi»). Selecția exportă exact ce s-a ales, oricare ar fi starea. Format: CSV sau XLSX.

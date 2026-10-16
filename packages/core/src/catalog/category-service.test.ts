@@ -403,3 +403,47 @@ describe("ștergere", () => {
     });
   });
 });
+
+describe("caracterele «>» și «|» în numele categoriilor", () => {
+  it("la creare: refuzate (sunt separatoarele din import și export), cu cod stabil și mesaj clar", async () => {
+    const { service, store } = setup();
+    const manager = roleSubject("manager");
+    for (const name of ["Pompe > Circulație", "Filtre | Nisip", "A>B", ">"]) {
+      await expect(service.create(manager, { name }), name).rejects.toMatchObject({
+        code: "CATEGORY_NAME_INVALID",
+        message: expect.stringContaining("«>» și «|»"),
+      });
+    }
+    expect(store.rows.size).toBe(0);
+    // virgula și alte caractere sunt în regulă
+    await expect(service.create(manager, { name: "Accesorii, diverse" })).resolves.toMatchObject({
+      name: "Accesorii, diverse",
+    });
+  });
+
+  it("la redenumire: o redenumire spre un nume interzis se refuză, dar o categorie veche cu «>» se poate edita în rest și redenumi curat", async () => {
+    const { service, store } = setup();
+    const manager = roleSubject("manager");
+    const clean = store.seed({ name: "Pompe", slug: "pompe" });
+    await expect(
+      service.update(manager, clean.id, { name: "Pompe | Piscine" }),
+    ).rejects.toMatchObject({
+      code: "CATEGORY_NAME_INVALID",
+    });
+    expect(store.rows.get(clean.id)?.name).toBe("Pompe");
+
+    // o categorie existentă dinainte cu nume interzis: numele trimis neschimbat nu blochează editarea
+    const legacy = store.seed({ name: "Veche > cu bară", slug: "veche" });
+    const edited = await service.update(manager, legacy.id, {
+      name: "Veche > cu bară",
+      description: "Descriere nouă",
+    });
+    expect(edited.description).toBe("Descriere nouă");
+    // iar redenumirea curată merge
+    await expect(
+      service.update(manager, legacy.id, { name: "Veche, cu virgulă" }),
+    ).resolves.toMatchObject({
+      name: "Veche, cu virgulă",
+    });
+  });
+});

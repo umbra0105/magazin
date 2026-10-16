@@ -4,6 +4,12 @@ import type { getLogger } from "@ecom/shared";
 import { AuditService } from "../../audit/audit-service";
 import { PermissionService } from "../../rbac/permission-service";
 import type { SettingsService } from "../../settings/settings-service";
+import { AttributeService, createPrismaAttributeStore } from "../attribute-service";
+import { BrandService, createPrismaBrandStore } from "../brand-service";
+import { CategoryService } from "../category-service";
+import { createPrismaCategoryStore } from "../category-store";
+import { ProductAttributesService, createPrismaProductAttributeStore } from "../product-attributes";
+import { ProductRelationsService, createPrismaProductRelationStore } from "../product-relations";
 import {
   ProductAssignmentsService,
   createPrismaProductAssignmentStore,
@@ -58,18 +64,52 @@ export function createProductImportService(deps: ProductImportRuntimeDeps): Prod
     storage: deps.storage,
   });
   const permissions = new PermissionService(db);
+  // profilul WooCommerce: categorii, branduri, atribute și relații, tot cu audit tăcut
+  const wooLogger = { warn: deps.logger.warn };
+  const woo = {
+    categories: new CategoryService({
+      store: createPrismaCategoryStore(db),
+      audit: SILENT_AUDIT,
+      logger: wooLogger,
+    }),
+    brands: new BrandService({
+      store: createPrismaBrandStore(db),
+      audit: SILENT_AUDIT,
+      logger: wooLogger,
+    }),
+    attributeDefs: new AttributeService({
+      store: createPrismaAttributeStore(db),
+      audit: SILENT_AUDIT,
+      logger: wooLogger,
+    }),
+    attributeValues: new ProductAttributesService({
+      store: createPrismaProductAttributeStore(db),
+      attributes: createPrismaAttributeStore(db),
+      audit: SILENT_AUDIT,
+      logger: wooLogger,
+    }),
+    relations: new ProductRelationsService({
+      store: createPrismaProductRelationStore(db),
+      audit: SILENT_AUDIT,
+      logger: wooLogger,
+    }),
+    getTimezone: async () => (await settings.getGroup("regional")).timezone,
+  };
   return new ProductImportService({
     store: createPrismaProductImportStore(db),
     storage: deps.storage,
     audit: deps.audit,
     products,
     assignments,
+    woo,
     getSettings: async () => {
       const group = await settings.getGroup("import");
       return {
         maxUploadBytes: group.maxUploadBytes,
         maxRows: group.maxRows,
-        maxColumns: group.maxColumns,
+        // exporturile WooCommerce au 80+ de coloane; valoarea implicită veche (60) a rămas în instalările
+        // existente, deci pragul real nu coboară sub 200
+        maxColumns: Math.max(group.maxColumns, 200),
         maxCellLength: group.maxCellLength,
         maxUncompressedBytes: group.maxUncompressedBytes,
         maxZipEntries: group.maxZipEntries,

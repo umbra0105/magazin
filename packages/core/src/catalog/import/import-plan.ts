@@ -20,6 +20,7 @@ import {
 } from "./import-fields";
 import { restoreCell, restoredText } from "./cell-safety";
 import type { ParsedTable } from "./import-file";
+import type { WooOperation, WooPlanExtras } from "./woo/woo-types";
 
 /**
  * Planificarea unui import: pentru fiecare rând din fișier decide ce s-ar întâmpla (produs nou,
@@ -93,7 +94,9 @@ export type ImportOperation =
       productPatch: Record<string, unknown> | null;
       variantPatch: Record<string, unknown> | null;
       categoryIds: string[] | null;
-    };
+    }
+  /** Operațiile profilului WooCommerce (vezi `woo/woo-types.ts`). */
+  | WooOperation;
 
 export interface PlannedRow {
   /** Numărul rândului din fișier (antetul e 1). */
@@ -121,6 +124,8 @@ export interface ImportPlan {
   fileWarnings: string[];
   /** SHA-256 peste operațiile planificate; schimbat dacă fișierul, maparea sau catalogul s-au schimbat. */
   fingerprint: string;
+  /** Doar la profilul WooCommerce: ce se creează, id-urile existente referite, statistici. */
+  woo?: WooPlanExtras;
 }
 
 export class ImportMappingError extends Error {
