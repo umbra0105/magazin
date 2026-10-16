@@ -168,6 +168,19 @@ export const settingGroups = {
     /** Încercări refuzate (origine, sesiune, permisiune) pe IP care mai intră în jurnalul de audit. */
     refusedAuditMaxAttempts: z.number().int().min(1).max(10_000).default(20),
   },
+  productExport: {
+    /**
+     * Rânduri (variante) într-un export de produse. Peste limită exportul se refuză cu un mesaj (se restrânge
+     * cu filtre sau cu selecția): fișierul ajunge direct în browser, fără job în fundal. CSV-ul curge din
+     * bază pe loturi; XLSX-ul se construiește în memorie, de aceea limita e comună.
+     */
+    maxRows: z.number().int().min(1).max(100_000).default(20_000),
+    /** Exporturi per utilizator în fereastră (contor separat de importuri, media și documente). */
+    uploadMaxAttempts: z.number().int().min(1).max(10_000).default(10),
+    uploadWindowMinutes: z.number().int().min(1).max(1440).default(10),
+    /** Încercări refuzate (origine, sesiune, permisiune) pe IP care mai intră în jurnalul de audit. */
+    refusedAuditMaxAttempts: z.number().int().min(1).max(10_000).default(20),
+  },
   monitoring: {
     /** DSN Sentry. Gol = Sentry complet inactiv. Nu e secret (se trimite și în browser). */
     sentryDsn: z

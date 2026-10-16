@@ -335,3 +335,28 @@ export {
   type ProductImportUploadDeps,
 } from "./import/import-handler";
 export { createProductImportService, type ProductImportRuntimeDeps } from "./import/import-runtime";
+export {
+  EXPORT_FORMATS,
+  ExportError,
+  MAX_EXPORT_SELECTION,
+  ProductExportService,
+  exportRequestSchema,
+  type ExportAbout,
+  type ExportFormat,
+  type PreparedExport,
+  type ProductExportDeps,
+  type ProductExportSettings,
+} from "./export/export-service";
+export {
+  createPrismaProductExportStore,
+  type ExportScope,
+  type ProductExportStore,
+} from "./export/export-store";
+export { exportHeaders, type ExportCell, type ExportRow } from "./export/export-rows";
+export {
+  handleProductExport,
+  type ProductExportRouteDeps,
+  type ProductExportSettingsGroup,
+} from "./export/export-handler";
+export { createProductExportService, type ProductExportRuntimeDeps } from "./export/export-runtime";
+export { csvStreamResponse } from "./import/import-csv";

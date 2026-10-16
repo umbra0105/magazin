@@ -927,3 +927,16 @@ export async function removeE2eImports(): Promise<void> {
     await db.query(`delete from product_import where "fileName" = any($1::text[])`, [names]);
   });
 }
+
+/** Evenimentele de audit `product.export` ale unui cont de test (după email), în ordine cronologică. */
+export async function readE2eExportAudit(
+  actorEmail: string,
+): Promise<{ outcome: string; after: Record<string, unknown> | null }[]> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select outcome, after from audit_log where action = 'product.export' and "actorLabel" = $1 order by "createdAt" asc`,
+      [actorEmail],
+    );
+    return result.rows as { outcome: string; after: Record<string, unknown> | null }[];
+  });
+}

@@ -67,6 +67,7 @@ export default async function ProductsPage({
   const trash = query.view === "deleted";
   const canWrite = can(subject, "products.write");
   const canEditContent = can(subject, "products.content.write");
+  const canExport = can(subject, "products.export");
 
   const rows: ProductTableRow[] = page.rows.map((r) => ({
     id: r.id,
@@ -101,6 +102,17 @@ export default async function ProductsPage({
     if (target > 1) search.set("page", String(target));
     const qs = search.toString();
     return `/admin/produse${qs ? `?${qs}` : ""}`;
+  };
+
+  // filtrele listei, ca parametri (exportul le aplică pe server, la fel ca lista)
+  const exportFilters: Record<string, string> = {
+    ...(trash && { view: "deleted" }),
+    ...(query.q && { q: query.q }),
+    ...(query.categoryId && { category: query.categoryId }),
+    ...(query.brandId && { brand: query.brandId }),
+    ...(query.status && { status: query.status }),
+    ...(query.shippingClass && { shipping: query.shippingClass }),
+    ...(query.stock && { stock: query.stock }),
   };
 
   const filtered = Boolean(
@@ -295,6 +307,9 @@ export default async function ProductsPage({
           categories={categories}
           brands={brands.map((b) => ({ id: b.id, name: b.name }))}
           view={trash ? "deleted" : "active"}
+          {...(canExport && {
+            exportTools: { filters: exportFilters, filteredTotal: page.total },
+          })}
         />
       )}
 

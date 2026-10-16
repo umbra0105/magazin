@@ -9,6 +9,7 @@ import { bulkUpdateProducts, updateProductInline } from "@/app/(admin)/admin/pro
 import { duplicateProduct } from "@/app/(admin)/admin/produse/lifecycle-actions";
 import { formatMoney, formatMoneyInput, parseMoneyInput } from "@/lib/money-input";
 import { getMessages } from "@/messages";
+import { ProductExportDialog } from "./product-export-dialog";
 import {
   LifecycleConfirmDialog,
   PurgeDialog,
@@ -55,6 +56,8 @@ export interface ProductTableProps {
   brands: { id: string; name: string }[];
   /** „active” (implicit) sau „deleted” (coșul de gunoi: restaurare și ștergere definitivă). */
   view: "active" | "deleted";
+  /** Prezent doar cu `products.export`: filtrele listei și câte produse respectă filtrele. */
+  exportTools?: { filters: Record<string, string>; filteredTotal: number };
 }
 
 type InlineField = "title" | "status" | "stockStatus" | "price";
@@ -80,6 +83,7 @@ export function ProductTable({
   categories,
   brands,
   view,
+  exportTools,
 }: ProductTableProps) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -359,6 +363,17 @@ export function ProductTable({
         {announcement}
       </p>
 
+      {exportTools && (
+        <div className="flex justify-end" data-export-toolbar>
+          <ProductExportDialog
+            filters={exportTools.filters}
+            filteredTotal={exportTools.filteredTotal}
+            selectedIds={selectedRows.map((r) => r.id)}
+            trashView={trash}
+          />
+        </div>
+      )}
+
       {canWrite && selectedRows.length > 0 && (
         <section
           aria-label={m.bulk.region}
@@ -539,7 +554,7 @@ export function ProductTable({
         <table className="w-full min-w-[56rem] text-left text-sm" aria-label={m.table.label}>
           <thead className="border-b border-border bg-border/30">
             <tr>
-              {canWrite && (
+              {(canWrite || exportTools) && (
                 <th scope="col" className="w-10 p-3">
                   <input
                     type="checkbox"
@@ -586,7 +601,7 @@ export function ProductTable({
                 data-product-title={row.title}
                 className="border-b border-border align-top last:border-0"
               >
-                {canWrite && (
+                {(canWrite || exportTools) && (
                   <td className="p-3">
                     <input
                       type="checkbox"

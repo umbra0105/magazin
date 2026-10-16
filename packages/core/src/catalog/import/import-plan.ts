@@ -18,6 +18,7 @@ import {
   isImageHeader,
   type ImportFieldKey,
 } from "./import-fields";
+import { restoreCell, restoredText } from "./cell-safety";
 import type { ParsedTable } from "./import-file";
 
 /**
@@ -267,8 +268,16 @@ function readRowValues(
   const values: RowValues = {};
   mapping.columns.forEach((field, index) => {
     if (!field) return;
-    const cell = (cells[index] ?? "").trim();
-    if (cell === "") return;
+    const raw = (cells[index] ?? "").trim();
+    if (raw === "") return;
+    // un apostrof pus de export în fața unui text periculos (=, +, -, @) se scoate; valoarea rămâne text
+    // literal (un «-» restaurat din «'-» nu mai e marcajul de ștergere)
+    const restored = restoreCell(raw);
+    if (restored !== null) {
+      values[field] = restored;
+      return;
+    }
+    const cell = raw;
     if (cell === CLEAR_MARKER) {
       if (!importField(field).clearable) {
         errors.push({
@@ -645,9 +654,9 @@ export function collectLookups(
   const skus = new Set<string>();
   const slugs = new Set<string>();
   for (const cells of table.rows) {
-    const sku = skuColumn >= 0 ? (cells[skuColumn] ?? "").trim() : "";
+    const sku = skuColumn >= 0 ? restoredText((cells[skuColumn] ?? "").trim()) : "";
     if (sku) skus.add(sku);
-    const slug = slugColumn >= 0 ? (cells[slugColumn] ?? "").trim() : "";
+    const slug = slugColumn >= 0 ? restoredText((cells[slugColumn] ?? "").trim()) : "";
     if (slug && slug !== CLEAR_MARKER) slugs.add(slug);
   }
   return { skus: [...skus], slugs: [...slugs] };
@@ -714,7 +723,7 @@ export function planImport(
   table.rows.forEach((cells, index) => {
     const row = table.rowNumbers[index] as number;
     const messages: ImportMessage[] = [];
-    const sku = (cells[skuColumn] ?? "").trim();
+    const sku = restoredText((cells[skuColumn] ?? "").trim());
     const planned = (
       outcome: RowOutcome,
       op: ImportOperation | null = null,

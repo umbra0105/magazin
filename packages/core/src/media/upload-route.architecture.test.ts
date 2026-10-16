@@ -119,6 +119,7 @@ describe("rutele API care scriu verifică originea și permisiunea (sursa reală
       expect.arrayContaining([
         "apps/web/src/app/api/media/route.ts",
         "apps/web/src/app/api/admin/products/[id]/documents/route.ts",
+        "apps/web/src/app/api/admin/product-exports/route.ts",
       ]),
     );
     // excepțiile enumerate există și chiar scriu (altfel lista ar putea îmbătrâni în tăcere)
@@ -129,8 +130,13 @@ describe("rutele API care scriu verifică originea și permisiunea (sursa reală
     }
   });
 
-  it("ambele handlere de upload conțin verificarea de origine și cea de permisiune", () => {
-    for (const name of ["handleMediaUpload", "handleProductDocumentUpload"]) {
+  it("handlerele de upload, import și export conțin verificarea de origine și cea de permisiune", () => {
+    for (const name of [
+      "handleMediaUpload",
+      "handleProductDocumentUpload",
+      "handleProductImportUpload",
+      "handleProductExport",
+    ]) {
       const file = core.find((f) =>
         new RegExp(`export\\s+(?:async\\s+)?function\\s+${name}\\b`).test(f.content),
       );

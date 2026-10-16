@@ -1174,6 +1174,45 @@ export const ro = {
           "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",
       },
     },
+    productExport: {
+      openButton: "Exportă…",
+      title: "Exportă produsele",
+      description:
+        "Fișierul are aceleași coloane ca importul, deci se poate reimporta fără mapare. Prețul de achiziție nu se exportă niciodată.",
+      scopeLegend: "Ce exporți",
+      scope: {
+        selection: (n: number) => `Produsele selectate (${n})`,
+        selectionNone: "Produsele selectate (nu ai selectat niciunul în listă)",
+        filters: (n: number) => `Toate produsele care respectă filtrele curente (${n})`,
+        all: "Tot catalogul",
+      },
+      includeTrash: "Include și produsele din coșul de gunoi",
+      includeTrashHelp:
+        "Implicit coșul de gunoi nu intră în export. La reimport, produsele din coș apar ca «ignorate».",
+      formatLegend: "Format",
+      format: {
+        csv: "CSV (pentru Excel)",
+        csvHelp:
+          "Se deschide cu dublu-click în Excel, cu coloanele separate. Codurile cu zerouri la început (SKU, EAN) cer XLSX.",
+        xlsx: "XLSX (recomandat)",
+        xlsxHelp:
+          "Păstrează zerourile din coduri, prețurile ca numere în lei și are o foaie «Despre export».",
+      },
+      cancel: "Anulează",
+      submit: "Exportă",
+      working: "Se generează fișierul…",
+      done: (name: string) => `Exportul a fost descărcat: ${name}`,
+      close: "Închide",
+      errors: {
+        generic: "Exportul nu a putut fi generat. Încearcă din nou.",
+        network: "Conexiunea a fost întreruptă. Încearcă din nou.",
+        AUTH_RATE_LIMITED: "Prea multe exporturi la rând. Încearcă din nou peste câteva minute.",
+        AUTH_FORBIDDEN: "Nu ai permisiunea să exporți produsele.",
+        AUTH_UNAUTHENTICATED: "Sesiunea a expirat. Autentifică-te din nou.",
+        ORIGIN_INVALID: "Cererea nu a venit din aplicație. Reîncarcă pagina.",
+        EXPORT_INVALID: "Cererea de export nu este validă. Reîncarcă pagina.",
+      },
+    },
     productImport: {
       title: "Import de produse",
       description:
@@ -1229,6 +1268,8 @@ export const ro = {
         blockedCost:
           "Pare să conțină prețul de achiziție sau date de furnizor. Nu se importă niciodată.",
         blockedImages: "Imaginile nu se importă în acest import.",
+        blockedReadonly:
+          "Coloană informativă din export (doar pentru citire): se ignoră la import.",
         required: "SKU este obligatoriu: fără el nu se știe ce produs se actualizează.",
         submit: "Verifică (fără modificări)",
         checking: "Se verifică…",

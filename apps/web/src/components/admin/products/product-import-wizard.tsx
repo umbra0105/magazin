@@ -406,7 +406,11 @@ export function ProductImportWizard({
                         </Select>
                         {blocked && (
                           <p className="mt-1 text-xs text-muted-foreground" data-blocked={blocked}>
-                            {blocked === "cost" ? m.mapping.blockedCost : m.mapping.blockedImages}
+                            {blocked === "cost"
+                              ? m.mapping.blockedCost
+                              : blocked === "readonly"
+                                ? m.mapping.blockedReadonly
+                                : m.mapping.blockedImages}
                           </p>
                         )}
                       </td>

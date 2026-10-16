@@ -132,58 +132,74 @@ export interface ProductListStore {
 
 type Db = Pick<PrismaClient, "product" | "category">;
 
-export function createPrismaProductListStore(db: Db): ProductListStore {
-  return {
-    async list(query) {
-      const and: Prisma.ProductWhereInput[] = [
-        { deletedAt: query.view === "deleted" ? { not: null } : null },
-      ];
+/** Cum se tratează produsele din coșul de gunoi la construirea filtrului. */
+export type TrashHandling = "exclude" | "only" | "include";
 
-      if (query.q) {
-        and.push({
-          OR: [
-            { title: { contains: query.q, mode: "insensitive" } },
-            { slug: { contains: query.q, mode: "insensitive" } },
-            {
-              variants: {
-                some: {
-                  OR: [
-                    { sku: { contains: query.q, mode: "insensitive" } },
-                    { ean: { startsWith: query.q } },
-                    { manufacturerPartNumber: { contains: query.q, mode: "insensitive" } },
-                  ],
+/**
+ * Condiția `where` a listei: căutare, categorie (cu subcategoriile ei), brand, stare, clasă de livrare,
+ * stoc și vederea (coșul de gunoi). Folosită și de export, ca «produsele care respectă filtrele curente»
+ * să însemne exact aceleași produse ca în listă. Nu atinge coloanele costului.
+ */
+export async function buildProductListWhere(
+  db: Pick<PrismaClient, "category">,
+  query: Omit<ProductListQuery, "page" | "pageSize" | "sort">,
+  trash: TrashHandling = query.view === "deleted" ? "only" : "exclude",
+): Promise<Prisma.ProductWhereInput> {
+  const and: Prisma.ProductWhereInput[] = [
+    ...(trash === "include" ? [] : [{ deletedAt: trash === "only" ? { not: null } : null }]),
+  ];
+
+  if (query.q) {
+    and.push({
+      OR: [
+        { title: { contains: query.q, mode: "insensitive" } },
+        { slug: { contains: query.q, mode: "insensitive" } },
+        {
+          variants: {
+            some: {
+              OR: [
+                { sku: { contains: query.q, mode: "insensitive" } },
+                { ean: { startsWith: query.q } },
+                { manufacturerPartNumber: { contains: query.q, mode: "insensitive" } },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  }
+  if (query.categoryId) {
+    const category = await db.category.findUnique({
+      where: { id: query.categoryId },
+      select: { id: true, path: true },
+    });
+    // categoria și toate subcategoriile ei (calea începe cu a ei)
+    and.push(
+      category
+        ? {
+            categories: {
+              some: {
+                category: {
+                  OR: [{ id: category.id }, { path: { startsWith: `${category.path}/` } }],
                 },
               },
             },
-          ],
-        });
-      }
-      if (query.categoryId) {
-        const category = await db.category.findUnique({
-          where: { id: query.categoryId },
-          select: { id: true, path: true },
-        });
-        // categoria și toate subcategoriile ei (calea începe cu a ei)
-        and.push(
-          category
-            ? {
-                categories: {
-                  some: {
-                    category: {
-                      OR: [{ id: category.id }, { path: { startsWith: `${category.path}/` } }],
-                    },
-                  },
-                },
-              }
-            : { id: "__nicio_categorie__" },
-        );
-      }
-      if (query.brandId) and.push({ brandId: query.brandId });
-      if (query.status) and.push({ status: query.status });
-      if (query.shippingClass) and.push({ shippingClass: query.shippingClass });
-      if (query.stock) and.push({ stockStatus: query.stock });
+          }
+        : { id: "__nicio_categorie__" },
+    );
+  }
+  if (query.brandId) and.push({ brandId: query.brandId });
+  if (query.status) and.push({ status: query.status });
+  if (query.shippingClass) and.push({ shippingClass: query.shippingClass });
+  if (query.stock) and.push({ stockStatus: query.stock });
 
-      const where: Prisma.ProductWhereInput = { AND: and };
+  return { AND: and };
+}
+
+export function createPrismaProductListStore(db: Db): ProductListStore {
+  return {
+    async list(query) {
+      const where = await buildProductListWhere(db, query);
       const orderBy: Prisma.ProductOrderByWithRelationInput[] =
         query.sort === "title_asc"
           ? [{ title: "asc" }, { id: "asc" }]

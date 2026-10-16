@@ -120,12 +120,13 @@ describe("CSV-urile generate trec prin funcția comună (sursa reală)", () => {
   });
 
   it("toate generatoarele CSV existente apelează funcția comună (lista se actualizează deliberat)", () => {
-    const callsCommon = /\b(csvResponse|toCsv)\(/;
+    const callsCommon = /\b(csvResponse|csvStreamResponse|toCsv)\(/;
     const users = files.filter(
       (f) => callsCommon.test(f.content) && f.path !== COMMON && !isTest(f.path),
     );
     expect(users.map((f) => f.path).sort()).toEqual(
       [
+        "packages/core/src/catalog/export/export-handler.ts",
         "packages/core/src/catalog/import/import-handler.ts",
         "packages/core/src/catalog/import/import-template.ts",
       ].sort(),

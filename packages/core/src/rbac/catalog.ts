@@ -15,6 +15,7 @@ export const PERMISSIONS = {
   "products.content.write":
     "Editează conținutul produselor (descriere, SEO, media, documente), fără prețuri, stoc sau cost",
   "products.archive": "Arhivează și șterge produse",
+  "products.export": "Exportă produsele în CSV sau XLSX (fără prețul de achiziție, pentru nimeni)",
   "products.cost.view": "Vede prețul de achiziție (NIR) al produselor",
   "products.cost.edit": "Modifică prețul de achiziție (NIR) al produselor",
   "catalog.legacy.edit":
@@ -83,6 +84,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "products.write",
       "products.content.write",
       "products.archive",
+      "products.export",
       "products.cost.view",
       "media.read",
       "inventory.read",

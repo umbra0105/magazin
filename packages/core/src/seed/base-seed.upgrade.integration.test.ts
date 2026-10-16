@@ -38,4 +38,24 @@ describe("seed de bază pe o instalare existentă (fără admin.access)", () => 
     expect(out.withAccess).toBe(DEFAULT_ROLES.length);
     expect(out.kept).toBe(1);
   });
+
+  it("products.export: o instalare veche primește permisiunea la rularea seed-ului, doar la Manager, Admin, Owner", async () => {
+    const out = await inRolledBackTransaction(db, async (tx) => {
+      await runBaseSeed(tx);
+      // Simulează baza de dinaintea schimbării: permisiunea și legăturile ei nu există.
+      await tx.permission.delete({ where: { key: "products.export" } });
+      const first = await runBaseSeed(tx);
+      const second = await runBaseSeed(tx);
+      const holders = await tx.rolePermission.findMany({
+        where: { permission: { key: "products.export" } },
+        select: { role: { select: { key: true } } },
+      });
+      return { first, second, roles: holders.map((h) => h.role.key).sort() };
+    });
+    expect(out.first.permissions).toBe(1);
+    expect(out.second.permissions).toBe(0);
+    expect(out.second.rolePermissions).toBe(0);
+    // Depozit, Editor, Suport și Contabil au products.read sau cost, dar nu pot exporta catalogul
+    expect(out.roles).toEqual(["admin", "manager", "owner"]);
+  });
 });

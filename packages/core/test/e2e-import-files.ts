@@ -35,3 +35,11 @@ export function e2eXlsxBomb(xlsx: Buffer, sheetMb: number): Buffer {
 export function e2eZipNames(bytes: Uint8Array): string[] {
   return Object.keys(unzipSync(bytes));
 }
+
+/** Conținutul text al fiecărei intrări dintr-o arhivă XLSX (după cale), pentru verificări în E2E. */
+export function e2eUnzipText(bytes: Uint8Array): Record<string, string> {
+  const decoder = new TextDecoder();
+  return Object.fromEntries(
+    Object.entries(unzipSync(bytes)).map(([name, entry]) => [name, decoder.decode(entry)]),
+  );
+}

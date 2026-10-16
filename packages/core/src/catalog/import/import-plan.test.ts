@@ -588,3 +588,84 @@ describe("planImport: maparea, avertismentele și amprenta", () => {
     });
   });
 });
+
+describe("apostroful pus de export în fața textelor periculoase (=, +, -, @)", () => {
+  const run = (rows: string[][], variants: ExistingVariant[] = []) =>
+    planImport(
+      table(["SKU", "Titlu", "Subtitlu"], rows),
+      mapping("sku", "title", "subtitle"),
+      snapshot(variants),
+    );
+
+  it("se scoate la import: textul exportat revine exact și rândul rămâne «neschimbat»", () => {
+    const current = existing({
+      sku: "A",
+      product: {
+        title: "=HYPERLINK(x)",
+        subtitle: "-5°C",
+        slug: "a",
+        description: null,
+        status: "draft",
+        deleted: false,
+        brandId: null,
+        shippingClass: "standard",
+        categoryIds: [],
+      },
+    });
+    const plan = run([["A", "'=HYPERLINK(x)", "'-5°C"]], [current]);
+    expect(plan.rows[0]?.outcome).toBe("unchanged");
+  });
+
+  it("un «-» restaurat din «'-» este text, nu marcajul de ștergere", () => {
+    const current = existing({
+      sku: "A",
+      product: {
+        title: "Produs A",
+        subtitle: "valoare veche",
+        slug: "a",
+        description: null,
+        status: "draft",
+        deleted: false,
+        brandId: null,
+        shippingClass: "standard",
+        categoryIds: [],
+      },
+    });
+    const literal = run([["A", "", "'-"]], [current]);
+    expect(literal.rows[0]).toMatchObject({ outcome: "updated" });
+    expect(literal.rows[0]?.op).toMatchObject({ productPatch: { subtitle: "-" } });
+    // «-» singur rămâne marcajul de ștergere
+    const clear = run([["A", "", "-"]], [current]);
+    expect(clear.rows[0]?.op).toMatchObject({ productPatch: { subtitle: null } });
+  });
+
+  it("se scoate un singur apostrof; un text obișnuit cu apostrof rămâne neatins", () => {
+    const create = run([["N1", "''=x", "'salut"]]);
+    expect(create.rows[0]?.outcome).toBe("error"); // lipsește prețul, dar titlul s-a citit
+    const plan = planImport(
+      table(["SKU", "Titlu", "Preț"], [["N1", "''=x", "10"]]),
+      mapping("sku", "title", "price"),
+      snapshot(),
+    );
+    expect(plan.rows[0]?.op).toMatchObject({ kind: "create", input: { title: "'=x" } });
+    const plain = planImport(
+      table(["SKU", "Titlu", "Preț"], [["N2", "'salut", "10"]]),
+      mapping("sku", "title", "price"),
+      snapshot(),
+    );
+    expect(plain.rows[0]?.op).toMatchObject({ kind: "create", input: { title: "'salut" } });
+  });
+
+  it("SKU-ul neutralizat se restaurează și la căutarea în catalog", () => {
+    const current = existing({ sku: "-X1" });
+    const plan = planImport(
+      table(["SKU", "Preț"], [["'-X1", "150,00"]]),
+      mapping("sku", "price"),
+      snapshot([current]),
+    );
+    expect(plan.rows[0]).toMatchObject({ sku: "-X1", outcome: "updated" });
+    expect(
+      collectLookups(table(["SKU", "Preț"], [["'-X1", "1"]]), mapping("sku", "price")).skus,
+    ).toEqual(["-X1"]);
+  });
+});

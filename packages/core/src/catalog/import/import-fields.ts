@@ -288,11 +288,25 @@ const ALIAS_INDEX = (() => {
   return index;
 })();
 
+/**
+ * Coloane doar pentru citire, adăugate la EXPORT după cele importabile (informative): importul le
+ * recunoaște după antet și le ignoră cu mențiune, nu le mapează pe niciun câmp.
+ */
+export const EXPORT_READONLY_COLUMNS: readonly { key: "productId" | "updatedAt"; label: string }[] =
+  [
+    { key: "productId", label: "ID produs" },
+    { key: "updatedAt", label: "Modificat la" },
+  ];
+
+const READONLY_HEADERS = new Set(EXPORT_READONLY_COLUMNS.map((c) => foldText(c.label)));
+export const isReadonlyExportHeader = (header: string): boolean =>
+  READONLY_HEADERS.has(foldText(header));
+
 export interface SuggestedColumn {
   /** Câmpul propus (`null` = ignoră coloana). */
   field: ImportFieldKey | null;
   /** De ce coloana nu poate fi mapată (se afișează în interfață). */
-  blocked: "cost" | "images" | null;
+  blocked: "cost" | "images" | "readonly" | null;
 }
 
 /**
@@ -304,6 +318,7 @@ export function suggestMapping(headers: readonly string[]): SuggestedColumn[] {
   return headers.map((header) => {
     if (isCostLikeHeader(header)) return { field: null, blocked: "cost" };
     if (isImageHeader(header)) return { field: null, blocked: "images" };
+    if (isReadonlyExportHeader(header)) return { field: null, blocked: "readonly" };
     const field = ALIAS_INDEX.get(foldText(header)) ?? null;
     if (field && !used.has(field)) {
       used.add(field);
