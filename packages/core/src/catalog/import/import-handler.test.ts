@@ -266,10 +266,16 @@ describe("șablon și raport", () => {
 
   it("raportul: 401/403 fără drepturi, 404 pentru import străin, CSV cu antete de descărcare", async () => {
     const service = {
-      async reportCsv(_s: PermissionSubject | null, id: string) {
+      async reportRows(_s: PermissionSubject | null, id: string) {
         if (id === "lipsa") throw new ImportError("IMPORT_NOT_FOUND", "nu există");
         if (id === "gol") throw new ImportError("IMPORT_STATE_INVALID", "fără raport");
-        return { csv: "﻿Rând;SKU\r\n", fileName: "raport-import-produse.csv" };
+        return {
+          rows: [
+            ["Rând", "SKU"],
+            ["2", "A1"],
+          ],
+          fileName: "raport-import-produse.csv",
+        };
       },
     };
     const ok = await handleProductImportReport("imp-1", {

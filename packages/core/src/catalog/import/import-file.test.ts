@@ -2,7 +2,7 @@ import { strToU8, unzipSync, zipSync } from "fflate";
 import writeExcelFile from "write-excel-file/node";
 import { describe, expect, it } from "vitest";
 import { encodeWindows1250 } from "../../../test/windows-1250";
-import { toCsv } from "./import-csv";
+import { CSV_MIME, csvResponse, toCsv } from "./import-csv";
 import { IMPORT_FIELDS, suggestMapping } from "./import-fields";
 import { buildTemplate } from "./import-template";
 import {
@@ -396,21 +396,36 @@ describe("CSV salvat din Excel pe un calculator cu separatorul «,» (Windows-12
 });
 
 describe("toCsv", () => {
-  it("pune ghilimele unde trebuie și neutralizează celulele care ar fi formule", () => {
-    const text = toCsv(
-      [
-        ["a", 'b"c', "d;e", "f\ng"],
-        ["=SUM(A1)", "+1", "-1", "@x"],
-      ],
-      { delimiter: ";", bom: false, sep: false },
-    );
-    expect(text).toBe(`a;"b""c";"d;e";"f\ng"\r\n'=SUM(A1);'+1;'-1;'@x\r\n`);
+  const bom = String.fromCharCode(0xfeff);
+  const prefix = `${bom}sep=;\r\n`;
+
+  it("începe ÎNTOTDEAUNA cu BOM UTF-8 și linia «sep=;», apoi antetul (Excel deschide corect fișierul)", () => {
+    expect(toCsv([["a", "b"]])).toBe(`${prefix}a;b\r\n`);
+    expect(toCsv([["Rând", "SKU"]]).startsWith(prefix + "Rând;SKU")).toBe(true);
   });
 
-  it("începe implicit cu BOM UTF-8 și linia «sep=», apoi rândurile (Excel deschide corect fișierul)", () => {
-    const bom = String.fromCharCode(0xfeff);
-    expect(toCsv([["a", "b"]])).toBe(`${bom}sep=;\r\na;b\r\n`);
-    expect(toCsv([["a", "b"]], { delimiter: "," })).toBe(`${bom}sep=,\r\na,b\r\n`);
-    expect(toCsv([["a"]], { bom: false })).toBe("sep=;\r\na\r\n");
+  it("pune ghilimele unde trebuie și neutralizează celulele care ar fi formule", () => {
+    const text = toCsv([
+      ["a", 'b"c', "d;e", "f\ng"],
+      ["=SUM(A1)", "+1", "-1", "@x"],
+    ]);
+    expect(text).toBe(`${prefix}a;"b""c";"d;e";"f\ng"\r\n'=SUM(A1);'+1;'-1;'@x\r\n`);
+  });
+
+  it("virgula dintr-un text nu rupe coloana (delimitatorul e «;»), iar textul nu primește ghilimele degeaba", () => {
+    const text = toCsv([["Stare", "valoare necunoscută (Ciornă, Activ sau Arhivat)"]]);
+    expect(text).toBe(`${prefix}Stare;valoare necunoscută (Ciornă, Activ sau Arhivat)\r\n`);
+  });
+
+  it("csvResponse: aceleași reguli, ca atașament, fără cache", async () => {
+    const response = csvResponse([["a", "b"]], "fisier.csv");
+    // text() scoate BOM-ul la decodare: se verifică octeții
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(new TextDecoder().decode(bytes.subarray(3))).toBe(`sep=;\r\na;b\r\n`);
+    expect(response.headers.get("content-type")).toBe(CSV_MIME);
+    expect(response.headers.get("content-disposition")).toBe('attachment; filename="fisier.csv"');
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
   });
 });

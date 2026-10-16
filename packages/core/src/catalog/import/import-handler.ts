@@ -10,7 +10,8 @@ import { can, type PermissionSubject } from "../../rbac/can";
 import type { SettingGroupValue } from "../../settings/registry";
 import { ImportFileError, type ImportFormat } from "./import-file";
 import { ImportError, type ProductImportService } from "./import-service";
-import { TEMPLATE_FILE_NAMES, TEMPLATE_MIME, buildTemplate } from "./import-template";
+import { csvResponse } from "./import-csv";
+import { TEMPLATE_FILE_NAMES, XLSX_MIME, buildTemplate, templateRows } from "./import-template";
 
 export type ImportSettingsGroup = SettingGroupValue<"import">;
 
@@ -28,7 +29,7 @@ export interface ProductImportUploadDeps {
 
 export interface ProductImportDownloadDeps {
   getSubject: () => Promise<PermissionSubject | null>;
-  service: Pick<ProductImportService, "reportCsv">;
+  service: Pick<ProductImportService, "reportRows">;
 }
 
 const NO_STORE = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
@@ -164,12 +165,14 @@ export async function handleProductImportTemplate(
   const requested = new URL(request.url).searchParams.get("format");
   if (requested !== "csv" && requested !== "xlsx") return json({ code: "VALIDATION_ERROR" }, 400);
   const format: ImportFormat = requested;
+  // CSV-ul trece prin funcția comună (BOM + «sep=;»); XLSX-ul are propriul generator
+  if (format === "csv") return csvResponse(templateRows(), TEMPLATE_FILE_NAMES.csv);
   const bytes = await buildTemplate(format);
   return new Response(Buffer.from(bytes), {
     status: 200,
     headers: {
       ...NO_STORE,
-      "Content-Type": TEMPLATE_MIME[format],
+      "Content-Type": XLSX_MIME,
       "Content-Disposition": `attachment; filename="${TEMPLATE_FILE_NAMES[format]}"`,
     },
   });
@@ -184,15 +187,8 @@ export async function handleProductImportReport(
   if (!subject) return json({ code: "AUTH_UNAUTHENTICATED" }, 401);
   if (!can(subject, "products.write")) return json({ code: "AUTH_FORBIDDEN" }, 403);
   try {
-    const { csv, fileName } = await deps.service.reportCsv(subject, importId);
-    return new Response(csv, {
-      status: 200,
-      headers: {
-        ...NO_STORE,
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${fileName}"`,
-      },
-    });
+    const { rows, fileName } = await deps.service.reportRows(subject, importId);
+    return csvResponse(rows, fileName);
   } catch (error) {
     if (error instanceof ImportError) {
       return json({ code: error.code }, error.code === "IMPORT_NOT_FOUND" ? 404 : 409);

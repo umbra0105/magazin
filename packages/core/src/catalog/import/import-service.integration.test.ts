@@ -12,6 +12,7 @@ import { PermissionService } from "../../rbac/permission-service";
 import { runBaseSeed } from "../../seed/base-seed";
 import { settingGroups } from "../../settings/registry";
 import { inRolledBackTransaction, type TestTx } from "../../test-utils/rollback";
+import { toCsv } from "./import-csv";
 import { createProductImportService } from "./import-runtime";
 import type { ImportJobQueue } from "./import-service";
 
@@ -610,7 +611,8 @@ describe("import pe baza reală", () => {
         csv([HEAD, [`BAD-${tag}`, "x", "abc", "", ""], [`AR-${tag}`, "y", "5", "", ""]]),
       );
       await service.validate(manager, { importId: analysis.importId, columns: MAP });
-      const { csv: text, fileName } = await service.reportCsv(manager, analysis.importId);
+      const { rows, fileName } = await service.reportRows(manager, analysis.importId);
+      const text = toCsv(rows);
       expect(fileName).toBe("raport-import-produse.csv");
       expect(text.startsWith(String.fromCharCode(0xfeff) + "sep=;\r\nRând;SKU;")).toBe(true);
       expect(text).toContain("Rând;SKU;Rezultat;Motiv");

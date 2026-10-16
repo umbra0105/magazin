@@ -15,10 +15,7 @@ export const TEMPLATE_FILE_NAMES: Record<ImportFormat, string> = {
   xlsx: "sablon-import-produse.xlsx",
 };
 
-export const TEMPLATE_MIME: Record<ImportFormat, string> = {
-  csv: "text/csv; charset=utf-8",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-};
+export const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 const GENERAL_NOTES: readonly string[] = [
   "Un rând = un produs, identificat prin SKU. SKU existent = se actualizează; SKU nou = produs nou (ciornă, o singură variantă).",
@@ -54,7 +51,7 @@ export function instructionRows(): string[][] {
 /** Șablonul ca octeți (CSV cu BOM UTF-8 și `;`, ca Excel-ul în limba română; sau XLSX). */
 export async function buildTemplate(format: ImportFormat): Promise<Uint8Array> {
   if (format === "csv") {
-    return new TextEncoder().encode(toCsv(templateRows(), { delimiter: ";" }));
+    return new TextEncoder().encode(toCsv(templateRows()));
   }
   const text = (value: string, bold = false) => ({
     value,

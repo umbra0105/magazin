@@ -15,10 +15,7 @@ import { getStorage } from "./media";
 import { getCounterStore, getSettings } from "./services";
 import { getCurrentSubject } from "./session";
 
-const globalForImports = globalThis as unknown as {
-  __ecomProductImports?: ProductImportService;
-  __ecomImportQueue?: ImportQueue;
-};
+const globalForImports = globalThis as unknown as { __ecomImportQueue?: ImportQueue };
 
 /** O singură coadă `product-import` (și conexiune Redis) per proces. */
 function getImportQueue(): ImportQueue {
@@ -35,9 +32,14 @@ function getImportQueue(): ImportQueue {
  * Importul de produse (CSV/XLSX). Fișierul stă privat în stocare sub `private/product-imports/`;
  * importurile mari rulează în fundal (workerul `product-import`). Rândurile se scriu prin serviciile
  * catalogului, cu un singur eveniment de audit agregat.
+ *
+ * Serviciul NU se păstrează pe `globalThis` (spre deosebire de coadă și de conexiunea la bază, care sunt
+ * resurse): e un obiect ieftin, iar un singleton ar ține în dezvoltare codul vechi după o modificare
+ * (reîncărcarea la cald înlocuiește modulele, dar nu și instanța deja creată), de exemplu un raport CSV
+ * generat cu funcția de dinainte de o corecție.
  */
 export function getProductImportService(): ProductImportService {
-  globalForImports.__ecomProductImports ??= createProductImportService({
+  return createProductImportService({
     db: getDb(),
     storage: getStorage(),
     settings: getSettings(),
@@ -48,7 +50,6 @@ export function getProductImportService(): ProductImportService {
       for (const tag of tags) revalidateTag(tag);
     },
   });
-  return globalForImports.__ecomProductImports;
 }
 
 /** Dependențele rutei de încărcare, legate la serviciile reale. Contoarele au spațiu de nume propriu. */

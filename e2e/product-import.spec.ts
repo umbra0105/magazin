@@ -181,7 +181,21 @@ test.describe("import de produse", () => {
     const report = await page.request.get(`/api/admin/product-imports/${importId}/report`);
     expect(report.status()).toBe(200);
     expect(report.headers()["content-disposition"]).toContain("attachment");
-    const reportText = new TextDecoder().decode(await report.body());
+    // octeții raportului: BOM UTF-8, apoi «sep=;», apoi antetul (Excel separă coloanele la dublu-click)
+    const reportBytes = new Uint8Array(await report.body());
+    expect([...reportBytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    const reportText = new TextDecoder().decode(reportBytes.subarray(3));
+    expect(
+      reportText.startsWith("sep=;" + String.fromCharCode(13, 10) + "Rând;SKU;Rezultat;Motiv"),
+    ).toBe(true);
+    expect(report.headers()["content-type"]).toContain("text/csv");
+    // textele cu virgulă (ex. «Ciornă, Activ sau Arhivat») rămân într-o singură celulă, nu se sparg pe virgulă
+    expect(reportText).toContain("valoare invalidă „abc”");
+    const badLine =
+      reportText.split(String.fromCharCode(13, 10)).find((l) => l.includes("-BAD;")) ?? "";
+    const cells = badLine.split(";");
+    expect(cells).toHaveLength(5); // Rând;SKU;Rezultat;Motiv;Câmpuri: virgulele din motiv nu adaugă coloane
+    expect(cells[3]).toContain("cu virgulă sau punct");
     expect(reportText).toContain(`${sku("BAD")};eroare;`);
     expect(reportText).not.toContain("9999");
 

@@ -318,7 +318,14 @@ export {
   type ImportValidation,
   type ProductImportDeps,
 } from "./import/import-service";
-export { buildTemplate, TEMPLATE_FILE_NAMES, TEMPLATE_MIME } from "./import/import-template";
+export {
+  buildTemplate,
+  instructionRows,
+  templateRows,
+  TEMPLATE_FILE_NAMES,
+  XLSX_MIME,
+} from "./import/import-template";
+export { CSV_MIME, csvResponse, toCsv } from "./import/import-csv";
 export {
   handleProductImportReport,
   handleProductImportTemplate,

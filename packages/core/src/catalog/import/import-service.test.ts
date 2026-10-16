@@ -404,7 +404,7 @@ describe("pașii și protecțiile", () => {
       await expect(ctx.service.apply(subject, {})).rejects.toBeDefined();
       await expect(ctx.service.status(subject, "x")).rejects.toBeDefined();
       await expect(ctx.service.cancel(subject, "x")).rejects.toBeDefined();
-      await expect(ctx.service.reportCsv(subject, "x")).rejects.toBeDefined();
+      await expect(ctx.service.reportRows(subject, "x")).rejects.toBeDefined();
     }
     expect(ctx.files.size).toBe(0);
   });

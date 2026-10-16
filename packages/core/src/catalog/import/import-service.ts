@@ -9,7 +9,6 @@ import { CATALOG_TAG } from "../catalog-support";
 import type { ProductAssignmentsService } from "../product-assignments";
 import { parseInput } from "../product-schemas";
 import type { ProductService } from "../product-service";
-import { toCsv } from "./import-csv";
 import {
   IMPORT_FIELD_KEYS,
   isCostLikeFieldKey,
@@ -649,11 +648,14 @@ export class ProductImportService {
     await this.deps.store.delete(record.id);
   }
 
-  /** Raportul ca CSV (rândurile cu eroare, avertisment sau ignorate), fără conținutul câmpurilor. */
-  async reportCsv(
+  /**
+   * Rândurile raportului pentru descărcare (antetul primul): cele cu eroare, avertisment sau ignorate,
+   * fără conținutul câmpurilor. CSV-ul îl scrie funcția comună (`csvResponse`), nu serviciul.
+   */
+  async reportRows(
     subject: PermissionSubject | null,
     importId: string,
-  ): Promise<{ csv: string; fileName: string }> {
+  ): Promise<{ rows: string[][]; fileName: string }> {
     assertCan(subject, "products.write");
     const record = await this.own(subject, importId);
     const report = record.report;
@@ -681,6 +683,6 @@ export class ProductImportService {
         "",
       ]);
     }
-    return { csv: toCsv(rows, { delimiter: ";" }), fileName: "raport-import-produse.csv" };
+    return { rows, fileName: "raport-import-produse.csv" };
   }
 }
