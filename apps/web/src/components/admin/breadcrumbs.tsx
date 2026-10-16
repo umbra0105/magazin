@@ -19,6 +19,7 @@ export function Breadcrumbs() {
     (section, raw) => {
       if (section !== "products") return null;
       // /admin/produse/nou și /admin/produse/<id>: etichete, nu cuvântul „nou” sau id-ul tehnic
+      if (raw === "import") return m.productImport.title;
       return raw === "nou" ? m.products.editor.createTitle : m.products.editor.breadcrumbEdit;
     },
   );

@@ -112,6 +112,11 @@ test.describe("import de produse", () => {
     await page.getByRole("link", { name: "Import produse" }).click();
     await page.waitForURL(/\/admin\/produse\/import$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Import de produse");
+    // firimitura din antet are eticheta paginii, nu «Editare produs» (segmentul «import» nu e un id de produs)
+    await expect(
+      page.locator("nav ol li").filter({ hasText: "Import de produse" }).first(),
+    ).toBeVisible();
+    await expect(page.locator("nav ol li").filter({ hasText: "Editare produs" })).toHaveCount(0);
 
     // șablonul se descarcă în ambele formate
     const template = await page.request.get("/api/admin/product-imports/template?format=csv");
