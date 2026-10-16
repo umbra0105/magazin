@@ -51,7 +51,7 @@ const PRISMA_WRITE = new RegExp(
 );
 /** Serviciile catalogului care scriu (numele lor sunt o convenție: testul le caută). */
 const SERVICE_WRITE =
-  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService|ProductAssignmentsService|getProductAssignmentsService|productAssignmentsService|getPurchasePriceService|purchasePriceService|AttributeService|getAttributeService|attributeService|ProductAttributesService|getProductAttributesService|productAttributesService|ProductDocumentsService|getProductDocumentsService|productDocumentsService|PartsDiagramService|getPartsDiagramService|partsDiagramService|ProductRelationsService|getProductRelationsService|productRelationsService|ProductLifecycleService|getProductLifecycleService|productLifecycleService)\b/;
+  /\b(?:ProductService|ProductUpdateGuard|CostPriceService|CategoryService|BrandService|getProductService|getCostPriceService|getProductUpdateGuard|getCategoryService|getBrandService|productService|costPriceService|productUpdateGuard|categoryService|brandService|ProductAssignmentsService|getProductAssignmentsService|productAssignmentsService|getPurchasePriceService|purchasePriceService|AttributeService|getAttributeService|attributeService|ProductAttributesService|getProductAttributesService|productAttributesService|ProductDocumentsService|getProductDocumentsService|productDocumentsService|PartsDiagramService|getPartsDiagramService|partsDiagramService|ProductRelationsService|getProductRelationsService|productRelationsService|ProductLifecycleService|getProductLifecycleService|productLifecycleService|ProductImportService|getProductImportService|productImportService)\b/;
 
 const WRITES_PRODUCTS = (content: string): boolean =>
   PRISMA_WRITE.test(content) || SERVICE_WRITE.test(content);
@@ -253,6 +253,23 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
         "restoreProducts",
         "describeProductPurge",
         "purgeProduct",
+      ].sort(),
+    );
+    for (const e of exported) expect(e.permission, e.name).toBe("products.write");
+  });
+
+  it("acțiunile importului de produse sunt recunoscute ca scrieri de catalog și cer toate products.write", () => {
+    const file = files.find((f) => f.path.endsWith("(admin)/admin/produse/import/actions.ts"));
+    expect(file).toBeDefined();
+    expect(WRITES_PRODUCTS(file?.content ?? "")).toBe(true);
+    const exported = exportsOf(file?.content ?? "");
+    expect(exported.map((e) => e.name).sort()).toEqual(
+      [
+        "analyzeProductImport",
+        "validateProductImport",
+        "applyProductImport",
+        "getProductImportStatus",
+        "cancelProductImport",
       ].sort(),
     );
     for (const e of exported) expect(e.permission, e.name).toBe("products.write");

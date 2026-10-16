@@ -118,9 +118,14 @@ export default async function ProductsPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{m.title}</h1>
           {canWrite && (
-            <Link href="/admin/produse/nou" className={buttonVariants({ variant: "default" })}>
-              {m.editor.newButton}
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/admin/produse/import" className={buttonVariants({ variant: "outline" })}>
+                {getMessages().admin.productImport.openButton}
+              </Link>
+              <Link href="/admin/produse/nou" className={buttonVariants({ variant: "default" })}>
+                {m.editor.newButton}
+              </Link>
+            </div>
           )}
         </div>
         <p className="text-sm text-muted-foreground">{m.description}</p>

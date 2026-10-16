@@ -809,3 +809,121 @@ export async function seedE2eDiagramWithHotspot(
     return diagramId;
   });
 }
+
+/** O variantă de probă după SKU: produsul ei, prețul, categoriile, brandul și dacă are preț de achiziție. */
+export async function readE2eVariantBySku(sku: string): Promise<{
+  productSlug: string;
+  title: string;
+  status: string;
+  price: number;
+  salePrice: number | null;
+  ean: string | null;
+  categoryNames: string[];
+  brandName: string | null;
+  hasCost: boolean;
+  priceHistoryRows: number;
+} | null> {
+  return withClient(async (db) => {
+    const found = await db.query(
+      `select v.id, v.price, v."salePrice", v.ean, v."costPrice" is not null as "hasCost",
+              p.id as "productId", p.slug, p.title, p.status, b.name as "brandName"
+       from product_variant v
+       join product p on p.id = v."productId"
+       left join brand b on b.id = p."brandId"
+       where lower(v.sku) = lower($1)`,
+      [sku],
+    );
+    const row = found.rows[0] as
+      | {
+          id: string;
+          price: number;
+          salePrice: number | null;
+          ean: string | null;
+          hasCost: boolean;
+          productId: string;
+          slug: string;
+          title: string;
+          status: string;
+          brandName: string | null;
+        }
+      | undefined;
+    if (!row) return null;
+    const categories = await db.query(
+      `select c.name from product_category pc join category c on c.id = pc."categoryId"
+       where pc."productId" = $1 order by pc."isPrimary" desc, c.name`,
+      [row.productId],
+    );
+    const history = await db.query(
+      `select count(*)::int as n from price_history where "variantId" = $1`,
+      [row.id],
+    );
+    return {
+      productSlug: row.slug,
+      title: row.title,
+      status: row.status,
+      price: row.price,
+      salePrice: row.salePrice,
+      ean: row.ean,
+      categoryNames: categories.rows.map((r: { name: string }) => r.name),
+      brandName: row.brandName,
+      hasCost: row.hasCost,
+      priceHistoryRows: history.rows[0]?.n as number,
+    };
+  });
+}
+
+/** Evenimentele de audit cu acțiunea dată pe o entitate anume (ex. un import), cele mai vechi primele. */
+export async function readE2eAuditByEntity(
+  action: string,
+  entityId: string,
+): Promise<{ outcome: string; after: Record<string, unknown> | null }[]> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select outcome, after from audit_log where action = $1 and "entityId" = $2 order by "createdAt" asc`,
+      [action, entityId],
+    );
+    return result.rows as { outcome: string; after: Record<string, unknown> | null }[];
+  });
+}
+
+/** Starea unui import de produse, citită direct din bază (fără conținutul raportului). */
+export async function readE2eImport(importId: string): Promise<{
+  status: string;
+  storageKey: string | null;
+  processedRows: number;
+  rowCount: number;
+} | null> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select status, "storageKey", "processedRows", "rowCount" from product_import where id = $1`,
+      [importId],
+    );
+    return (
+      (result.rows[0] as
+        | {
+            status: string;
+            storageKey: string | null;
+            processedRows: number;
+            rowCount: number;
+          }
+        | undefined) ?? null
+    );
+  });
+}
+
+const trackedImportFiles = new Set<string>();
+
+/** Înregistrează numele unui fișier de import încărcat în test, ca importul rămas să fie curățat. */
+export function trackE2eImportFile(fileName: string): void {
+  trackedImportFiles.add(fileName);
+}
+
+/** Șterge importurile (rândurile) acestui worker, după numele fișierelor urmărite. */
+export async function removeE2eImports(): Promise<void> {
+  const names = [...trackedImportFiles];
+  trackedImportFiles.clear();
+  if (names.length === 0) return;
+  await withClient(async (db) => {
+    await db.query(`delete from product_import where "fileName" = any($1::text[])`, [names]);
+  });
+}

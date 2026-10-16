@@ -137,6 +137,37 @@ export const settingGroups = {
     /** Încercări refuzate (origine, sesiune, permisiune) pe IP care mai intră în jurnalul de audit. */
     refusedAuditMaxAttempts: z.number().int().min(1).max(10_000).default(20),
   },
+  import: {
+    /** Mărimea maximă a unui fișier de import (CSV sau XLSX), în octeți (implicit 10 MB; plafon 50 MB). */
+    maxUploadBytes: z
+      .number()
+      .int()
+      .min(1024)
+      .max(50 * 1024 * 1024)
+      .default(10 * 1024 * 1024),
+    /** Rânduri de date acceptate într-un import. */
+    maxRows: z.number().int().min(1).max(20_000).default(5000),
+    maxColumns: z.number().int().min(2).max(200).default(60),
+    /** Caractere într-o celulă (implicit cât descrierea unui produs). */
+    maxCellLength: z.number().int().min(100).max(100_000).default(100_000),
+    /** Conținut decomprimat acceptat dintr-un XLSX (protecție împotriva arhivelor-bombă). */
+    maxUncompressedBytes: z
+      .number()
+      .int()
+      .min(1024 * 1024)
+      .max(200 * 1024 * 1024)
+      .default(60 * 1024 * 1024),
+    maxZipEntries: z.number().int().min(10).max(500).default(100),
+    /** Până la atâtea rânduri importul se aplică pe loc; peste, rulează în fundal, cu progres. */
+    syncMaxRows: z.number().int().min(1).max(1000).default(100),
+    /** Cât timp rămâne un import (fișierul neaplicat, apoi raportul) înainte să fie șters. */
+    retentionHours: z.number().int().min(1).max(168).default(24),
+    /** Încărcări de fișiere de import per utilizator în fereastră (contor separat). */
+    uploadMaxAttempts: z.number().int().min(1).max(10_000).default(20),
+    uploadWindowMinutes: z.number().int().min(1).max(1440).default(10),
+    /** Încercări refuzate (origine, sesiune, permisiune) pe IP care mai intră în jurnalul de audit. */
+    refusedAuditMaxAttempts: z.number().int().min(1).max(10_000).default(20),
+  },
   monitoring: {
     /** DSN Sentry. Gol = Sentry complet inactiv. Nu e secret (se trimite și în browser). */
     sentryDsn: z

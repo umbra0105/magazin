@@ -266,3 +266,65 @@ export {
   type PartsDiagramServiceDeps,
   type PartsDiagramStore,
 } from "./parts-diagram-service";
+export {
+  CATEGORY_PATH_SEPARATOR,
+  CATEGORY_SEPARATOR,
+  CLEAR_MARKER,
+  IMPORT_FIELDS,
+  IMPORT_FIELD_KEYS,
+  importField,
+  isCostLikeHeader,
+  suggestMapping,
+  type ImportFieldDef,
+  type ImportFieldKey,
+  type SuggestedColumn,
+} from "./import/import-fields";
+export {
+  CSV_DELIMITERS,
+  DEFAULT_IMPORT_LIMITS,
+  ImportFileError,
+  parseImportFile,
+  type CsvDelimiter,
+  type ImportFormat,
+  type ImportLimits,
+  type ParsedTable,
+} from "./import/import-file";
+export {
+  ImportMappingError,
+  planImport,
+  type ImportCounts,
+  type ImportMapping,
+  type ImportPlan,
+  type PlannedRow,
+  type RowOutcome,
+} from "./import/import-plan";
+export {
+  createPrismaProductImportStore,
+  REPORT_ENTRY_LIMIT,
+  type ImportRecord,
+  type ImportReport,
+  type ImportReportEntry,
+  type ImportStatus,
+  type ProductImportStore,
+} from "./import/import-store";
+export {
+  ImportError,
+  ProductImportService,
+  buildReport,
+  type ImportAnalysis,
+  type ImportJobQueue,
+  type ImportSettings,
+  type ImportStatusView,
+  type ImportValidation,
+  type ProductImportDeps,
+} from "./import/import-service";
+export { buildTemplate, TEMPLATE_FILE_NAMES, TEMPLATE_MIME } from "./import/import-template";
+export {
+  handleProductImportReport,
+  handleProductImportTemplate,
+  handleProductImportUpload,
+  type ImportSettingsGroup,
+  type ProductImportDownloadDeps,
+  type ProductImportUploadDeps,
+} from "./import/import-handler";
+export { createProductImportService, type ProductImportRuntimeDeps } from "./import/import-runtime";

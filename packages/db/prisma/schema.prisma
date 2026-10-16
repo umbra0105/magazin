@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id            String     @id
-  name          String
-  email         String
-  emailVerified Boolean    @default(false)
-  image         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  roles         UserRole[]
-  mediaUploads  Media[]
+  id             String          @id
+  name           String
+  email          String
+  emailVerified  Boolean         @default(false)
+  image          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  sessions       Session[]
+  accounts       Account[]
+  roles          UserRole[]
+  mediaUploads   Media[]
+  productImports ProductImport[]
 
   @@unique([email])
   @@map("user")
@@ -837,4 +838,48 @@ model ChannelCategoryMapping {
   @@unique([channelId, categoryId])
   @@index([categoryId])
   @@map("channel_category_mapping")
+}
+
+// ---------------------------------------------------------------------------
+// Import de produse (Faza 4, punctul 14a)
+// ---------------------------------------------------------------------------
+
+/// Un import de produse dintr-un fișier CSV/XLSX, în pașii lui: încărcat → verificat (dry-run, fără
+/// modificări în catalog) → aplicat (sincron sau în fundal). Fișierul stă privat în storage sub
+/// `storageKey` (cheie generată de server) și se șterge după aplicare, la anulare sau la expirare.
+/// `planHash` leagă aplicarea de ce a fost verificat. `summary` și `report` conțin doar numere, SKU-uri
+/// și mesaje; niciodată prețul de achiziție sau conținutul câmpurilor lungi.
+model ProductImport {
+  id            String    @id @default(cuid())
+  createdById   String?
+  createdBy     User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  /// "uploaded" | "validated" | "queued" | "running" | "completed" | "failed" (CHECK în migrație)
+  status        String    @default("uploaded")
+  fileName      String
+  /// "csv" | "xlsx" (CHECK în migrație)
+  format        String
+  sizeBytes     Int
+  /// SHA-256 (hex) al fișierului stocat
+  fileHash      String
+  /// Cheia fișierului în storage privat; `null` după ștergerea lui
+  storageKey    String?   @unique
+  /// Delimitatorul ales la CSV
+  delimiter     String?
+  /// Câmpul fiecărei coloane (în ordine), salvat la verificare
+  mapping       Json?
+  planHash      String?
+  rowCount      Int
+  processedRows Int       @default(0)
+  summary       Json?
+  report        Json?
+  errorMessage  String?
+  expiresAt     DateTime
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([createdById])
+  @@index([expiresAt])
+  @@map("product_import")
 }
