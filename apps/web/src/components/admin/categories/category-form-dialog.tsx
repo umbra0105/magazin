@@ -101,6 +101,11 @@ export function CategoryFormDialog({
   };
 
   const submit = () => {
+    if (name.trim() === "") {
+      setError(m.errors.nameRequired);
+      document.getElementById("cat-name")?.focus();
+      return;
+    }
     startTransition(async () => {
       setError(null);
       try {
@@ -157,6 +162,7 @@ export function CategoryFormDialog({
         className="max-w-xl"
       >
         <form
+          noValidate
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();

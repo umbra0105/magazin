@@ -302,6 +302,7 @@ export const ro = {
       },
       errors: {
         generic: "Acțiunea a eșuat. Încearcă din nou.",
+        nameRequired: "Numele dosarului e obligatoriu.",
         forbidden: "Nu ai permisiunea pentru această acțiune.",
         unauthenticated: "Sesiunea a expirat. Autentifică-te din nou.",
         MEDIA_NOT_FOUND: "Fișierul nu mai există. Reîncarcă pagina.",
@@ -434,6 +435,7 @@ export const ro = {
       },
       errors: {
         generic: "Acțiunea a eșuat. Încearcă din nou.",
+        nameRequired: "Numele categoriei e obligatoriu.",
         NOT_ALLOWED: "Nu poți muta categoria acolo.",
         CATEGORY_NOT_FOUND: "Categoria nu mai există. Reîncarcă pagina.",
         CATEGORY_PARENT_NOT_FOUND: "Categoria părinte nu mai există. Reîncarcă pagina.",
@@ -503,6 +505,7 @@ export const ro = {
       },
       errors: {
         generic: "Acțiunea a eșuat. Încearcă din nou.",
+        nameRequired: "Numele brandului e obligatoriu.",
         BRAND_NOT_FOUND: "Brandul nu mai există. Reîncarcă pagina.",
         BRAND_SLUG_CONFLICT: "Adresa e deja folosită de alt brand.",
         BRAND_LOGO_NOT_FOUND: "Logoul ales nu mai există în bibliotecă.",
@@ -740,6 +743,10 @@ export const ro = {
         },
         unsavedMark: "modificări nesalvate",
         unsavedConfirm: "Ai modificări nesalvate. Dacă ieși acum, le pierzi. Ieși din pagină?",
+        unsavedTitle: "Modificări nesalvate",
+        unsavedStay: "Rămân pe pagină",
+        unsavedLeave: "Ies fără să salvez",
+        unsavedClose: "Închide",
         common: {
           save: "Salvează",
           saving: "Se salvează…",

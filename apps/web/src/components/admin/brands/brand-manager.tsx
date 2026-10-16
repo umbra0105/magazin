@@ -274,6 +274,11 @@ function BrandFormDialog({
   };
 
   const submit = () => {
+    if (name.trim() === "") {
+      setError(m.errors.nameRequired);
+      document.getElementById("brand-name")?.focus();
+      return;
+    }
     startTransition(async () => {
       setError(null);
       const nullable = (value: string) => (value.trim() === "" ? null : value.trim());
@@ -327,6 +332,7 @@ function BrandFormDialog({
         className="max-w-xl"
       >
         <form
+          noValidate
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();

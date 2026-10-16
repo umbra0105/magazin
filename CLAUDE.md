@@ -184,6 +184,17 @@ există `tenantId`. În schimb:
   trimis în formulare, cu `ref`), cu buton vizibil și texte în română, iar fișierul ales și mărimea lui
   sunt într-o regiune `aria-live`. Testul de arhitectură `file-input` pică la orice câmp de fișier nativ.
 
+### Fără widget-uri native în afara limbii aplicației — regulă permanentă
+
+- În cod nou **nu se folosește `window.confirm` / `alert` / `prompt`** (butoanele și textele lor ies în limba
+  browserului, nu în română): se folosește un dialog propriu (`Dialog` din `@ecom/ui`), cu texte din mesaje.
+  Excepție: dialogul nativ `beforeunload`, controlat de browser.
+- **Nu te bazezi pe validarea nativă a browserului** (`required`, `pattern`, `type="email"`/`"url"` într-un
+  `<form>` fără `noValidate`): baloanele ies în limba browserului. Formularele au `noValidate` și mesaje proprii
+  în română, cu focus pe primul câmp greșit. Testul de arhitectură `native-widgets` pică la orice ocolire.
+- Datorie cunoscută, de tratat înainte de lansare (Faza 17/18): `datetime-local`/`date`, `type="number"`,
+  `type="search"` și `<select>` nativ (vezi PROGRESS).
+
 ### Comenzi utile
 
 - `pnpm dev` — pornește aplicația

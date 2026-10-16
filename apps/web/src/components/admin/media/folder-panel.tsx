@@ -67,6 +67,11 @@ export function FolderPanel({
 
   const submit = () => {
     if (!mode) return;
+    if (mode.kind !== "move" && name.trim() === "") {
+      setError(m.errors.nameRequired);
+      document.getElementById("folder-name")?.focus();
+      return;
+    }
     startTransition(async () => {
       setError(null);
       try {
@@ -186,6 +191,7 @@ export function FolderPanel({
         className="max-w-md"
       >
         <form
+          noValidate
           className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();

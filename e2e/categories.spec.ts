@@ -356,3 +356,39 @@ test.describe("branduri", () => {
     });
   });
 });
+
+test.describe("validări în română (fără baloane native)", () => {
+  test("nume gol: mesaj propriu și focus pe câmp, la brand, categorie și dosar media", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    await login(page, owner, "/admin/branduri");
+
+    await page.getByRole("button", { name: "Brand nou" }).click();
+    const brand = page.getByRole("dialog", { name: "Brand nou" });
+    await expect(brand.locator("form")).toHaveAttribute("novalidate", "");
+    await brand.getByRole("button", { name: "Salvează" }).click();
+    await expect(brand.getByRole("alert")).toHaveText("Numele brandului e obligatoriu.");
+    await expect(brand.getByLabel("Nume")).toBeFocused();
+    await page.keyboard.press("Escape");
+
+    await page.goto("/admin/categorii");
+    await page.getByRole("button", { name: "Categorie nouă" }).click();
+    const category = page.getByRole("dialog", { name: "Categorie nouă" });
+    await expect(category.locator("form")).toHaveAttribute("novalidate", "");
+    await category.getByRole("button", { name: "Salvează" }).click();
+    await expect(category.getByRole("alert")).toHaveText("Numele categoriei e obligatoriu.");
+    await expect(category.getByLabel("Nume")).toBeFocused();
+    await page.keyboard.press("Escape");
+
+    await page.goto("/admin/media");
+    await page.getByRole("button", { name: "Folder nou" }).click();
+    const folder = page.getByRole("dialog", { name: "Creează folder" });
+    await expect(folder.locator("form")).toHaveAttribute("novalidate", "");
+    await folder.getByRole("button", { name: "Salvează", exact: true }).click();
+    await expect(folder.getByRole("alert")).toHaveText("Numele dosarului e obligatoriu.");
+    await expect(folder.getByLabel("Nume folder")).toBeFocused();
+  });
+});

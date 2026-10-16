@@ -303,17 +303,36 @@ test.describe("editorul de produs", () => {
     await openFromList(page, tag, title);
     const editorUrl = page.url();
 
+    // niciun dialog NATIV (window.confirm): confirmarea e un dialog al aplicației, în română
+    const nativeDialogs: string[] = [];
+    page.on("dialog", (dialog) => {
+      nativeDialogs.push(dialog.message());
+      void dialog.dismiss();
+    });
+
     // modificare nesalvată → linkul „înapoi” cere confirmare; „rămân” păstrează pagina și textul
     await page.getByLabel("Titlu", { exact: true }).fill(`${title} (nesalvat)`);
     await expect(page.getByText("modificări nesalvate").first()).toBeVisible();
-    page.once("dialog", (dialog) => void dialog.dismiss());
     await page.getByRole("link", { name: "Înapoi la lista de produse" }).click();
+    const unsaved = page.getByRole("dialog", { name: "Modificări nesalvate" });
+    await expect(unsaved).toBeVisible();
+    await expect(unsaved).toContainText("Ai modificări nesalvate");
+    await expect(unsaved.getByRole("button", { name: "Rămân pe pagină" })).toBeFocused();
+    await unsaved.getByRole("button", { name: "Rămân pe pagină" }).click();
+    await expect(unsaved).toBeHidden();
     await expect(page).toHaveURL(editorUrl);
     await expect(page.getByLabel("Titlu", { exact: true })).toHaveValue(`${title} (nesalvat)`);
 
-    // „ies” confirmă și navighează
-    page.once("dialog", (dialog) => void dialog.accept());
+    // Escape = «rămân»
     await page.getByRole("link", { name: "Înapoi la lista de produse" }).click();
+    await expect(unsaved).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(unsaved).toBeHidden();
+    await expect(page).toHaveURL(editorUrl);
+
+    // „ies” navighează la același link
+    await page.getByRole("link", { name: "Înapoi la lista de produse" }).click();
+    await unsaved.getByRole("button", { name: "Ies fără să salvez" }).click();
     await expect(page).toHaveURL(/\/admin\/produse$/);
 
     // fără modificări: niciun dialog
@@ -327,6 +346,43 @@ test.describe("editorul de produs", () => {
     await page.getByRole("link", { name: "Înapoi la lista de produse" }).click();
     await expect(page).toHaveURL(/\/admin\/produse$/);
     expect(dialogs).toBe(0);
+    expect(nativeDialogs).toEqual([]);
+  });
+
+  test("butonul «înapoi» al browserului cu modificări nesalvate: dialog propriu, nu cel nativ", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    const tag = randomBytes(3).toString("hex");
+    const [title] = (await seedE2eProducts(tag, 1)) as [string];
+    await login(page, owner, "/admin/produse");
+    await openFromList(page, tag, title);
+    const editorUrl = page.url();
+    const nativeDialogs: string[] = [];
+    page.on("dialog", (dialog) => {
+      nativeDialogs.push(dialog.message());
+      void dialog.dismiss();
+    });
+
+    // tastarea reală dă activare utilizator; Chrome sare intrările de istoric create fără ea
+    await page.getByLabel("Titlu", { exact: true }).click();
+    await page.keyboard.press("End");
+    await page.keyboard.type(" (nesalvat)");
+    const unsaved = page.getByRole("dialog", { name: "Modificări nesalvate" });
+    await page.goBack();
+    await expect(unsaved).toBeVisible();
+    await unsaved.getByRole("button", { name: "Rămân pe pagină" }).click();
+    await expect(unsaved).toBeHidden();
+    await expect(page).toHaveURL(editorUrl);
+    await expect(page.getByLabel("Titlu", { exact: true })).toHaveValue(`${title} (nesalvat)`);
+
+    await page.goBack();
+    await expect(unsaved).toBeVisible();
+    await unsaved.getByRole("button", { name: "Ies fără să salvez" }).click();
+    await expect(page).toHaveURL(/\/admin\/produse(\?.*)?$/);
+    expect(nativeDialogs).toEqual([]);
   });
 
   test("Suport nu poate deschide produsul; produs inexistent dă 404", async ({
