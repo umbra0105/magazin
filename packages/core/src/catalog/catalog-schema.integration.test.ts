@@ -358,3 +358,54 @@ describe("catalog: media pe produs și istorice", () => {
     }, "price_history_price_check");
   });
 });
+
+describe("catalog: constrângeri completate la închiderea fazei (acoperire)", () => {
+  const category = (tx: TestTx, depth: number) =>
+    tx.category.create({
+      data: { name: `Adâncime ${depth}`, slug: `adm-${uid()}`, path: `adm-${uid()}`, depth },
+    });
+
+  it("adâncimea categoriei: între 0 și 10 în bază (serviciul limitează la 4)", async () => {
+    await violation((tx) => category(tx, -1), "category_depth_check");
+    await violation((tx) => category(tx, 11), "category_depth_max_check");
+    await inRolledBackTransaction(db, async (tx) => {
+      expect((await category(tx, 0)).depth).toBe(0);
+      expect((await category(tx, 10)).depth).toBe(10);
+    });
+  });
+
+  it("istoricul prețului de achiziție: sumă nenegativă și sursă din lista permisă", async () => {
+    const entry = async (tx: TestTx, data: { costPrice: number; source: string }) => {
+      const variant = await newVariant(tx, (await newProduct(tx)).id);
+      return tx.costPriceHistory.create({
+        data: { variantId: variant.id, effectiveDate: new Date(), ...data },
+      });
+    };
+    await violation(
+      (tx) => entry(tx, { costPrice: -1, source: "manual" }),
+      "cost_price_history_costPrice_check",
+    );
+    await violation(
+      (tx) => entry(tx, { costPrice: 100, source: "nimic" }),
+      "cost_price_history_source_check",
+    );
+    await inRolledBackTransaction(db, async (tx) => {
+      expect((await entry(tx, { costPrice: 0, source: "import" })).costPrice).toBe(0);
+    });
+  });
+
+  it("codul clasei de taxare: litere mici, cifre și «_», începe cu literă", async () => {
+    for (const bad of ["Redusa", "1redusa", "redusă", "red usa", ""]) {
+      await violation(
+        (tx) => tx.taxClass.create({ data: { code: bad, name: "X" } }),
+        "tax_class_code_check",
+      );
+    }
+    await inRolledBackTransaction(db, async (tx) => {
+      expect(
+        (await tx.taxClass.create({ data: { code: `redusa_${uid()}`.slice(0, 20), name: "X" } }))
+          .name,
+      ).toBe("X");
+    });
+  });
+});

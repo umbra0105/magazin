@@ -22,6 +22,21 @@ function setup(initial: Record<string, unknown> = {}) {
   return { rows, ...fake, service: new SettingsService(store, fake.cache), store };
 }
 
+describe("SettingsService: grup citit fără cache (setări de securitate)", () => {
+  it("getGroupUncached vede imediat o modificare din baza de date, deși getGroup mai ține valoarea veche din cache", async () => {
+    const { service, rows } = setup({ "imageImport.allowedHosts": ["vechi.ro"] });
+    expect((await service.getGroup("imageImport")).allowedHosts).toEqual(["vechi.ro"]);
+    rows.set("imageImport.allowedHosts", ["nou.ro"]); // modificat direct în bază (Prisma Studio)
+    expect((await service.getGroup("imageImport")).allowedHosts).toEqual(["vechi.ro"]);
+    expect((await service.getGroupUncached("imageImport")).allowedHosts).toEqual(["nou.ro"]);
+  });
+
+  it("o valoare invalidă în bază face citirea să EȘUEZE (nu cade pe lista implicită sau pe o listă mai largă)", async () => {
+    const { service } = setup({ "imageImport.allowedHosts": ["10.0.0.5"] });
+    await expect(service.getGroupUncached("imageImport")).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
 describe("SettingsService: cache și grupuri", () => {
   it("scrie cache-ul cu cheia și TTL-ul de 5 minute", async () => {
     const { service, ttls } = setup();

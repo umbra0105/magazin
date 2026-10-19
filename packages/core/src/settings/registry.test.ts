@@ -45,6 +45,47 @@ describe("registrul de setări", () => {
     expect(settingGroups.monitoring.sentryDsn.parse(undefined)).toBe("");
   });
 
+  describe("importul de imagini din adrese (securitate)", () => {
+    const hosts = settingGroups.imageImport.allowedHosts;
+
+    it("implicit lista de domenii permise e goală (nimic nu se descarcă)", () => {
+      expect(hosts.parse(undefined)).toEqual([]);
+    });
+
+    it("numele se normalizează (litere mici, fără punct final, punycode)", () => {
+      expect(hosts.parse(["PiscineShop.RO", "cdn.piscineshop.ro."])).toEqual([
+        "piscineshop.ro",
+        "cdn.piscineshop.ro",
+      ]);
+      expect(hosts.parse(["piscine.ro", "picină.ro"])[1]).toBe("xn--picin-vwa.ro");
+    });
+
+    it.each([
+      ["IP v4", "10.0.0.5"],
+      ["IP v6", "[::1]"],
+      ["cu port", "piscineshop.ro:8443"],
+      ["cu schemă", "https://piscineshop.ro"],
+      ["cu cale", "piscineshop.ro/poze"],
+      ["wildcard", "*.piscineshop.ro"],
+      ["cu utilizator", "user@piscineshop.ro"],
+      ["o singură etichetă", "localhost"],
+      ["cu spații", "piscine shop.ro"],
+      ["gol", ""],
+    ])("refuză %s", (_name, value) => {
+      expect(hosts.safeParse([value]).success).toBe(false);
+    });
+
+    it("cel mult 50 de domenii; limitele numerice au plafoane", () => {
+      expect(hosts.safeParse(Array.from({ length: 51 }, (_, i) => `d${i}.ro`)).success).toBe(false);
+      const g = settingGroups.imageImport;
+      expect(g.maxRedirects.safeParse(4).success).toBe(false);
+      expect(g.maxImagesPerProduct.safeParse(31).success).toBe(false);
+      expect(g.concurrency.safeParse(11).success).toBe(false);
+      expect(g.maxDownloadBytes.safeParse(51 * 1024 * 1024).success).toBe(false);
+      expect(g.totalTimeoutSeconds.safeParse(121).success).toBe(false);
+    });
+  });
+
   describe("validări", () => {
     const ok = (key: string, value: unknown) => getSettingSchema(key)?.safeParse(value).success;
 

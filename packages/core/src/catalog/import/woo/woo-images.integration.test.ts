@@ -6,7 +6,14 @@ import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { getDb, type PrismaClient } from "@ecom/db";
-import { LocalStorageDriver, deriveSigningKey, type StorageDriver } from "@ecom/integrations";
+import {
+  LocalStorageDriver,
+  S3StorageDriver,
+  deriveSigningKey,
+  ensureS3Bucket,
+  type StorageDriver,
+} from "@ecom/integrations";
+import { assertTestBucket } from "../../../../../../test/support/test-env";
 import { createLogger } from "@ecom/shared";
 import { wooCsv, type WooFixtureRow } from "../../../../test/woo-fixture";
 import { AuditService } from "../../../audit/audit-service";
@@ -138,8 +145,10 @@ async function withImages<T>(
     as: (role: string) => Promise<Subject>;
     page: (path: string, body: Buffer | (() => Promise<ConnectResponse>)) => void;
   }) => Promise<T>,
+  options: { storage?: StorageDriver } = {},
 ): Promise<T> {
   const world = await setup();
+  const storage = options.storage ?? mediaStorage;
   return inRolledBackTransaction(db, async (tx) => {
     await runBaseSeed(tx);
     const queued: string[] = [];
@@ -173,7 +182,7 @@ async function withImages<T>(
     const store = createPrismaProductImportStore(dbx);
     const processor = new MediaProcessor({
       store: createPrismaProcessingStore(dbx),
-      storage: mediaStorage,
+      storage,
       limiter: new MemoryDecodeLimiter(),
       getSettings: async () => defaultMediaSettings(),
       logger: silent,
@@ -196,7 +205,7 @@ async function withImages<T>(
             return handler();
           },
         }),
-      media: new MediaService({ store: createPrismaMediaStore(dbx), storage: mediaStorage }),
+      media: new MediaService({ store: createPrismaMediaStore(dbx), storage }),
       processMedia: async (mediaId) => {
         try {
           const outcome = await processor.process(mediaId, { finalAttempt: true });
@@ -214,7 +223,7 @@ async function withImages<T>(
           },
         }),
         logger: silent,
-        storage: mediaStorage,
+        storage,
       }),
       getPolicy: async () => world.policy,
       getMediaLimits: async () => world.mediaLimits,
@@ -862,6 +871,75 @@ describe("tabela sarcinilor: constrângeri", () => {
       await expect(make("public/media/u2/original.png")).rejects.toBeDefined();
       await tx.$executeRawUnsafe("ROLLBACK TO SAVEPOINT uq");
     });
+  });
+});
+
+describe("pe stocarea S3 reală (MinIO, bucket de test)", () => {
+  const bucket = process.env["S3_BUCKET"];
+  assertTestBucket(bucket);
+
+  function requireEnv(name: string): string {
+    const value = process.env[name];
+    if (!value) throw new Error(`${name} lipsește: testul cere MinIO pornit și variabilele S3_*.`);
+    return value;
+  }
+  const connection = () => ({
+    endpoint: requireEnv("S3_ENDPOINT"),
+    region: process.env["S3_REGION"] ?? "us-east-1",
+    accessKeyId: requireEnv("S3_ACCESS_KEY_ID"),
+    secretAccessKey: requireEnv("S3_SECRET_ACCESS_KEY"),
+    forcePathStyle: (process.env["S3_FORCE_PATH_STYLE"] ?? "true") === "true",
+  });
+
+  it("imaginile aduse din adrese ajung în bucket (original + variante), se pot citi înapoi și se atașează produsului", async () => {
+    await ensureS3Bucket({ ...connection(), bucket });
+    const storage = new S3StorageDriver({
+      ...connection(),
+      bucket: bucket as string,
+      appUrl: "https://magazin.test",
+    });
+    const keys: string[] = [];
+    try {
+      await withImages(
+        async ({ tx, service, importer, as, page }) => {
+          page("/poze/a.png", await png(200, 10, 10, 400));
+          page("/poze/b.png", await png(10, 200, 10, 400));
+          const owner = await as("owner");
+          const { validation } = await check(service, owner, [
+            row("S3-1", `${url("a")}, ${url("b")}`),
+          ]);
+          await apply(service, owner, validation);
+          const summary = await importer.run(validation.importId);
+          expect(summary).toMatchObject({ downloaded: 2, failed: 0, attached: 2 });
+
+          const rows = await tx.media.findMany({
+            where: { sourceHash: { not: null } },
+            select: { storageKey: true, variants: true, status: true, mime: true },
+          });
+          expect(rows).toHaveLength(2);
+          for (const media of rows) {
+            expect(media.status).toBe("ready");
+            keys.push(media.storageKey);
+            const variants = media.variants as unknown as { key: string }[];
+            expect(variants.length).toBeGreaterThan(0);
+            for (const v of variants) keys.push(v.key);
+          }
+          // fiecare obiect e în bucket și are conținut
+          for (const key of keys) {
+            const { stream, object } = await storage.get(key);
+            let size = 0;
+            for await (const chunk of stream) size += (chunk as Buffer).length;
+            expect(size).toBeGreaterThan(0);
+            expect(object.contentType).toMatch(/^image\//);
+          }
+          expect((await mediaOf(tx, "S3-1")).links).toHaveLength(2);
+        },
+        { storage },
+      );
+    } finally {
+      // bucketul de test e partajat între rulări, iar tranzacția se anulează: obiectele se șterg explicit
+      for (const key of keys) await storage.delete(key).catch(() => undefined);
+    }
   });
 });
 

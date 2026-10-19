@@ -7,6 +7,21 @@ const rolesWith = (permission: keyof typeof PERMISSIONS) =>
     .sort();
 
 describe("catalogul RBAC", () => {
+  it("permisiunile catalogului din Faza 4: cine ce poate (decizii ale utilizatorului)", () => {
+    // conținut (descriere, SEO, media, documente): Editor, Manager, Admin, Owner
+    expect(rolesWith("products.content.write")).toEqual(["admin", "editor", "manager", "owner"]);
+    // structură, prețuri, import: fără Editor
+    expect(rolesWith("products.write")).toEqual(["admin", "manager", "owner"]);
+    expect(rolesWith("products.export")).toEqual(["admin", "manager", "owner"]);
+    // ID-urile din magazinul vechi: doar Admin și Owner
+    expect(rolesWith("catalog.legacy.edit")).toEqual(["admin", "owner"]);
+    // Editorul nu poate scrie preț, import sau export
+    const editor = DEFAULT_ROLES.find((role) => role.key === "editor");
+    for (const key of ["products.write", "products.export", "catalog.legacy.edit"] as const) {
+      expect(editor?.permissions, key).not.toContain(key);
+    }
+  });
+
   it("prețul de achiziție (products.cost.view) îl văd Owner, Admin, Manager și Contabil", () => {
     expect(rolesWith("products.cost.view")).toEqual(["accountant", "admin", "manager", "owner"]);
   });
