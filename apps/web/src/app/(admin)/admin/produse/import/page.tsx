@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { IMPORT_FIELDS } from "@ecom/core";
+import { buttonVariants } from "@ecom/ui";
 import { ProductImportWizard } from "@/components/admin/products/product-import-wizard";
 import { requireAdmin } from "@/lib/admin-page";
 import { getSettings } from "@/lib/services";
@@ -27,7 +28,16 @@ export default async function ProductImportPage() {
         >
           {m.back}
         </Link>
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-semibold">{m.title}</h1>
+          <Link
+            href="/admin/produse/import/istoric"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+            data-import-history-link
+          >
+            {m.history.openLink}
+          </Link>
+        </div>
         <p className="text-sm text-muted-foreground">{m.description}</p>
       </header>
       <ProductImportWizard

@@ -72,5 +72,21 @@ export function getProductImportUploadDeps(): ProductImportUploadDeps {
 }
 
 export function getProductImportDownloadDeps(): ProductImportDownloadDeps {
-  return { getSubject: getCurrentSubject, service: getProductImportService() };
+  return {
+    getSubject: getCurrentSubject,
+    service: getProductImportService(),
+    // descărcările de rapoarte au limita lor, separată de cea a încărcărilor
+    checkRate: async (userId) => {
+      const group = await getSettings().getGroup("import");
+      await new MediaUploadGuard(
+        getCounterStore(),
+        {
+          uploadMaxAttempts: group.reportDownloadMaxAttempts,
+          uploadWindowMinutes: group.uploadWindowMinutes,
+          refusedAuditMaxAttempts: group.refusedAuditMaxAttempts,
+        },
+        "product-import-report",
+      ).checkUpload(userId, null);
+    },
+  };
 }

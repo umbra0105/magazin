@@ -13,6 +13,7 @@ import {
 import {
   REPORT_ENTRY_LIMIT,
   type ImportPatch,
+  type ImportHistoryRow,
   type ImportRecord,
   type ImportStatus,
   type NewImport,
@@ -45,6 +46,8 @@ const settings: ImportSettings = {
   maxUploadBytes: 10_000_000,
   syncMaxRows: 100,
   retentionHours: 24,
+  historyRetentionDays: 180,
+  interruptedAfterMinutes: 30,
 };
 
 class MemoryStore implements ProductImportStore {
@@ -58,9 +61,6 @@ class MemoryStore implements ProductImportStore {
   };
   private n = 0;
   /** Profilul WooCommerce nu e acoperit de aceste teste (are testele lui); magazinul de test nu-l folosește. */
-  woo = {
-    listAttributes: async () => [],
-  } as unknown as ProductImportStore["woo"];
   async loadWooSnapshot(): Promise<never> {
     throw new Error("profilul WooCommerce nu e folosit în aceste teste");
   }
@@ -78,6 +78,7 @@ class MemoryStore implements ProductImportStore {
       startedAt: null,
       finishedAt: null,
       createdAt: NOW,
+      updatedAt: NOW,
       ...data,
     };
     this.records.set(record.id, record);
@@ -87,7 +88,7 @@ class MemoryStore implements ProductImportStore {
     return this.records.get(id) ?? null;
   }
   async update(id: string, patch: ImportPatch) {
-    const next = { ...(this.records.get(id) as ImportRecord), ...patch };
+    const next = { ...(this.records.get(id) as ImportRecord), ...patch, updatedAt: NOW };
     this.records.set(id, next);
     return next;
   }
@@ -103,12 +104,58 @@ class MemoryStore implements ProductImportStore {
   }
   async findExpired(now: Date) {
     return [...this.records.values()]
-      .filter((r) => r.expiresAt < now && r.status !== "running" && r.status !== "queued")
+      .filter((r) => r.expiresAt < now && (r.status === "uploaded" || r.status === "validated"))
       .map((r) => ({ id: r.id, storageKey: r.storageKey }));
   }
   async loadSnapshot() {
     return this.snapshot;
   }
+  private applied(): ImportRecord[] {
+    return [...this.records.values()]
+      .filter((r) => ["queued", "running", "completed", "failed"].includes(r.status))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  private historyRow(r: ImportRecord): ImportHistoryRow {
+    return {
+      id: r.id,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      startedAt: r.startedAt,
+      finishedAt: r.finishedAt,
+      status: r.status,
+      fileName: r.fileName,
+      format: r.format,
+      mapping: r.mapping,
+      rowCount: r.rowCount,
+      processedRows: r.processedRows,
+      summary: r.summary,
+      errorMessage: r.errorMessage,
+      userName: r.createdById ? `Utilizator ${r.createdById}` : null,
+      userEmail: r.createdById ? `${r.createdById}@magazin.test` : null,
+      hasReport: r.report !== null,
+    };
+  }
+  async listApplied({ skip, take }: { skip: number; take: number }) {
+    const all = this.applied();
+    return { total: all.length, rows: all.slice(skip, skip + take).map((r) => this.historyRow(r)) };
+  }
+  async getApplied(id: string) {
+    const record = this.applied().find((r) => r.id === id);
+    return record ? { row: this.historyRow(record), report: record.report } : null;
+  }
+  async purgeReports(now: Date) {
+    let n = 0;
+    for (const r of this.records.values()) {
+      if ((r.status === "completed" || r.status === "failed") && r.expiresAt < now && r.report) {
+        r.report = null;
+        n++;
+      }
+    }
+    return n;
+  }
+  woo = {
+    listAttributes: async () => [],
+  } as unknown as ProductImportStore["woo"];
 }
 
 function setup(options: { queue?: ImportJobQueue; syncMaxRows?: number } = {}) {
@@ -260,7 +307,8 @@ describe("aplicarea rând cu rând", () => {
       after: { rows: 25, created: 25, errors: 0, updated: 0 },
     });
     // retenția: raportul rămâne 24 h după final
-    expect(record.expiresAt.getTime()).toBe(NOW.getTime() + 24 * 3_600_000);
+    // importul aplicat rămâne în istoric; raportul detaliat se păstrează historyRetentionDays
+    expect(record.expiresAt.getTime()).toBe(NOW.getTime() + 180 * 86_400_000);
   });
 });
 

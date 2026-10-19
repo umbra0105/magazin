@@ -30,6 +30,8 @@ export interface ProductImportUploadDeps {
 export interface ProductImportDownloadDeps {
   getSubject: () => Promise<PermissionSubject | null>;
   service: Pick<ProductImportService, "reportRows">;
+  /** Limita de descărcări de rapoarte (contor separat de încărcări); aruncă o eroare cu cod AUTH_RATE_LIMITED. */
+  checkRate?: (userId: string) => Promise<void>;
 }
 
 const NO_STORE = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
@@ -178,7 +180,12 @@ export async function handleProductImportTemplate(
   });
 }
 
-/** `GET /api/admin/product-imports/<id>/report` — raportul ca CSV (sesiune + `products.write`, doar al tău). */
+/**
+ * `GET /api/admin/product-imports/<id>/report` — raportul final al unui import ca CSV (sesiune + `products.write`
+ * + limită proprie de descărcări). Importurile APLICATE sunt în istoric și le descarcă oricine are `products.write`;
+ * raportul unui import doar verificat e al utilizatorului care l-a încărcat. Raportul detaliat șters după perioada
+ * de păstrare dă 410.
+ */
 export async function handleProductImportReport(
   importId: string,
   deps: ProductImportDownloadDeps,
@@ -187,11 +194,24 @@ export async function handleProductImportReport(
   if (!subject) return json({ code: "AUTH_UNAUTHENTICATED" }, 401);
   if (!can(subject, "products.write")) return json({ code: "AUTH_FORBIDDEN" }, 403);
   try {
+    await deps.checkRate?.(subject.userId);
+  } catch (error) {
+    if (error instanceof Error && (error as { code?: unknown }).code === "AUTH_RATE_LIMITED") {
+      const retryAfter = (error as { retryAfterSeconds?: unknown }).retryAfterSeconds;
+      return json({ code: "AUTH_RATE_LIMITED" }, 429, {
+        "Retry-After": String(typeof retryAfter === "number" ? retryAfter : 60),
+      });
+    }
+    throw error;
+  }
+  try {
     const { rows, fileName } = await deps.service.reportRows(subject, importId);
     return csvResponse(rows, fileName);
   } catch (error) {
     if (error instanceof ImportError) {
-      return json({ code: error.code }, error.code === "IMPORT_NOT_FOUND" ? 404 : 409);
+      const status =
+        error.code === "IMPORT_NOT_FOUND" ? 404 : error.code === "IMPORT_REPORT_PURGED" ? 410 : 409;
+      return json({ code: error.code }, status);
     }
     throw error;
   }

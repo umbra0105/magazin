@@ -1028,3 +1028,29 @@ export async function readE2eWooFixtureState(): Promise<{
     };
   });
 }
+
+/**
+ * Inserează un import rămas «în rulare» de ore întregi (un job căzut la mijloc), al contului dat, ca istoricul
+ * să-l arate ca întrerupt. Numele fișierului trebuie urmărit cu `trackE2eImportFile` pentru curățare.
+ */
+export async function insertE2eInterruptedImport(
+  userEmail: string,
+  fileName: string,
+  processedRows: number,
+  rowCount: number,
+): Promise<string> {
+  trackE2eImportFile(fileName);
+  return withClient(async (db) => {
+    const result = await db.query(
+      `insert into product_import (id, "createdById", status, "fileName", format, "sizeBytes", "fileHash",
+         "rowCount", "processedRows", "expiresAt", "startedAt", "createdAt", "updatedAt")
+       select gen_random_uuid()::text, u.id, 'running', $2, 'csv', 100, repeat('a', 64), $4, $3,
+              now() + interval '1 day', now() - interval '3 hours', now() - interval '3 hours',
+              now() - interval '2 hours'
+       from "user" u where u.email = $1
+       returning id`,
+      [userEmail, fileName, processedRows, rowCount],
+    );
+    return result.rows[0]?.id as string;
+  });
+}

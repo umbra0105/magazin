@@ -115,6 +115,8 @@ export function createProductImportService(deps: ProductImportRuntimeDeps): Prod
         maxZipEntries: group.maxZipEntries,
         syncMaxRows: group.syncMaxRows,
         retentionHours: group.retentionHours,
+        historyRetentionDays: group.historyRetentionDays,
+        interruptedAfterMinutes: group.interruptedAfterMinutes,
       };
     },
     loadSubject: (userId) => permissions.loadSubject(userId),

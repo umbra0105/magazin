@@ -41,9 +41,12 @@ import { detectWooColumns, looksLikeWooExport } from "./woo/woo-columns";
 import { collectWooLookups, planWoo } from "./woo/woo-plan";
 import type { WooOptions } from "./woo/woo-types";
 import {
+  APPLIED_STATUSES,
   REPORT_ENTRY_LIMIT,
   isWooMapping,
+  type ImportHistoryRow,
   type ImportMappingRecord,
+  type ImportSummary,
   type ImportRecord,
   type ImportReport,
   type ImportReportEntry,
@@ -74,6 +77,10 @@ export interface ImportSettings extends ImportLimits {
   maxUploadBytes: number;
   syncMaxRows: number;
   retentionHours: number;
+  /** Zile de păstrare a raportului detaliat al importurilor aplicate (istoric). */
+  historyRetentionDays: number;
+  /** Minute fără progres după care un import care rulează apare ca «întrerupt». */
+  interruptedAfterMinutes: number;
 }
 
 export interface ImportJobQueue {
@@ -140,6 +147,50 @@ export interface ImportStatusView {
   report: ImportReport | null;
   errorMessage: string | null;
 }
+
+/** Starea unui import în istoric: «întrerupt» = rulează în baza de date, dar n-a mai avansat de mult. */
+export type ImportHistoryState = "running" | "completed" | "failed" | "interrupted";
+
+export interface ImportHistoryItem {
+  id: string;
+  createdAt: Date;
+  finishedAt: Date | null;
+  state: ImportHistoryState;
+  fileName: string;
+  format: ImportFormat;
+  profile: "generic" | "woocommerce";
+  userName: string | null;
+  userEmail: string | null;
+  rowCount: number;
+  /** Rânduri aplicate până acum (la un import întrerupt: cel puțin atâtea). */
+  processedRows: number;
+  /** Contoarele finale (doar la importurile terminate). */
+  counts: ImportSummary | null;
+  /** Motivul eșecului (doar la importurile eșuate). */
+  errorMessage: string | null;
+  /** Raportul detaliat pe rânduri mai există; altfel a fost șters după perioada de păstrare. */
+  hasReport: boolean;
+  /** Până când se păstrează raportul detaliat (null dacă a fost deja șters). */
+  reportUntil: Date | null;
+}
+
+export interface ImportHistoryPage {
+  items: ImportHistoryItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  retentionDays: number;
+}
+
+export interface ImportHistoryDetail {
+  item: ImportHistoryItem;
+  /** Raportul final pe rânduri; `null` dacă importul nu e terminat sau detaliul a fost șters. */
+  report: ImportReport | null;
+  retentionDays: number;
+}
+
+export const HISTORY_PAGE_SIZE = 25;
 
 const PREVIEW_ROWS = 5;
 const PREVIEW_CELL = 80;
@@ -296,6 +347,89 @@ export class ProductImportService {
     }
   }
 
+  /** Șterge raportul detaliat al importurilor aplicate după perioada de păstrare (sumarul rămâne). */
+  async purgeReportDetails(): Promise<number> {
+    try {
+      return await this.deps.store.purgeReports(this.now());
+    } catch (error) {
+      this.deps.logger.warn(
+        { reason: error instanceof Error ? error.message : "necunoscut" },
+        "import: purjarea rapoartelor vechi a eșuat",
+      );
+      return 0;
+    }
+  }
+
+  private historyItem(row: ImportHistoryRow, settings: ImportSettings): ImportHistoryItem {
+    const idleMs = this.now().getTime() - row.updatedAt.getTime();
+    const state: ImportHistoryState =
+      row.status === "completed"
+        ? "completed"
+        : row.status === "failed"
+          ? "failed"
+          : idleMs > settings.interruptedAfterMinutes * 60_000
+            ? "interrupted"
+            : "running";
+    return {
+      id: row.id,
+      createdAt: row.createdAt,
+      finishedAt: row.finishedAt,
+      state,
+      fileName: row.fileName,
+      format: row.format,
+      profile: isWooMapping(row.mapping) ? "woocommerce" : "generic",
+      userName: row.userName,
+      userEmail: row.userEmail,
+      rowCount: row.rowCount,
+      processedRows: row.processedRows,
+      counts: state === "completed" ? row.summary : null,
+      errorMessage: state === "failed" ? row.errorMessage : null,
+      hasReport: state === "completed" && row.hasReport,
+      reportUntil:
+        state === "completed" && row.hasReport && row.finishedAt
+          ? new Date(row.finishedAt.getTime() + settings.historyRetentionDays * 86_400_000)
+          : null,
+    };
+  }
+
+  /** Istoricul importurilor aplicate (ale tuturor utilizatorilor), cele mai noi întâi. Cere `products.write`. */
+  async listHistory(subject: PermissionSubject | null, page: number): Promise<ImportHistoryPage> {
+    assertCan(subject, "products.write");
+    await this.purgeReportDetails();
+    const settings = await this.limits();
+    const safePage = Number.isInteger(page) && page > 0 ? Math.min(page, 100_000) : 1;
+    const { rows, total } = await this.deps.store.listApplied({
+      skip: (safePage - 1) * HISTORY_PAGE_SIZE,
+      take: HISTORY_PAGE_SIZE,
+    });
+    return {
+      items: rows.map((row) => this.historyItem(row, settings)),
+      total,
+      page: safePage,
+      pageSize: HISTORY_PAGE_SIZE,
+      pageCount: Math.max(Math.ceil(total / HISTORY_PAGE_SIZE), 1),
+      retentionDays: settings.historyRetentionDays,
+    };
+  }
+
+  /** Un import din istoric, cu raportul final pe rânduri (dacă mai există). Cere `products.write`. */
+  async getHistory(
+    subject: PermissionSubject | null,
+    importId: string,
+  ): Promise<ImportHistoryDetail> {
+    assertCan(subject, "products.write");
+    await this.purgeReportDetails();
+    const settings = await this.limits();
+    const found = await this.deps.store.getApplied(importId);
+    if (!found) throw new ImportError("IMPORT_NOT_FOUND", "Importul nu există în istoric");
+    const item = this.historyItem(found.row, settings);
+    return {
+      item,
+      report: item.state === "completed" ? found.report : null,
+      retentionDays: settings.historyRetentionDays,
+    };
+  }
+
   /** Șterge importurile expirate (fișier + rând); se cheamă la fiecare încărcare nouă. */
   async purgeExpired(): Promise<number> {
     const expired = await this.deps.store.findExpired(this.now(), PURGE_BATCH);
@@ -340,6 +474,7 @@ export class ProductImportService {
   ): Promise<ImportAnalysis> {
     assertCan(subject, "products.write");
     const settings = await this.limits();
+    await this.purgeReportDetails().catch(() => undefined);
     await this.purgeExpired().catch((error: unknown) => {
       this.deps.logger.warn(
         { reason: error instanceof Error ? error.message : "necunoscut" },
@@ -550,6 +685,9 @@ export class ProductImportService {
         errorMessage: message,
         finishedAt: this.now(),
         storageKey: null,
+        expiresAt: new Date(
+          this.now().getTime() + (await this.limits()).historyRetentionDays * 86_400_000,
+        ),
       });
       await this.deleteFile(record.storageKey);
     };
@@ -650,16 +788,29 @@ export class ProductImportService {
     }
     const report = buildReport(plan, finalRows, counts);
 
+    // entitățile create de profilul WooCommerce (planificate minus cele care n-au putut fi create)
+    const created =
+      plan.woo && wooRun
+        ? {
+            categories: plan.woo.creations.categories.filter((c) => wooRun.categoryId.has(c.key))
+              .length,
+            brands: plan.woo.creations.brands.filter((b) => wooRun.brandId.has(b.key)).length,
+            attributes: plan.woo.creations.attributes.filter((a) => wooRun.attributeId.has(a.key))
+              .length,
+          }
+        : null;
     const finishedAt = this.now();
     await this.deps.store.update(record.id, {
       status: "completed",
       processedRows: plan.rows.length,
-      summary: counts,
+      summary: { ...counts, ...(created && { created }) },
       report,
       finishedAt,
       storageKey: null,
-      // raportul rămâne descărcabil încă `retentionHours`, apoi rândul se șterge
-      expiresAt: new Date(finishedAt.getTime() + (await this.limits()).retentionHours * 3_600_000),
+      // importul aplicat rămâne în istoric; raportul detaliat se păstrează `historyRetentionDays`
+      expiresAt: new Date(
+        finishedAt.getTime() + (await this.limits()).historyRetentionDays * 86_400_000,
+      ),
     });
     await this.deleteFile(record.storageKey);
 
@@ -677,6 +828,11 @@ export class ProductImportService {
         unchanged: counts.unchanged,
         skipped: counts.skipped,
         errors: counts.errors,
+        ...(created && {
+          createdCategories: created.categories,
+          createdBrands: created.brands,
+          createdAttributes: created.attributes,
+        }),
         background: record.status === "queued" || record.status === "running",
       },
     });
@@ -793,9 +949,26 @@ export class ProductImportService {
     importId: string,
   ): Promise<{ rows: string[][]; fileName: string }> {
     assertCan(subject, "products.write");
-    const record = await this.own(subject, importId);
-    const report = record.report;
-    if (!report) throw new ImportError("IMPORT_STATE_INVALID", "Importul nu are încă un raport");
+    // raportul unui import APLICAT e în istoric: îl poate descărca oricine are products.write; al unui import
+    // doar verificat rămâne al utilizatorului care l-a încărcat
+    const found = await this.deps.store.get(importId);
+    const applied =
+      found !== null && (APPLIED_STATUSES as readonly string[]).includes(found.status);
+    if (!found || (!applied && found.createdById !== subject.userId)) {
+      throw new ImportError("IMPORT_NOT_FOUND", "Importul nu există sau a expirat");
+    }
+    if (applied && found.status !== "completed") {
+      throw new ImportError("IMPORT_STATE_INVALID", "Importul nu are încă un raport final");
+    }
+    const report = found.report;
+    if (!report) {
+      throw new ImportError(
+        applied ? "IMPORT_REPORT_PURGED" : "IMPORT_STATE_INVALID",
+        applied
+          ? "Raportul detaliat a fost șters după perioada de păstrare; au rămas doar contoarele"
+          : "Importul nu are încă un raport",
+      );
+    }
     const rows: string[][] = [["Rând", "SKU", "Rezultat", "Motiv", "Câmpuri schimbate"]];
     for (const warning of report.fileWarnings) rows.push(["", "", "avertisment", warning, ""]);
     for (const entry of report.entries) {

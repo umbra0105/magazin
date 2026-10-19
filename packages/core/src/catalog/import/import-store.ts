@@ -56,6 +56,14 @@ export function isWooMapping(
 
 export type { WooPlanExtras };
 
+/** Contoarele unui import terminat, plus câte entități a creat (profilul WooCommerce). */
+export type ImportSummary = ImportCounts & {
+  created?: { categories: number; brands: number; attributes: number };
+};
+
+/** Stările în care un import a ajuns la aplicare (intră în istoric). */
+export const APPLIED_STATUSES = ["queued", "running", "completed", "failed"] as const;
+
 export interface ImportRecord {
   id: string;
   createdById: string | null;
@@ -70,13 +78,35 @@ export interface ImportRecord {
   planHash: string | null;
   rowCount: number;
   processedRows: number;
-  summary: ImportCounts | null;
+  summary: ImportSummary | null;
   report: ImportReport | null;
   errorMessage: string | null;
   expiresAt: Date;
   startedAt: Date | null;
   finishedAt: Date | null;
   createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Un rând din istoric: fără raportul detaliat (greu), cu utilizatorul și dacă detaliul mai există. */
+export interface ImportHistoryRow {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  status: ImportStatus;
+  fileName: string;
+  format: ImportFormat;
+  mapping: ImportMappingRecord | null;
+  rowCount: number;
+  processedRows: number;
+  summary: ImportSummary | null;
+  errorMessage: string | null;
+  userName: string | null;
+  userEmail: string | null;
+  /** Raportul detaliat pe rânduri mai există (nu a fost purjat). */
+  hasReport: boolean;
 }
 
 export interface NewImport {
@@ -117,8 +147,17 @@ export interface ProductImportStore {
   /** Trece starea de la una din `from` la `to`, ATOMIC; `false` dacă altcineva a schimbat-o între timp. */
   transition(id: string, from: readonly ImportStatus[], to: ImportStatus): Promise<boolean>;
   delete(id: string): Promise<void>;
-  /** Importurile expirate (care nu rulează), cu fișierul lor. */
+  /** Importurile neaplicate (doar încărcate sau verificate) expirate, cu fișierul lor. Cele aplicate NU expiră: sunt istoric. */
   findExpired(now: Date, limit: number): Promise<{ id: string; storageKey: string | null }[]>;
+  /** Istoricul: importurile care au ajuns la aplicare, cele mai noi întâi. */
+  listApplied(page: {
+    skip: number;
+    take: number;
+  }): Promise<{ rows: ImportHistoryRow[]; total: number }>;
+  /** Un import aplicat (al oricărui utilizator), cu raportul lui dacă mai există. */
+  getApplied(id: string): Promise<{ row: ImportHistoryRow; report: ImportReport | null } | null>;
+  /** Șterge raportul detaliat al importurilor aplicate al căror termen de păstrare a trecut; sumarul rămâne. */
+  purgeReports(now: Date): Promise<number>;
   loadSnapshot(lookups: {
     skus: readonly string[];
     slugs: readonly string[];
@@ -154,6 +193,43 @@ const toRecord = (row: Row): ImportRecord => ({
   startedAt: row.startedAt,
   finishedAt: row.finishedAt,
   createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
+});
+
+type HistorySelected = {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  status: string;
+  fileName: string;
+  format: string;
+  mapping: Prisma.JsonValue | null;
+  rowCount: number;
+  processedRows: number;
+  summary: Prisma.JsonValue | null;
+  errorMessage: string | null;
+  createdBy: { name: string; email: string } | null;
+};
+
+const toHistoryRow = (row: HistorySelected, hasReport: boolean): ImportHistoryRow => ({
+  id: row.id,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
+  startedAt: row.startedAt,
+  finishedAt: row.finishedAt,
+  status: row.status as ImportStatus,
+  fileName: row.fileName,
+  format: row.format as ImportFormat,
+  mapping: row.mapping as ImportMappingRecord | null,
+  rowCount: row.rowCount,
+  processedRows: row.processedRows,
+  summary: row.summary as ImportSummary | null,
+  errorMessage: row.errorMessage,
+  userName: row.createdBy?.name ?? null,
+  userEmail: row.createdBy?.email ?? null,
+  hasReport,
 });
 
 const jsonValue = (value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull =>
@@ -217,11 +293,93 @@ export function createPrismaProductImportStore(db: Db): ProductImportStore {
 
     async findExpired(now, limit) {
       return db.productImport.findMany({
-        where: { expiresAt: { lt: now }, status: { notIn: ["running", "queued"] } },
+        where: { expiresAt: { lt: now }, status: { in: ["uploaded", "validated"] } },
         orderBy: { expiresAt: "asc" },
         take: limit,
         select: { id: true, storageKey: true },
       });
+    },
+
+    async listApplied({ skip, take }) {
+      const where = { status: { in: [...APPLIED_STATUSES] } };
+      const [total, rows] = await Promise.all([
+        db.productImport.count({ where }),
+        db.productImport.findMany({
+          where,
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          skip,
+          take,
+          select: {
+            id: true,
+            createdAt: true,
+            updatedAt: true,
+            startedAt: true,
+            finishedAt: true,
+            status: true,
+            fileName: true,
+            format: true,
+            mapping: true,
+            rowCount: true,
+            processedRows: true,
+            summary: true,
+            errorMessage: true,
+            createdBy: { select: { name: true, email: true } },
+          },
+        }),
+      ]);
+      // raportul detaliat e greu: nu se aduce în listă, doar dacă mai există
+      const purged = new Set(
+        (
+          await db.productImport.findMany({
+            where: { id: { in: rows.map((r) => r.id) }, report: { equals: Prisma.DbNull } },
+            select: { id: true },
+          })
+        ).map((r) => r.id),
+      );
+      return {
+        total,
+        rows: rows.map((row) => toHistoryRow(row, !purged.has(row.id))),
+      };
+    },
+
+    async getApplied(id) {
+      const row = await db.productImport.findFirst({
+        where: { id, status: { in: [...APPLIED_STATUSES] } },
+        select: {
+          id: true,
+          createdAt: true,
+          updatedAt: true,
+          startedAt: true,
+          finishedAt: true,
+          status: true,
+          fileName: true,
+          format: true,
+          mapping: true,
+          rowCount: true,
+          processedRows: true,
+          summary: true,
+          errorMessage: true,
+          report: true,
+          createdBy: { select: { name: true, email: true } },
+        },
+      });
+      if (!row) return null;
+      return {
+        row: toHistoryRow(row, row.report !== null),
+        report: (row.report as ImportReport | null) ?? null,
+      };
+    },
+
+    async purgeReports(now) {
+      const result = await db.productImport.updateMany({
+        where: {
+          status: { in: ["completed", "failed"] },
+          expiresAt: { lt: now },
+          report: { not: Prisma.DbNull },
+        },
+        data: { report: Prisma.DbNull },
+      });
+      return result.count;
     },
 
     async loadSnapshot({ skus, slugs }) {

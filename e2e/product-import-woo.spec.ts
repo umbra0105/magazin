@@ -194,6 +194,40 @@ test.describe("import WooCommerce", () => {
     await expect(page.locator("[data-import-apply]")).toBeDisabled();
   });
 
+  test("istoric: importul WooCommerce aplicat apare cu profilul și entitățile create; costul din fișier nu apare în istoric, detalii sau CSV", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    const tag = randomBytes(3).toString("hex");
+    const fileName = `e2e-${tag}-woo-istoric.csv`;
+    await login(page, owner, "/admin/produse/import");
+    await upload(page, fileName, Buffer.from(wooCsv(syntheticWooRows())), true);
+    await page.locator("[data-import-check]").click();
+    await page.locator("[data-import-apply]").click();
+    await page.locator("[data-import-confirm]").click();
+    await expect(page.locator("[data-import-done]")).toBeVisible();
+
+    await page.goto("/admin/produse/import/istoric");
+    const row = page.locator("[data-history-row]").filter({ hasText: fileName });
+    await expect(row).toContainText("WooCommerce");
+    await expect(row.locator("[data-history-created]")).toContainText(
+      "6 categorii, 2 branduri, 1 atribute",
+    );
+    await expect(row.locator("[data-history-counts]")).toContainText("7 noi");
+    await expect(page.locator("body")).not.toContainText(WOO_COST_SENTINEL);
+
+    await row.locator("[data-history-details]").click();
+    await expect(page.locator("[data-woo-create]").first()).toBeVisible();
+    await expect(page.locator("[data-woo-report]")).toContainText("Accesorii, diverse");
+    await expect(page.locator("body")).not.toContainText(WOO_COST_SENTINEL);
+    const href = await page.locator("[data-import-download]").getAttribute("href");
+    const body = await (await page.request.get(href as string)).text();
+    expect(body).not.toContain(WOO_COST_SENTINEL);
+    expect(body).not.toContain("7654321");
+  });
+
   test("opțiunea «păstrează starea din fișier» activează produsul publicat la reimport; implicit rămâne ciornă", async ({
     page,
     request,

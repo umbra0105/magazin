@@ -108,7 +108,11 @@ export function breadcrumbsFor(
   homeLabel: string,
   entries: readonly AdminNavEntry[] = ADMIN_NAV,
   /** Eticheta unui segment după secțiune (ex. „nou”, un id); `null` = afișat decodat. */
-  segmentLabel?: (sectionId: AdminNavIcon | null, raw: string) => string | null,
+  segmentLabel?: (
+    sectionId: AdminNavIcon | null,
+    raw: string,
+    previous: string | null,
+  ) => string | null,
 ): Crumb[] {
   const path = pathname.split(/[?#]/)[0] ?? "";
   const segments = path.split("/").filter(Boolean);
@@ -121,7 +125,8 @@ export function breadcrumbsFor(
     consumed = section.href.split("/").filter(Boolean).length;
   }
   let href = `/${segments.slice(0, consumed).join("/")}`;
-  for (const raw of segments.slice(consumed)) {
+  const rest = segments.slice(consumed);
+  for (const [index, raw] of rest.entries()) {
     href += `/${raw}`;
     let label = raw;
     try {
@@ -129,7 +134,10 @@ export function breadcrumbsFor(
     } catch {
       // segment cu % invalid: îl afișăm cum e
     }
-    crumbs.push({ label: segmentLabel?.(section?.id ?? null, raw) ?? label, href });
+    crumbs.push({
+      label: segmentLabel?.(section?.id ?? null, raw, rest[index - 1] ?? null) ?? label,
+      href,
+    });
   }
   const last = crumbs[crumbs.length - 1];
   if (last) last.href = null;

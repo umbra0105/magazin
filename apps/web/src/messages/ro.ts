@@ -1216,6 +1216,120 @@ export const ro = {
       },
     },
     productImport: {
+      history: {
+        title: "Istoric importuri",
+        openLink: "Istoric importuri",
+        back: "← Înapoi la import",
+        description:
+          "Importurile care au ajuns la aplicare, cele mai noi întâi. Un import doar verificat sau anulat nu apare aici: nu a schimbat nimic.",
+        tabsLabel: "Istoricul",
+        tabs: { imports: "Importuri", exports: "Exporturi" },
+        retention: (days: number) =>
+          `Raportul detaliat pe rânduri se păstrează ${days} de zile; după aceea rămân doar contoarele. Fișierul original nu se păstrează.`,
+        empty: "Niciun import aplicat încă.",
+        columns: {
+          date: "Data",
+          user: "Utilizator",
+          file: "Fișier",
+          profile: "Profil",
+          state: "Stare",
+          rows: "Rânduri",
+          result: "Rezultat",
+          actions: "Acțiuni",
+        },
+        profiles: { generic: "Generic", woocommerce: "WooCommerce" } as Record<string, string>,
+        states: {
+          running: "În curs",
+          completed: "Aplicat",
+          failed: "Eșuat",
+          interrupted: "Întrerupt",
+        } as Record<string, string>,
+        unknownUser: "(cont șters)",
+        progress: (done: number, total: number) => `${done} din ${total}`,
+        interrupted: (done: number, total: number) =>
+          `S-au aplicat cel puțin ${done} din ${total} rânduri înainte de întrerupere. Reverifică importul: rândurile deja aplicate apar ca «neschimbate».`,
+        failed: (message: string) => `Motiv: ${message}`,
+        counts: {
+          new: "noi",
+          updated: "actualizate",
+          unchanged: "neschimbate",
+          skipped: "ignorate",
+          errors: "cu erori",
+        } as Record<string, string>,
+        created: (categories: number, brands: number, attributes: number) =>
+          `Create: ${categories} categorii, ${brands} branduri, ${attributes} atribute`,
+        purged: "detaliu șters",
+        details: "Detalii",
+        pagination: {
+          label: "Paginare istoric",
+          previous: "Anterioara",
+          next: "Următoarea",
+          pageOf: (page: number, count: number) => `Pagina ${page} din ${count}`,
+        },
+        detail: {
+          breadcrumb: "Detalii import",
+          title: (file: string) => `Import: ${file}`,
+          back: "← Înapoi la istoric",
+          summary: {
+            date: "Pornit",
+            finished: "Terminat",
+            user: "Utilizator",
+            profile: "Profil",
+            format: "Format",
+            rows: "Rânduri în fișier",
+          },
+          purged: (days: number) =>
+            `Raportul detaliat a fost șters după ${days} de zile; au rămas doar contoarele de mai sus.`,
+          noFinalReport:
+            "Importul nu are un raport final (nu s-a terminat). Contoarele și rândurile apar doar la importurile aplicate până la capăt.",
+          until: (date: string) => `Raportul detaliat se păstrează până la ${date}.`,
+          filterLabel: "Arată",
+          filters: {
+            all: "Toate",
+            error: "Cu erori",
+            skipped: "Ignorate",
+            new: "Noi",
+            updated: "Actualizate",
+          } as Record<string, string>,
+          shown: (shown: number, total: number) =>
+            shown === total
+              ? total === 1
+                ? "1 rând"
+                : `${total} rânduri`
+              : `Primele ${shown} din ${total} rânduri`,
+          noRows: "Niciun rând pentru acest filtru.",
+          download: "Descarcă raportul (CSV)",
+        },
+        exports: {
+          title: "Exporturi de produse",
+          description:
+            "Ultimele exporturi, din jurnalul de audit. Conțin doar numere (rânduri, produse), niciodată valori din catalog.",
+          empty: "Niciun export încă.",
+          forbidden: "Istoricul exporturilor cere permisiunea de export de produse.",
+          columns: {
+            date: "Data",
+            user: "Utilizator",
+            scope: "Domeniu",
+            format: "Format",
+            rows: "Rânduri",
+            state: "Stare",
+          },
+          scopes: {
+            selection: "Produsele selectate",
+            filters: "Filtrele curente",
+            all: "Tot catalogul",
+          } as Record<string, string>,
+          states: {
+            downloaded: "Descărcat",
+            interrupted: "Întrerupt",
+            refused: "Refuzat",
+          } as Record<string, string>,
+          trash: "cu coșul de gunoi",
+          filtered: "cu filtre",
+          rowsAndProducts: (rows: number, products: number) =>
+            `${rows} ${rows === 1 ? "rând" : "rânduri"}, ${products} ${products === 1 ? "produs" : "produse"}`,
+        },
+      },
       title: "Import de produse",
       description:
         "Importă sau actualizează produse dintr-un fișier CSV sau XLSX: încarci fișierul, mapezi coloanele, verifici (fără nicio modificare), apoi aplici.",

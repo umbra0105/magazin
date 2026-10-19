@@ -162,6 +162,15 @@ export const settingGroups = {
     syncMaxRows: z.number().int().min(1).max(1000).default(100),
     /** Cât timp rămâne un import (fișierul neaplicat, apoi raportul) înainte să fie șters. */
     retentionHours: z.number().int().min(1).max(168).default(24),
+    /**
+     * Cât timp se păstrează RAPORTUL DETALIAT al unui import aplicat (în istoric), în zile. După aceea se
+     * șterge detaliul pe rânduri; sumarul (contoarele, utilizatorul, fișierul) rămâne.
+     */
+    historyRetentionDays: z.number().int().min(7).max(3650).default(180),
+    /** Un import care rulează și nu a mai avansat de atâtea minute apare în istoric ca «întrerupt». */
+    interruptedAfterMinutes: z.number().int().min(5).max(1440).default(30),
+    /** Descărcări de rapoarte de import per utilizator în fereastră (contor separat de încărcări). */
+    reportDownloadMaxAttempts: z.number().int().min(1).max(10_000).default(60),
     /** Încărcări de fișiere de import per utilizator în fereastră (contor separat). */
     uploadMaxAttempts: z.number().int().min(1).max(10_000).default(20),
     uploadWindowMinutes: z.number().int().min(1).max(1440).default(10),

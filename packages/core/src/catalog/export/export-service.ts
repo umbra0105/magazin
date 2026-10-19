@@ -100,8 +100,58 @@ const STOCK_LABELS: Record<string, string> = {
   onbackorder: "La comandă",
 };
 
+/** Un export din istoric (citit din evenimentele de audit `product.export`; doar numere, fără valori din catalog). */
+export interface ExportHistoryItem {
+  id: string;
+  at: Date;
+  actorLabel: string | null;
+  /** `downloaded` = exportul a curs până la capăt; `interrupted` = întrerupt sau eșuat; `refused` = refuzat. */
+  state: "downloaded" | "interrupted" | "refused";
+  format: string | null;
+  scope: string | null;
+  rows: number | null;
+  products: number | null;
+  includeTrash: boolean;
+  filtered: boolean;
+  /** Motivul unui refuz sau al unei întreruperi (cod scurt, nu valori). */
+  reason: string | null;
+}
+
 export class ProductExportService {
   constructor(private readonly deps: ProductExportDeps) {}
+
+  /** Ultimele exporturi (cele mai noi întâi), din jurnalul de audit. Cere `products.export`. */
+  async history(subject: PermissionSubject | null, limit = 100): Promise<ExportHistoryItem[]> {
+    assertCan(subject, "products.export");
+    const rows = await this.deps.audit.list({ entity: "product_export", limit });
+    return rows
+      .filter((row) => row.action === "product.export")
+      .map((row): ExportHistoryItem => {
+        const after = (row.after ?? {}) as Record<string, unknown>;
+        const text = (key: string): string | null =>
+          typeof after[key] === "string" ? (after[key] as string) : null;
+        const num = (key: string): number | null =>
+          typeof after[key] === "number" ? (after[key] as number) : null;
+        return {
+          id: row.id,
+          at: row.createdAt,
+          actorLabel: row.actorLabel,
+          state:
+            row.outcome === "success"
+              ? "downloaded"
+              : row.outcome === "denied"
+                ? "refused"
+                : "interrupted",
+          format: text("format"),
+          scope: text("scope"),
+          rows: num("rows"),
+          products: num("products"),
+          includeTrash: after["includeTrash"] === true,
+          filtered: after["filtered"] === true,
+          reason: text("reason"),
+        };
+      });
+  }
 
   /**
    * Verifică permisiunea și cererea, numără rândurile, refuză exporturile goale sau peste limită, apoi

@@ -16,8 +16,11 @@ export function Breadcrumbs() {
     (id) => m.nav[id],
     m.home,
     undefined,
-    (section, raw) => {
+    (section, raw, previous) => {
       if (section !== "products") return null;
+      // /admin/produse/import/istoric și /admin/produse/import/istoric/<id>
+      if (raw === "istoric" && previous === "import") return m.productImport.history.title;
+      if (previous === "istoric") return m.productImport.history.detail.breadcrumb;
       // /admin/produse/nou și /admin/produse/<id>: etichete, nu cuvântul „nou” sau id-ul tehnic
       if (raw === "import") return m.productImport.title;
       return raw === "nou" ? m.products.editor.createTitle : m.products.editor.breadcrumbEdit;
