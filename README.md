@@ -9,12 +9,12 @@ Specificațiile proiectului sunt în [`docs/`](docs/README.md). Regulile de lucr
 
 ## Cerințe
 
-| Unealtă        | Versiune                                       |
-| -------------- | ---------------------------------------------- |
-| Node.js        | 24 LTS (`.nvmrc`)                              |
-| pnpm           | 12 (versiunea exactă e în `package.json`)      |
-| Docker Desktop | pentru Postgres, Redis, MinIO și Mailpit local |
-| Git            | orice versiune recentă                         |
+| Unealtă        | Versiune                                                           |
+| -------------- | ------------------------------------------------------------------ |
+| Node.js        | 24 LTS, minim 24.7.0 (`.nvmrc`; parolele folosesc `crypto.argon2`) |
+| pnpm           | 12 (versiunea exactă e în `package.json`)                          |
+| Docker Desktop | pentru Postgres, Redis, MinIO și Mailpit local                     |
+| Git            | orice versiune recentă                                             |
 
 ## Pornire locală de la zero
 

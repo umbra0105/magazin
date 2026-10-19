@@ -9,7 +9,7 @@ pe mai multe instalări; branding, conținut și integrări diferă prin setări
 
 ## Stack
 
-- Node.js 24 LTS, pnpm
+- Node.js 24 LTS (minim 24.7.0: parolele folosesc `crypto.argon2` din Node), pnpm
 - Next.js 15 App Router, TypeScript strict, React Server Components
 - PostgreSQL + Prisma, Redis (cache/sesiuni/cozi), BullMQ
 - Tailwind CSS + shadcn/ui, React Hook Form + Zod

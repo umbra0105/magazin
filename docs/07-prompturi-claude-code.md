@@ -39,8 +39,8 @@ Inițializează monorepo-ul conform structurii din docs/01-arhitectura-si-decizi
 
 Cerințe:
 - pnpm workspaces + Turborepo
-- Node.js 24 LTS: fișier `.nvmrc` cu `24`, câmpul `engines.node` (`>=24`) și
-  `packageManager` (pnpm) în package.json, `node-version: 24` în GitHub Actions,
+- Node.js 24 LTS: fișier `.nvmrc` cu `lts/krypton`, câmpul `engines.node` (`>=24.7.0`, pentru `crypto.argon2`) și
+  `packageManager` (pnpm) în package.json, `node-version: ">=24.7.0 <25"` în GitHub Actions,
   imagini Docker `node:24-*` (Node 20 e end-of-life)
 - apps/web: Next.js 15, App Router, TypeScript strict, Tailwind, shadcn/ui inițializat
 - packages: db, core, ui, integrations, jobs, config, shared (cu package.json și tsconfig corecte)

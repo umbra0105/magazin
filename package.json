@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@12.10.1",
   "engines": {
-    "node": ">=24"
+    "node": ">=24.7.0"
   },
   "scripts": {
     "dev": "node scripts/in.mjs apps/web node_modules/next/dist/bin/next dev",
