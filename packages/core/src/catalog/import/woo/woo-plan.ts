@@ -1,4 +1,10 @@
 import { createHash } from "node:crypto";
+import {
+  IMAGE_URL_REJECTION_MESSAGES,
+  checkImageUrl,
+  parseImageUrl,
+  splitImageCell,
+} from "../../../media/image-url";
 import { parseDecimalInput } from "@ecom/shared/decimal";
 import { MAX_CATEGORY_DEPTH } from "../../category-tree";
 import { SHIPPING_CLASSES, type ShippingClass } from "../../constants";
@@ -33,6 +39,7 @@ import type {
   WooAttributeDef,
   WooAttributeDraft,
   WooContext,
+  WooImagePlan,
   WooCreateOp,
   WooCreations,
   WooOptions,
@@ -103,7 +110,17 @@ export const DEFAULT_WOO_OPTIONS: WooOptions = {
     standard: "standard",
   },
   attributeTargets: {},
+  importImages: false,
 };
+
+/** Motivele respingerii unei imagini la verificare (fără rețea), în română. */
+export const WOO_IMAGE_MESSAGES: Readonly<Record<string, string>> = {
+  ...IMAGE_URL_REJECTION_MESSAGES,
+  too_many_for_product: "prea multe imagini pe produs",
+  too_many_for_import: "prea multe imagini în import",
+};
+
+const sha256Hex = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 const shortValue = (raw: string): string => (raw.length > 30 ? `${raw.slice(0, 30)}…` : raw);
 
@@ -209,10 +226,37 @@ export function planWoo(
       `Coloana «${shortValue(blocked)}» pare de cost sau de furnizor și nu se citește (prețul de achiziție nu se importă niciodată).`,
     );
   }
-  const imageColumns = columns.ignored.filter((c) => c.reason.startsWith("imaginile"));
+  const imageColumns = columns.ignored.filter((c) => c.reason.startsWith("coloană de imagini"));
   if (imageColumns.length > 0) {
     fileWarnings.push(
-      `Coloana de imagini (${imageColumns.map((c) => `«${shortValue(c.header)}»`).join(", ")}) a fost ignorată: imaginile se importă separat.`,
+      `Coloane de imagini în plus (${imageColumns.map((c) => `«${shortValue(c.header)}»`).join(", ")}) au fost ignorate: se citește doar prima.`,
+    );
+  }
+  // imaginile se descarcă în fundal, după produse, doar la cerere și doar cu dreptul de media
+  const imagePolicy = options.importImages ? ctx.images : null;
+  const imagePlan: WooImagePlan = {
+    enabled: imagePolicy !== null && columns.roles.images !== undefined,
+    tasks: [],
+    issues: [],
+    stats: {
+      total: 0,
+      accepted: 0,
+      rejected: 0,
+      alreadyInLibrary: 0,
+      alreadyAttached: 0,
+      ignoredOnVariations: 0,
+      byHost: {},
+      rejectedByReason: {},
+    },
+  };
+  if (columns.roles.images !== undefined && ctx.images === null) {
+    // lipsa dreptului are prioritate: contul nu poate porni opțiunea, deci explicația corectă e cea despre drept
+    fileWarnings.push(
+      "Imaginile nu se importă: contul nu are dreptul de a încărca fișiere în biblioteca media (media.write).",
+    );
+  } else if (columns.roles.images !== undefined && !options.importImages) {
+    fileWarnings.push(
+      "Coloana «Imagini» nu se importă: opțiunea de import al imaginilor e oprită.",
     );
   }
   const stockColumns = columns.ignored.filter((c) => c.reason.startsWith("stocul"));
@@ -681,6 +725,79 @@ export function planWoo(
     return wanted;
   }
 
+  // ---------------------------------------------------------------- imagini (fără nicio cerere de rețea)
+  /**
+   * Adresele din coloana «Imagini» a unui produs: se parsează și trec prin regulile fără rețea (https, port,
+   * sintaxă, listă de domenii). Cele acceptate devin sarcini pentru fundal; cele respinse apar în raport cu
+   * motivul, FĂRĂ adresa completă. Nu se face nicio cerere în rețea.
+   */
+  function planImages(r: RowInfo, productSku: string, productId: string | null): void {
+    if (!imagePolicy || columns.roles.images === undefined) return;
+    const cell = at(r.cells, "images");
+    if (!cell) return;
+    const attached = productId ? extras.productMedia.get(productId) : undefined;
+    const seen = new Set<string>();
+    let accepted = 0;
+    const stats = imagePlan.stats;
+    const reject = (reason: string, host: string | null, index: number, raw: string): void => {
+      stats.rejected += 1;
+      stats.rejectedByReason[reason] = (stats.rejectedByReason[reason] ?? 0) + 1;
+      imagePlan.issues.push({
+        row: r.row,
+        sku: productSku,
+        position: index,
+        host,
+        reason,
+        rawHash: sha256Hex(raw),
+      });
+      // lista goală de domenii se spune o singură dată (mesaj de fișier), nu pe fiecare imagine
+      if (reason !== "no_hosts_configured") {
+        warn(
+          r,
+          `Imagine ${index + 1}${host ? ` (${host})` : ""}: ${WOO_IMAGE_MESSAGES[reason] ?? "adresă respinsă"}`,
+        );
+      }
+    };
+    splitImageCell(cell).forEach((raw, index) => {
+      stats.total += 1;
+      if (accepted >= imagePolicy.maxImagesPerProduct) {
+        return reject("too_many_for_product", null, index, raw);
+      }
+      if (stats.accepted >= imagePolicy.maxImagesPerImport) {
+        return reject("too_many_for_import", null, index, raw);
+      }
+      const check = checkImageUrl(raw, imagePolicy);
+      if (!check.ok) return reject(check.reason, check.host, index, raw);
+      if (seen.has(check.sourceHash)) return; // aceeași adresă de două ori pe produs: o singură dată
+      seen.add(check.sourceHash);
+      stats.accepted += 1;
+      stats.byHost[check.host] = (stats.byHost[check.host] ?? 0) + 1;
+      const mediaId = extras.mediaBySourceHash.get(check.sourceHash);
+      if (mediaId && attached?.has(mediaId)) {
+        stats.alreadyAttached += 1; // deja în produs: nimic de făcut
+      } else {
+        if (mediaId) stats.alreadyInLibrary += 1;
+        imagePlan.tasks.push({
+          row: r.row,
+          sku: productSku,
+          position: accepted,
+          url: check.href,
+          sourceHash: check.sourceHash,
+          host: check.host,
+        });
+      }
+      accepted += 1;
+    });
+  }
+
+  /** Imaginile de pe rândurile de variație nu se importă: se spune explicit, o dată pe rând. */
+  function ignoreVariationImages(kid: RowInfo): void {
+    if (!imagePolicy || columns.roles.images === undefined) return;
+    if (!at(kid.cells, "images")) return;
+    imagePlan.stats.ignoredOnVariations += 1;
+    warn(kid, "Imagini: la variații se ignoră; se folosesc imaginile produsului variabil");
+  }
+
   // ---------------------------------------------------------------- planificarea efectivă
   const planned = new Map<number, PlannedRow>();
   const emit = (
@@ -917,6 +1034,7 @@ export function planWoo(
     const product = productLevel(r, isNew);
     const variant = variantLevel(r, isNew);
     if (hasError(r)) return failRow(r);
+    planImages(r, r.sku, existing?.productId ?? null);
 
     if (existing) {
       const prod = productPatch(existing.product, existing.productId, product, new Set(), r);
@@ -956,6 +1074,7 @@ export function planWoo(
       return failRow(parent);
     }
     stats.variations += kids.length;
+    for (const kid of kids) ignoreVariationImages(kid);
     // opțiunile de variație = atributele care apar pe variații
     const variationNames = new Set<string>();
     const kidSelections = new Map<number, { option: string; value: string }[]>();
@@ -1061,6 +1180,7 @@ export function planWoo(
           err(parent, "Produsul variabil nu se creează: una dintre variații are erori");
         return failRow(parent);
       }
+      planImages(parent, kids[0]?.sku ?? parent.sku, null);
       const op: WooCreateOp = {
         kind: "woo-create",
         product: draftOf(product),
@@ -1138,6 +1258,7 @@ export function planWoo(
       emit(kid, "updated", op, vari.changed);
     }
     if (hasError(parent)) return failRow(parent);
+    planImages(parent, anyExisting.sku, anyExisting.productId);
     if (prod.changed.length === 0) return emit(parent, "unchanged");
     const op: WooUpdateOp = {
       ...prod.op,
@@ -1249,7 +1370,13 @@ export function planWoo(
 
   const fingerprint = createHash("sha256")
     .update(
-      JSON.stringify([ordered.map((r) => [r.row, r.sku, r.outcome, r.op]), finalCreations, refs]),
+      JSON.stringify([
+        ordered.map((r) => [r.row, r.sku, r.outcome, r.op]),
+        finalCreations,
+        refs,
+        imagePlan.tasks,
+        imagePlan.issues.map((i) => [i.row, i.position, i.reason, i.rawHash]),
+      ]),
     )
     .digest("hex");
 
@@ -1259,6 +1386,7 @@ export function planWoo(
     fileWarnings,
     fingerprint,
     woo: {
+      images: imagePlan,
       creations: finalCreations,
       refs,
       stats,
@@ -1270,7 +1398,11 @@ export function planWoo(
 }
 
 /** SKU-urile și ID-urile din fișier (și țintele relațiilor), ca să se încarce din catalog doar ce trebuie. */
-export function collectWooLookups(table: ParsedTable): { skus: string[]; legacyIds: string[] } {
+export function collectWooLookups(table: ParsedTable): {
+  skus: string[];
+  legacyIds: string[];
+  imageHashes: string[];
+} {
   const columns = detectWooColumns(table.headers);
   const cell = (cells: readonly string[], role: WooRole): string => {
     const index = columns.roles[role];
@@ -1278,12 +1410,17 @@ export function collectWooLookups(table: ParsedTable): { skus: string[]; legacyI
   };
   const skus = new Set<string>();
   const legacyIds = new Set<string>();
+  const imageHashes = new Set<string>();
   for (const cells of table.rows) {
     const id = cell(cells, "id");
     const sku = cell(cells, "sku");
     if (sku) skus.add(sku);
     else if (id) skus.add(`WC-${id}`);
     if (id) legacyIds.add(id);
+    for (const raw of splitImageCell(cell(cells, "images"))) {
+      const parsed = parseImageUrl(raw, 4000);
+      if (parsed.ok) imageHashes.add(parsed.sourceHash);
+    }
     for (const role of ["upsells", "crossSells"] as const) {
       for (const token of splitWooList(cell(cells, role))) {
         const idRef = /^id:(\d+)$/i.exec(token);
@@ -1292,5 +1429,5 @@ export function collectWooLookups(table: ParsedTable): { skus: string[]; legacyI
       }
     }
   }
-  return { skus: [...skus], legacyIds: [...legacyIds] };
+  return { skus: [...skus], legacyIds: [...legacyIds], imageHashes: [...imageHashes] };
 }

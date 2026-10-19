@@ -56,6 +56,67 @@ export function WooOptionsPanel({
         </p>
       </fieldset>
 
+      {analysis.images.hasColumn && (
+        <fieldset className="flex flex-col gap-2" data-woo-images>
+          <legend className="mb-1 text-sm font-semibold">{m.images.heading}</legend>
+          <p className="text-sm">
+            {m.images.found(
+              analysis.images.total,
+              analysis.images.onAllowedHosts,
+              analysis.images.onOtherHosts,
+              analysis.images.invalid,
+            )}
+          </p>
+          {analysis.images.hosts.length > 0 && (
+            <div>
+              <h3 className="text-xs font-medium text-muted-foreground">{m.images.hostsHeading}</h3>
+              <ul className="list-disc pl-5 text-sm" data-woo-image-hosts>
+                {analysis.images.hosts.map((host) => (
+                  <li key={host.host} data-image-host={host.host} data-allowed={host.allowed}>
+                    {m.images.hostLine(host.host, host.count, host.allowed)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {!analysis.images.canImport ? (
+            <p
+              role="note"
+              className="rounded-md border border-border p-3 text-sm"
+              data-images-no-right
+            >
+              {m.images.noRight}
+            </p>
+          ) : (
+            <>
+              {analysis.images.allowedHosts.length === 0 && (
+                <p
+                  role="note"
+                  className="rounded-md border border-danger p-3 text-sm"
+                  data-images-no-hosts
+                >
+                  {m.images.noHosts}
+                </p>
+              )}
+              <label className="flex items-start gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 shrink-0 accent-primary"
+                  checked={options.importImages}
+                  onChange={(event) => update({ importImages: event.target.checked })}
+                  aria-describedby="woo-images-help"
+                  data-woo-import-images
+                />
+                <span>{m.images.checkbox}</span>
+              </label>
+              <p id="woo-images-help" className="pl-6 text-xs text-muted-foreground">
+                {m.images.help}
+              </p>
+            </>
+          )}
+        </fieldset>
+      )}
+
       <fieldset className="grid gap-3 sm:grid-cols-2">
         <legend className="mb-1 text-sm font-semibold">{m.units.heading}</legend>
         <div className="flex flex-col gap-1">
@@ -257,6 +318,96 @@ function withoutKey<V extends string>(
   return next;
 }
 
+/** Imaginile din fișier, fără nicio adresă completă: câte, de pe ce domenii, ce se respinge și de ce. */
+function WooImageReport({ images }: { images: NonNullable<WooReportSection["images"]> }) {
+  const r = m.report.images;
+  const { stats } = images;
+  const extra = Object.entries(stats).filter(
+    ([key, value]) => typeof value === "number" && value > 0 && key in r.stats,
+  ) as [string, number][];
+  return (
+    <div className="flex flex-col gap-2" data-woo-images-report>
+      <h4 className="text-sm font-medium">{r.heading}</h4>
+      {!images.enabled ? (
+        <p className="text-sm text-muted-foreground">{r.off}</p>
+      ) : (
+        <>
+          <p className="text-sm" data-images-summary>
+            {r.summary(stats.total, stats.accepted, stats.rejected)}
+          </p>
+          {extra.length > 0 && (
+            <ul className="list-disc pl-5 text-sm">
+              {extra.map(([key, value]) => (
+                <li key={key} data-images-stat={key}>
+                  {r.stats[key]}: {value}
+                </li>
+              ))}
+            </ul>
+          )}
+          {Object.keys(stats.byHost).length > 0 && (
+            <div>
+              <h5 className="text-xs font-medium text-muted-foreground">{r.hostsHeading}</h5>
+              <ul className="list-disc pl-5 text-sm" data-images-hosts>
+                {Object.entries(stats.byHost).map(([host, count]) => (
+                  <li key={host}>
+                    {host}: {count}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {Object.keys(stats.rejectedByReason).length > 0 && (
+            <div>
+              <h5 className="text-xs font-medium text-muted-foreground">{r.reasonsHeading}</h5>
+              <ul className="list-disc pl-5 text-sm" data-images-rejected>
+                {Object.entries(stats.rejectedByReason).map(([reason, count]) => (
+                  <li key={reason} data-images-reason={reason}>
+                    {r.reasons[reason] ?? reason}: {count}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {images.issues.length > 0 && (
+            <details className="rounded-md border border-border p-2 text-sm">
+              <summary className="cursor-pointer font-medium">{r.issuesHeading}</summary>
+              <div className="mt-2 overflow-x-auto">
+                <table className="w-full min-w-[28rem] text-left text-sm" data-images-issues>
+                  <thead className="border-b border-border">
+                    <tr>
+                      {[r.row, r.sku, r.host, r.reason].map((label) => (
+                        <th key={label} scope="col" className="p-1 font-medium">
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {images.issues.map((issue, index) => (
+                      <tr
+                        key={`${issue.row}-${index}`}
+                        className="border-b border-border last:border-0"
+                      >
+                        <td className="p-1">{issue.row}</td>
+                        <td className="p-1 break-all">{issue.sku || "—"}</td>
+                        <td className="p-1 break-all">{issue.host ?? "—"}</td>
+                        <td className="p-1">{issue.message}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {images.issuesTruncated && (
+                <p className="mt-1 text-xs text-muted-foreground">{r.truncated}</p>
+              )}
+            </details>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Ce creează importul WooCommerce și constatările lui, în raport (la verificare și după aplicare). */
 export function WooReportExtras({ woo }: { woo: WooReportSection }) {
   const nothing =
@@ -301,6 +452,7 @@ export function WooReportExtras({ woo }: { woo: WooReportSection }) {
           )}
         </>
       )}
+      {woo.images && woo.images.stats.total > 0 && <WooImageReport images={woo.images} />}
       <div>
         <h4 className="text-sm font-medium">{m.report.rowTypes}</h4>
         <p className="text-sm">{describeRowTypes(woo.rowTypes)}</p>

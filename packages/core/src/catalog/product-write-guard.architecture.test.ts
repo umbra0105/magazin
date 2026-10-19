@@ -269,6 +269,7 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa realÄ
         "validateProductImport",
         "applyProductImport",
         "getProductImportStatus",
+        "retryProductImportImages",
         "cancelProductImport",
       ].sort(),
     );

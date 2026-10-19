@@ -60,6 +60,19 @@ class MemoryStore implements ProductImportStore {
     brandIndex: buildBrandIndex([]),
   };
   private n = 0;
+  /** Imaginile nu sunt acoperite de aceste teste (au testele lor). */
+  images: ProductImportStore["images"] = {
+    insertTasks: async () => 0,
+    listTasks: async () => [],
+    setResult: async () => undefined,
+    resetFailed: async () => 0,
+    progress: async () => new Map(),
+    failures: async () => [],
+    findMediaBySourceHash: async () => null,
+    findMediaBySourceHashes: async () => new Map(),
+    productMediaIds: async () => [],
+    productTitles: async () => new Map(),
+  };
   /** Profilul WooCommerce nu e acoperit de aceste teste (are testele lui); magazinul de test nu-l folosește. */
   async loadWooSnapshot(): Promise<never> {
     throw new Error("profilul WooCommerce nu e folosit în aceste teste");

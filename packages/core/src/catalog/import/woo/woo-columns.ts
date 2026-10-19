@@ -30,6 +30,7 @@ export const WOO_ROLES = [
   "upsells",
   "crossSells",
   "brands",
+  "images",
 ] as const;
 export type WooRole = (typeof WOO_ROLES)[number];
 
@@ -67,6 +68,7 @@ const ROLE_HEADERS: Readonly<Record<WooRole, readonly string[]>> = {
   upsells: ["upsells", "up sells", "vanzari suplimentare"],
   crossSells: ["vanzari incrucisate", "cross sells", "cross sell", "crosssells"],
   brands: ["branduri", "brands", "brand", "marca"],
+  images: ["imagini", "images"],
 };
 
 /** Coloane cunoscute, ignorate în 15a, cu motivul (fiecare apare o singură dată în raport). */
@@ -162,10 +164,15 @@ export function detectWooColumns(headers: readonly string[]): WooColumnMap {
       return;
     }
     if (isImageHeader(header)) {
-      ignored.push({
-        header,
-        reason: "imaginile se importă separat (15b); aici se ignoră",
-      });
+      // prima coloană de imagini e sursa importului de imagini (opțional); celelalte se ignoră
+      if (
+        roles.images === undefined &&
+        (ROLE_HEADERS.images.includes(foldedFull) || ROLE_HEADERS.images.includes(folded))
+      ) {
+        roles.images = index;
+        return;
+      }
+      ignored.push({ header, reason: "coloană de imagini în plus: se ignoră" });
       return;
     }
     for (const role of WOO_ROLES) {

@@ -7,7 +7,14 @@ import {
   type ProductImportUploadDeps,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
-import { createImportQueue, importJobQueue, type ImportQueue } from "@ecom/jobs";
+import {
+  createImageImportQueue,
+  createImportQueue,
+  imageJobQueue,
+  importJobQueue,
+  type ImageImportQueue,
+  type ImportQueue,
+} from "@ecom/jobs";
 import { getLogger } from "@ecom/shared";
 import { revalidateTag } from "next/cache";
 import { getAudit } from "./admin-writes";
@@ -15,7 +22,10 @@ import { getStorage } from "./media";
 import { getCounterStore, getSettings } from "./services";
 import { getCurrentSubject } from "./session";
 
-const globalForImports = globalThis as unknown as { __ecomImportQueue?: ImportQueue };
+const globalForImports = globalThis as unknown as {
+  __ecomImportQueue?: ImportQueue;
+  __ecomImageImportQueue?: ImageImportQueue;
+};
 
 /** O singură coadă `product-import` (și conexiune Redis) per proces. */
 function getImportQueue(): ImportQueue {
@@ -26,6 +36,16 @@ function getImportQueue(): ImportQueue {
     globalForImports.__ecomImportQueue = queue;
   }
   return globalForImports.__ecomImportQueue;
+}
+
+/** O singură coadă `product-import-images` (și conexiune Redis) per proces. */
+function getImageImportQueue(): ImageImportQueue {
+  if (!globalForImports.__ecomImageImportQueue) {
+    const queue = createImageImportQueue(loadEnv().REDIS_URL);
+    queue.on("error", () => undefined);
+    globalForImports.__ecomImageImportQueue = queue;
+  }
+  return globalForImports.__ecomImageImportQueue;
 }
 
 /**
@@ -46,6 +66,7 @@ export function getProductImportService(): ProductImportService {
     audit: getAudit(),
     logger: getLogger(),
     queue: importJobQueue(getImportQueue()),
+    imageQueue: imageJobQueue(getImageImportQueue()),
     invalidate: (tags) => {
       for (const tag of tags) revalidateTag(tag);
     },

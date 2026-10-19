@@ -9,6 +9,7 @@ import {
   SettingsService,
   createPrismaProcessingStore,
   createPrismaSettingsStore,
+  type DecodeLimiter,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { createStorage } from "@ecom/integrations";
@@ -21,6 +22,9 @@ import { startMediaWorker } from "./media-worker";
  */
 export function createMediaRuntime(): {
   processor: MediaProcessor;
+  /** Pentru importul de imagini, care folosește aceleași setări și aceeași limită de decodări. */
+  settings: SettingsService;
+  limiter: DecodeLimiter;
   redisUrl: string;
   close(): void;
 } {
@@ -31,19 +35,20 @@ export function createMediaRuntime(): {
   const db = getDb();
   const settings = new SettingsService(createPrismaSettingsStore(db), redis);
 
+  const limiter = new ResilientDecodeLimiter(
+    new RedisDecodeLimiter(redis),
+    new MemoryDecodeLimiter(),
+    logger,
+  );
   const processor = new MediaProcessor({
     store: createPrismaProcessingStore(db),
     storage: createStorage(env),
-    limiter: new ResilientDecodeLimiter(
-      new RedisDecodeLimiter(redis),
-      new MemoryDecodeLimiter(),
-      logger,
-    ),
+    limiter,
     lock: new RedisMediaLock(redis),
     getSettings: () => settings.getGroup("media"),
     logger,
   });
-  return { processor, redisUrl: env.REDIS_URL, close: () => redis.disconnect() };
+  return { processor, settings, limiter, redisUrl: env.REDIS_URL, close: () => redis.disconnect() };
 }
 
 /** Pornește workerul `media` cu dependențele reale. Folosit de `pnpm worker` și de `pnpm dev:web`. */

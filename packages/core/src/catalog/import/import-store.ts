@@ -9,6 +9,7 @@ import {
 } from "./import-plan";
 import type { ImportFormat } from "./import-file";
 import type { WooPlanExtras, WooOptions, WooReportSection } from "./woo/woo-types";
+import { createImageTaskStore, type ImageTaskStore } from "./woo/image-store";
 import { createWooQueries, type WooLookups, type WooQueries } from "./woo/woo-store";
 import type { WooSnapshot } from "./woo/woo-plan";
 
@@ -59,6 +60,8 @@ export type { WooPlanExtras };
 /** Contoarele unui import terminat, plus câte entități a creat (profilul WooCommerce). */
 export type ImportSummary = ImportCounts & {
   created?: { categories: number; brands: number; attributes: number };
+  /** Imaginile din fișier, la momentul aplicării (descărcarea rulează apoi în fundal). */
+  images?: { total: number; accepted: number; rejected: number; queued: number };
 };
 
 /** Stările în care un import a ajuns la aplicare (intră în istoric). */
@@ -166,6 +169,8 @@ export interface ProductImportStore {
   loadWooSnapshot(lookups: WooLookups): Promise<WooSnapshot>;
   /** Interogări și scrieri ale profilului WooCommerce (ID din magazinul vechi, căutări după SKU / ID). */
   woo: WooQueries;
+  /** Sarcinile de descărcare a imaginilor (profilul WooCommerce, punctul 15b). */
+  images: ImageTaskStore;
 }
 
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -248,6 +253,7 @@ export function createPrismaProductImportStore(db: Db): ProductImportStore {
   const woo = createWooQueries(db);
   const store: ProductImportStore = {
     woo,
+    images: createImageTaskStore(db),
     async loadWooSnapshot(lookups) {
       const base = await store.loadSnapshot({ skus: lookups.skus, slugs: [] });
       return { ...base, woo: await woo.loadExtras(base, lookups) };

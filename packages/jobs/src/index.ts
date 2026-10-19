@@ -10,3 +10,6 @@ export * from "./media-runtime";
 export * from "./import-queue";
 export * from "./import-worker";
 export * from "./import-runtime";
+export * from "./image-import-queue";
+export * from "./image-import-worker";
+export * from "./image-import-runtime";

@@ -78,3 +78,22 @@ export {
   normalizeTags,
 } from "./tags";
 export { blurhashToDataUrl } from "./placeholder";
+
+export { normalizeHostname } from "./host";
+export {
+  IMAGE_URL_REJECTION_MESSAGES,
+  checkImageUrl,
+  parseImageUrl,
+  splitImageCell,
+  type ImageUrlCheck,
+  type ImageUrlPolicy,
+  type ImageUrlRejection,
+} from "./image-url";
+export { isPublicAddress } from "./ip-guard";
+export {
+  SAFE_FETCH_MESSAGES,
+  SafeFetchError,
+  safeFetchImage,
+  type SafeFetchErrorCode,
+  type SafeFetchPolicy,
+} from "./safe-fetch";

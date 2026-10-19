@@ -1,5 +1,6 @@
 import {
   startEmailWorkerFromEnv,
+  startImageImportWorkerFromEnv,
   startImportWorkerFromEnv,
   startMediaWorkerFromEnv,
 } from "@ecom/jobs";
@@ -19,8 +20,9 @@ export function startDevEmailWorker(): void {
     startEmailWorkerFromEnv();
     startMediaWorkerFromEnv();
     startImportWorkerFromEnv();
+    startImageImportWorkerFromEnv();
     getLogger().info(
-      { queues: ["emails", "media", "product-import"] },
+      { queues: ["emails", "media", "product-import", "product-import-images"] },
       "workeri porniți în procesul de dezvoltare",
     );
   } catch (error) {

@@ -22,6 +22,8 @@ const chunks = <T>(items: readonly T[], size: number): T[][] => {
 export interface WooLookups {
   skus: readonly string[];
   legacyIds: readonly string[];
+  /** Hash-urile adreselor de imagini din fișier (pentru fișierele deja aduse din aceleași adrese). */
+  imageHashes: readonly string[];
 }
 
 export interface WooQueries {
@@ -171,6 +173,27 @@ export function createWooQueries(db: Db): WooQueries {
         }
       }
 
+      const mediaBySourceHash = new Map<string, string>();
+      for (const part of chunks([...new Set(lookups.imageHashes)], LOOKUP_CHUNK)) {
+        for (const row of await db.media.findMany({
+          where: { sourceHash: { in: part } },
+          select: { id: true, sourceHash: true },
+        })) {
+          if (row.sourceHash) mediaBySourceHash.set(row.sourceHash, row.id);
+        }
+      }
+      const productMedia = new Map<string, Set<string>>();
+      for (const part of chunks(productIds, LOOKUP_CHUNK)) {
+        for (const row of await db.productMedia.findMany({
+          where: { productId: { in: part }, variantId: null },
+          select: { productId: true, mediaId: true },
+        })) {
+          const set = productMedia.get(row.productId) ?? new Set<string>();
+          set.add(row.mediaId);
+          productMedia.set(row.productId, set);
+        }
+      }
+
       const productIdBySku = new Map<string, string>();
       for (const [sku, variant] of base.variantsBySku) productIdBySku.set(sku, variant.productId);
       const productIdByLegacyId = await findProductIdsByLegacyId(lookups.legacyIds);
@@ -192,6 +215,8 @@ export function createWooQueries(db: Db): WooQueries {
         productIdBySku,
         productIdByLegacyId,
         variantIdByLegacyId,
+        mediaBySourceHash,
+        productMedia,
       };
     },
 

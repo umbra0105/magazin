@@ -10,6 +10,7 @@ import { getSettings } from "@/lib/services";
 import { getMessages } from "@/messages";
 
 const m = getMessages().admin.productImport.history;
+const imagesText = getMessages().admin.productImport.images;
 
 export const metadata: Metadata = { title: m.title };
 
@@ -168,6 +169,23 @@ export default async function ImportHistoryPage({
                                   item.counts.created.brands,
                                   item.counts.created.attributes,
                                 )}
+                              </p>
+                            )}
+                            {item.images && (
+                              <p
+                                className="text-xs text-muted-foreground"
+                                data-history-images-summary
+                              >
+                                {imagesText.heading}:{" "}
+                                {imagesText.summary(
+                                  item.images.downloaded,
+                                  item.images.existing,
+                                  item.images.failed,
+                                  item.images.pending,
+                                )}
+                                {item.images.state === "interrupted"
+                                  ? ` — ${imagesText.states.interrupted}`
+                                  : ""}
                               </p>
                             )}
                           </>

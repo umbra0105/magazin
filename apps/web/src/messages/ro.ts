@@ -1371,7 +1371,7 @@ export const ro = {
           "Un rând = un produs, iar coloanele se mapează la pasul următor. Merge cu șablonul de mai jos sau cu un export al aplicației.",
         woocommerce: "WooCommerce (export de produse)",
         woocommerceHelp:
-          "Exportul standard de produse din WooCommerce (CSV). Coloanele se recunosc singure. Categoriile, brandurile și atributele lipsă se creează, dar numai după ce le vezi listate la verificare și confirmi. Produsele noi intră ca ciornă. Imaginile și stocul nu se importă.",
+          "Exportul standard de produse din WooCommerce (CSV). Coloanele se recunosc singure. Categoriile, brandurile și atributele lipsă se creează, dar numai după ce le vezi listate la verificare și confirmi. Produsele noi intră ca ciornă. Imaginile din coloana «Imagini» se pot aduce din adrese (doar de pe domenii permise, în fundal, după ce produsele sunt create). Stocul nu se importă.",
         notWoo:
           "Fișierul nu pare un export WooCommerce de produse (lipsesc coloanele ID, Tip, Nume sau Preț). Alege formatul «Generic» sau exportă din nou din WooCommerce.",
       },
@@ -1422,6 +1422,20 @@ export const ro = {
           existing: (name: string) => `Atribut existent: ${name}`,
           products: (n: number) => (n === 1 ? "1 rând" : `${n} rânduri`),
         },
+        images: {
+          heading: "Imagini",
+          found: (total: number, onAllowed: number, onOther: number, invalid: number) =>
+            `${total === 1 ? "Fișierul conține o adresă de imagine" : `Fișierul conține ${total} adrese de imagini`}: ${onAllowed} pe domenii permise, ${onOther} pe alte domenii (se vor respinge), ${invalid} care nu respectă regulile (https, portul 443, fără IP, utilizator sau fragment; se vor respinge).`,
+          hostsHeading: "Domenii din fișier",
+          hostLine: (host: string, count: number, allowed: boolean) =>
+            `${host}: ${count} ${count === 1 ? "imagine" : "imagini"} — ${allowed ? "domeniu permis" : "domeniu NEPERMIS (imaginile de aici se vor respinge)"}`,
+          noRight:
+            "Contul tău nu poate încărca fișiere în biblioteca media (drept lipsă), deci imaginile nu se vor importa. Produsele se importă normal.",
+          noHosts:
+            "Lista de domenii permise este goală, deci nicio imagine nu se va descărca. Lista este o setare de securitate: o poate completa doar un Administrator sau Proprietar, din setări (nu din acest formular).",
+          checkbox: "Aduce imaginile din adrese, în fundal, după ce produsele sunt create",
+          help: "La verificare NU se face nicio cerere în rețea. Descărcarea pornește după aplicare, nu blochează produsele și are progres vizibil. Imaginile deja aduse nu se descarcă din nou; imaginile existente ale produsului nu se șterg (cele noi se adaugă la sfârșit; prima devine principală doar dacă produsul n-are imagini).",
+        },
         columns: {
           heading: "Coloane ignorate",
           help: "Aceste coloane din fișier nu se importă în acest pas.",
@@ -1449,7 +1463,43 @@ export const ro = {
             legacyNotSaved: "ID-uri din magazinul vechi nesalvate",
           } as Record<string, string>,
           rowTypes: "Tipuri de rânduri în fișier",
+          images: {
+            heading: "Imagini din fișier",
+            off: "Importul de imagini nu e activ pentru acest fișier.",
+            summary: (total: number, accepted: number, rejected: number) =>
+              `${total} adrese: ${accepted} acceptate, ${rejected} respinse.`,
+            stats: {
+              alreadyInLibrary: "Deja în bibliotecă (se atașează fără descărcare)",
+              alreadyAttached: "Deja atașate produsului (nimic de făcut)",
+              ignoredOnVariations: "Ignorate (rânduri de variație)",
+            } as Record<string, string>,
+            hostsHeading: "Domenii acceptate",
+            reasonsHeading: "Respinse, după motiv",
+            reasons: {
+              too_long: "Adresă prea lungă",
+              invalid: "Adresă invalidă",
+              scheme: "Nu e https",
+              credentials: "Cu utilizator sau parolă",
+              port: "Alt port decât 443",
+              fragment: "Cu fragment (#)",
+              ip_literal: "IP în loc de domeniu",
+              no_hosts_configured: "Lista de domenii permise e goală",
+              host_not_allowed: "Domeniu nepermis",
+              too_many_for_product: "Prea multe imagini pe produs",
+              too_many_for_import: "Prea multe imagini în import",
+            } as Record<string, string>,
+            issuesHeading: "Imagini respinse (fără adresa completă)",
+            row: "Rând",
+            sku: "SKU",
+            host: "Domeniu",
+            reason: "Motiv",
+            truncated: "Lista e tăiată; restul respingerilor apar în sumarul de mai sus.",
+          },
         },
+        imagesApply: (n: number) =>
+          n === 0
+            ? ""
+            : ` ${n === 1 ? "O imagine va fi adusă" : `${n} imagini vor fi aduse`} în fundal, după produse.`,
         apply: (categories: number, brands: number, attributes: number) =>
           categories + brands + attributes === 0
             ? ""
@@ -1539,9 +1589,40 @@ export const ro = {
         another: "Import nou",
         toProducts: "Către lista de produse",
       },
+      images: {
+        heading: "Imaginile din fișier",
+        none: "Fișierul nu a avut imagini de adus.",
+        progress: (done: number, total: number) => `${done} din ${total} imagini procesate`,
+        progressLabel: "Progresul descărcării imaginilor",
+        counts: {
+          downloaded: "Descărcate",
+          existing: "Deja existente",
+          failed: "Eșuate",
+          pending: "În așteptare",
+        },
+        states: {
+          running: "Se descarcă în fundal. Produsele sunt deja create.",
+          interrupted: "Descărcarea pare oprită (nimic nu a mai avansat). Apasă «Reia imaginile».",
+          done: "Descărcarea s-a terminat.",
+        },
+        retry: "Reia imaginile",
+        retrying: "Se reia…",
+        retried: "Descărcarea a fost reluată.",
+        failuresHeading: "Imagini eșuate",
+        failuresNone: "Nicio imagine eșuată.",
+        row: "Rând",
+        sku: "SKU",
+        host: "Domeniu",
+        reason: "Motiv",
+        hint: "Imaginile eșuate se reîncearcă la reluare. Cele rămase în așteptare se descarcă tot la reluare.",
+        column: "Imagini",
+        summary: (downloaded: number, existing: number, failed: number, pending: number) =>
+          `${downloaded} descărcate · ${existing} existente · ${failed} eșuate${pending > 0 ? ` · ${pending} în așteptare` : ""}`,
+      },
       errors: {
         generic: "Acțiunea a eșuat. Încearcă din nou.",
         AUTH_FORBIDDEN: "Nu ai permisiunea să imporți produse.",
+        IMPORT_IMAGES_OWNER: "Doar utilizatorul care a pornit importul poate relua imaginile.",
         VALIDATION_ERROR: "Cerere invalidă. Reîncarcă pagina și reia.",
         IMPORT_NOT_FOUND: "Importul nu există sau a expirat. Încarcă fișierul din nou.",
         IMPORT_STATE_INVALID: "Importul nu mai e în starea potrivită pentru această acțiune.",

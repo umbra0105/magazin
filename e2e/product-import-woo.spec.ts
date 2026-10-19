@@ -2,7 +2,11 @@ import { randomBytes } from "node:crypto";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { WOO_COST_SENTINEL, syntheticWooRows, wooCsv } from "../packages/core/test/woo-fixture";
 import {
+  countE2eProductsBySku,
   promoteE2eUser,
+  readE2eImageTasks,
+  removeE2eImageData,
+  setE2eImageHosts,
   readE2eAuditByEntity,
   readE2eWooFixtureState,
   removeE2eImports,
@@ -65,10 +69,14 @@ test.describe.configure({ mode: "serial", timeout: 180_000 });
 
 test.beforeEach(async () => {
   await removeE2eWooFixtureData();
+  await removeE2eImageData();
 });
 test.afterEach(async () => {
   await removeE2eImports();
   await removeE2eWooFixtureData();
+  await removeE2eImageData();
+  // lista de domenii permise revine la goală (instalarea de test nu permite nicio imagine)
+  await setE2eImageHosts(null);
 });
 
 test.describe("import WooCommerce", () => {
@@ -108,7 +116,13 @@ test.describe("import WooCommerce", () => {
     // coloanele ignorate și cea blocată (cost), fără valori
     await page.locator("[data-woo-columns] summary").click();
     await expect(page.locator("[data-woo-blocked]")).toContainText("Meta: _pret_intrare");
-    await expect(page.locator("[data-woo-columns]")).toContainText("Imagini");
+    // «Imagini» nu mai e coloană ignorată (15b): are propriul panou, cu lista de domenii goală în instalarea de test
+    await expect(page.locator("[data-woo-columns]")).not.toContainText("Imagini");
+    await expect(page.locator("[data-woo-images]")).toContainText("exemplu.invalid");
+    await expect(page.locator("[data-images-no-hosts]")).toContainText(
+      "Lista de domenii permise este goală",
+    );
+    await expect(page.locator("[data-woo-import-images]")).not.toBeChecked();
     await expect(page.locator("[data-woo-columns]")).toContainText("stocul nu se importă");
     await expect(page.locator("body")).not.toContainText(WOO_COST_SENTINEL);
 
@@ -133,7 +147,9 @@ test.describe("import WooCommerce", () => {
     await expect(created.locator('[data-woo-stat="descriptionTables"]')).toHaveText("1");
     await expect(created.locator('[data-woo-stat="skuFallbacks"]')).toHaveText("1");
     await expect(page.locator("[data-file-warnings]")).toContainText("Meta: _pret_intrare");
-    await expect(page.locator("[data-file-warnings]")).toContainText("Coloana de imagini");
+    await expect(page.locator("[data-file-warnings]")).toContainText(
+      "Coloana «Imagini» nu se importă",
+    );
     // rândurile murdare au motiv
     await expect(page.locator('[data-outcome="error"]').first()).toBeVisible();
     await expect(page.locator("[data-import-report]")).toContainText(
@@ -290,5 +306,155 @@ test.describe("import WooCommerce", () => {
     await expect(page.getByRole("heading", { name: "Mapează coloanele" })).toBeVisible();
     await expect(page.getByLabel("Importă în câmpul: SKU")).toHaveValue("sku");
     await expect(reportRow(page, 2)).toHaveCount(0);
+  });
+});
+
+test.describe("import WooCommerce: imagini din adrese (15b)", () => {
+  const imageRows = (): Record<string, string>[] => [
+    {
+      ID: "9001",
+      Tip: "simple",
+      SKU: "IMG-E2E-1",
+      Nume: "Produs imagini 1",
+      "Preț obișnuit": "100",
+      Imagini:
+        "https://imagini.localhost/poze/a.jpg, http://imagini.localhost/poze/b.jpg, https://alt-domeniu.invalid/poze/c.jpg, https://10.0.0.5/poze/d.jpg",
+    },
+    {
+      ID: "9002",
+      Tip: "simple",
+      SKU: "IMG-E2E-2",
+      Nume: "Produs imagini 2",
+      "Preț obișnuit": "120",
+      Imagini: "https://imagini.localhost/poze/e.jpg",
+    },
+  ];
+
+  test("domenii permise, verificare fără cereri, aplicare, descărcare în fundal care eșuează fără scurgeri, reluare, audit agregat", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    await setE2eImageHosts(["imagini.localhost"]);
+    const owner = await createAccount(request, baseURL as string, "owner");
+    const tag = randomBytes(3).toString("hex");
+    await login(page, owner, "/admin/produse/import");
+    await upload(page, `e2e-${tag}-img.csv`, Buffer.from(wooCsv(imageRows())), true);
+
+    // pasul 2: domeniile din fișier, cu cele permise marcate; bifa e activă când lista nu e goală
+    await expect(page.locator("[data-woo-images]")).toContainText(
+      "Fișierul conține 5 adrese de imagini: 2 pe domenii permise, 1 pe alte domenii (se vor respinge), 2 care nu respectă regulile",
+    );
+    await expect(page.locator('[data-image-host="imagini.localhost"]')).toHaveAttribute(
+      "data-allowed",
+      "true",
+    );
+    await expect(page.locator('[data-image-host="alt-domeniu.invalid"]')).toHaveAttribute(
+      "data-allowed",
+      "false",
+    );
+    await expect(page.locator("[data-images-no-hosts]")).toHaveCount(0);
+    await expect(page.locator("[data-woo-import-images]")).toBeChecked();
+    await expect(page.locator("[data-woo-images]")).not.toContainText("10.0.0.5");
+
+    // pasul 3: verificarea arată câte, de pe ce domenii și ce se respinge, fără nicio adresă completă
+    await page.locator("[data-import-check]").click();
+    await expect(page.getByRole("heading", { name: "Rezultatul verificării" })).toBeVisible();
+    const report = page.locator("[data-woo-images-report]");
+    await expect(report.locator("[data-images-summary]")).toContainText(
+      "5 adrese: 2 acceptate, 3 respinse",
+    );
+    await expect(report.locator("[data-images-hosts]")).toContainText("imagini.localhost: 2");
+    await expect(report.locator('[data-images-reason="scheme"]')).toContainText("Nu e https: 1");
+    await expect(report.locator('[data-images-reason="host_not_allowed"]')).toContainText(
+      "Domeniu nepermis: 1",
+    );
+    await expect(report.locator('[data-images-reason="ip_literal"]')).toContainText(
+      "IP în loc de domeniu: 1",
+    );
+    await expect(page.locator("body")).not.toContainText("10.0.0.5");
+    await expect(page.locator("body")).not.toContainText("/poze/");
+    // dry-run: produsele nu există încă
+    expect(await countE2eProductsBySku(["IMG-E2E-1", "IMG-E2E-2"])).toBe(0);
+
+    // aplicare: produsele apar acum, imaginile se descarcă în fundal
+    await page.locator("[data-import-apply]").click();
+    await expect(page.locator("[data-import-summary]")).toContainText("2 imagini vor fi aduse");
+    await page.locator("[data-import-confirm]").click();
+    await expect(page.locator("[data-import-done]")).toBeVisible({ timeout: 60_000 });
+    expect(await countE2eProductsBySku(["IMG-E2E-1", "IMG-E2E-2"])).toBe(2);
+
+    // domeniul din test nu duce la un server public: ambele imagini eșuează, produsele rămân
+    const panel = page.locator("[data-import-images]");
+    await expect(panel.locator('[data-image-state="done"]')).toBeVisible({ timeout: 90_000 });
+    await expect(panel.locator('[data-image-count="failed"] dd')).toHaveText("2");
+    await expect(panel.locator('[data-image-count="downloaded"] dd')).toHaveText("0");
+    const href = await panel.locator("a").getAttribute("href");
+    const importId = (href ?? "").split("/").pop() as string;
+    expect(importId.length).toBeGreaterThan(10);
+    const tasks = await readE2eImageTasks(importId);
+    expect(tasks).toHaveLength(2);
+    for (const task of tasks) {
+      expect(task.status).toBe("failed");
+      expect(task.host).toBe("imagini.localhost");
+      expect(["dns_failed", "address_not_public", "connect_failed", "timeout"]).toContain(
+        task.reason,
+      );
+    }
+
+    // istoricul: contoare, motive generice, fără IP-uri, adrese sau căi
+    await page.goto(`/admin/produse/import/istoric/${importId}`);
+    const history = page.locator("[data-history-images]");
+    await expect(history.locator('[data-image-count="failed"] dd')).toHaveText("2");
+    await expect(history.locator("[data-image-failure]")).toHaveCount(2);
+    await expect(history).toContainText("imagini.localhost");
+    const text = (await history.textContent()) ?? "";
+    expect(text).not.toMatch(/\b\d{1,3}(\.\d{1,3}){3}\b/);
+    expect(text).not.toContain("/poze/");
+    expect(text).not.toContain("https://");
+
+    // reluarea imaginilor eșuate (doar cine a pornit importul)
+    await history.locator("[data-image-retry]").click();
+    await expect(history.locator("[data-image-retry-message]")).toContainText(
+      "Descărcarea a fost reluată.",
+    );
+    await expect(async () => {
+      await page.reload();
+      await expect(page.locator('[data-history-images] [data-image-state="done"]')).toBeVisible();
+      await expect(
+        page.locator('[data-history-images] [data-image-count="pending"] dd'),
+      ).toHaveText("0");
+    }).toPass({ timeout: 90_000 });
+
+    // auditul: o singură înregistrare agregată la aplicare, una la sfârșitul descărcării, doar numere
+    const applied = await readE2eAuditByEntity("product.import", importId);
+    expect(applied).toHaveLength(1);
+    expect(applied[0]?.after).toMatchObject({ imagesTotal: 5, imagesRejected: 3, imagesQueued: 2 });
+    const finished = await readE2eAuditByEntity("product.import.images", importId);
+    expect(finished.length).toBeGreaterThanOrEqual(1);
+    expect(JSON.stringify(finished)).not.toContain("imagini.localhost");
+  });
+
+  test("un cont fără drept de media (Manager) importă produsele, dar nu vede opțiunea de imagini", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    await setE2eImageHosts(["imagini.localhost"]);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    const tag = randomBytes(3).toString("hex");
+    await login(page, manager, "/admin/produse/import");
+    await upload(page, `e2e-${tag}-img-m.csv`, Buffer.from(wooCsv(imageRows())), true);
+    await expect(page.locator("[data-images-no-right]")).toContainText(
+      "Contul tău nu poate încărca fișiere în biblioteca media",
+    );
+    await expect(page.locator("[data-woo-import-images]")).toHaveCount(0);
+    await page.locator("[data-import-check]").click();
+    await expect(page.locator("[data-file-warnings]")).toContainText("media.write");
+    await page.locator("[data-import-apply]").click();
+    await page.locator("[data-import-confirm]").click();
+    await expect(page.locator("[data-import-done]")).toBeVisible({ timeout: 60_000 });
+    expect(await countE2eProductsBySku(["IMG-E2E-1", "IMG-E2E-2"])).toBe(2);
+    await expect(page.locator("[data-import-images]")).toHaveCount(0);
   });
 });

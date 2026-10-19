@@ -3,6 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ImportError } from "@ecom/core";
 import { Badge, buttonVariants } from "@ecom/ui";
+import {
+  ImageFailures,
+  ImageProgress,
+  RetryImagesButton,
+} from "@/components/admin/products/product-import-images";
 import { WooReportExtras } from "@/components/admin/products/product-import-woo";
 import { requireAdmin } from "@/lib/admin-page";
 import { formatDateTime } from "@/lib/format-date";
@@ -60,6 +65,10 @@ export default async function ImportHistoryDetailPage({
     throw error;
   }
   const { item, report, retentionDays } = detail;
+  const imageFailures =
+    item.images && item.images.failed > 0
+      ? await getProductImportService().imageFailures(subject, id)
+      : [];
   const regional = await getSettings().getGroup("regional");
   const when = (date: Date) => formatDateTime(date, regional.locale, regional.timezone);
 
@@ -134,6 +143,24 @@ export default async function ImportHistoryDetailPage({
             item.counts.created.attributes,
           )}
         </p>
+      )}
+
+      {item.images && (
+        <section
+          aria-labelledby="hist-images"
+          className="flex flex-col gap-3 rounded-md border border-border p-3"
+          data-history-images
+        >
+          <h2 id="hist-images" className="text-lg font-semibold">
+            {root.images.heading}
+          </h2>
+          <ImageProgress progress={item.images} />
+          {(item.images.state === "interrupted" ||
+            (item.images.state === "done" && item.images.failed > 0)) && (
+            <RetryImagesButton importId={item.id} />
+          )}
+          <ImageFailures failures={imageFailures} />
+        </section>
       )}
 
       {item.state === "completed" && !report && (

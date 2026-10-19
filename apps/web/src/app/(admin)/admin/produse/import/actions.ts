@@ -81,6 +81,21 @@ export const getProductImportStatus = withPermission(
   { action: "product.import.status", entity: "product_import" },
 );
 
+/** Reia descărcarea imaginilor unui import (cele în așteptare și cele eșuate). Doar cine a pornit importul. */
+export const retryProductImportImages = withPermission(
+  "products.write",
+  async (input: unknown, subject) => {
+    try {
+      const { importId } = idInput.parse(input);
+      await getProductImportService().retryImages(subject, importId);
+      return { ok: true as const };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "product.import.images.retry", entity: "product_import" },
+);
+
 export const cancelProductImport = withPermission(
   "products.write",
   async (input: unknown, subject) => {

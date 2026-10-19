@@ -39,7 +39,10 @@ import { WooApplier, type WooApplyDeps } from "./woo/woo-apply";
 import { describeWoo, type WooAnalysis } from "./woo/woo-analysis";
 import { detectWooColumns, looksLikeWooExport } from "./woo/woo-columns";
 import { collectWooLookups, planWoo } from "./woo/woo-plan";
-import type { WooOptions } from "./woo/woo-types";
+import { imageFailureMessage, type ImageImportPolicy } from "./woo/image-importer";
+import type { ImageFailure, ImageProgress } from "./woo/image-store";
+import { WOO_IMAGE_MESSAGES } from "./woo/woo-plan";
+import { REPORT_IMAGE_ISSUES, type WooOptions } from "./woo/woo-types";
 import {
   APPLIED_STATUSES,
   REPORT_ENTRY_LIMIT,
@@ -87,6 +90,17 @@ export interface ImportJobQueue {
   enqueue(importId: string): Promise<void>;
 }
 
+/** Coada descărcării imaginilor unui import (job separat, în worker). */
+export interface ImageJobQueue {
+  enqueue(importId: string): Promise<void>;
+}
+
+/** Setările importului de imagini (`imageImport`), citite FĂRĂ cache: lista de domenii e o setare de securitate. */
+export type ImageImportSettings = ImageImportPolicy & {
+  maxImagesPerProduct: number;
+  maxImagesPerImport: number;
+};
+
 export interface ProductImportDeps {
   store: ProductImportStore;
   storage: Pick<StorageDriver, "put" | "get" | "delete">;
@@ -106,6 +120,10 @@ export interface ProductImportDeps {
   /** Pentru jobul din fundal: utilizatorul care a pornit importul, cu permisiunile curente. */
   loadSubject?: (userId: string) => Promise<PermissionSubject | null>;
   queue?: ImportJobQueue;
+  /** Fără ea, imaginile se verifică, dar descărcarea nu pornește singură (se reia cu «Reia imaginile»). */
+  imageQueue?: ImageJobQueue;
+  /** Setările importului de imagini; fără ele, importul de imagini e indisponibil. */
+  getImageSettings?: () => Promise<ImageImportSettings>;
   invalidate?: (tags: readonly string[]) => Promise<void> | void;
   logger: Pick<ReturnType<typeof getLogger>, "warn" | "error">;
   now?: () => Date;
@@ -138,8 +156,20 @@ export interface ImportValidation {
   mode: "sync" | "background";
 }
 
+/** Progresul descărcării imaginilor unui import (din sarcinile lui). */
+export interface ImageProgressView {
+  total: number;
+  pending: number;
+  downloaded: number;
+  existing: number;
+  failed: number;
+  /** «în curs» = ceva s-a mișcat recent; «întrerupt» = sunt imagini în așteptare, dar nimic nu avansează. */
+  state: "running" | "interrupted" | "done";
+}
+
 export interface ImportStatusView {
   importId: string;
+  images: ImageProgressView | null;
   status: ImportRecord["status"];
   rowCount: number;
   processedRows: number;
@@ -168,6 +198,8 @@ export interface ImportHistoryItem {
   counts: ImportSummary | null;
   /** Motivul eșecului (doar la importurile eșuate). */
   errorMessage: string | null;
+  /** Imaginile aduse din adrese: progres și rezultat (null dacă importul n-a avut imagini). */
+  images: ImageProgressView | null;
   /** Raportul detaliat pe rânduri mai există; altfel a fost șters după perioada de păstrare. */
   hasReport: boolean;
   /** Până când se păstrează raportul detaliat (null dacă a fost deja șters). */
@@ -210,6 +242,7 @@ const wooOptionsSchema = z.strictObject({
   dimensionUnit: z.enum(["cm", "mm", "m"]),
   shippingClassMap: z.record(z.string().min(1).max(100), z.enum(SHIPPING_CLASSES)),
   attributeTargets: z.record(z.string().min(1).max(100), z.string().min(1).max(60)),
+  importImages: z.boolean().default(false),
 });
 const wooValidateSchema = z.strictObject({
   importId: z.string().min(1).max(40),
@@ -228,6 +261,7 @@ function normalizeWooOptions(options: z.output<typeof wooOptionsSchema>): WooOpt
     dimensionUnit: options.dimensionUnit,
     shippingClassMap: fold(options.shippingClassMap) as WooOptions["shippingClassMap"],
     attributeTargets: fold(options.attributeTargets),
+    importImages: options.importImages,
   };
 }
 
@@ -289,6 +323,17 @@ export function buildReport(
         categoriesToCreate: plan.woo.creations.categories.map((c) => c.names.join(" > ")),
         brandsToCreate: plan.woo.creations.brands.map((b) => b.name),
         attributesToCreate: plan.woo.creations.attributes.map((a) => a.name),
+        images: {
+          enabled: plan.woo.images.enabled,
+          stats: plan.woo.images.stats,
+          issues: plan.woo.images.issues.slice(0, REPORT_IMAGE_ISSUES).map((issue) => ({
+            row: issue.row,
+            sku: issue.sku,
+            host: issue.host,
+            message: WOO_IMAGE_MESSAGES[issue.reason] ?? "adresă respinsă",
+          })),
+          issuesTruncated: plan.woo.images.issues.length > REPORT_IMAGE_ISSUES,
+        },
         stats: plan.woo.stats,
         rowTypes: plan.woo.rowTypes,
         ignoredColumns: plan.woo.ignoredColumns,
@@ -360,7 +405,38 @@ export class ProductImportService {
     }
   }
 
-  private historyItem(row: ImportHistoryRow, settings: ImportSettings): ImportHistoryItem {
+  /** Progresul imaginilor: «întrerupt» când sunt imagini în așteptare și nimic nu s-a mișcat de mult. */
+  private imageView(
+    progress: ImageProgress | undefined,
+    settings: ImportSettings,
+  ): ImageProgressView | null {
+    if (!progress) return null;
+    const total = progress.pending + progress.downloaded + progress.existing + progress.failed;
+    if (total === 0) return null;
+    const idleMs = progress.lastActivity
+      ? this.now().getTime() - progress.lastActivity.getTime()
+      : 0;
+    const state: ImageProgressView["state"] =
+      progress.pending === 0
+        ? "done"
+        : idleMs > settings.interruptedAfterMinutes * 60_000
+          ? "interrupted"
+          : "running";
+    return {
+      total,
+      pending: progress.pending,
+      downloaded: progress.downloaded,
+      existing: progress.existing,
+      failed: progress.failed,
+      state,
+    };
+  }
+
+  private historyItem(
+    row: ImportHistoryRow,
+    settings: ImportSettings,
+    images: ImageProgress | undefined,
+  ): ImportHistoryItem {
     const idleMs = this.now().getTime() - row.updatedAt.getTime();
     const state: ImportHistoryState =
       row.status === "completed"
@@ -383,6 +459,7 @@ export class ProductImportService {
       rowCount: row.rowCount,
       processedRows: row.processedRows,
       counts: state === "completed" ? row.summary : null,
+      images: state === "completed" ? this.imageView(images, settings) : null,
       errorMessage: state === "failed" ? row.errorMessage : null,
       hasReport: state === "completed" && row.hasReport,
       reportUntil:
@@ -402,8 +479,9 @@ export class ProductImportService {
       skip: (safePage - 1) * HISTORY_PAGE_SIZE,
       take: HISTORY_PAGE_SIZE,
     });
+    const progress = await this.deps.store.images.progress(rows.map((row) => row.id));
     return {
-      items: rows.map((row) => this.historyItem(row, settings)),
+      items: rows.map((row) => this.historyItem(row, settings, progress.get(row.id))),
       total,
       page: safePage,
       pageSize: HISTORY_PAGE_SIZE,
@@ -422,7 +500,8 @@ export class ProductImportService {
     const settings = await this.limits();
     const found = await this.deps.store.getApplied(importId);
     if (!found) throw new ImportError("IMPORT_NOT_FOUND", "Importul nu există în istoric");
-    const item = this.historyItem(found.row, settings);
+    const progress = await this.deps.store.images.progress([importId]);
+    const item = this.historyItem(found.row, settings, progress.get(importId));
     return {
       item,
       report: item.state === "completed" ? found.report : null,
@@ -440,11 +519,22 @@ export class ProductImportService {
     return expired.length;
   }
 
-  private async analysisOf(record: ImportRecord, table: ParsedTable): Promise<ImportAnalysis> {
+  private async analysisOf(
+    record: ImportRecord,
+    table: ParsedTable,
+    subject: PermissionSubject,
+  ): Promise<ImportAnalysis> {
     const detected = detectWooColumns(table.headers);
-    const woo = looksLikeWooExport(detected)
-      ? describeWoo(table, await this.deps.store.woo.listAttributes(), detected)
-      : null;
+    let woo: WooAnalysis | null = null;
+    if (looksLikeWooExport(detected)) {
+      const canImport = can(subject, "media.write") && !!this.deps.getImageSettings;
+      const imageSettings =
+        canImport && this.deps.getImageSettings ? await this.deps.getImageSettings() : null;
+      woo = describeWoo(table, await this.deps.store.woo.listAttributes(), detected, {
+        allowedHosts: imageSettings?.allowedHosts ?? [],
+        canImport,
+      });
+    }
     return {
       importId: record.id,
       fileName: record.fileName,
@@ -500,7 +590,7 @@ export class ProductImportService {
         rowCount: table.rows.length,
         expiresAt: new Date(this.now().getTime() + settings.retentionHours * 3_600_000),
       });
-      return await this.analysisOf(record, table);
+      return await this.analysisOf(record, table, subject);
     } catch (error) {
       await this.deleteFile(key);
       throw error;
@@ -524,7 +614,7 @@ export class ProductImportService {
         ? options.delimiter
         : undefined;
     const table = await parseImportFile(bytes, await this.limits(), delimiter ? { delimiter } : {});
-    return this.analysisOf(record, table);
+    return this.analysisOf(record, table, subject);
   }
 
   private mappingOf(columns: readonly (ImportFieldKey | null)[]): ImportMapping {
@@ -547,7 +637,17 @@ export class ProductImportService {
         );
       }
       const snapshot = await this.deps.store.loadWooSnapshot(collectWooLookups(table));
+      const imageSettings =
+        can(subject, "media.write") && this.deps.getImageSettings
+          ? await this.deps.getImageSettings()
+          : null;
       const plan = planWoo(table, mapping.options, snapshot, {
+        images: imageSettings && {
+          allowedHosts: imageSettings.allowedHosts,
+          maxUrlLength: imageSettings.maxUrlLength,
+          maxImagesPerProduct: imageSettings.maxImagesPerProduct,
+          maxImagesPerImport: imageSettings.maxImagesPerImport,
+        },
         timezone: await this.deps.woo.getTimezone(),
         canSetLegacy: can(subject, "catalog.legacy.edit"),
       });
@@ -637,7 +737,7 @@ export class ProductImportService {
         "Catalogul s-a schimbat de la verificare (sau fișierul nu mai corespunde). Reia verificarea, apoi aplică.",
       );
     }
-    if (plan.counts.new + plan.counts.updated === 0) {
+    if (plan.counts.new + plan.counts.updated === 0 && (plan.woo?.images.tasks.length ?? 0) === 0) {
       throw new ImportError(
         "IMPORT_NOTHING_TO_APPLY",
         "Nu există nimic de aplicat: niciun rând nou sau modificat",
@@ -770,6 +870,9 @@ export class ProductImportService {
       }
     }
 
+    // imaginile: sarcinile se salvează acum; descărcarea rulează apoi în fundal (nu blochează produsele)
+    const imageTasks = await this.createImageTasks(record.id, plan, finalRows);
+
     const counts: ImportCounts = {
       new: 0,
       updated: 0,
@@ -799,11 +902,21 @@ export class ProductImportService {
               .length,
           }
         : null;
+    const imageStats = plan.woo?.images.stats;
+    const images =
+      imageStats && imageStats.total > 0
+        ? {
+            total: imageStats.total,
+            accepted: imageStats.accepted,
+            rejected: imageStats.rejected,
+            queued: imageTasks,
+          }
+        : null;
     const finishedAt = this.now();
     await this.deps.store.update(record.id, {
       status: "completed",
       processedRows: plan.rows.length,
-      summary: { ...counts, ...(created && { created }) },
+      summary: { ...counts, ...(created && { created }), ...(images && { images }) },
       report,
       finishedAt,
       storageKey: null,
@@ -833,6 +946,11 @@ export class ProductImportService {
           createdBrands: created.brands,
           createdAttributes: created.attributes,
         }),
+        ...(images && {
+          imagesTotal: images.total,
+          imagesRejected: images.rejected,
+          imagesQueued: images.queued,
+        }),
         background: record.status === "queued" || record.status === "running",
       },
     });
@@ -844,7 +962,120 @@ export class ProductImportService {
         "import: invalidarea cache-ului a eșuat",
       );
     }
+    if (imageTasks > 0) await this.enqueueImages(record.id);
     return report;
+  }
+
+  /** Salvează sarcinile de imagini ale rândurilor aplicate; la reluarea unui import căzut nu le dublează. */
+  private async createImageTasks(
+    importId: string,
+    plan: ImportPlan,
+    finalRows: readonly PlannedRow[],
+  ): Promise<number> {
+    const tasks = plan.woo?.images.tasks ?? [];
+    if (tasks.length === 0) return 0;
+    try {
+      const existing = await this.deps.store.images.progress([importId]);
+      if (existing.has(importId)) return 0;
+      const failedRows = new Set(finalRows.filter((r) => r.outcome === "error").map((r) => r.row));
+      const productBySku = await this.deps.store.woo.findProductIdsBySku([
+        ...new Set(tasks.map((task) => task.sku)),
+      ]);
+      const rows = [];
+      for (const task of tasks) {
+        const productId = productBySku.get(task.sku.toLowerCase());
+        if (!productId || failedRows.has(task.row)) continue;
+        rows.push({
+          productId,
+          row: task.row,
+          sku: task.sku,
+          position: task.position,
+          sourceUrl: task.url,
+          sourceHash: task.sourceHash,
+          host: task.host,
+        });
+      }
+      return await this.deps.store.images.insertTasks(importId, rows);
+    } catch (error) {
+      this.deps.logger.error(
+        { reason: error instanceof Error ? error.name : "necunoscut" },
+        "import: sarcinile de imagini nu s-au putut salva",
+      );
+      return 0;
+    }
+  }
+
+  private async enqueueImages(importId: string): Promise<void> {
+    if (!this.deps.imageQueue) return;
+    try {
+      await this.deps.imageQueue.enqueue(importId);
+    } catch (error) {
+      // imaginile rămân în așteptare și pot fi reluate din pagina importului
+      this.deps.logger.warn(
+        { reason: error instanceof Error ? error.message : "necunoscut" },
+        "import: coada de imagini nu e disponibilă",
+      );
+    }
+  }
+
+  /** Reia descărcarea imaginilor (cele rămase în așteptare și cele eșuate). Doar utilizatorul care a pornit importul. */
+  async retryImages(subject: PermissionSubject | null, importId: string): Promise<void> {
+    assertCan(subject, "products.write");
+    assertCan(subject, "media.write");
+    const record = await this.deps.store.get(importId);
+    if (!record || record.status !== "completed") {
+      throw new ImportError("IMPORT_NOT_FOUND", "Importul nu există sau nu s-a terminat încă");
+    }
+    if (record.createdById !== subject.userId) {
+      throw new ImportError(
+        "IMPORT_IMAGES_OWNER",
+        "Doar utilizatorul care a pornit importul poate relua imaginile",
+      );
+    }
+    const reset = await this.deps.store.images.resetFailed(importId);
+    const progress = (await this.deps.store.images.progress([importId])).get(importId);
+    if (!progress || progress.pending === 0) {
+      throw new ImportError("IMPORT_NOTHING_TO_APPLY", "Nu există imagini de reluat");
+    }
+    if (!this.deps.imageQueue) {
+      throw new ImportError(
+        "IMPORT_QUEUE_UNAVAILABLE",
+        "Coada de joburi nu e disponibilă momentan; încearcă din nou",
+      );
+    }
+    try {
+      await this.deps.imageQueue.enqueue(importId);
+    } catch {
+      throw new ImportError(
+        "IMPORT_QUEUE_UNAVAILABLE",
+        "Coada de joburi nu e disponibilă momentan; încearcă din nou",
+      );
+    }
+    await this.deps.audit.record({
+      actorId: subject.userId,
+      actorLabel: subject.email,
+      action: "product.import.images.retry",
+      entity: "product_import",
+      entityId: importId,
+      after: { pending: progress.pending, retriedFailed: reset },
+    });
+  }
+
+  /** Imaginile eșuate ale unui import aplicat, cu motivul în română (fără adrese sau detalii interne). */
+  async imageFailures(
+    subject: PermissionSubject | null,
+    importId: string,
+  ): Promise<{ row: number; sku: string; host: string; message: string }[]> {
+    assertCan(subject, "products.write");
+    const found = await this.deps.store.getApplied(importId);
+    if (!found) throw new ImportError("IMPORT_NOT_FOUND", "Importul nu există în istoric");
+    const failures: ImageFailure[] = await this.deps.store.images.failures(importId, 2000);
+    return failures.map((f) => ({
+      row: f.row,
+      sku: f.sku,
+      host: f.host,
+      message: imageFailureMessage(f.reason),
+    }));
   }
 
   private wooApplier(): WooApplier {
@@ -918,8 +1149,13 @@ export class ProductImportService {
   async status(subject: PermissionSubject | null, importId: string): Promise<ImportStatusView> {
     assertCan(subject, "products.write");
     const record = await this.own(subject, importId);
+    const progress = await this.deps.store.images.progress([record.id]);
     return {
       importId: record.id,
+      images:
+        record.status === "completed"
+          ? this.imageView(progress.get(record.id), await this.limits())
+          : null,
       status: record.status,
       rowCount: record.rowCount,
       processedRows: record.processedRows,
@@ -981,6 +1217,18 @@ export class ProductImportService {
         OUTCOME_LABEL[entry.outcome],
         entry.messages.join(" · "),
         entry.changed.join(", "),
+      ]);
+    }
+    const failures = applied
+      ? await this.deps.store.images.failures(importId, REPORT_ENTRY_LIMIT)
+      : [];
+    for (const failure of failures) {
+      rows.push([
+        String(failure.row),
+        failure.sku,
+        "imagine eșuată",
+        `${failure.host}: ${imageFailureMessage(failure.reason)}`,
+        "",
       ]);
     }
     if (report.truncated) {

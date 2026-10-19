@@ -54,6 +54,23 @@ export class SettingsService {
     return out as SettingGroupValue<G>;
   }
 
+  /**
+   * Ca `getGroup`, dar DIRECT din baza de date, fără cache: pentru setările de securitate (lista de domenii permise
+   * pentru imagini), unde o valoare veche din cache (până la 5 minute) ar lăsa o gazdă scoasă din listă încă
+   * permisă.
+   */
+  async getGroupUncached<G extends SettingGroupName>(group: G): Promise<SettingGroupValue<G>> {
+    const rows = await this.store.loadAll();
+    const known = new Set<string>(listSettingKeys().map((k) => k.key));
+    const map: Record<string, unknown> = {};
+    for (const row of rows) if (known.has(row.key)) map[row.key] = row.value;
+    const out: Record<string, unknown> = {};
+    for (const name of Object.keys(settingGroups[group])) {
+      out[name] = this.parseStored(`${group}.${name}`, map);
+    }
+    return out as SettingGroupValue<G>;
+  }
+
   /** Validează, scrie și invalidează cache-ul. `auditLog()` se leagă la nivelul server action-ului. */
   async set<K extends SettingKey>(key: K, value: unknown): Promise<SettingValue<K>> {
     const schema = getSettingSchema(key);

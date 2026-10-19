@@ -73,6 +73,10 @@ async function withWoo<T>(
           if (group === "regional") return { timezone: "Europe/Bucharest" };
           throw new Error(`grup neașteptat: ${group}`);
         },
+        async getGroupUncached(group: string) {
+          if (group === "imageImport") return z.object(settingGroups.imageImport).parse({});
+          throw new Error(`grup neașteptat: ${group}`);
+        },
       } as never,
       audit: new AuditService(createPrismaAuditStore(tx)),
       logger,
@@ -136,7 +140,14 @@ describe("import WooCommerce pe baza reală", () => {
       // «Putere» e opțiune de variație (apare pe variații), deci nu se listează ca atribut simplu
       expect(woo.attributes.map((a) => a.name)).toEqual(["Material"]);
       expect(woo.blockedColumns).toEqual(["Meta: _pret_intrare"]);
-      expect(woo.ignoredColumns.some((c) => c.header === "Imagini")).toBe(true);
+      expect(woo.ignoredColumns.some((c) => c.header === "Imagini")).toBe(false);
+      expect(woo.images).toMatchObject({
+        hasColumn: true,
+        canImport: true,
+        allowedHosts: [],
+        onAllowedHosts: 0,
+      });
+      expect(woo.defaults.importImages).toBe(false);
       // un fișier generic nu e WooCommerce
       const generic = await service.register(owner, {
         bytes: new TextEncoder().encode("SKU;Titlu;Preț\r\nA;B;10\r\n"),

@@ -11,6 +11,8 @@ export interface NewMedia {
   alt: string;
   folderId: string | null;
   uploadedById: string | null;
+  /** Doar la imaginile aduse prin import din adresă: hash-ul adresei sursă normalizate. */
+  sourceHash?: string | null;
 }
 
 export interface MediaRow {

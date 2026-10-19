@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeHostname } from "../media/host";
 
 /**
  * Registrul setărilor: singura sursă pentru chei, tipuri și valori implicite NEUTRE.
@@ -189,6 +190,50 @@ export const settingGroups = {
     uploadWindowMinutes: z.number().int().min(1).max(1440).default(10),
     /** Încercări refuzate (origine, sesiune, permisiune) pe IP care mai intră în jurnalul de audit. */
     refusedAuditMaxAttempts: z.number().int().min(1).max(10_000).default(20),
+  },
+  /**
+   * Importul de imagini prin adresă (profilul WooCommerce). SETARE DE SECURITATE: lista de domenii permise se
+   * modifică doar cu `settings.write` (Admin, Owner), niciodată din formularul de import. Lista goală = nicio
+   * imagine nu se descarcă. Potrivirea e EXACTĂ pe numele gazdei, normalizat (litere mici, fără punct final,
+   * punycode); fără wildcard, fără IP, fără port. Lista nu anulează niciodată verificarea adreselor
+   * (rețele private, loopback, link-local, metadata): aceea rulează oricum, la fiecare cerere și redirect.
+   */
+  imageImport: {
+    allowedHosts: z
+      .array(
+        z.string().transform((value, ctx) => {
+          const host = normalizeHostname(value);
+          if (host === null) {
+            ctx.addIssue({
+              code: "custom",
+              message:
+                "Nu e un nume de domeniu valid (fără IP, port, cale, wildcard sau utilizator)",
+            });
+            return z.NEVER;
+          }
+          return host;
+        }),
+      )
+      .max(50)
+      .default([]),
+    /** Mărimea maximă a unei imagini descărcate, în octeți (implicit 15 MB; plafon 50 MB). */
+    maxDownloadBytes: z
+      .number()
+      .int()
+      .min(1024)
+      .max(50 * 1024 * 1024)
+      .default(15 * 1024 * 1024),
+    connectTimeoutSeconds: z.number().int().min(1).max(30).default(5),
+    /** Timpul total al unei descărcări, cu redirecturile incluse. */
+    totalTimeoutSeconds: z.number().int().min(2).max(120).default(30),
+    /** Redirecturi urmate (doar în cadrul aceleiași gazde, fiecare revalidat); plafon 3. */
+    maxRedirects: z.number().int().min(0).max(3).default(3),
+    maxUrlLength: z.number().int().min(100).max(4000).default(2000),
+    maxImagesPerProduct: z.number().int().min(1).max(30).default(20),
+    maxImagesPerImport: z.number().int().min(1).max(20_000).default(2000),
+    /** Descărcări simultane, în total și pe aceeași gazdă. */
+    concurrency: z.number().int().min(1).max(10).default(3),
+    perHostConcurrency: z.number().int().min(1).max(5).default(2),
   },
   monitoring: {
     /** DSN Sentry. Gol = Sentry complet inactiv. Nu e secret (se trimite și în browser). */

@@ -14,6 +14,8 @@ export interface UploadCommand {
   alt?: string;
   uploadedById: string | null;
   limits: ImageLimits;
+  /** Doar la imaginile aduse prin import din adresă: hash-ul adresei sursă normalizate. */
+  sourceHash?: string | null;
 }
 
 export interface UploadedMedia extends MediaRow {
@@ -81,6 +83,7 @@ export class MediaService {
         alt: (command.alt ?? "").slice(0, 300),
         folderId: command.folderId ?? null,
         uploadedById: command.uploadedById,
+        ...(command.sourceHash && { sourceHash: command.sourceHash }),
       });
     } catch (error) {
       await storage.delete(key).catch(() => undefined);

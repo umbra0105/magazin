@@ -16,9 +16,22 @@ export interface WooOptions {
   shippingClassMap: Record<string, ShippingClass>;
   /** Numele atributului (normalizat) → id al unui atribut existent, «create» sau «ignore». */
   attributeTargets: Record<string, string>;
+  /** Imaginile din coloana «Imagini» se descarcă în fundal, după produse (cere `media.write`). */
+  importImages: boolean;
+}
+
+export const REPORT_IMAGE_ISSUES = 200;
+
+export interface WooImagePolicy {
+  allowedHosts: readonly string[];
+  maxUrlLength: number;
+  maxImagesPerProduct: number;
+  maxImagesPerImport: number;
 }
 
 export interface WooContext {
+  /** Politica imaginilor; `null` = importul de imagini oprit (opțiune dezactivată sau fără drept de media). */
+  images: WooImagePolicy | null;
   timezone: string;
   /** Contul are `catalog.legacy.edit`: doar atunci se salvează ID-ul din magazinul vechi. */
   canSetLegacy: boolean;
@@ -57,6 +70,10 @@ export interface WooSnapshotExtras {
   productIdBySku: Map<string, string>;
   productIdByLegacyId: Map<string, string>;
   variantIdByLegacyId: Map<string, string>;
+  /** Hash-ul adresei sursă → fișierul din bibliotecă adus deja de la acea adresă. */
+  mediaBySourceHash: Map<string, string>;
+  /** Fișierele media deja atașate fiecărui produs existent. */
+  productMedia: Map<string, Set<string>>;
 }
 
 export interface WooAttributeDraft {
@@ -167,7 +184,50 @@ export interface WooRefs {
   attributeId: Record<string, string>;
 }
 
+/** O imagine acceptată de verificările fără rețea, de adus în fundal după produse. */
+export interface WooImageTask {
+  row: number;
+  /** SKU-ul primei variante a produsului (cu el se regăsește produsul după aplicare). */
+  sku: string;
+  position: number;
+  /** Adresa NORMALIZATĂ (https, gazdă permisă). */
+  url: string;
+  sourceHash: string;
+  host: string;
+}
+
+/** O imagine respinsă fără rețea (domeniu nepermis, http, port, IP...). Adresa brută NU se păstrează. */
+export interface WooImageIssue {
+  row: number;
+  sku: string;
+  position: number;
+  host: string | null;
+  reason: string;
+  /** Hash-ul adresei brute, doar pentru deduplicare. */
+  rawHash: string;
+}
+
+export interface WooImagePlan {
+  enabled: boolean;
+  tasks: WooImageTask[];
+  issues: WooImageIssue[];
+  stats: {
+    total: number;
+    accepted: number;
+    rejected: number;
+    /** Fișiere deja aduse de la aceeași adresă (se atașează fără descărcare). */
+    alreadyInLibrary: number;
+    /** Deja atașate produsului: nimic de făcut. */
+    alreadyAttached: number;
+    /** Imagini de pe rândurile de variație: se ignoră (se folosesc cele ale produsului variabil). */
+    ignoredOnVariations: number;
+    byHost: Record<string, number>;
+    rejectedByReason: Record<string, number>;
+  };
+}
+
 export interface WooPlanExtras {
+  images: WooImagePlan;
   creations: WooCreations;
   refs: WooRefs;
   stats: WooStats;
@@ -178,6 +238,14 @@ export interface WooPlanExtras {
 
 /** Secțiunea raportului specifică profilului WooCommerce. */
 export interface WooReportSection {
+  /** Imaginile din fișier: câte, de pe ce domenii, câte respinse și de ce (fără adrese). */
+  images?: {
+    enabled: boolean;
+    stats: WooImagePlan["stats"];
+    /** Imaginile respinse fără rețea, cu motivul în română (fără adrese); tăiat la `REPORT_IMAGE_ISSUES`. */
+    issues: { row: number; sku: string; host: string | null; message: string }[];
+    issuesTruncated: boolean;
+  };
   categoriesToCreate: string[];
   brandsToCreate: string[];
   attributesToCreate: string[];

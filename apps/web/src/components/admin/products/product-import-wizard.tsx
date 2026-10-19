@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type {
+  ImageProgressView,
   ImportAnalysis,
   ImportReport,
   ImportStatusView,
@@ -18,6 +19,7 @@ import {
   validateProductImport,
 } from "@/app/(admin)/admin/produse/import/actions";
 import { getMessages } from "@/messages";
+import { ImageProgress, RetryImagesButton } from "./product-import-images";
 import { WooOptionsPanel, WooReportExtras } from "./product-import-woo";
 
 const m = getMessages().admin.productImport;
@@ -54,6 +56,7 @@ export function ProductImportWizard({
   const [validation, setValidation] = useState<ImportValidation | null>(null);
   const [status, setStatus] = useState<ImportStatusView | null>(null);
   const [finalReport, setFinalReport] = useState<ImportReport | null>(null);
+  const [imageProgress, setImageProgress] = useState<ImageProgressView | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -76,6 +79,7 @@ export function ProductImportWizard({
     setValidation(null);
     setStatus(null);
     setFinalReport(null);
+    setImageProgress(null);
     setProblem(null);
     setConfirmOpen(false);
   };
@@ -237,10 +241,45 @@ export function ProductImportWizard({
     };
   }, [step, importId, poll]);
 
+  // imaginile se descarcă în fundal DUPĂ import: progresul se interoghează cât timp mai sunt de adus
+  const refreshImages = useCallback(async (id: string): Promise<ImageProgressView | null> => {
+    try {
+      const result = await getProductImportStatus({ importId: id });
+      if (result.ok) {
+        setImageProgress(result.status.images);
+        return result.status.images;
+      }
+    } catch {
+      /* se reîncearcă la următoarea interogare */
+    }
+    return null;
+  }, []);
+
+  useEffect(() => {
+    if (step !== "done" || !importId) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tick = async () => {
+      if (stopped) return;
+      const progress = await refreshImages(importId);
+      if (!stopped && progress?.state === "running") timer = setTimeout(tick, 2000);
+    };
+    timer = setTimeout(tick, 300);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [step, importId, refreshImages]);
+
   const wooProfile = profile === "woocommerce" && analysis?.woo != null && wooOptions != null;
   const skuMapped = wooProfile || columns.includes("sku");
+  const imageStats = validation?.report.woo?.images?.stats;
+  // imaginile încă neatașate (acceptate minus cele deja în produs) sunt de lucru chiar dacă produsele nu se schimbă
+  const imageWork = imageStats ? imageStats.accepted - imageStats.alreadyAttached : 0;
   const nothingToApply =
-    validation !== null && validation.report.counts.new + validation.report.counts.updated === 0;
+    validation !== null &&
+    validation.report.counts.new + validation.report.counts.updated === 0 &&
+    imageWork === 0;
 
   return (
     <div className="flex max-w-5xl flex-col gap-6">
@@ -550,6 +589,7 @@ export function ProductImportWizard({
                     validation.report.woo.attributesToCreate.length,
                   )}`
                 : ""}
+              {validation.report.woo?.images?.enabled ? m.woo.imagesApply(imageWork) : ""}
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="outline" onClick={() => setConfirmOpen(false)}>
@@ -606,6 +646,31 @@ export function ProductImportWizard({
           <h2 id="imp-done" className="text-lg font-semibold">
             {m.apply.doneHeading}
           </h2>
+          {imageProgress && (
+            <section
+              aria-labelledby="imp-images"
+              className="flex flex-col gap-3 rounded-md border border-border p-3"
+              data-import-images
+            >
+              <h3 id="imp-images" className="text-sm font-semibold">
+                {m.images.heading}
+              </h3>
+              <ImageProgress progress={imageProgress} />
+              {(imageProgress.state === "interrupted" ||
+                (imageProgress.state === "done" && imageProgress.failed > 0)) && (
+                <RetryImagesButton
+                  importId={importId}
+                  onDone={() => void refreshImages(importId)}
+                />
+              )}
+              <Link
+                href={`/admin/produse/import/istoric/${importId}`}
+                className="text-sm text-primary underline-offset-2 hover:underline"
+              >
+                {m.images.failuresHeading}
+              </Link>
+            </section>
+          )}
           <ReportView report={finalReport} importId={importId} />
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={reset}>

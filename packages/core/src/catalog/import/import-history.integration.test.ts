@@ -79,6 +79,10 @@ async function withHistory<T>(
         if (group === "regional") return { timezone: "Europe/Bucharest" };
         throw new Error(`grup neașteptat: ${group}`);
       },
+      async getGroupUncached(group: string) {
+        if (group === "imageImport") return z.object(settingGroups.imageImport).parse({});
+        throw new Error(`grup neașteptat: ${group}`);
+      },
     } as never;
     const service = createProductImportService({
       db: tx as unknown as PrismaClient,

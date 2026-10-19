@@ -17,9 +17,25 @@ import {
 } from "../import-plan";
 import { detectWooColumns, looksLikeWooExport } from "./woo-columns";
 import { DEFAULT_WOO_OPTIONS, collectWooLookups, planWoo, type WooSnapshot } from "./woo-plan";
-import type { WooCreateOp, WooOptions, WooSnapshotExtras, WooUpdateOp } from "./woo-types";
+import type {
+  WooContext,
+  WooCreateOp,
+  WooOptions,
+  WooSnapshotExtras,
+  WooUpdateOp,
+} from "./woo-types";
 
-const CTX = { timezone: "Europe/Bucharest", canSetLegacy: true };
+const CTX: WooContext = {
+  // contul poate importa imagini (media.write), dar opțiunea e oprită în opțiunile implicite
+  images: {
+    allowedHosts: [],
+    maxUrlLength: 2000,
+    maxImagesPerProduct: 20,
+    maxImagesPerImport: 2000,
+  },
+  timezone: "Europe/Bucharest",
+  canSetLegacy: true,
+};
 
 async function tableOf(rows: WooFixtureRow[]): Promise<ParsedTable> {
   return parseImportFile(wooCsv(rows), DEFAULT_IMPORT_LIMITS);
@@ -35,6 +51,8 @@ function emptyExtras(over: Partial<WooSnapshotExtras> = {}): WooSnapshotExtras {
     productIdBySku: new Map(),
     productIdByLegacyId: new Map(),
     variantIdByLegacyId: new Map(),
+    mediaBySourceHash: new Map(),
+    productMedia: new Map(),
     ...over,
   };
 }
@@ -88,6 +106,7 @@ describe("recunoașterea coloanelor WooCommerce (antete în română)", () => {
         "gtin",
         "height",
         "id",
+        "images",
         "length",
         "name",
         "parent",
@@ -108,7 +127,9 @@ describe("recunoașterea coloanelor WooCommerce (antete în română)", () => {
     // costul: blocat, nu ignorat
     expect(map.blocked).toEqual(["Meta: _pret_intrare"]);
     const ignored = Object.fromEntries(map.ignored.map((c) => [c.header, c.reason]));
-    expect(ignored["Imagini"]).toMatch(/imaginile/);
+    // prima coloană de imagini e sursa importului de imagini (15b), nu o coloană ignorată
+    expect(map.roles.images).toBeDefined();
+    expect(ignored["Imagini"]).toBeUndefined();
     expect(ignored["Stoc"]).toMatch(/stocul/);
     expect(ignored["În stoc?"]).toMatch(/stocul/);
     expect(ignored["Etichete"]).toMatch(/etichetele/);
@@ -363,9 +384,9 @@ describe("planificarea fixture-ului sintetic pe un catalog gol", () => {
     expect(JSON.stringify(p)).not.toContain('"900"');
   });
 
-  it("imaginile și stocul se ignoră cu avertisment la nivel de fișier", async () => {
+  it("imaginile (opțiune oprită) și stocul se ignoră cu avertisment la nivel de fișier", async () => {
     const p = await plan();
-    expect(p.fileWarnings.join("\n")).toMatch(/Coloana de imagini.*Imagini.*ignorată/);
+    expect(p.fileWarnings.join("\n")).toMatch(/Coloana «Imagini» nu se importă/);
     expect(p.fileWarnings.join("\n")).toMatch(/Coloanele de stoc.*ignorate.*Faza 5/);
   });
 

@@ -16,7 +16,7 @@ import {
 } from "../product-assignments";
 import { ProductService } from "../product-service";
 import { createPrismaProductStore } from "../product-store";
-import type { ImportJobQueue } from "./import-service";
+import type { ImageJobQueue, ImportJobQueue } from "./import-service";
 import { ProductImportService } from "./import-service";
 import { createPrismaProductImportStore } from "./import-store";
 
@@ -39,12 +39,14 @@ const SILENT_AUDIT = new AuditService({
 export interface ProductImportRuntimeDeps {
   db: PrismaClient;
   storage: StorageDriver;
-  settings: Pick<SettingsService, "getGroup">;
+  settings: Pick<SettingsService, "getGroup" | "getGroupUncached">;
   /** Auditul real, doar pentru evenimentul agregat. */
   audit: AuditService;
   logger: Pick<ReturnType<typeof getLogger>, "warn" | "error">;
   /** Coada jobului din fundal; fără ea, importurile se aplică mereu pe loc. */
   queue?: ImportJobQueue;
+  /** Coada descărcării imaginilor; fără ea, imaginile rămân în așteptare până la «Reia imaginile». */
+  imageQueue?: ImageJobQueue;
   invalidate?: (tags: readonly string[]) => Promise<void> | void;
 }
 
@@ -120,6 +122,23 @@ export function createProductImportService(deps: ProductImportRuntimeDeps): Prod
       };
     },
     loadSubject: (userId) => permissions.loadSubject(userId),
+    // lista de domenii permise e o setare de securitate: se citește mereu din baza de date, fără cache
+    getImageSettings: async () => {
+      const group = await settings.getGroupUncached("imageImport");
+      return {
+        allowedHosts: group.allowedHosts,
+        maxUrlLength: group.maxUrlLength,
+        maxDownloadBytes: group.maxDownloadBytes,
+        connectTimeoutSeconds: group.connectTimeoutSeconds,
+        totalTimeoutSeconds: group.totalTimeoutSeconds,
+        maxRedirects: group.maxRedirects,
+        concurrency: group.concurrency,
+        perHostConcurrency: group.perHostConcurrency,
+        maxImagesPerProduct: group.maxImagesPerProduct,
+        maxImagesPerImport: group.maxImagesPerImport,
+      };
+    },
+    ...(deps.imageQueue && { imageQueue: deps.imageQueue }),
     ...(deps.queue && { queue: deps.queue }),
     ...(deps.invalidate && { invalidate: deps.invalidate }),
     logger: deps.logger,

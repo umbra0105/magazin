@@ -317,6 +317,9 @@ export {
   type ImportHistoryItem,
   type ImportHistoryPage,
   type ImportHistoryState,
+  type ImageImportSettings,
+  type ImageJobQueue,
+  type ImageProgressView,
   type ImportJobQueue,
   type ImportSettings,
   type ImportStatusView,
@@ -340,6 +343,25 @@ export {
   type ProductImportUploadDeps,
 } from "./import/import-handler";
 export { createProductImportService, type ProductImportRuntimeDeps } from "./import/import-runtime";
+export {
+  createProductImageImporter,
+  type ProductImageImporterRuntimeDeps,
+} from "./import/image-runtime";
+export {
+  IMAGE_FAILURE_MESSAGES,
+  ProductImageImporter,
+  imageFailureCode,
+  imageFailureMessage,
+  type ImageImportPolicy,
+  type ImageImportSummary,
+  type ImageImporterDeps,
+  type ImageProcessOutcome,
+} from "./import/woo/image-importer";
+export {
+  createImageTaskStore,
+  type ImageTask,
+  type ImageTaskStore,
+} from "./import/woo/image-store";
 export {
   EXPORT_FORMATS,
   ExportError,

@@ -1054,3 +1054,61 @@ export async function insertE2eInterruptedImport(
     return result.rows[0]?.id as string;
   });
 }
+
+/**
+ * Lista de domenii permise pentru importul de imagini (setarea `imageImport.allowedHosts`), scrisă direct în
+ * bază, ca din Prisma Studio. `null` o șterge (lista goală = nicio imagine descărcată). Se citește FĂRĂ cache.
+ */
+export async function setE2eImageHosts(hosts: readonly string[] | null): Promise<void> {
+  await withClient(async (db) => {
+    if (hosts === null) {
+      await db.query(`delete from setting where key = 'imageImport.allowedHosts'`);
+      return;
+    }
+    await db.query(
+      `insert into setting (key, "group", value, "updatedAt") values ('imageImport.allowedHosts', 'imageImport', $1::jsonb, now())
+       on conflict (key) do update set value = excluded.value, "updatedAt" = now()`,
+      [JSON.stringify(hosts)],
+    );
+  });
+}
+
+/** Sarcinile de imagini ale unui import (stare, motiv, gazdă), fără adresele complete. */
+export async function readE2eImageTasks(
+  importId: string,
+): Promise<{ status: string; reason: string | null; host: string }[]> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select status, reason, host from product_import_image where "importId" = $1 order by row, position`,
+      [importId],
+    );
+    return result.rows as {
+      status: string;
+      reason: string | null;
+      host: string;
+    }[];
+  });
+}
+
+/** Produsele create de testele de imagini (SKU `IMG-E2E-…`) și fișierele aduse de la adresele lor. */
+export async function removeE2eImageData(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `delete from product where id in (select "productId" from product_variant where sku like 'IMG-E2E-%')`,
+    );
+    await db.query(
+      `delete from media where "sourceHash" is not null and "originalName" like 'e2e-img-%'`,
+    );
+  });
+}
+
+/** Câte produse cu SKU-urile date există. */
+export async function countE2eProductsBySku(skus: readonly string[]): Promise<number> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select count(distinct "productId")::int as n from product_variant where sku = any($1::text[])`,
+      [skus],
+    );
+    return (result.rows[0]?.n as number) ?? 0;
+  });
+}

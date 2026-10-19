@@ -231,6 +231,9 @@ model Media {
   height          Int?
   /// SHA-256 (hex) al originalului stocat; permite detectarea dublurilor
   checksum        String
+  /// SHA-256 (hex) al adresei sursă normalizate, pentru imaginile aduse prin import din adresă (idempotență: aceeași
+  /// adresă nu produce un al doilea fișier). `null` la fișierele încărcate de utilizator.
+  sourceHash      String?         @unique
   originalName    String
   storageKey      String         @unique
   /// [{ name, format, key, width, height, sizeBytes }]
@@ -375,6 +378,7 @@ model Product {
   collections              CollectionProduct[]
   relations                ProductRelation[]     @relation("ProductRelations")
   relatedTo                ProductRelation[]     @relation("RelatedProducts")
+  importImages             ProductImportImage[]
   documents                ProductDocument[]
   channelListings          ChannelListing[]
   partsDiagrams            PartsDiagramProduct[]
@@ -879,7 +883,39 @@ model ProductImport {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  images        ProductImportImage[]
+
   @@index([createdById])
   @@index([expiresAt])
   @@map("product_import")
+}
+
+/// O imagine de adus dintr-o adresă, în cadrul unui import WooCommerce (punctul 15b). Sarcinile se creează la
+/// aplicare (după produse) și se execută în fundal: o imagine eșuată nu strică produsul și se reîncearcă la rulări
+/// următoare. Adresa e cea NORMALIZATĂ (https, gazdă permisă); motivul eșecului e un COD stabil, niciodată IP-uri,
+/// anteturi sau corpuri de răspuns.
+model ProductImportImage {
+  id         String        @id @default(cuid())
+  importId   String
+  import     ProductImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Rândul din fișier și SKU-ul, pentru raport
+  row        Int
+  sku        String
+  /// Ordinea în fișier, în cadrul produsului (prima = principală dacă produsul nu are imagini)
+  position   Int
+  sourceUrl  String
+  sourceHash String
+  host       String
+  /// "pending" | "downloaded" | "existing" | "failed" (CHECK în migrație)
+  status     String        @default("pending")
+  /// Cod stabil al motivului (ex. host_not_allowed, too_large, not_image); null când n-a eșuat
+  reason     String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([importId, status])
+  @@index([productId])
+  @@map("product_import_image")
 }
