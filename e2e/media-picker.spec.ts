@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { insertE2eMedia, promoteE2eUser } from "../packages/core/test/e2e-support";
 import { solidPng } from "./support/png";
+import { uniqueClientIp } from "./support/client-ip";
 import { expectResponseOk } from "./support/diagnostics";
 
 /**
@@ -22,7 +23,7 @@ async function createAccount(
   const email = `e2e-${randomBytes(5).toString("hex")}@example.test`;
   const password = randomBytes(18).toString("base64url");
   const response = await request.post(`${baseURL}/api/auth/sign-up/email`, {
-    headers: { origin: baseURL },
+    headers: { origin: baseURL, "x-forwarded-for": uniqueClientIp() },
     data: { name: "Cont E2E", email, password },
   });
   await expectResponseOk(response, "înregistrarea contului de test");

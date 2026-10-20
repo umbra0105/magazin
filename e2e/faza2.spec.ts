@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { ageE2eSessions, promoteE2eUser } from "../packages/core/test/e2e-support";
 import { extractTokenLink, waitForEmail } from "./support/mailpit";
+import { uniqueClientIp } from "./support/client-ip";
 import { expectResponseOk } from "./support/diagnostics";
 
 /**
@@ -24,7 +25,7 @@ test("Faza 2 cap-coadă: înregistrare → email → login → fără admin → 
 
   // 1. Înregistrare cu câmpuri de rol injectate: serverul trebuie să le ignore.
   const signUp = await request.post(`${origin}/api/auth/sign-up/email`, {
-    headers: { origin },
+    headers: { origin, "x-forwarded-for": uniqueClientIp() },
     data: { name: "Vizitator E2E", email, password, role: "owner", roles: ["owner"] },
   });
   await expectResponseOk(signUp, "înregistrarea contului de test");

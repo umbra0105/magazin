@@ -6,6 +6,7 @@ import {
   promoteE2eUser,
 } from "../packages/core/test/e2e-support";
 import { expectNoEmail, extractTokenLink, waitForEmail } from "./support/mailpit";
+import { uniqueClientIp } from "./support/client-ip";
 import { expectResponseOk } from "./support/diagnostics";
 
 /**
@@ -21,7 +22,7 @@ async function verifiedAccount(request: APIRequestContext, baseURL: string) {
   const email = uniqueEmail();
   const password = newPassword();
   const response = await request.post(`${baseURL}/api/auth/sign-up/email`, {
-    headers: { origin: baseURL },
+    headers: { origin: baseURL, "x-forwarded-for": uniqueClientIp() },
     data: { name: "Cont E2E", email, password },
   });
   await expectResponseOk(response, "înregistrarea contului de test");

@@ -21,6 +21,7 @@ import {
   trackE2eImportFile,
   trackE2eProduct,
 } from "../packages/core/test/e2e-support";
+import { uniqueClientIp } from "./support/client-ip";
 import { expectResponseOk } from "./support/diagnostics";
 
 /**
@@ -42,7 +43,7 @@ async function createAccount(
   const email = `e2e-${randomBytes(5).toString("hex")}@example.test`;
   const password = randomBytes(18).toString("base64url");
   const response = await request.post(`${baseURL}/api/auth/sign-up/email`, {
-    headers: { origin: baseURL },
+    headers: { origin: baseURL, "x-forwarded-for": uniqueClientIp() },
     data: { name: "Cont E2E", email, password },
   });
   await expectResponseOk(response, "înregistrarea contului de test");

@@ -25,8 +25,11 @@ export default async function globalSetup(): Promise<void> {
   // Un proxy de încredere: Next adaugă singur `X-Forwarded-For` (IP-ul socketului) când lipsește, iar
   // testele trimit propriul antet ca să aibă IP-uri distincte (limitele pe IP nu se amestecă).
   await setTestSetting(process.env["TEST_DATABASE_URL"], "auth.trustedProxyHops", 1);
-  // Toate cererile din browser vin de la același IP (localhost): limita de înregistrări pe IP nu are
-  // sens într-o suită care creează zeci de conturi. Se testează separat, în teste unitare.
+  // Limita de înregistrări pe IP (100 = maximul din registru) nu trebuie să fie un plafon al suitei: fiecare
+  // înregistrare din teste trimite un `X-Forwarded-For` propriu (`uniqueClientIp()`, verificat de
+  // `test/architecture/e2e-signup-ip.architecture.test.ts`). Fără el, toate conturile ar împărți coșul
+  // `register-ip:::1`, iar o rulare curată (100 de conturi) ar fi fix la limită: orice reîncercare dă 429.
+  // Limita în sine se testează separat, în teste unitare.
   await setTestSetting(process.env["TEST_DATABASE_URL"], "auth.registerMaxAttempts", 100);
   // Contoarele de limitare ale unei rulări anterioare nu trebuie să le afecteze pe cele ale acesteia.
   await clearE2eRateLimits();
