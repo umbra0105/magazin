@@ -314,21 +314,30 @@ export function createPrismaProductRelationStore(db: Db): ProductRelationStore {
           select: { id: true, type: true, position: true, product: { select: summarySelect } },
         }),
       ]);
+      // Prisma tipizează produsul asociat ca nenul, dar `variants` (cu `take`) se citește separat: dacă produsul a
+      // fost șters definitiv (golirea coșului) între citiri, rândul vine cu produsul `null` (dovedit pe baza reală).
+      // Relația dispare oricum odată cu produsul (ON DELETE CASCADE), deci se omite, nu se aruncă excepție.
+      const present = (
+        id: string,
+        type: string,
+        position: number,
+        direction: RelationRecord["direction"],
+        product: RawSummary | null,
+      ): RelationRecord[] =>
+        product
+          ? [
+              {
+                id,
+                type: type as ProductRelationType,
+                position,
+                direction,
+                product: toSummary(product),
+              },
+            ]
+          : [];
       return [
-        ...outgoing.map((r): RelationRecord => ({
-          id: r.id,
-          type: r.type as ProductRelationType,
-          position: r.position,
-          direction: "outgoing",
-          product: toSummary(r.relatedProduct),
-        })),
-        ...incoming.map((r): RelationRecord => ({
-          id: r.id,
-          type: r.type as ProductRelationType,
-          position: r.position,
-          direction: "incoming",
-          product: toSummary(r.product),
-        })),
+        ...outgoing.flatMap((r) => present(r.id, r.type, r.position, "outgoing", r.relatedProduct)),
+        ...incoming.flatMap((r) => present(r.id, r.type, r.position, "incoming", r.product)),
       ];
     },
 

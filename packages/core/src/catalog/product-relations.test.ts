@@ -4,6 +4,7 @@ import type { PermissionSubject } from "../rbac/can";
 import { DEFAULT_ROLES } from "../rbac/catalog";
 import type { ProductRelationType } from "./constants";
 import {
+  createPrismaProductRelationStore,
   MAX_RELATIONS_PER_TYPE,
   ProductRelationsService,
   type ProductRelationStore,
@@ -271,5 +272,51 @@ describe("relații între produse", () => {
     await expect(service.list(roleSubject("support"), "a")).rejects.toMatchObject({
       code: "AUTH_FORBIDDEN",
     });
+  });
+});
+
+/**
+ * Cursa dovedită pe baza reală (400 de încercări, 186 cu `TypeError: Cannot read properties of null (reading 'id')`):
+ * `findMany` cu `relatedProduct`/`product` imbricat (cu `variants` luate separat) întoarce rândul de relație cu
+ * produsul `null` dacă produsul asociat a fost șters definitiv între cele două citiri. Tipurile Prisma spun „nenul”.
+ * Aici baza e simulată cu exact acel rezultat, ca testul să fie determinist.
+ */
+describe("createPrismaProductRelationStore.list: produs asociat șters în timpul citirii", () => {
+  const summary = (id: string) => ({
+    id,
+    title: `Produs ${id}`,
+    status: "active",
+    deletedAt: null,
+    variants: [{ sku: `SKU-${id}` }],
+  });
+
+  function storeWith(outgoing: unknown[], incoming: unknown[]) {
+    let call = 0;
+    const db = {
+      productRelation: {
+        findMany: vi.fn(async () => (call++ === 0 ? outgoing : incoming)),
+      },
+    };
+    return createPrismaProductRelationStore(
+      db as unknown as Parameters<typeof createPrismaProductRelationStore>[0],
+    );
+  }
+
+  it("omite relația al cărei produs a dispărut, fără excepție, și păstrează restul", async () => {
+    const store = storeWith(
+      [
+        { id: "r1", type: "accessory", position: 0, relatedProduct: summary("b") },
+        { id: "r2", type: "accessory", position: 1, relatedProduct: null },
+      ],
+      [
+        { id: "r3", type: "similar", position: 0, product: null },
+        { id: "r4", type: "similar", position: 0, product: summary("c") },
+      ],
+    );
+    const rows = await store.list("a");
+    expect(rows.map((r) => `${r.direction}:${r.id}:${r.product.id}`)).toEqual([
+      "outgoing:r1:b",
+      "incoming:r4:c",
+    ]);
   });
 });
