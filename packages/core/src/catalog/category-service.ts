@@ -289,9 +289,12 @@ export class CategoryService {
 
       let result = await this.deps.store.update(id, patch as Partial<NewCategoryData>);
       if (patch.slug !== undefined && patch.slug !== before.slug) {
-        const nodes = asNodes(await this.deps.store.listAll());
-        // calea categoriei și a descendenților, din noua adresă
-        await this.deps.store.applyUpdates(planRename(nodes, id, patch.slug));
+        const newSlug = patch.slug;
+        // calea categoriei și a descendenților, din noua adresă; citire + plan + scriere sub blocarea arborelui
+        await this.deps.store.serialized(async () => {
+          const nodes = asNodes(await this.deps.store.listAll());
+          await this.deps.store.applyUpdates(planRename(nodes, id, newSlug));
+        });
         result = (await this.deps.store.get(id)) ?? result;
       }
       await this.deps.audit.record({
@@ -316,20 +319,24 @@ export class CategoryService {
   async move(subject: PermissionSubject | null, id: string, input: unknown): Promise<void> {
     assertCan(subject, "products.write");
     const { parentId, index } = parseInput(categoryMoveSchema, input);
-    const rows = await this.deps.store.listAll();
-    const nodes = asNodes(rows);
+    // citire + validare + plan + scriere sub blocarea arborelui: planul scrie rândurile complete ale fraților,
+    // deci o mutare simultană ar fi anulată de o citire veche
+    const { node, target } = await this.deps.store.serialized(async () => {
+      const rows = await this.deps.store.listAll();
+      const nodes = asNodes(rows);
 
-    const verdict = validateMove(nodes, id, parentId);
-    if (!verdict.ok) throw new CatalogError(verdict.code, REFUSAL_MESSAGES[verdict.code]);
+      const verdict = validateMove(nodes, id, parentId);
+      if (!verdict.ok) throw new CatalogError(verdict.code, REFUSAL_MESSAGES[verdict.code]);
 
-    const node = nodes.find((n) => n.id === id) as CategoryNode;
-    if (node.parentId !== parentId) {
-      const owner = await this.deps.store.findSiblingBySlug(parentId, node.slug, id);
-      if (owner) throw this.conflict(node.slug, owner);
-    }
-    const target = index ?? nodes.filter((n) => n.parentId === parentId && n.id !== id).length;
-    const plan = planMove(nodes, id, parentId, target);
-    await this.deps.store.applyUpdates(plan);
+      const moved = nodes.find((n) => n.id === id) as CategoryNode;
+      if (moved.parentId !== parentId) {
+        const owner = await this.deps.store.findSiblingBySlug(parentId, moved.slug, id);
+        if (owner) throw this.conflict(moved.slug, owner);
+      }
+      const position = index ?? nodes.filter((n) => n.parentId === parentId && n.id !== id).length;
+      await this.deps.store.applyUpdates(planMove(nodes, id, parentId, position));
+      return { node: moved, target: position };
+    });
 
     await this.deps.audit.record({
       actorId: subject.userId,

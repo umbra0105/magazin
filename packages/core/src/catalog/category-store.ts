@@ -52,6 +52,12 @@ export interface CategoryStore {
   update(id: string, data: Partial<NewCategoryData>): Promise<CategoryRecord>;
   /** Aplică o listă de actualizări de structură (părinte, adâncime, cale, ordine), atomic. */
   applyUpdates(updates: readonly NodeUpdate[]): Promise<void>;
+  /**
+   * Rulează `fn` cu structura arborelui blocată: o altă operație de acest fel (alt administrator, alt proces)
+   * așteaptă să termine, apoi citește arborele proaspăt. Citirea → planul → `applyUpdates` sunt scrieri ale
+   * rândurilor COMPLETE din citirea făcută; fără blocare, două mutări simultane își șterg una alteia efectul.
+   */
+  serialized<T>(fn: () => Promise<T>): Promise<T>;
   countChildren(id: string): Promise<number>;
   /** Legături cu produse: `active` = produse neșterse, `deleted` = produse șterse (soft delete). */
   countProducts(id: string): Promise<{ active: number; deleted: number }>;
@@ -134,6 +140,28 @@ export function createPrismaCategoryStore(db: Db): CategoryStore {
           });
         }
       });
+    },
+
+    async serialized(fn) {
+      // Blocare consultativă PE TRANZACȚIE (se eliberează la sfârșitul ei, chiar la eroare). Operațiile din `fn`
+      // rulează pe alte conexiuni, dar nu pot începe altă operație serializată cât timp aceasta ține blocarea.
+      const lock = (tx: Prisma.TransactionClient | PrismaClient) =>
+        tx.$executeRaw`select pg_advisory_xact_lock(hashtext('ecom:category-tree'))`;
+      // Clientul rădăcină are `$connect`; un client deja în tranzacție (testele cu rollback, importul) nu: acolo
+      // blocarea se ia pe tranzacția existentă și ține până la sfârșitul ei, fără tranzacție imbricată.
+      if (!("$connect" in db)) {
+        await lock(db);
+        return fn();
+      }
+      let result: Awaited<ReturnType<typeof fn>> | undefined;
+      await db.$transaction(
+        async (tx) => {
+          await lock(tx);
+          result = await fn();
+        },
+        { maxWait: 10_000, timeout: 60_000 },
+      );
+      return result as Awaited<ReturnType<typeof fn>>;
     },
 
     countChildren: (id) => db.category.count({ where: { parentId: id } }),

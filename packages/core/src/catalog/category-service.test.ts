@@ -89,6 +89,9 @@ class MemoryCategoryStore implements CategoryStore {
       this.rows.set(u.id, { ...current, ...u });
     }
   }
+  serialized<T>(fn: () => Promise<T>): Promise<T> {
+    return fn();
+  }
   async countChildren(id: string) {
     return [...this.rows.values()].filter((r) => r.parentId === id).length;
   }
