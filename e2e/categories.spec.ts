@@ -230,7 +230,9 @@ test.describe("categorii", () => {
     await expect(dialog.getByLabel("Identificator din magazinul vechi")).toHaveCount(0);
     await dialog.getByLabel("Descriere", { exact: true }).fill("Descriere scrisă de Editor");
     await dialog.getByRole("button", { name: "Salvează" }).click();
-    await expect(row(editor.p, name)).toBeVisible();
+    // salvarea s-a terminat când dialogul se închide; rândul era vizibil încă de dinainte, deci `toBeVisible()`
+    // singur ar fi trecut imediat, iar închiderea contextului ar fi întrerupt salvarea în curs
+    await expect(dialog).toBeHidden();
     await editor.context.close();
 
     // Manager: structura da, legacy nu
@@ -253,7 +255,9 @@ test.describe("categorii", () => {
       .getByLabel("Adresă din magazinul vechi")
       .fill(`https://vechi.example/categorie/${tag}`);
     await aDialog.getByRole("button", { name: "Salvează" }).click();
-    await expect(row(admin.p, name)).toBeVisible();
+    // întâi închiderea dialogului (salvarea s-a terminat); rândul era vizibil de dinainte, iar `reload()` peste o
+    // salvare în curs o întrerupe și câmpul revine gol
+    await expect(aDialog).toBeHidden();
     await admin.p.reload();
     await admin.p.getByRole("button", { name: `Editează categoria ${name}` }).click();
     await expect(
