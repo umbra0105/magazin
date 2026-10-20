@@ -202,6 +202,8 @@ există `tenantId`. În schimb:
   textul dintr-un element nou. NU un text care poate exista deja în pagină (de exemplu `toContainText` pe un
   rând care conține un `<select>` deschis cu acel text printre opțiuni, sau pe un titlu care conține deja
   cuvântul căutat): trece imediat, testul se încheie cu acțiunea în curs și devine intermitent.
+- Orice aserțiune nouă de text pe un element care poate conține deja acel text (select deschis, listă, titlu)
+  se respinge la revizuire.
 
 ### Comenzi utile
 
