@@ -9,6 +9,7 @@ import {
   removeE2eProducts,
 } from "../packages/core/test/e2e-support";
 import { noisePng, solidPng } from "./support/png";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Biblioteca media, în browser: încărcare multiplă cu progres, procesare în fundal (workerul din
@@ -33,7 +34,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }

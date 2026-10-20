@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { insertE2eMedia, promoteE2eUser } from "../packages/core/test/e2e-support";
 import { solidPng } from "./support/png";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Selectorul `MediaPicker`, în browser, printr-un harness care există doar în teste (pagina
@@ -24,7 +25,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }

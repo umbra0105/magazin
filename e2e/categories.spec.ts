@@ -7,6 +7,7 @@ import {
   removeE2eProducts,
 } from "../packages/core/test/e2e-support";
 import { solidPng } from "./support/png";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Categoriile și brandurile din admin, în browser: creare, mutare cu tastatura și prin glisare,
@@ -31,7 +32,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }

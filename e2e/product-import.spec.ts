@@ -21,6 +21,7 @@ import {
   trackE2eImportFile,
   trackE2eProduct,
 } from "../packages/core/test/e2e-support";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Importul de produse (CSV/XLSX), în browser (punctul 14a): fluxul în pași (fișier → mapare →
@@ -44,7 +45,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }
@@ -345,7 +346,26 @@ test.describe("import de produse", () => {
     await page.keyboard.press("Tab");
     await expect(input).toBeFocused();
     await expect(button).not.toHaveCSS("box-shadow", "none");
-    const chooser = page.waitForEvent("filechooser");
+    // înainte de Spațiu: unde e focusul de fapt (diagnostic: un eșec arată elementul, nu doar un timeout)
+    const focus = await page.evaluate(() => {
+      const active = document.activeElement;
+      return {
+        tag: active?.tagName ?? null,
+        id: active?.id ?? null,
+        type: active instanceof HTMLInputElement ? active.type : null,
+        disabled: active instanceof HTMLInputElement ? active.disabled : null,
+        documentHasFocus: document.hasFocus(),
+        readyState: document.readyState,
+      };
+    });
+    expect(focus, "focusul trebuie să fie pe câmpul de fișier înainte de Spațiu").toMatchObject({
+      tag: "INPUT",
+      id: "import-file",
+      type: "file",
+      disabled: false,
+    });
+    // termen scurt DOAR pe așteptarea ferestrei: un eșec costă 15 s, nu 180 s
+    const chooser = page.waitForEvent("filechooser", { timeout: 15_000 });
     await page.keyboard.press("Space");
     const picked = await chooser;
     expect(picked.isMultiple()).toBe(false);

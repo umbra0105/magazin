@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { ageE2eSessions, promoteE2eUser } from "../packages/core/test/e2e-support";
 import { extractTokenLink, waitForEmail } from "./support/mailpit";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Cap-coadă Faza 2, într-un singur parcurs ca al unui om: un vizitator își face cont (încercând să
@@ -26,7 +27,7 @@ test("Faza 2 cap-coadă: înregistrare → email → login → fără admin → 
     headers: { origin },
     data: { name: "Vizitator E2E", email, password, role: "owner", roles: ["owner"] },
   });
-  expect(signUp.ok()).toBe(true);
+  await expectResponseOk(signUp, "înregistrarea contului de test");
 
   // 2. Înainte de confirmarea emailului, autentificarea e refuzată.
   await page.goto("/autentificare");

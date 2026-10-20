@@ -13,6 +13,7 @@ import {
   removeE2eWooFixtureData,
   trackE2eImportFile,
 } from "../packages/core/test/e2e-support";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Importul WooCommerce în browser (punctul 15a), pe fixture-ul SINTETIC (fără conținut din exportul real):
@@ -37,7 +38,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }

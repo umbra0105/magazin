@@ -11,6 +11,7 @@ import {
   seedE2eProducts,
   trackE2eAttribute,
 } from "../packages/core/test/e2e-support";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Blocul 11b în browser: atribute (pagina `/admin/atribute` și tabul Atribute), relații (tabul
@@ -33,7 +34,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }

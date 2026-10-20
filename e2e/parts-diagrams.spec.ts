@@ -12,6 +12,7 @@ import {
   trackE2eDiagram,
 } from "../packages/core/test/e2e-support";
 import { solidPng } from "./support/png";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Fișa explodată, în browser (blocul 11d): flag-ul `partsDiagrams` (meniu, rută 404, tab), creare cu
@@ -35,7 +36,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }

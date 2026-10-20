@@ -3,6 +3,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { promoteE2eUser } from "../packages/core/test/e2e-support";
 import { solidPng } from "./support/png";
 import { deleteTestObject, presignGet, putTestObject, s3E2eEnv } from "./support/s3";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Upload pe driverul S3 (MinIO), pe un server E2E separat (vezi `playwright.config.ts`, proiectul
@@ -20,7 +21,7 @@ async function createOwner(request: APIRequestContext, baseURL: string) {
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, "owner");
   return { email, password };
 }

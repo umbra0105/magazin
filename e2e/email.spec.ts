@@ -6,6 +6,7 @@ import {
   promoteE2eUser,
 } from "../packages/core/test/e2e-support";
 import { expectNoEmail, extractTokenLink, waitForEmail } from "./support/mailpit";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Fluxurile cu email, cap-coadă: aplicația pune emailul în coadă (BullMQ), workerul îl trimite prin
@@ -23,7 +24,7 @@ async function verifiedAccount(request: APIRequestContext, baseURL: string) {
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, null);
   return { email, password };
 }

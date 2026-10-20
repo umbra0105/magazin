@@ -12,6 +12,7 @@ import {
   seedE2eProducts,
   trackE2eProduct,
 } from "../packages/core/test/e2e-support";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Editorul de produs, în browser (blocul 11a): creare completă, taburi cu tastatură, drepturi pe roluri
@@ -35,7 +36,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }

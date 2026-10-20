@@ -12,6 +12,7 @@ import {
   setE2eModelSpecifics,
   trackE2eProduct,
 } from "../packages/core/test/e2e-support";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Ciclul de viață al produsului, în browser (punctul 13): duplicare (ce se copiază și ce NU),
@@ -35,7 +36,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }

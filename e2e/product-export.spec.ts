@@ -11,6 +11,7 @@ import {
   seedE2eProducts,
   trackE2eImportFile,
 } from "../packages/core/test/e2e-support";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Exportul de produse (CSV/XLSX), în browser (punctul 14b): domeniile (filtre curente, selecție), cele
@@ -34,7 +35,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }

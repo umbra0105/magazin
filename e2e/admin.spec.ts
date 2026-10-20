@@ -5,6 +5,7 @@ import {
   promoteE2eUser,
   setE2eFeatureFlag,
 } from "../packages/core/test/e2e-support";
+import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Zona de admin, în browser. Conturile se creează prin API-ul real de înregistrare (parole
@@ -28,7 +29,7 @@ async function createAccount(
     headers: { origin: baseURL },
     data: { name: "Cont E2E", email, password },
   });
-  expect(response.ok()).toBe(true);
+  await expectResponseOk(response, "înregistrarea contului de test");
   await promoteE2eUser(email, roleKey);
   return { email, password };
 }
