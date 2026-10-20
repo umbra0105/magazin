@@ -124,6 +124,11 @@ test.describe("lista de produse", () => {
       .click();
     await page.getByLabel(`Editează starea pentru ${title} (redenumit)`).selectOption("archived");
     await page.getByRole("button", { name: "Salvează" }).click();
+    // întâi se așteaptă ÎNCHIDEREA editorului (salvarea s-a terminat): „Arhivat” există deja printre opțiunile
+    // listei deschise, deci l-ar găsi imediat, iar pasul următor ar porni cu salvarea încă în curs
+    await expect(
+      page.getByRole("combobox", { name: `Editează starea pentru ${title} (redenumit)` }),
+    ).toBeHidden();
     await expect(renamed).toContainText("Arhivat");
 
     // preț: produs cu o singură variantă, în lei cu virgulă
@@ -235,6 +240,10 @@ test.describe("lista de produse", () => {
     await expect(dialog).toContainText(titles[0] as string);
     // anulare: nu se schimbă nimic
     await dialog.getByRole("button", { name: "Anulează" }).click();
+    // întâi starea pozitivă care dovedește că anularea s-a produs (dialogul s-a închis), apoi valoarea inițială
+    // (produsul 01 e ciornă); negativa singură ar trece și cu dialogul încă deschis
+    await expect(dialog).toBeHidden();
+    await expect(row(page, titles[0] as string)).toContainText("Ciornă");
     await expect(row(page, titles[0] as string)).not.toContainText("Activ");
 
     await bar.getByRole("button", { name: "Aplică…" }).click();

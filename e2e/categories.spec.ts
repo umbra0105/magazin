@@ -117,8 +117,11 @@ test.describe("categorii", () => {
     const moveDialog = page.getByRole("dialog", { name: `Mută «${child}»` });
     await moveDialog.getByLabel("Mută sub").selectOption({ label: "— La rădăcină —" });
     await moveDialog.getByRole("button", { name: "Mută", exact: true }).click();
-    await expect(row(page, child)).toContainText(`/${slugOf(child)} `);
+    // starea care se schimbă efectiv la mutare: nivelul nou și calea fără părinte (calea „/…/copil ” conținea
+    // deja „/copil ”, deci un text pe slug singur ar fi trecut și înainte de mutare)
     await expect(row(page, child)).toContainText("nivel 1");
+    await expect(row(page, child)).not.toContainText(`/${slugOf(root)}/${slugOf(child)}`);
+    await expect(row(page, child)).toContainText(`/${slugOf(child)} `);
 
     // reordonare: „mai sus” o pune înaintea lui „other” (ordinea în DOM)
     const names = async () =>

@@ -96,8 +96,9 @@ test.describe("documente de produs", () => {
     await page.getByRole("button", { name: "Încarcă", exact: true }).click();
     const row = page.locator('[data-document-row="Manual de utilizare"]');
     await expect(row).toBeVisible();
-    await expect(row).toContainText("Manual");
-    await expect(row).toContainText("PDF");
+    // tipul salvat apare în rândul de detalii („Manual · Română · PDF · …”); titlul conține deja „Manual”, deci un
+    // text pe tot rândul ar trece și cu un tip greșit
+    await expect(row.getByText(/^Manual · .*PDF/)).toBeVisible();
 
     const [doc] = await readE2eDocuments(slug);
     expect(doc).toMatchObject({
