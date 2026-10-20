@@ -134,7 +134,11 @@ export function ProductTable({
       try {
         const result = await updateProductInline({ id: row.id, field, value });
         if (result.ok) {
-          setEditing(null);
+          // Se închide doar editorul care s-a salvat. Dacă utilizatorul a început între timp altă editare (cererea
+          // era lentă), aceea rămâne deschisă, cu ce a scris: răspunsul întârziat nu o mai șterge.
+          setEditing((current) =>
+            current && current.id === row.id && current.field === field ? null : current,
+          );
           setRowError(null);
           setAnnouncement(m.inline.saved(row.title));
           router.refresh();

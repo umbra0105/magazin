@@ -149,6 +149,66 @@ test.describe("lista de produse", () => {
     await expect(after).toContainText("249,50");
   });
 
+  test("o editare începută cât o salvare anterioară e încă în curs NU se pierde când aceea se termină", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    const tag = randomBytes(3).toString("hex");
+    const [title] = await seedE2eProducts(tag, 2);
+    await login(page, owner, `/admin/produse`);
+    await page.goto(`/admin/produse?q=${encodeURIComponent(`E2E ${tag}`)}&sort=title_asc`);
+    const first = row(page, title as string);
+
+    // Cerere lentă, în mod DETERMINIST: răspunsul primei salvări (server action) e ținut în aer și eliberat de test,
+    // ca salvarea să se termine DUPĂ ce utilizatorul a început altă editare (pe o rețea lentă se întâmplă singur).
+    let releaseSave: () => void = () => undefined;
+    let saveHeld = false;
+    await page.route("**/admin/produse**", async (route) => {
+      const sent = route.request();
+      if (!saveHeld && sent.method() === "POST" && sent.headers()["next-action"]) {
+        saveHeld = true;
+        await new Promise<void>((resolve) => {
+          releaseSave = resolve;
+        });
+      }
+      await route.continue();
+    });
+
+    // 1. salvarea titlului pornește și rămâne în aer
+    await first.getByRole("button", { name: `Editează titlul pentru ${title}` }).click();
+    await page.getByLabel(`Editează titlul pentru ${title}`).fill(`${title} (redenumit)`);
+    await page.getByRole("button", { name: "Salvează" }).click();
+    await expect.poll(() => saveHeld).toBe(true);
+
+    // 2. cât salvarea e în curs, utilizatorul începe să editeze starea (butoanele de editare nu sunt blocate)
+    await first.getByRole("button", { name: `Editează starea pentru ${title}` }).click();
+    await page
+      .getByRole("combobox", { name: `Editează starea pentru ${title}` })
+      .selectOption("archived");
+
+    // 3. salvarea titlului se termină acum; lista arată titlul nou
+    releaseSave();
+    const renamed = row(page, `${title} (redenumit)`);
+    await expect(renamed).toBeVisible();
+
+    // 4. editarea stării, începută între timp, a rămas deschisă, cu valoarea aleasă (nu s-a pierdut)
+    const statusEditor = page.getByRole("combobox", {
+      name: `Editează starea pentru ${title} (redenumit)`,
+    });
+    await expect(statusEditor).toBeVisible();
+    await expect(statusEditor).toHaveValue("archived");
+
+    // 5. și se poate salva
+    await page.getByRole("button", { name: "Salvează" }).click();
+    // Se așteaptă ÎNCHIDEREA editorului (salvarea s-a terminat): textul „Arhivat” există deja printre opțiunile
+    // listei deschise, deci l-ar găsi imediat, iar testul s-ar încheia cu salvarea în curs (produsul ar fi șters
+    // sub ea de `afterEach`, cu o eroare P2025 în jurnalul serverului).
+    await expect(statusEditor).toBeHidden();
+    await expect(renamed).toContainText("Arhivat");
+  });
+
   test("editare în masă: selecție, confirmare explicită, tot sau nimic; ajustare de preț în procente", async ({
     page,
     request,
