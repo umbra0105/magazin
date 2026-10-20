@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { argon2Sync, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { PASSWORD_HASH_LIMITS, hashPassword, verifyPassword } from "./password";
 
@@ -120,5 +120,98 @@ describe("parole: hash-uri străine sau cu parametri excesivi sunt respinse îna
     const hash = `$argon2id$v=19$m=24576,t=3,p=2$${salt.toString("base64").replace(/=+$/, "")}$${tag.toString("base64").replace(/=+$/, "")}`;
     expect(await verifyPassword({ hash, password: p })).toBe(true);
     expect(await verifyPassword({ hash, password: `${p}x` })).toBe(false);
+  });
+});
+
+/**
+ * Hash-uri produse de implementarea VECHE (`@node-rs/argon2` 2.2.2, parametrii de azi) în CI-ul din B2.1, cu parole
+ * INVENTATE. Sunt valori fixe: dovada permanentă că parolele stocate înainte de trecerea la `crypto.argon2` se
+ * validează cu implementarea nouă, fără migrare sau rehash. Parolele sunt scrise cu escape-uri \u, ca forma
+ * Unicode (compusă / descompusă) să nu se altereze la copiere sau la salvare.
+ */
+const OLD_VECTORS: { label: string; password: string; hash: string }[] = [
+  {
+    label: "ascii (cu diacritice românești)",
+    password: "Parola-de-test-1 cu spații și simboluri !@#$%",
+    hash: "$argon2id$v=19$m=19456,t=2,p=1$j0jizD8PxbI2s2MhHYSmPQ$Kiou/LKEY2SUvBUxHD7+uPcDJneSktM0kf/Iv63wXq4",
+  },
+  {
+    label: "unicode compus (NFC)",
+    password: "Șarpele țesut ăîâ 密码\u{1f510} pässwörd",
+    hash: "$argon2id$v=19$m=19456,t=2,p=1$sCZQiHLEazvxUqGcaajRkQ$PxUNywC4Rh07f9BD9bUI+MSKYjWrbmo6pa/mzvi48yo",
+  },
+  {
+    label: "unicode descompus (NFD)",
+    password: "é ä ô (forma descompusă)",
+    hash: "$argon2id$v=19$m=19456,t=2,p=1$Ib0diSynZRDE6j5uoY3TiA$tcwHTrmstiYdx7FTdr6vcXWaWANmsgpiX//XOj4A2lc",
+  },
+  {
+    label: "goală",
+    password: "",
+    hash: "$argon2id$v=19$m=19456,t=2,p=1$gVxzQiaJSto3pcKpGDMY8Q$dqMuBYzCja3G4EehIUHRF3fhcWmAVbWBBwNhIjRyM9g",
+  },
+  {
+    label: "lungă (300 de caractere)",
+    password: "lung-".repeat(60),
+    hash: "$argon2id$v=19$m=19456,t=2,p=1$pG60bURoJFv9NrnpeA6NUQ$sEQIqn71g7ts1UVuGqQ2cTchCrmCKfHke5f79ufu3fQ",
+  },
+  {
+    label: "cu caracter NUL",
+    password: "a\u0000b",
+    hash: "$argon2id$v=19$m=19456,t=2,p=1$7VGOPPHpC8IAp02rQ1SHwA$G766+LV0Q3Q0RfuJQeHf43UhFPk21gJiHkwvbPodjjk",
+  },
+];
+
+describe("compatibilitate permanentă: hash-uri produse de implementarea veche (valori fixe)", () => {
+  it.each(OLD_VECTORS)("$label: se validează cu implementarea nouă", async ({ password, hash }) => {
+    expect(await verifyPassword({ hash, password })).toBe(true);
+  });
+
+  it.each(OLD_VECTORS)("$label: o parolă apropiată NU se validează", async ({ password, hash }) => {
+    expect(await verifyPassword({ hash, password: `${password}x` })).toBe(false);
+    expect(await verifyPassword({ hash, password: `x${password}` })).toBe(false);
+  });
+
+  it("forma compusă (NFC) și cea descompusă (NFD) sunt parole DIFERITE (octeți diferiți)", async () => {
+    const nfc = OLD_VECTORS.find((v) => v.label.includes("NFC"));
+    const nfd = OLD_VECTORS.find((v) => v.label.includes("NFD"));
+    if (!nfc || !nfd) throw new Error("lipsesc vectorii NFC / NFD");
+    // forma lor Unicode e cea așteptată (nu s-a alterat la salvare)
+    expect(nfc.password).toBe(nfc.password.normalize("NFC"));
+    expect(nfd.password).not.toBe(nfd.password.normalize("NFC"));
+    // fiecare hash se validează DOAR cu forma lui
+    expect(await verifyPassword({ hash: nfd.hash, password: nfd.password })).toBe(true);
+    expect(await verifyPassword({ hash: nfd.hash, password: nfd.password.normalize("NFC") })).toBe(
+      false,
+    );
+    expect(await verifyPassword({ hash: nfc.hash, password: nfc.password })).toBe(true);
+    expect(await verifyPassword({ hash: nfc.hash, password: nfc.password.normalize("NFD") })).toBe(
+      false,
+    );
+  });
+
+  it("hash-urile vechi au exact forma și parametrii așteptați (și hash-urile noi la fel)", async () => {
+    const shape = /^\$argon2id\$v=19\$m=19456,t=2,p=1\$[A-Za-z0-9+/]{22}\$[A-Za-z0-9+/]{43}$/;
+    for (const { hash } of OLD_VECTORS) expect(hash).toMatch(shape);
+    expect(await hashPassword("forma")).toMatch(shape);
+  });
+});
+
+describe("algoritmul: vectorul oficial RFC 9106 §5.3 (Argon2id)", () => {
+  it("crypto.argon2 reproduce exact eticheta din RFC 9106", () => {
+    // parola 32×0x01, sare 16×0x02, secret 8×0x03, date asociate 12×0x04; t=3, m=32 KiB, p=4, tag de 32 de octeți
+    const tag = argon2Sync("argon2id", {
+      message: Buffer.alloc(32, 0x01),
+      nonce: Buffer.alloc(16, 0x02),
+      secret: Buffer.alloc(8, 0x03),
+      associatedData: Buffer.alloc(12, 0x04),
+      parallelism: 4,
+      tagLength: 32,
+      memory: 32,
+      passes: 3,
+    });
+    expect(tag.toString("hex")).toBe(
+      "0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659",
+    );
   });
 });

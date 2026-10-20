@@ -19,7 +19,6 @@
     "@ecom/shared": "workspace:*",
     "@ecom/ui": "workspace:*",
     "@hookform/resolvers": "5.9.1",
-    "@node-rs/argon2": "2.2.2",
     "@sentry/nextjs": "11.5.0",
     "better-auth": "1.7.7",
     "bullmq": "6.3.12",

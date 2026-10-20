@@ -51,15 +51,7 @@ const nextConfig: NextConfig = {
     // aplică handlerele, pe flux, cu eroare clară. Fără asta, un PDF de 12 MB ar fi salvat tăiat.
     middlewareClientMaxBodySize: "51mb",
   },
-  serverExternalPackages: [
-    "pg",
-    "ioredis",
-    "pino",
-    "@node-rs/argon2",
-    "bullmq",
-    "nodemailer",
-    "sharp",
-  ],
+  serverExternalPackages: ["pg", "ioredis", "pino", "bullmq", "nodemailer", "sharp"],
 };
 
 // Fără org/project/authToken: nu urcă source maps și nu contactează Sentry la build.
