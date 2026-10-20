@@ -189,51 +189,55 @@ export class CategoryService {
     }
     await this.assertImage(data.imageMediaId);
 
-    const all = asNodes(await this.deps.store.listAll());
+    // citire (calea și adâncimea părintelui, frații) + verificări + inserare sub blocarea arborelui: altfel o
+    // mutare a părintelui sau o altă creare simultană lasă copilul cu cale veche sau cu același `sortOrder`
     const parentId = data.parentId ?? null;
-    const parent = parentId ? all.find((n) => n.id === parentId) : null;
-    if (parentId && !parent) {
-      throw new CatalogError(
-        "CATEGORY_PARENT_NOT_FOUND",
-        REFUSAL_MESSAGES.CATEGORY_PARENT_NOT_FOUND,
-      );
-    }
-    const depth = parent ? parent.depth + 1 : 0;
-    if (depth > MAX_CATEGORY_DEPTH) {
-      throw new CatalogError("CATEGORY_TOO_DEEP", REFUSAL_MESSAGES.CATEGORY_TOO_DEEP);
-    }
+    const created = await this.deps.store.serialized(async () => {
+      const all = asNodes(await this.deps.store.listAll());
+      const parent = parentId ? all.find((n) => n.id === parentId) : null;
+      if (parentId && !parent) {
+        throw new CatalogError(
+          "CATEGORY_PARENT_NOT_FOUND",
+          REFUSAL_MESSAGES.CATEGORY_PARENT_NOT_FOUND,
+        );
+      }
+      const depth = parent ? parent.depth + 1 : 0;
+      if (depth > MAX_CATEGORY_DEPTH) {
+        throw new CatalogError("CATEGORY_TOO_DEEP", REFUSAL_MESSAGES.CATEGORY_TOO_DEEP);
+      }
 
-    let slug: string;
-    if (data.slug) {
-      const owner = await this.deps.store.findSiblingBySlug(parentId, data.slug);
-      if (owner) throw this.conflict(data.slug, owner);
-      slug = data.slug;
-    } else {
-      slug = await generateUniqueSlug(
-        data.name,
-        async (s) => (await this.deps.store.findSiblingBySlug(parentId, s)) !== null,
-      );
-    }
+      let slug: string;
+      if (data.slug) {
+        const owner = await this.deps.store.findSiblingBySlug(parentId, data.slug);
+        if (owner) throw this.conflict(data.slug, owner);
+        slug = data.slug;
+      } else {
+        slug = await generateUniqueSlug(
+          data.name,
+          async (s) => (await this.deps.store.findSiblingBySlug(parentId, s)) !== null,
+        );
+      }
 
-    const siblings = all.filter((n) => n.parentId === parentId);
-    const row: NewCategoryData = {
-      parentId,
-      slug,
-      name: data.name,
-      path: pathFor(parent?.path ?? null, slug),
-      depth,
-      sortOrder: siblings.length,
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.excludeFromGroupDiscount !== undefined && {
-        excludeFromGroupDiscount: data.excludeFromGroupDiscount,
-      }),
-      ...(data.seoTitle !== undefined && { seoTitle: data.seoTitle }),
-      ...(data.seoDescription !== undefined && { seoDescription: data.seoDescription }),
-      ...(data.imageMediaId !== undefined && { imageMediaId: data.imageMediaId }),
-      ...(data.legacyId !== undefined && { legacyId: data.legacyId }),
-      ...(data.legacyUrl !== undefined && { legacyUrl: data.legacyUrl }),
-    };
-    const created = await this.deps.store.create(row);
+      const siblings = all.filter((n) => n.parentId === parentId);
+      const row: NewCategoryData = {
+        parentId,
+        slug,
+        name: data.name,
+        path: pathFor(parent?.path ?? null, slug),
+        depth,
+        sortOrder: siblings.length,
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.excludeFromGroupDiscount !== undefined && {
+          excludeFromGroupDiscount: data.excludeFromGroupDiscount,
+        }),
+        ...(data.seoTitle !== undefined && { seoTitle: data.seoTitle }),
+        ...(data.seoDescription !== undefined && { seoDescription: data.seoDescription }),
+        ...(data.imageMediaId !== undefined && { imageMediaId: data.imageMediaId }),
+        ...(data.legacyId !== undefined && { legacyId: data.legacyId }),
+        ...(data.legacyUrl !== undefined && { legacyUrl: data.legacyUrl }),
+      };
+      return this.deps.store.create(row);
+    });
     await this.deps.audit.record({
       actorId: subject.userId,
       actorLabel: subject.email,

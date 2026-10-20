@@ -113,3 +113,128 @@ describe("CategoryService.move: mutări simultane", () => {
     }
   }, 30_000);
 });
+
+/**
+ * `CategoryService.create` sub aceeași blocare ca mutarea și redenumirea. Înainte, `create` citea tot arborele
+ * (calea și adâncimea părintelui, numărul de frați) fără blocare: (a) o creare simultană cu mutarea părintelui
+ * scria pentru copil calea VECHE a părintelui; (b) două creări simultane sub același părinte primeau același
+ * `sortOrder`. Aceeași barieră ca mai sus, pe baza reală.
+ */
+describe("CategoryService.create: creări simultane", () => {
+  const makeRoot = async (ids: string[], name: string, tag: string, sortOrder: number) => {
+    const row = await db.category.create({
+      data: {
+        name: `ZZ ${name} ${tag}`,
+        slug: `zz-${name.toLowerCase()}-${tag}`,
+        path: `/zz-${name.toLowerCase()}-${tag}`,
+        depth: 0,
+        sortOrder,
+      },
+      select: { id: true },
+    });
+    ids.push(row.id);
+    return row.id;
+  };
+  const cleanup = async (ids: string[], tag: string) => {
+    // copiii creați de teste nu sunt în `ids`: se șterg după adresă, întâi cei mai adânci
+    await db.category.deleteMany({
+      where: { slug: { startsWith: "zz-" }, name: { endsWith: tag }, depth: { gt: 0 } },
+    });
+    await db.category.deleteMany({
+      where: { OR: [{ id: { in: ids } }, { name: { endsWith: tag } }] },
+    });
+  };
+  const serviceOver = (store: CategoryStore) =>
+    new CategoryService({
+      store,
+      audit: new AuditService({ append: async () => undefined, list: async () => [] }),
+      logger: createLogger({ destination: { write() {} } }),
+    });
+
+  it("(a) creare simultană cu mutarea părintelui: copilul nu rămâne cu calea veche", async () => {
+    const tag = randomUUID().slice(0, 8);
+    const ids: string[] = [];
+    try {
+      const p = await makeRoot(ids, "P", tag, 0);
+      const q = await makeRoot(ids, "Q", tag, 1);
+      const real = createPrismaCategoryStore(db);
+      let reads = 0;
+      let moveApplied: () => void = () => undefined;
+      const moveDone = new Promise<void>((resolve) => {
+        moveApplied = resolve;
+      });
+      const store: CategoryStore = {
+        ...real,
+        async listAll() {
+          const rows = await real.listAll();
+          reads++;
+          // creare (prima) a citit; așteaptă ca mutarea părintelui să se aplice (sau expiră, dacă e blocată)
+          if (reads === 1) await Promise.race([moveDone, sleep(600)]);
+          return rows;
+        },
+        async applyUpdates(updates) {
+          await real.applyUpdates(updates);
+          moveApplied();
+        },
+      };
+      const service = serviceOver(store);
+
+      const create = service.create(subject, { name: `ZZ Copil ${tag}`, parentId: p });
+      await sleep(50);
+      const move = service.move(subject, p, { parentId: q });
+      await Promise.all([create, move]);
+
+      const parent = await db.category.findUniqueOrThrow({ where: { id: p } });
+      const child = await db.category.findFirstOrThrow({ where: { name: `ZZ Copil ${tag}` } });
+      expect(parent.parentId).toBe(q);
+      expect(child.parentId).toBe(p);
+      expect(child.path.startsWith(`${parent.path}/`)).toBe(true);
+      expect(child.depth).toBe(parent.depth + 1);
+    } finally {
+      await cleanup(ids, tag);
+    }
+  }, 30_000);
+
+  it("(b) două creări simultane sub același părinte primesc sortOrder distincte", async () => {
+    const tag = randomUUID().slice(0, 8);
+    const ids: string[] = [];
+    try {
+      const p = await makeRoot(ids, "P", tag, 0);
+      const real = createPrismaCategoryStore(db);
+      let reads = 0;
+      let bothRead: () => void = () => undefined;
+      const both = new Promise<void>((resolve) => {
+        bothRead = resolve;
+      });
+      const store: CategoryStore = {
+        ...real,
+        async listAll() {
+          const rows = await real.listAll();
+          reads++;
+          if (reads >= 2) bothRead();
+          // prima creare așteaptă să citească și a doua (sau expiră, dacă a doua e blocată de serializare)
+          if (reads === 1) await Promise.race([both, sleep(600)]);
+          return rows;
+        },
+      };
+      const service = serviceOver(store);
+
+      await Promise.all([
+        service.create(subject, { name: `ZZ Unu ${tag}`, parentId: p }),
+        (async () => {
+          await sleep(50);
+          return service.create(subject, { name: `ZZ Doi ${tag}`, parentId: p });
+        })(),
+      ]);
+
+      const children = await db.category.findMany({
+        where: { parentId: p },
+        select: { sortOrder: true },
+      });
+      expect(children).toHaveLength(2);
+      expect(new Set(children.map((c) => c.sortOrder)).size).toBe(2);
+    } finally {
+      await cleanup(ids, tag);
+    }
+  }, 30_000);
+});
