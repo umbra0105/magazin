@@ -195,6 +195,14 @@ există `tenantId`. În schimb:
 - Datorie cunoscută, de tratat înainte de lansare (Faza 17/18): `datetime-local`/`date`, `type="number"`,
   `type="search"` și `<select>` nativ (vezi PROGRESS).
 
+### Teste E2E — aserțiuni de succes — regulă permanentă
+
+- O aserțiune care dovedește că o acțiune s-a terminat trebuie să verifice o stare care apare DOAR după
+  finalizarea ei: editorul s-a închis, indicatorul de încărcare a dispărut, a apărut un element nou sau
+  textul dintr-un element nou. NU un text care poate exista deja în pagină (de exemplu `toContainText` pe un
+  rând care conține un `<select>` deschis cu acel text printre opțiuni, sau pe un titlu care conține deja
+  cuvântul căutat): trece imediat, testul se încheie cu acțiunea în curs și devine intermitent.
+
 ### Comenzi utile
 
 - `pnpm dev` — pornește aplicația
