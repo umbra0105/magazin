@@ -1,6 +1,7 @@
 import { strFromU8, unzipSync, zipSync } from "fflate";
 import { readSheet } from "read-excel-file/universal";
 import { DomainError } from "@ecom/shared";
+import { XlsxShapeError, assertWorkbookShape } from "./xlsx-bounds";
 
 /**
  * Citirea fișierelor de import (CSV și XLSX) într-un tabel de texte, cu limite stricte:
@@ -293,9 +294,12 @@ export function sanitizeXlsx(bytes: Uint8Array, limits: ImportLimits): Uint8Arra
     if (!kept["xl/workbook.xml"]) {
       fail("IMPORT_FILE_CORRUPT", "Fișierul XLSX nu are un registru valid (workbook lipsă)");
     }
+    // forma foilor (celule departe de date, text expandat, spațiu în exces) ÎNAINTE de biblioteca de citire
+    assertWorkbookShape(kept, limits);
     return zipSync(kept, { level: 6 });
   } catch (error) {
     if (error instanceof ImportFileError) throw error;
+    if (error instanceof XlsxShapeError) throw new ImportFileError(error.code, error.message);
     return fail("IMPORT_FILE_CORRUPT", "Fișierul XLSX nu poate fi citit; pare deteriorat");
   }
 }
