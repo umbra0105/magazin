@@ -141,6 +141,41 @@ describe("emailurile de autentificare pe Better Auth real", () => {
     expect(second?.body?.code).toBe("INVALID_TOKEN");
   });
 
+  /**
+   * Blocul C, C-11: tokenul de resetare a parolei stătea în clar în cheia Redis (`ecom:auth:verification:reset-password:<token>`);
+   * cine citea Redis (sau fișierul AOF) putea reseta parola oricui, într-o oră. Acum identificatorul se stochează hash-uit.
+   */
+  it("tokenul de resetare NU apare în clar în Redis (nici în chei, nici în valori), dar resetarea merge", async () => {
+    const resets: { token: string }[] = [];
+    const auth = makeAuth({
+      sendVerification: async () => undefined,
+      sendPasswordReset: async (d) => void resets.push({ token: d.token }),
+    });
+    const u = newUser();
+    await auth.api.signUpEmail({ body: u });
+    await auth.api.requestPasswordReset({ body: { email: u.email } });
+    await new Promise((r) => setTimeout(r, 200));
+    const token = resets[0]?.token as string;
+    expect(token.length).toBeGreaterThan(10);
+
+    const keys = await redis.keys("ecom:auth:*");
+    for (const key of keys) {
+      expect(key, "cheie Redis").not.toContain(token);
+      const value = await redis.get(key);
+      expect(value ?? "", `valoarea cheii ${key}`).not.toContain(token);
+    }
+
+    const newPassword = gen();
+    await auth.api.resetPassword({ body: { token, newPassword } });
+    const signedIn = await auth.api
+      .signInEmail({ body: { email: u.email, password: newPassword } })
+      .catch((e) => e);
+    // contul cere verificarea emailului: parola nouă e corectă dacă răspunsul NU e «parolă greșită»
+    expect((signedIn as { body?: { code?: string } }).body?.code).not.toBe(
+      "INVALID_EMAIL_OR_PASSWORD",
+    );
+  });
+
   it("durata tokenului de resetare vine din setarea auth.passwordResetMinutes", async () => {
     let token = "";
     const auth = makeAuth(

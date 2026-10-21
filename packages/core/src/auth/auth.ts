@@ -74,6 +74,9 @@ export function createAuth(deps: CreateAuthDeps) {
     secret: deps.secret,
     database: prismaAdapter(deps.db, { provider: "postgresql" }),
     secondaryStorage: deps.secondaryStorage,
+    // Tokenurile (resetarea parolei) se păstrează hash-uite: cine citește Redis sau fișierul AOF nu poate folosi un token
+    // în viață (C-11). Fără asta cheia era `verification:reset-password:<token>`, adică tokenul în clar.
+    verification: { storeIdentifier: "hashed" },
     emailAndPassword: {
       enabled: true,
       minPasswordLength: settings.minPasswordLength,
