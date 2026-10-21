@@ -14,7 +14,8 @@ export const PERMISSIONS = {
   "products.write": "Creează și modifică produse (prețuri, stoc, variante, clasă de livrare, TVA)",
   "products.content.write":
     "Editează conținutul produselor (descriere, SEO, media, documente), fără prețuri, stoc sau cost",
-  "products.archive": "Arhivează și șterge produse",
+  "products.archive":
+    "Rezervată, neaplicată: arhivarea, ștergerea, restaurarea și ștergerea definitivă a produselor cer products.write",
   "products.export": "Exportă produsele în CSV sau XLSX (fără prețul de achiziție, pentru nimeni)",
   "products.cost.view": "Vede prețul de achiziție (NIR) al produselor",
   "products.cost.edit": "Modifică prețul de achiziție (NIR) al produselor",
