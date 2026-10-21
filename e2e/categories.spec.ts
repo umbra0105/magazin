@@ -57,6 +57,33 @@ async function createCategory(page: Page, name: string, parent?: string) {
   await expect(row(page, name)).toBeVisible();
 }
 
+/**
+ * Gestul de glisare, pas cu pas. `dragTo` mută mouse-ul și îl eliberează fără să aștepte interfața: `onDragOver`
+ * acceptă lăsarea doar după ce starea `dragging` s-a randat, deci un gest prea rapid ajunge la `drop` fără
+ * `preventDefault` și nu se întâmplă nimic. Aici se eliberează abia când rândul-țintă arată evidențierea
+ * «lasă aici» (starea `over`, clasa `border-primary`), adică după ce aplicația a acceptat gestul.
+ */
+async function dragOnto(page: Page, sourceName: string, targetName: string): Promise<void> {
+  const source = row(page, sourceName);
+  const target = row(page, targetName);
+  // lista poate depăși fereastra (categorii rămase de la alte teste): coordonatele trebuie să fie în ecran
+  await source.scrollIntoViewIfNeeded();
+  await target.scrollIntoViewIfNeeded();
+  const from = await source.boundingBox();
+  const to = await target.boundingBox();
+  expect(from).not.toBeNull();
+  expect(to).not.toBeNull();
+  if (!from || !to) return;
+  await page.mouse.move(from.x + 40, from.y + from.height / 2);
+  await page.mouse.down();
+  // mijlocul rândului-țintă = zona «înăuntru»; mișcări mici repetă `dragover` până e acceptat
+  await page.mouse.move(from.x + 45, from.y + from.height / 2 + 6);
+  await page.mouse.move(to.x + 40, to.y + to.height / 2, { steps: 5 });
+  await page.mouse.move(to.x + 42, to.y + to.height / 2 + 1);
+  await expect(target).toHaveClass(/border-primary/);
+  await page.mouse.up();
+}
+
 const slugOf = (name: string): string => name.toLowerCase().replace(/\s+/g, "-");
 
 async function uploadReadyImage(
@@ -123,16 +150,24 @@ test.describe("categorii", () => {
     await expect(row(page, child)).not.toContainText(`/${slugOf(root)}/${slugOf(child)}`);
     await expect(row(page, child)).toContainText(`/${slugOf(child)} `);
 
-    // reordonare: „mai sus” o pune înaintea lui „other” (ordinea în DOM)
+    // reordonare: „mai sus” trimite un index absolut din lista paginii (C-35), deci pe rădăcină ar depinde de
+    // categoriile altor teste rulate în paralel. Frații sunt ai testului, sub un părinte propriu: pozițiile nu
+    // pot fi mutate din afară.
+    const holder = `E2E Grup ${tag}`;
+    const first = `E2E Prima ${tag}`;
+    const second = `E2E A doua ${tag}`;
+    await createCategory(page, holder);
+    await createCategory(page, first, holder);
+    await createCategory(page, second, holder);
     const names = async () =>
       (
         await page
           .locator("[data-category-row]")
           .evaluateAll((els) => els.map((el) => el.getAttribute("data-category-name") ?? ""))
-      ).filter((n) => n.endsWith(tag));
-    expect(await names()).toEqual([root, other, child]);
-    await page.getByRole("button", { name: `Mută ${child} mai sus` }).click();
-    await expect.poll(names).toEqual([root, child, other]);
+      ).filter((n) => [holder, first, second].includes(n));
+    await expect.poll(names).toEqual([holder, first, second]);
+    await page.getByRole("button", { name: `Mută ${second} mai sus` }).click();
+    await expect.poll(names).toEqual([holder, second, first]);
 
     // ștergerea unei categorii cu produse: refuz cu numărul, nu eroare de bază
     await attachProductToE2eCategory(slugOf(child), `Pompă ${tag}`, `prod-${tag}`);
@@ -180,18 +215,11 @@ test.describe("categorii", () => {
     await createCategory(page, a);
     await createCategory(page, b);
 
-    const source = row(page, a);
-    const target = row(page, b);
-    const box = await target.boundingBox();
-    expect(box).not.toBeNull();
-    await source.dragTo(target, { targetPosition: { x: 40, y: (box?.height ?? 40) / 2 } });
+    await dragOnto(page, a, b);
     await expect(row(page, a)).toContainText(`/${slugOf(b)}/${slugOf(a)}`, { timeout: 15_000 });
 
     // tras înapoi peste propriul părinte la rădăcină: „B” nu se poate muta sub „A” (ciclu)
-    const boxA = await row(page, a).boundingBox();
-    await row(page, b).dragTo(row(page, a), {
-      targetPosition: { x: 40, y: (boxA?.height ?? 40) / 2 },
-    });
+    await dragOnto(page, b, a);
     await expect(page.locator("[data-problem]")).toContainText("Nu poți muta categoria acolo");
     await expect(row(page, b)).toContainText(`/${slugOf(b)} `);
   });
