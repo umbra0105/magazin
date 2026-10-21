@@ -15,6 +15,7 @@ import { withPermission } from "@/lib/session";
 export type CategoryActionFailure = { ok: false; code: string; message?: string };
 
 const DOMAIN_CODES = new Set([
+  "CATEGORY_HAS_CHANNEL_MAPPINGS",
   "CATEGORY_NOT_FOUND",
   "CATEGORY_PARENT_NOT_FOUND",
   "CATEGORY_SELF_PARENT",

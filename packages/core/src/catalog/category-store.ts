@@ -61,7 +61,14 @@ export interface CategoryStore {
   countChildren(id: string): Promise<number>;
   /** Legături cu produse: `active` = produse neșterse, `deleted` = produse șterse (soft delete). */
   countProducts(id: string): Promise<{ active: number; deleted: number }>;
-  delete(id: string): Promise<void>;
+  /** Numele canalelor de vânzare cu care categoria are mapări (ștergerea categoriei le-ar șterge în cascadă). */
+  listChannelMappings(id: string): Promise<string[]>;
+  /**
+   * Șterge o categorie. Verificarea mapărilor către canale se repetă ÎN tranzacție, cu categoria blocată (`FOR UPDATE`: o
+   * mapare nouă, care ia `FOR KEY SHARE` pe categorie, așteaptă sau vede ștergerea): întoarce `{ blockedBy }` (numele
+   * canalelor) dacă există mapări, fără să șteargă nimic; `null` dacă s-a șters.
+   */
+  delete(id: string): Promise<{ blockedBy: string[] } | null>;
   mediaExists(mediaId: string): Promise<boolean>;
 }
 
@@ -182,8 +189,27 @@ export function createPrismaCategoryStore(db: Db): CategoryStore {
       return { active, deleted };
     },
 
+    async listChannelMappings(id) {
+      const rows = await db.channelCategoryMapping.findMany({
+        where: { categoryId: id },
+        select: { channel: { select: { name: true } } },
+        orderBy: { channel: { name: "asc" } },
+      });
+      return rows.map((r) => r.channel.name);
+    },
+
     async delete(id) {
-      await db.category.delete({ where: { id } });
+      return inTransaction(db, async (tx) => {
+        await tx.$queryRaw`SELECT id FROM category WHERE id = ${id} FOR UPDATE`;
+        const mappings = await tx.channelCategoryMapping.findMany({
+          where: { categoryId: id },
+          select: { channel: { select: { name: true } } },
+          orderBy: { channel: { name: "asc" } },
+        });
+        if (mappings.length > 0) return { blockedBy: mappings.map((m) => m.channel.name) };
+        await tx.category.delete({ where: { id } });
+        return null;
+      });
     },
 
     async mediaExists(mediaId) {

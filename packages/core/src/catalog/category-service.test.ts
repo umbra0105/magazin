@@ -98,8 +98,13 @@ class MemoryCategoryStore implements CategoryStore {
   async countProducts(id: string) {
     return this.products.get(id) ?? { active: 0, deleted: 0 };
   }
+  readonly channelMappings = new Map<string, string[]>();
+  async listChannelMappings(id: string) {
+    return this.channelMappings.get(id) ?? [];
+  }
   async delete(id: string) {
     this.rows.delete(id);
+    return null;
   }
   async mediaExists(id: string) {
     return this.media.has(id);

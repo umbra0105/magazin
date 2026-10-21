@@ -403,7 +403,12 @@ export class CategoryService {
       );
     }
 
-    await this.deps.store.delete(id);
+    const mapped = await this.deps.store.listChannelMappings(id);
+    if (mapped.length > 0) throw this.mappingsRefusal(category.name, mapped);
+
+    // verificarea se repetă în tranzacția de ștergere (cu categoria blocată): o mapare adăugată între timp nu se pierde
+    const blocked = await this.deps.store.delete(id);
+    if (blocked) throw this.mappingsRefusal(category.name, blocked.blockedBy);
     // frații rămași își păstrează ordinea relativă; renumerotarea nu e necesară pentru corectitudine
     await this.deps.audit.record({
       actorId: subject.userId,
@@ -414,6 +419,14 @@ export class CategoryService {
       before: { name: category.name, path: category.path },
     });
     await this.invalidate([id, ...(category.parentId ? [category.parentId] : [])]);
+  }
+
+  private mappingsRefusal(name: string, channels: readonly string[]): CatalogError {
+    return new CatalogError(
+      "CATEGORY_HAS_CHANNEL_MAPPINGS",
+      `Categoria «${name}» nu poate fi ștearsă: are mapări către canale de vânzare (${channels.join(", ")}). Elimină mai întâi mapările; altfel s-ar pierde.`,
+      { channels },
+    );
   }
 
   /** Verifică o adresă propusă între frații unui părinte (pentru formular). */
