@@ -113,6 +113,31 @@ describe("registrul de setări", () => {
       }
     });
 
+    it("stoc (Faza 5): valorile implicite din decizii", () => {
+      const inv = settingGroups.inventory;
+      expect(inv.transferReservationWorkdays.parse(undefined)).toBe(3);
+      expect(inv.defaultLeadTimeDays.parse(undefined)).toBe(14);
+      expect(inv.lowStockSteps.parse(undefined)).toBe(2);
+      expect(inv.snapshotSafetyWindowMinutes.parse(undefined)).toBe(30);
+      expect(inv.snapshotStaleHours.parse(undefined)).toBe(24);
+      expect(inv.backInStockRetentionDays.parse(undefined)).toBe(90);
+    });
+
+    it("stoc (Faza 5): întregi în limite", () => {
+      const cases: Array<[string, number[], unknown[]]> = [
+        ["inventory.transferReservationWorkdays", [1, 3, 30], [0, 31, 2.5, "3"]],
+        ["inventory.defaultLeadTimeDays", [0, 14, 365], [-1, 366, 1.5, "14"]],
+        ["inventory.lowStockSteps", [0, 2, 1000], [-1, 1001, 0.5, "2"]],
+        ["inventory.snapshotSafetyWindowMinutes", [0, 30, 1440], [-1, 1441, 1.5]],
+        ["inventory.snapshotStaleHours", [1, 24, 720], [0, 721, 1.5]],
+        ["inventory.backInStockRetentionDays", [1, 90, 365], [0, 366, 1.5]],
+      ];
+      for (const [key, good, bad] of cases) {
+        for (const value of good) expect(ok(key, value), `${key}=${value}`).toBe(true);
+        for (const value of bad) expect(ok(key, value), `${key}=${String(value)}`).toBe(false);
+      }
+    });
+
     it("DSN Sentry: gol sau URL http(s); nimic altceva", () => {
       for (const value of [
         "",

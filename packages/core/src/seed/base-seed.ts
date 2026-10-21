@@ -4,6 +4,11 @@ import { brandingConfigSchema } from "../branding/tokens";
 import { FEATURE_FLAGS, FEATURE_KEYS } from "../features/registry";
 import { DEFAULT_ROLES, PERMISSIONS, PERMISSION_KEYS } from "../rbac/catalog";
 import { WEB_CHANNEL_CODE } from "../channels/constants";
+import {
+  DEFAULT_WAREHOUSE_CODE,
+  DEFAULT_WAREHOUSE_NAME,
+  INITIAL_MEASURE_UNITS,
+} from "../inventory/constants";
 import { getSettingSchema, listSettingKeys } from "../settings/registry";
 
 /** Delegatul de DB al seed-ului: un PrismaClient sau clientul unei tranzacții. */
@@ -19,6 +24,8 @@ export interface BaseSeedResult {
   settings: number;
   featureFlags: number;
   salesChannels: number;
+  warehouses: number;
+  measureUnits: number;
   brandingCreated: boolean;
 }
 
@@ -90,6 +97,28 @@ export async function runBaseSeed(db: SeedDb): Promise<BaseSeedResult> {
     skipDuplicates: true,
   });
 
+  // Depozitul implicit (D3): creat doar dacă nu există niciun depozit implicit (baza permite exact unul), deci un seed
+  // rulat după ce utilizatorul a redenumit sau a mutat implicitul nu schimbă nimic.
+  const hasDefaultWarehouse =
+    (await db.warehouse.findFirst({ where: { isDefault: true }, select: { id: true } })) !== null;
+  if (!hasDefaultWarehouse) {
+    await db.warehouse.upsert({
+      where: { code: DEFAULT_WAREHOUSE_CODE },
+      create: { code: DEFAULT_WAREHOUSE_CODE, name: DEFAULT_WAREHOUSE_NAME, isDefault: true },
+      update: { isDefault: true, isActive: true },
+    });
+  }
+
+  // Unitățile de măsură de pornire (D11): sistem, editabile (nume, zecimale), nedestructiv (nu suprascrie).
+  const measureUnits = await db.measureUnit.createMany({
+    data: INITIAL_MEASURE_UNITS.map((unit, index) => ({
+      ...unit,
+      isSystem: true,
+      sortOrder: index,
+    })),
+    skipDuplicates: true,
+  });
+
   let brandingCreated = false;
   if (!(await db.branding.findUnique({ where: { id: "default" } }))) {
     const config = brandingConfigSchema.parse(configFromPreset(DEFAULT_PRESET));
@@ -116,6 +145,8 @@ export async function runBaseSeed(db: SeedDb): Promise<BaseSeedResult> {
     settings: settings.count,
     featureFlags: featureFlags.count,
     salesChannels: salesChannels.count,
+    warehouses: hasDefaultWarehouse ? 0 : 1,
+    measureUnits: measureUnits.count,
     brandingCreated,
   };
 }

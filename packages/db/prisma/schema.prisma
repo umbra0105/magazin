@@ -233,7 +233,7 @@ model Media {
   checksum        String
   /// SHA-256 (hex) al adresei sursă normalizate, pentru imaginile aduse prin import din adresă (idempotență: aceeași
   /// adresă nu produce un al doilea fișier). `null` la fișierele încărcate de utilizator.
-  sourceHash      String?         @unique
+  sourceHash      String?        @unique
   originalName    String
   storageKey      String         @unique
   /// [{ name, format, key, width, height, sizeBytes }]
@@ -269,20 +269,22 @@ model Media {
 /// Brandul produselor (opțional pe produs; eMAG îl cere la publicare). `legacyId`/`legacyUrl` = identificatorul și
 /// adresa din magazinul WooCommerce de unde se migrează (import repetabil + redirecționări 301 la lansare).
 model Brand {
-  id             String    @id @default(cuid())
-  slug           String    @unique
-  name           String
-  description    String?
-  seoTitle       String?
-  seoDescription String?
-  legacyId       String?   @unique
-  legacyUrl      String?
+  id                  String    @id @default(cuid())
+  slug                String    @unique
+  name                String
+  description         String?
+  seoTitle            String?
+  seoDescription      String?
+  legacyId            String?   @unique
+  legacyUrl           String?
+  /// Termenul implicit „La comandă” (în zile) al produselor brandului care nu au unul propriu; gol = setarea globală
+  defaultLeadTimeDays Int?
   /// Logoul din biblioteca media (FK Restrict + provider de utilizare media)
-  logoMediaId    String?
-  logoMedia      Media?    @relation(fields: [logoMediaId], references: [id], onDelete: Restrict)
-  products       Product[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  logoMediaId         String?
+  logoMedia           Media?    @relation(fields: [logoMediaId], references: [id], onDelete: Restrict)
+  products            Product[]
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([logoMediaId])
   @@map("brand")
@@ -361,6 +363,19 @@ model Product {
   manageStock              Boolean               @default(true)
   /// "instock" | "outofstock" | "onbackorder" (CHECK); folosit când `manageStock = false`
   stockStatus              String                @default("instock")
+  /// Termenul „La comandă” în zile (0–365); gol = implicitul brandului, apoi setarea globală
+  leadTimeDays             Int?
+  /// Unitatea de măsură a produsului (D11); gol = bucată (pas 1). Varianta o poate suprascrie.
+  measureUnitId            String?
+  measureUnit              MeasureUnit?          @relation(fields: [measureUnitId], references: [id], onDelete: Restrict)
+  /// La ce se referă `price` al variantelor: "unit" (preț pe unitate: lei/ml) | "step" (preț pe pas: lei/sac); CHECK
+  priceBasis               String                @default("unit")
+  /// Pasul de vânzare în zecimi de miime de unitate (25000 = 2,5 ml); gol = o unitate. Cantitatea comandată e multiplu exact.
+  saleStep                 Int?
+  /// Minimul comandat, în pași (gol = 1)
+  minSteps                 Int?
+  /// Arată și prețul unui pas (ex. „Rola de 41,25 mp ≈ …”)
+  showStepPrice            Boolean               @default(false)
   excludeFromGroupDiscount Boolean               @default(false)
   seoTitle                 String?
   seoDescription           String?
@@ -434,6 +449,17 @@ model ProductVariant {
   manageStock            Boolean?
   /// "instock" | "outofstock" | "onbackorder" (CHECK); suprascrie `Product.stockStatus` (null = moștenește)
   stockStatus            String?
+  /// Unitate, bază de preț, pas și minim: nul = moștenește de la produs (ca `manageStock`)
+  measureUnitId          String?
+  measureUnit            MeasureUnit?         @relation(fields: [measureUnitId], references: [id], onDelete: Restrict)
+  priceBasis             String?
+  saleStep               Int?
+  minSteps               Int?
+  /// Cum ține SmartBill stocul acestei variante: "same_unit" (aceeași unitate) | "steps" (1 bucată SmartBill = 1 pas)
+  /// | "ratio" (1 unitate SmartBill = `smartbillRatio` zecimi de miime din unitatea noastră); gol = aceeași unitate
+  smartbillMode          String?
+  smartbillUnitName      String?
+  smartbillRatio         Int?
   position               Int                  @default(0)
   isDefault              Boolean              @default(false)
   legacyId               String?              @unique
@@ -445,6 +471,9 @@ model ProductVariant {
   manufacturerName       String?
   optionValues           VariantOptionValue[]
   channelListings        ChannelListing[]
+  inventoryItems         InventoryItem[]
+  stockMovements         StockMovement[]
+  backInStockAlerts      BackInStockAlert[]
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
@@ -883,7 +912,7 @@ model ProductImport {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  images        ProductImportImage[]
+  images ProductImportImage[]
 
   @@index([createdById])
   @@index([expiresAt])
@@ -918,4 +947,198 @@ model ProductImportImage {
   @@index([importId, status])
   @@index([productId])
   @@map("product_import_image")
+}
+
+// ---------------------------------------------------------------------------
+// Stoc (Faza 5): unități de măsură, depozite, stoc, mișcări, rezervări, angajări, alerte
+// Toate cantitățile sunt ÎNTREGI în zecimi de miime de unitate (4 zecimale; 25000 = 2,5): BIGINT pentru stoc,
+// INT pentru pas și rapoarte de conversie. Niciun `float`. Modulul `Quantity` din `@ecom/shared` e singura aritmetică.
+// ---------------------------------------------------------------------------
+
+/// Unitate de măsură a vânzării și a stocului (buc, ml, mp, kg …). `decimals` = câte zecimale are voie cantitatea
+/// (0–4). `smartbillName` = cum se numește unitatea în SmartBill. Unitățile de sistem nu se șterg; una folosită nici atât.
+model MeasureUnit {
+  id            String           @id @default(cuid())
+  code          String           @unique
+  name          String
+  symbol        String
+  smartbillName String?
+  decimals      Int              @default(0)
+  isActive      Boolean          @default(true)
+  isSystem      Boolean          @default(false)
+  sortOrder     Int              @default(0)
+  products      Product[]
+  variants      ProductVariant[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@map("measure_unit")
+}
+
+/// Locația stocului. Interfața arată o singură locație („Depozit principal”, redenumibilă); modelul multi-depozit
+/// rămâne în bază, în spatele flag-ului `multiWarehouse`. Exact un depozit implicit (index parțial unic în migrație).
+model Warehouse {
+  id        String          @id @default(cuid())
+  code      String          @unique
+  name      String
+  isDefault Boolean         @default(false)
+  isActive  Boolean         @default(true)
+  items     InventoryItem[]
+  movements StockMovement[]
+  snapshots StockSnapshot[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@map("warehouse")
+}
+
+/// Stocul unei variante gestionate într-un depozit. `physical` = cantitatea fizică din ultima poză SmartBill (plus
+/// ajustările de după ea), valabilă la `physicalAsOf`; `committed` = „angajat” (comenzi confirmate, încă neoglindite în
+/// poză); `reserved` = ținut pentru plăți în curs. Disponibil = physical − committed − reserved (niciodată sub 0).
+/// ZERO rânduri pentru produsele cu `manageStock = false`. Toate cantitățile ≥ 0 (D5), garantat de CHECK.
+model InventoryItem {
+  id            String             @id @default(cuid())
+  variantId     String
+  variant       ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  warehouseId   String
+  warehouse     Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  physical      BigInt             @default(0)
+  physicalAsOf  DateTime?
+  committed     BigInt             @default(0)
+  reserved      BigInt             @default(0)
+  /// Tamponul de siguranță (în unitatea variantei): cantitatea ținută în rezervă la calculul disponibilului
+  safetyBuffer  BigInt             @default(0)
+  /// Pragul „stoc mic” în PAȘI; gol = setarea globală `inventory.lowStockSteps`
+  lowStockSteps Int?
+  reservations  StockReservation[]
+  commitments   StockCommitment[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([variantId, warehouseId])
+  @@index([warehouseId])
+  @@map("inventory_item")
+}
+
+/// „Poza” periodică a stocului din SmartBill (import acum, API mai târziu): data valabilității, fișierul, numărul de
+/// rânduri și raportul. Se aplică toată sau deloc. `actorId` nu e cheie străină (istoricul supraviețuiește utilizatorului).
+model StockSnapshot {
+  id          String          @id @default(cuid())
+  warehouseId String
+  warehouse   Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  /// Ora la care e valabilă poza (nu ora încărcării)
+  takenAt     DateTime
+  /// "import" | "api" (CHECK)
+  source      String
+  fileName    String?
+  fileHash    String?
+  rowCount    Int             @default(0)
+  actorId     String?
+  actorLabel  String?
+  report      Json            @default("{}")
+  movements   StockMovement[]
+  createdAt   DateTime        @default(now())
+
+  @@index([warehouseId, takenAt])
+  @@map("stock_snapshot")
+}
+
+/// Registru IMUABIL al schimbărilor de stoc (trigger: nicio modificare, ștergere sau golire). `effectiveAt` = ora
+/// efectivă a faptului (regula „poza înlocuiește ajustările dinainte”), `createdAt` = ora scrierii. Referința
+/// generică (`refType`, `refId`) leagă mișcarea de o comandă fără a depinde de tabela `Order`. Nu are chei străine
+/// spre utilizator (istoricul supraviețuiește conturilor) și blochează ștergerea definitivă a variantei.
+model StockMovement {
+  id             String         @id @default(cuid())
+  variantId      String
+  variant        ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  warehouseId    String
+  warehouse      Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  /// "adjustment" | "snapshot" | "commit" | "release" | "mirror" | "transfer_in" | "transfer_out" (CHECK)
+  kind           String
+  /// Motiv fix, obligatoriu la ajustări: "sale_in_store" | "receipt" | "return" | "inventory_correction" | "damaged"
+  /// | "lost_stolen" | "other" (CHECK)
+  reason         String?
+  /// Text liber, obligatoriu la ajustări
+  note           String?
+  deltaPhysical  BigInt         @default(0)
+  deltaCommitted BigInt         @default(0)
+  physicalAfter  BigInt
+  committedAfter BigInt
+  effectiveAt    DateTime       @default(now())
+  refType        String?
+  refId          String?
+  snapshotId     String?
+  snapshot       StockSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: Restrict)
+  actorId        String?
+  actorLabel     String?
+  createdAt      DateTime       @default(now())
+
+  @@index([variantId, effectiveAt])
+  @@index([warehouseId, effectiveAt])
+  @@index([refType, refId])
+  @@index([snapshotId])
+  @@map("stock_movement")
+}
+
+/// Rezervare pentru o plată în curs (card: 15 minute; transfer bancar: zile lucrătoare). Coșul NU rezervă.
+/// O singură rezervare activă sau confirmată per referință și linie (index parțial unic în migrație).
+/// Stări: "active" | "confirmed" | "released" | "expired" (CHECK, cu momentele coerente).
+model StockReservation {
+  id          String        @id @default(cuid())
+  variantId   String
+  warehouseId String
+  item        InventoryItem @relation(fields: [variantId, warehouseId], references: [variantId, warehouseId], onDelete: Restrict)
+  quantity    BigInt
+  status      String        @default("active")
+  refType     String
+  refId       String
+  expiresAt   DateTime
+  confirmedAt DateTime?
+  releasedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, expiresAt])
+  @@index([variantId, warehouseId, status])
+  @@index([refType, refId])
+  @@map("stock_reservation")
+}
+
+/// „Angajat”: cantitate dintr-o comandă confirmată, încă neoglindită în poza SmartBill (D1). Referință generică
+/// (tip + id) în locul unei chei străine spre `Order` (tabela apare în Faza 9, unde se înlocuiește cu cheie străină,
+/// cu validarea datelor existente). Unic per comandă și linie: aceeași comandă nu poate angaja de două ori, nici
+/// după eliberare. `invoicedAt` = ora facturii (se compară cu ora pozei). Stări: "open" | "mirrored" | "released".
+model StockCommitment {
+  id          String        @id @default(cuid())
+  variantId   String
+  warehouseId String
+  item        InventoryItem @relation(fields: [variantId, warehouseId], references: [variantId, warehouseId], onDelete: Restrict)
+  quantity    BigInt
+  status      String        @default("open")
+  refType     String
+  refId       String
+  committedAt DateTime      @default(now())
+  invoicedAt  DateTime?
+  mirroredAt  DateTime?
+  releasedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([refType, refId, variantId, warehouseId], map: "stock_commitment_ref_key")
+  @@index([variantId, warehouseId, status])
+  @@map("stock_commitment")
+}
+
+/// „Anunță-mă când revine”: adresa se păstrează doar până la trimiterea unică (apoi se șterge) sau o perioadă
+/// limitată (`inventory.backInStockRetentionDays`). O cerere în așteptare per variantă și adresă (index parțial).
+model BackInStockAlert {
+  id         String         @id @default(cuid())
+  variantId  String
+  variant    ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  email      String
+  notifiedAt DateTime?
+  createdAt  DateTime       @default(now())
+
+  @@index([variantId, notifiedAt])
+  @@map("back_in_stock_alert")
 }

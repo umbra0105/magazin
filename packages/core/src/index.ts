@@ -13,3 +13,4 @@ export * from "./admin";
 export * from "./media";
 export * from "./catalog";
 export * from "./channels";
+export * from "./inventory";

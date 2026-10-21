@@ -43,8 +43,22 @@ export const settingGroups = {
     standardRate: z.number().min(0).max(100).default(21),
   },
   inventory: {
+    /** Valoarea implicită a bifei «Gestionează stocul» la produsele NOI (importurile setează explicit `false`). */
     manageStock: z.boolean().default(true),
+    /** Cât ține o rezervare pentru o plată cu cardul (D4); coșul nu rezervă nimic. */
     reservationMinutes: z.number().int().min(1).default(15),
+    /** Cât ține rezervarea pentru transfer bancar, în ZILE LUCRĂTOARE (D4). */
+    transferReservationWorkdays: z.number().int().min(1).max(30).default(3),
+    /** Termenul «La comandă» în zile, când nici produsul, nici brandul nu au unul (D6). */
+    defaultLeadTimeDays: z.number().int().min(0).max(365).default(14),
+    /** Pragul «stoc mic» / «Stoc limitat» în PAȘI de vânzare; o variantă îl poate suprascrie (D7). */
+    lowStockSteps: z.number().int().min(0).max(1000).default(2),
+    /** Fereastra de siguranță în jurul orei pozei SmartBill: factură în această fereastră rămâne angajată (D1). */
+    snapshotSafetyWindowMinutes: z.number().int().min(0).max(1440).default(30),
+    /** După câte ore se avertizează că poza SmartBill e veche (D1). */
+    snapshotStaleHours: z.number().int().min(1).max(720).default(24),
+    /** Cât se păstrează o cerere «Anunță-mă când revine» netrimisă, în zile (D12). */
+    backInStockRetentionDays: z.number().int().min(1).max(365).default(90),
   },
   catalog: {
     /**
