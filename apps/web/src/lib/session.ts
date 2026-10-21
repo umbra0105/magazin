@@ -1,15 +1,18 @@
 import { headers } from "next/headers";
 import {
+  DeniedAuditGate,
   PermissionService,
   createWithPermission,
   recordDeniedAttempt,
+  recordDeniedThrottled,
+  resolveClientIp,
   resolveSubject,
 } from "@ecom/core";
 import type { SubjectResolution } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { REQUEST_ID_HEADER } from "@ecom/shared/request-id";
 import { getAudit } from "./admin-writes";
-import { getAuth, getSettings } from "./services";
+import { getAuth, getCounterStore, getSettings } from "./services";
 
 /**
  * Utilizatorul curent și motivul dacă lipsește: fără sesiune sau sesiune de admin expirată
@@ -43,5 +46,15 @@ export async function getCurrentSubject() {
 export const withPermission = createWithPermission({
   getSubject: getCurrentSubject,
   getRequestId: async () => (await headers()).get(REQUEST_ID_HEADER),
-  onDenied: (attempt) => recordDeniedAttempt(getAudit(), attempt),
+  // Refuzul se aplică mereu; DOAR scrierea în audit (tabelă care nu se poate șterge) e limitată: C-08.
+  onDenied: async (attempt) => {
+    const hops = await getSettings().get("auth.trustedProxyHops");
+    const ip = resolveClientIp(await headers(), hops);
+    const decision = await new DeniedAuditGate(getCounterStore()).decide({
+      actorId: attempt.subject?.userId ?? null,
+      ip,
+    });
+    if (decision === "record") await recordDeniedAttempt(getAudit(), attempt);
+    else if (decision === "summary") await recordDeniedThrottled(getAudit(), attempt);
+  },
 });
