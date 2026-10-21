@@ -12,11 +12,34 @@ Rezumat în limbaj simplu, pentru cine nu citește codul. Detaliile tehnice sunt
 - **Și-a uitat parola?** Cere un link de resetare (valabil 1 oră, o singură dată). Mesajul e același, indiferent
   dacă emailul există, ca nimeni să nu poată afla cine are cont.
 - **Protecții la autentificare** (valorile sunt setări, implicit cele de mai jos):
-  - **(a) Limita pe încercări:** 5 încercări greșite în 15 minute pe aceeași combinație IP + email → răspuns
-    temporar „Prea multe încercări” (HTTP 429), cu numărul de minute până la reîncercare. **Contul nu se blochează**;
-    limita expiră singură.
-  - **(b) Blocarea contului:** 10 parole greșite pentru același email → contul se blochează 15 minute. Se
-    deblochează singur după expirare sau cu `pnpm admin:unlock <email>`.
+  - **Blocarea la autentificare** (regulile de mai jos sunt cele de după Blocul C din Faza 4; înainte existau o
+    «limită» de 5 încercări și o «blocare a contului» la 10 parole greșite, pe email, de la orice adresă):
+    - **Se numără doar parolele greșite.** Conectările reușite, limitările și emailul neverificat nu contează; cinci
+      conectări corecte la rând nu blochează pe nimeni. O conectare reușită șterge greșelile acelei perechi.
+    - **(a) Pe pereche (email, adresă IP):** 5 parole greșite în 15 minute (`auth.loginMaxAttempts`,
+      `auth.loginWindowMinutes`) → perechea se blochează 15 minute (`auth.lockoutMinutes`). Cât e blocată, orice
+      încercare (și cu parola corectă) primește „Prea multe încercări” (HTTP 429) cu numărul de minute. La blocări
+      repetate în 24 de ore durata se **dublează** (15, 30, 60 … până la 24 de ore). Se deblochează singură sau cu
+      `pnpm admin:unlock <email>`.
+    - **(b) Pe adresă IP:** 30 de parole greșite în 15 minute de la aceeași adresă (`auth.loginIpMaxAttempts`,
+      pentru orice email) → adresa se blochează progresiv, la fel. În plus, un ritm maxim de 120 de încercări pe minut
+      pe adresă (`auth.loginRatePerMinutePerIp`), reușitele incluse.
+    - **Nu există blocare globală pe email.** Parolele greșite pentru același email de la **adrese diferite** nu
+      blochează contul; doar produc o alertă în jurnalul de audit (`auth.login_suspicious`, la
+      `auth.lockoutThreshold` = 10). Un străin nu poate bloca contul unui administrator de pe altă adresă.
+    - **Ce schimbă `auth.trustedProxyHops`** (numărul de servere intermediare de încredere dintre internet și
+      aplicație; 0 = fără proxy, 1 = un proxy ca Caddy). Adresa clientului se citește din `X-Forwarded-For` doar
+      dacă valoarea e mai mare ca 0:
+      - **`trustedProxyHops = 1` (sau mai mult), în spatele proxy-ului:** adresa clientului e cunoscută, deci se
+        aplică regulile (a) și (b) întocmai: prag 5, blocare 15 minute progresivă, blocare pe adresă.
+      - **`trustedProxyHops = 0` (valoarea implicită din seed; dezvoltare locală sau fără proxy):** adresa nu e de
+        încredere, deci toți utilizatorii partajează «adresa necunoscută». Perechea devine (email, «-»), pragul se
+        **triplează** (15 parole greșite), blocarea se **plafonează la 1 minut**, nu există blocare pe adresă, iar
+        ritmul pe «adresa necunoscută» e de 1.200 de încercări pe minut. Un străin poate cel mult să încetinească
+        conectările unui email, un minut o dată. Aplicația scrie un avertisment la pornire în producție dacă rulează
+        astfel. Instalatorul trebuie să seteze 1 în spatele Caddy (Faza 18).
+      - O valoare **prea mare** față de realitate lasă clientul să-și aleagă singur adresa din antet: nu o mări
+        fără motiv.
   - Cererile sunt limitate și pe IP la înregistrare, resetare și confirmarea emailului; toate sesiunile se închid
     la schimbarea sau resetarea parolei.
 

@@ -37,12 +37,23 @@ Aștepți: <http://localhost:3000/api/health> răspunde 200; <http://localhost:8
 
 ## 3. Protecții la autentificare
 
-1. **(a) Limita pe încercări:** introdu o parolă greșită de 5 ori pentru același email. A 6-a încercare:
-   **aștepți** „Prea multe încercări” cu numărul de minute; contul **nu** e blocat (nu apare „cont blocat”).
-2. **(b) Blocarea contului:** repetă greșelile (de pe IP-uri/ferestre diferite sau după expirarea ferestrei) până
-   la 10 parole greșite pentru același email. **Aștepți:** contul se blochează 15 minute, cu același mesaj
-   generic ca la parolă greșită (nu se spune dacă emailul există).
-3. `pnpm admin:unlock <email>` → **aștepți** „Contul … a fost deblocat”; te poți autentifica.
+*(Pașii 1–3 au fost rescriși după Blocul C din Faza 4: vezi `docs/FAZA-2-ce-functioneaza.md`, secțiunea
+„Blocarea la autentificare”. Numărul de greșeli și durata depind de `auth.trustedProxyHops`.)*
+
+1. **Blocarea după parole greșite.** Introdu parole greșite pentru același email, una după alta; la fiecare
+   **aștepți** „Email sau parolă incorecte.” Continuă până la blocare:
+   - cu `trustedProxyHops = 0` (implicit pe calculatorul de dezvoltare): după **15** greșeli, blocare de cel mult **1
+     minut**;
+   - cu `trustedProxyHops = 1` (în spatele unui proxy): după **5** greșeli, blocare de **15 minute**, care se dublează
+     la blocări repetate în 24 de ore.
+
+   **Aștepți:** „Prea multe încercări. Poți încerca din nou peste N minut(e).” Cât durează blocarea, și parola
+   corectă primește același mesaj.
+2. **Nu există blocare globală pe email.** Un alt email (de exemplu Owner-ul) se poate autentifica imediat, în timp ce
+   emailul greșit e blocat. Cinci conectări **reușite** la rând nu blochează nimic (se numără doar greșelile).
+   Faptul că greșelile de la adrese diferite nu blochează contul nu se poate simula local (o singură adresă); e acoperit
+   de teste automate.
+3. `pnpm admin:unlock <email>` → **aștepți** „Contul … a fost deblocat”; te poți autentifica imediat.
 4. Parolă greșită pentru un email care nu există: **aștepți** exact același mesaj ca pentru unul existent.
 
 ## 4. Resetarea parolei
@@ -88,5 +99,6 @@ Aștepți: <http://localhost:3000/api/health> răspunde 200; <http://localhost:8
 ## Dacă ceva nu iese
 
 - Emailul nu apare în Mailpit: rulează `pnpm dev:mail` și verifică dacă `pnpm dev:web` (nu doar `pnpm dev`) e pornit.
-- „Prea multe încercări” la tine, în timp ce testezi: expiră singură în 15 minute.
+- „Prea multe încercări” la tine, în timp ce testezi: expiră singură (cel mult 1 minut cu `trustedProxyHops = 0`, 15 minute
+  cu 1) sau o ștergi cu `pnpm admin:unlock <email>`.
 - Pe Windows cu turbo blocat folosește `pnpm dev:web`, nu `pnpm dev`.
