@@ -117,6 +117,8 @@ Apoi marchează [!] în TODO și OPREȘTE-TE. Nu ghici.
 
 ## 3. Ritualul de început de sesiune
 
+> **Actualizare (2026-10-21):** ritualul de mai jos rămâne ca model, dar prompturile numerotate din `docs/07-prompturi-claude-code.md` (inclusiv «Promptul 7») sunt depășite și se ignoră. **Se lucrează după mesajele utilizatorului din conversație**, cu planul fazei din `docs/FAZA-N-plan.md` și cu regulile din `CLAUDE.md` (inclusiv «Verificare, commit și push»).
+
 Copiază asta la fiecare sesiune nouă, schimbând doar numărul fazei:
 
 ```
