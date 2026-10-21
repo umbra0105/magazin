@@ -355,7 +355,9 @@ export function createPrismaProductStore(db: Db): ProductStore {
       return variants
         .map((v) =>
           combinationKey(
-            [...v.optionValues]
+            // opțiune sau valoare ștearsă între citiri: relația vine `null`; perechea se ignoră (C-34)
+            v.optionValues
+              .filter((ov) => ov.option && ov.value)
               .sort((a, b) => a.option.position - b.option.position)
               .map((ov) => ({ option: ov.option.name, value: ov.value.value })),
           ),
@@ -396,7 +398,8 @@ export function createPrismaProductStore(db: Db): ProductStore {
       });
       return rows.map(({ optionValues, ...variant }) => ({
         ...variant,
-        selections: [...optionValues]
+        selections: optionValues
+          .filter((ov) => ov.option && ov.value)
           .sort((a, b) => a.option.position - b.option.position)
           .map((ov) => ({ option: ov.option.name, value: ov.value.value })),
       }));

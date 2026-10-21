@@ -652,8 +652,9 @@ export function createPrismaPartsDiagramStore(db: Db): PartsDiagramStore {
           label: h.label,
           product: h.product ? toProduct(h.product) : null,
         })),
+        // un produs șters definitiv între citiri vine cu relația `null` (Prisma le citește separat): se omite (C-34)
         products: row.products
-          .map((p) => toProduct(p.product))
+          .flatMap((p) => (p.product ? [toProduct(p.product)] : []))
           .sort((a, b) => a.title.localeCompare(b.title, "ro")),
       };
     },

@@ -449,12 +449,15 @@ export function createPrismaProductLifecycleStore(db: Db): ProductLifecycleStore
           collections: row._count.collections,
           channelListings: row._count.channelListings,
         },
-        diagrams: row.partsDiagrams.map((p) => ({ id: p.diagram.id, title: p.diagram.title })),
-        hotspots: row.hotspots.map((h) => ({
-          diagramId: h.diagram.id,
-          diagramTitle: h.diagram.title,
-          number: h.number,
-        })),
+        // fișă ștearsă între citiri: relația vine `null` (Prisma o citește separat); rândul se omite (C-34)
+        diagrams: row.partsDiagrams.flatMap((p) =>
+          p.diagram ? [{ id: p.diagram.id, title: p.diagram.title }] : [],
+        ),
+        hotspots: row.hotspots.flatMap((h) =>
+          h.diagram
+            ? [{ diagramId: h.diagram.id, diagramTitle: h.diagram.title, number: h.number }]
+            : [],
+        ),
         blockingListings: row.channelListings.filter(
           (l) => l.status === "active" || l.status === "pending",
         ).length,

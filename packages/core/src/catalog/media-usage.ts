@@ -33,6 +33,8 @@ export function createProductMediaUsageProvider(db: Db): MediaUsageProvider {
         orderBy: [{ product: { title: "asc" } }, { position: "asc" }],
       });
       for (const row of rows) {
+        // produs șters definitiv între citiri: relația vine `null` (Prisma o citește separat); rândul se omite (C-34)
+        if (!row.product) continue;
         const deleted = row.product.deletedAt ? " (șters)" : "";
         const usage: MediaUsage = {
           kind: row.variant ? PRODUCT_USAGE_KINDS.variant : PRODUCT_USAGE_KINDS.product,
