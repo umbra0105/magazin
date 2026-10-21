@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { DomainError } from "@ecom/shared";
 import type { CounterStore } from "./counter-store";
 import type { AuthSettings } from "./auth";
@@ -11,6 +12,14 @@ export class RateLimitedError extends DomainError {
 }
 
 export const normalizeEmail = (email: string): string => email.trim().toLowerCase();
+
+/**
+ * Amprenta emailului folosită în cheile contoarelor: lungime fixă (32 de caractere hex) și fără emailul în clar. Cheile
+ * din Redis nu depind astfel de lungimea intrării (Blocul C, C-07: un «email» de megabytes devenea o cheie de megabytes)
+ * și nu expun adrese de email în chei, în `SCAN`/`MONITOR` sau într-un dump.
+ */
+export const emailFingerprint = (email: string): string =>
+  createHash("sha256").update(normalizeEmail(email)).digest("hex").slice(0, 32);
 
 /**
  * Limite de cereri și blocare temporară pentru rutele de autentificare.
@@ -32,7 +41,7 @@ export class AuthGuard {
 
   async checkLogin(email: string, ip: string | null): Promise<void> {
     const { loginMaxAttempts: max, loginWindowMinutes: win } = this.settings;
-    const e = normalizeEmail(email);
+    const e = emailFingerprint(email);
     await this.hit(`login:${ip ?? "-"}:${e}`, max, win);
     // Un atacator care schimbă IP-ul tot nu poate trece de limita pe email (de 2× limita pe pereche).
     await this.hit(`login-email:${e}`, ip ? max * 2 : max, win);
@@ -41,13 +50,13 @@ export class AuthGuard {
   async checkRegister(email: string, ip: string | null): Promise<void> {
     const { registerMaxAttempts: max, registerWindowMinutes: win } = this.settings;
     if (ip) await this.hit(`register-ip:${ip}`, max, win);
-    await this.hit(`register-email:${normalizeEmail(email)}`, max, win);
+    await this.hit(`register-email:${emailFingerprint(email)}`, max, win);
   }
 
   async checkPasswordReset(email: string, ip: string | null): Promise<void> {
     const { passwordResetMaxAttempts: max, passwordResetWindowMinutes: win } = this.settings;
     if (ip) await this.hit(`reset-ip:${ip}`, max, win);
-    await this.hit(`reset-email:${normalizeEmail(email)}`, max, win);
+    await this.hit(`reset-email:${emailFingerprint(email)}`, max, win);
   }
 
   /**
@@ -64,12 +73,12 @@ export class AuthGuard {
 
   /** Secundele rămase din blocare; 0 = cont deblocat. */
   lockRemainingSeconds(email: string): Promise<number> {
-    return this.store.ttl(`lock:${normalizeEmail(email)}`);
+    return this.store.ttl(`lock:${emailFingerprint(email)}`);
   }
 
   /** Înregistrează un eșec; întoarce `true` dacă acest eșec a blocat contul. */
   async recordLoginFailure(email: string): Promise<boolean> {
-    const e = normalizeEmail(email);
+    const e = emailFingerprint(email);
     const { lockoutThreshold: threshold, lockoutMinutes: minutes } = this.settings;
     const { count } = await this.store.increment(`fail:${e}`, minutes * 60);
     if (count !== threshold) return false;
@@ -78,12 +87,12 @@ export class AuthGuard {
   }
 
   async recordLoginSuccess(email: string): Promise<void> {
-    await this.store.delete(`fail:${normalizeEmail(email)}`);
+    await this.store.delete(`fail:${emailFingerprint(email)}`);
   }
 
   /** Folosit de `pnpm admin:unlock`: scoate blocarea și contorul de eșecuri. */
   async unlock(email: string): Promise<void> {
-    const e = normalizeEmail(email);
+    const e = emailFingerprint(email);
     await this.store.delete(`lock:${e}`, `fail:${e}`, `login-email:${e}`);
   }
 }

@@ -59,6 +59,14 @@ const emailOf = (body: unknown): string | null => {
   return typeof email === "string" && email.length > 0 ? email : null;
 };
 
+/** Lungimea maximă a unei adrese de email (RFC 5321). Hook-ul rulează pe corpul BRUT, înainte de validarea Zod. */
+const MAX_EMAIL_LENGTH = 254;
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+$/;
+
+/** Same răspuns ca la un email greșit al Better Auth: nu depinde de existența contului. */
+const invalidEmail = () =>
+  new APIError("BAD_REQUEST", { code: "INVALID_EMAIL", message: "Invalid email" });
+
 /**
  * Instanța Better Auth. Politica de securitate stă aici, într-un singur loc:
  * parole argon2id, minim 12 caractere, sesiuni în DB cu cache Redis, cookie httpOnly/lax,
@@ -128,6 +136,9 @@ export function createAuth(deps: CreateAuthDeps) {
         }
         const email = emailOf(ctx.body);
         if (!email) return undefined;
+        // Emailul din corpul brut intră în chei de contor: se validează ÎNAINTE (lungime, formă), ca o intrare de
+        // megabytes să nu devină chei Redis de megabytes și să nu ajungă în nicio muncă costisitoare (C-07).
+        if (email.length > MAX_EMAIL_LENGTH || !EMAIL_SHAPE.test(email)) throw invalidEmail();
         const ip = resolveClientIp(ctx.headers ?? ctx.request?.headers, settings.trustedProxyHops);
         try {
           if (ctx.path === "/sign-in/email") {
