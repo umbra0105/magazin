@@ -80,6 +80,7 @@ describe("DeniedAuditGate (Redis real)", () => {
       set: async () => undefined,
       ttl: async () => 0,
       delete: async () => undefined,
+      deleteByPrefix: async () => undefined,
     };
     const gate = new DeniedAuditGate(broken, {
       perActor: 1,

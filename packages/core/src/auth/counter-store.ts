@@ -9,6 +9,8 @@ export interface CounterStore {
   /** Secundele rămase până la expirare; 0 dacă cheia nu există. */
   ttl(key: string): Promise<number>;
   delete(...keys: string[]): Promise<void>;
+  /** Șterge toate cheile care încep cu `prefix` (rar: deblocarea unui cont, fără a cunoaște adresele IP). */
+  deleteByPrefix(prefix: string): Promise<void>;
 }
 
 export class MemoryCounterStore implements CounterStore {
@@ -64,6 +66,11 @@ export class MemoryCounterStore implements CounterStore {
   async delete(...keys: string[]): Promise<void> {
     for (const key of keys) this.entries.delete(key);
   }
+
+  async deleteByPrefix(prefix: string): Promise<void> {
+    for (const key of [...this.entries.keys()])
+      if (key.startsWith(prefix)) this.entries.delete(key);
+  }
 }
 
 const PREFIX = "ecom:rl:";
@@ -94,6 +101,22 @@ export class RedisCounterStore implements CounterStore {
 
   async delete(...keys: string[]): Promise<void> {
     if (keys.length > 0) await this.redis.del(...keys.map((k) => PREFIX + k));
+  }
+
+  async deleteByPrefix(prefix: string): Promise<void> {
+    // SCAN (nu KEYS): nu blochează Redis; prefixul nu conține caractere speciale de glob (chei generate de aplicație)
+    let cursor = "0";
+    do {
+      const [next, found] = await this.redis.scan(
+        cursor,
+        "MATCH",
+        `${PREFIX}${prefix}*`,
+        "COUNT",
+        500,
+      );
+      cursor = next;
+      if (found.length > 0) await this.redis.del(...found);
+    } while (cursor !== "0");
   }
 }
 
@@ -166,5 +189,10 @@ export class ResilientCounterStore implements CounterStore {
   async delete(...keys: string[]): Promise<void> {
     await this.fallback.delete(...keys);
     await this.tryPrimary(() => this.primary.delete(...keys));
+  }
+
+  async deleteByPrefix(prefix: string): Promise<void> {
+    await this.fallback.deleteByPrefix(prefix);
+    await this.tryPrimary(() => this.primary.deleteByPrefix(prefix));
   }
 }

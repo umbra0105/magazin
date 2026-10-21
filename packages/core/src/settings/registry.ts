@@ -78,8 +78,16 @@ export const settingGroups = {
     emailVerificationHours: z.number().int().min(1).max(168).default(24),
     /** Cât e valabil linkul de resetare a parolei (unică folosință). */
     passwordResetMinutes: z.number().int().min(5).max(1440).default(60),
+    /**
+     * Conectări EȘUATE ale aceleiași perechi (email, adresă IP) în fereastră, după care perechea se blochează temporar
+     * (progresiv: `lockoutMinutes`, dublu la fiecare blocare repetată în 24 h). Se numără doar eșecurile.
+     */
     loginMaxAttempts: z.number().int().min(1).max(100).default(5),
     loginWindowMinutes: z.number().int().min(1).max(1440).default(15),
+    /** Conectări eșuate de pe o adresă IP (orice email) în fereastră, după care ADRESA se blochează temporar (progresiv). */
+    loginIpMaxAttempts: z.number().int().min(1).max(10_000).default(30),
+    /** Încercări de conectare (reușite sau nu) pe adresă pe minut: frână pentru costul argon2 al fiecărei cereri. */
+    loginRatePerMinutePerIp: z.number().int().min(1).max(100_000).default(120),
     registerMaxAttempts: z.number().int().min(1).max(100).default(5),
     registerWindowMinutes: z.number().int().min(1).max(1440).default(60),
     passwordResetMaxAttempts: z.number().int().min(1).max(100).default(5),
@@ -87,8 +95,12 @@ export const settingGroups = {
     /** Încercări de confirmare a emailului (`/api/verify-email`) per IP în fereastră. */
     verifyEmailMaxAttempts: z.number().int().min(1).max(1000).default(10),
     verifyEmailWindowMinutes: z.number().int().min(1).max(1440).default(15),
-    /** Eșecuri de login (pe email) după care contul se blochează temporar. */
+    /**
+     * Eșecuri de login pe un email, de la ORICE adrese, în fereastră, după care se scrie o alertă în audit. NU blochează
+     * contul: un străin nu poate bloca contul altcuiva (blocările sunt pe adresă și pe perechea email + adresă).
+     */
     lockoutThreshold: z.number().int().min(3).max(100).default(10),
+    /** Durata de bază a unei blocări (se dublează la blocări repetate în 24 h, până la 24 h). */
     lockoutMinutes: z.number().int().min(1).max(1440).default(15),
     /**
      * Câte proxy-uri de încredere sunt în fața aplicației. 0 = niciunul: headerul X-Forwarded-For

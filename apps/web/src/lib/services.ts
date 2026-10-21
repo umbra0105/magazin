@@ -113,14 +113,25 @@ export async function getAuth(): Promise<Auth> {
     settings,
     guard: new AuthGuard(getCounterStore(), settings),
     email: createAuthEmailSender(),
-    onAccountLocked: async ({ email, lockoutMinutes }) => {
-      // Se auditează doar conturile reale; jurnalul nu e vizibil din exterior, deci nu dă indicii.
+    onLoginLock: async ({ kind, email, lockoutMinutes }) => {
+      // Se auditează doar conturile reale (jurnalul nu e vizibil din exterior, deci nu dă indicii); fără adrese IP în audit.
       const user = await getDb().user.findUnique({ where: { email: email.trim().toLowerCase() } });
+      const audit = new AuditService(createPrismaAuditStore(getDb()));
+      if (kind === "ip") {
+        await audit.record({
+          actorId: "system",
+          actorLabel: "system",
+          action: "auth.ip_locked",
+          entity: "auth",
+          after: { lockoutMinutes },
+        });
+        return;
+      }
       if (!user) return;
-      await new AuditService(createPrismaAuditStore(getDb())).record({
+      await audit.record({
         actorId: "system",
         actorLabel: "system",
-        action: "auth.account_locked",
+        action: kind === "pair" ? "auth.login_locked" : "auth.login_suspicious",
         entity: "user",
         entityId: user.id,
         after: { lockoutMinutes },

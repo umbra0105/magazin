@@ -31,7 +31,6 @@ const db = getDb();
 
 try {
   const guard = new AuthGuard(new RedisCounterStore(redis), z.object(settingGroups.auth).parse({}));
-  const wasLocked = (await guard.lockRemainingSeconds(email)) > 0;
   await guard.unlock(email);
 
   const user = await db.user.findUnique({ where: { email } });
@@ -42,13 +41,11 @@ try {
       action: "auth.account_unlocked",
       entity: "user",
       entityId: user.id,
-      after: { wasLocked },
+      after: { cleared: true },
     });
   }
   console.log(
-    wasLocked
-      ? `Contul ${email} a fost deblocat.`
-      : `Contul ${email} nu era blocat; contorul de eșecuri a fost resetat oricum.`,
+    `Blocările și contoarele de eșecuri pentru ${email} au fost șterse, de pe toate adresele.`,
   );
   if (!user) console.log("Atenție: nu există niciun utilizator cu acest email.");
 } catch (error) {

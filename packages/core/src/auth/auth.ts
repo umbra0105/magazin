@@ -5,7 +5,7 @@ import type { PrismaClient } from "@ecom/db";
 import type { SettingGroupValue } from "../settings";
 import { RateLimitedError, type AuthGuard } from "./auth-guard";
 import { resolveClientIp } from "./client-ip";
-import { hashPassword, verifyPassword } from "./password";
+import { hashPassword, isPasswordWorkSaturated, verifyPassword } from "./password";
 import type { AuthSecondaryStorage } from "./redis-storage";
 
 export type AuthSettings = SettingGroupValue<"auth">;
@@ -32,20 +32,20 @@ export interface CreateAuthDeps {
   isProduction: boolean;
   settings: AuthSettings;
   guard: AuthGuard;
-  /** Apelat când un cont tocmai a fost blocat (audit, alertă). Nu primește parole. */
-  onAccountLocked?: (data: { email: string; lockoutMinutes: number }) => Promise<void> | void;
+  /**
+   * Apelat când o conectare produce o blocare temporară (`pair`: email + adresă; `ip`: adresa) sau o alertă
+   * (`email_alert`: același email greșit de la multe adrese; NU blochează). Pentru audit; nu primește parole sau adrese IP.
+   */
+  onLoginLock?: (data: {
+    kind: "pair" | "ip" | "email_alert";
+    email: string;
+    lockoutMinutes: number;
+  }) => Promise<void> | void;
   /** Trimiterea emailurilor (coadă) se leagă în punctul de emailuri; până atunci lipsește. */
   email?: AuthEmailSender;
 }
 
 const DAY_SECONDS = 24 * 60 * 60;
-
-/** Același răspuns pentru email inexistent, parolă greșită și cont blocat (fără enumerare). */
-const invalidCredentials = () =>
-  new APIError("UNAUTHORIZED", {
-    code: "INVALID_EMAIL_OR_PASSWORD",
-    message: "Invalid email or password",
-  });
 
 const tooManyRequests = (error: RateLimitedError) =>
   new APIError(
@@ -58,6 +58,14 @@ const emailOf = (body: unknown): string | null => {
   const email = (body as { email?: unknown } | null)?.email;
   return typeof email === "string" && email.length > 0 ? email : null;
 };
+
+/** Rutele care cheamă argon2: la coadă plină se refuză imediat (429). */
+const HASHING_PATHS = new Set([
+  "/sign-in/email",
+  "/sign-up/email",
+  "/reset-password",
+  "/change-password",
+]);
 
 /** Lungimea maximă a unei adrese de email (RFC 5321). Hook-ul rulează pe corpul BRUT, înainte de validarea Zod. */
 const MAX_EMAIL_LENGTH = 254;
@@ -130,6 +138,10 @@ export function createAuth(deps: CreateAuthDeps) {
     rateLimit: { enabled: false },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        // Coada de argon2 e plină (C-06): respingere imediată (429), înainte de orice contor sau muncă costisitoare.
+        if (HASHING_PATHS.has(ctx.path) && isPasswordWorkSaturated()) {
+          throw tooManyRequests(new RateLimitedError(1));
+        }
         // La schimbarea parolei se închid mereu celelalte sesiuni, indiferent ce trimite clientul.
         if (ctx.path === "/change-password") {
           return { context: { ...ctx, body: { ...ctx.body, revokeOtherSessions: true } } };
@@ -143,13 +155,6 @@ export function createAuth(deps: CreateAuthDeps) {
         try {
           if (ctx.path === "/sign-in/email") {
             await deps.guard.checkLogin(email, ip);
-            if ((await deps.guard.lockRemainingSeconds(email)) > 0) {
-              // Cont blocat: se parcurge aceeași muncă (hash) și se întoarce același răspuns ca la
-              // parolă greșită, ca blocarea să nu se vadă din exterior nici după timp, nici după mesaj.
-              const password = (ctx.body as { password?: unknown }).password;
-              await hashPassword(typeof password === "string" ? password : "");
-              throw invalidCredentials();
-            }
           } else if (ctx.path === "/sign-up/email") {
             await deps.guard.checkRegister(email, ip);
           } else if (
@@ -176,11 +181,23 @@ export function createAuth(deps: CreateAuthDeps) {
             (returned.body as { code?: string } | undefined)?.code !== "INVALID_EMAIL_OR_PASSWORD"
           )
             return;
-          if (await deps.guard.recordLoginFailure(email)) {
-            await deps.onAccountLocked?.({ email, lockoutMinutes: settings.lockoutMinutes });
+          const ip = resolveClientIp(
+            ctx.headers ?? ctx.request?.headers,
+            settings.trustedProxyHops,
+          );
+          for (const lock of await deps.guard.recordLoginFailure(email, ip)) {
+            await deps.onLoginLock?.({
+              kind: lock.kind,
+              email,
+              lockoutMinutes: lock.lockoutMinutes,
+            });
           }
         } else if (ctx.context.newSession) {
-          await deps.guard.recordLoginSuccess(email);
+          const ip = resolveClientIp(
+            ctx.headers ?? ctx.request?.headers,
+            settings.trustedProxyHops,
+          );
+          await deps.guard.recordLoginSuccess(email, ip);
         }
       }),
     },

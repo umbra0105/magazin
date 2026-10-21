@@ -26,11 +26,11 @@ const fakeEmail = {
 function setup(overrides: Partial<AuthSettings> = {}) {
   const settings = authSettings({ requireEmailVerification: false, ...overrides });
   const guard = new AuthGuard(new MemoryCounterStore(), settings);
-  const onAccountLocked = vi.fn();
+  const onLoginLock = vi.fn();
   const auth = createAuth({
     db,
     guard,
-    onAccountLocked,
+    onLoginLock,
     email: fakeEmail,
     secondaryStorage: createRedisSecondaryStorage(redis),
     appUrl: "http://localhost:3000",
@@ -38,7 +38,7 @@ function setup(overrides: Partial<AuthSettings> = {}) {
     isProduction: false,
     settings,
   });
-  return { auth, guard, onAccountLocked };
+  return { auth, guard, onLoginLock };
 }
 
 function newUser() {
@@ -120,54 +120,45 @@ describe("rate limiting și blocare pe Better Auth", () => {
     expect(Math.max(real, ghost) / Math.min(real, ghost)).toBeLessThan(2.5);
   });
 
-  it("a 6-a încercare de login în 15 minute primește 429 cu Retry-After, cu același corp pentru orice email", async () => {
-    const { auth } = setup();
+  it("după 5 eșecuri, perechea (email, IP) primește 429 cu Retry-After, cu același corp pentru orice email", async () => {
+    const { auth } = setup({ trustedProxyHops: 1 });
+    const headers = new Headers({ "x-forwarded-for": "203.0.113.31" });
     const u = newUser();
-    await auth.api.signUpEmail({ body: u });
+    await auth.api.signUpEmail({ body: u, headers });
     for (let i = 0; i < 5; i++)
-      expect((await failureOf(signIn(auth, u.email, rand())))?.status).toBe(401);
-    const limited = await failureOf(signIn(auth, u.email, u.password)); // chiar și parola corectă
+      expect((await failureOf(signIn(auth, u.email, rand(), headers)))?.status).toBe(401);
+    const limited = await failureOf(signIn(auth, u.email, u.password, headers)); // chiar și parola corectă
     expect(limited?.status).toBe(429);
     expect(Number(limited?.retryAfter)).toBeGreaterThan(0);
 
     const ghost = `nu-exista-${RUN}-2@test.invalid`;
-    for (let i = 0; i < 5; i++) await failureOf(signIn(auth, ghost, rand()));
-    const ghostLimited = await failureOf(signIn(auth, ghost, rand()));
+    for (let i = 0; i < 5; i++) await failureOf(signIn(auth, ghost, rand(), headers));
+    const ghostLimited = await failureOf(signIn(auth, ghost, rand(), headers));
     expect({ ...ghostLimited, retryAfter: null }).toEqual({ ...limited, retryAfter: null });
   });
 
-  it("după 10 eșecuri contul e blocat: parola corectă e refuzată cu același răspuns ca una greșită", async () => {
-    const { auth, onAccountLocked } = setup({ loginMaxAttempts: 100 });
+  it("blocarea se anunță prin onLoginLock și deblocarea (admin:unlock) readuce accesul", async () => {
+    const { auth, guard, onLoginLock } = setup({ trustedProxyHops: 1 });
+    const headers = new Headers({ "x-forwarded-for": "203.0.113.32" });
     const u = newUser();
-    await auth.api.signUpEmail({ body: u });
-    const wrong = await failureOf(signIn(auth, u.email, rand()));
-    for (let i = 0; i < 9; i++) await failureOf(signIn(auth, u.email, rand()));
-    expect(onAccountLocked).toHaveBeenCalledTimes(1);
-    expect(onAccountLocked).toHaveBeenCalledWith({ email: u.email, lockoutMinutes: 15 });
-
-    const lockedCorrect = await failureOf(signIn(auth, u.email, u.password));
-    expect(lockedCorrect).toEqual(wrong); // 401 identic, blocarea nu se vede din exterior
-  });
-
-  it("deblocarea (admin:unlock) readuce accesul", async () => {
-    const { auth, guard } = setup({ loginMaxAttempts: 100 });
-    const u = newUser();
-    await auth.api.signUpEmail({ body: u });
-    for (let i = 0; i < 10; i++) await failureOf(signIn(auth, u.email, rand()));
-    expect(await failureOf(signIn(auth, u.email, u.password))).not.toBeNull();
+    await auth.api.signUpEmail({ body: u, headers });
+    for (let i = 0; i < 5; i++) await failureOf(signIn(auth, u.email, rand(), headers));
+    expect(onLoginLock).toHaveBeenCalledWith({ kind: "pair", email: u.email, lockoutMinutes: 15 });
+    expect((await failureOf(signIn(auth, u.email, u.password, headers)))?.status).toBe(429);
     await guard.unlock(u.email);
-    expect(await failureOf(signIn(auth, u.email, u.password))).toBeNull();
+    expect(await failureOf(signIn(auth, u.email, u.password, headers))).toBeNull();
   });
 
-  it("un login reușit resetează contorul de eșecuri", async () => {
-    const { auth, onAccountLocked } = setup({ loginMaxAttempts: 100 });
+  it("un login reușit resetează contorul de eșecuri al perechii", async () => {
+    const { auth, onLoginLock } = setup({ trustedProxyHops: 1 });
+    const headers = new Headers({ "x-forwarded-for": "203.0.113.33" });
     const u = newUser();
-    await auth.api.signUpEmail({ body: u });
+    await auth.api.signUpEmail({ body: u, headers });
     for (let round = 0; round < 3; round++) {
-      for (let i = 0; i < 9; i++) await failureOf(signIn(auth, u.email, rand()));
-      expect(await failureOf(signIn(auth, u.email, u.password))).toBeNull();
+      for (let i = 0; i < 4; i++) await failureOf(signIn(auth, u.email, rand(), headers));
+      expect(await failureOf(signIn(auth, u.email, u.password, headers))).toBeNull();
     }
-    expect(onAccountLocked).not.toHaveBeenCalled();
+    expect(onLoginLock).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "pair" }));
   });
 
   it("un cont cu email neverificat și parola corectă nu consumă eșecuri (parola era bună)", async () => {
@@ -176,7 +167,7 @@ describe("rate limiting și blocare pe Better Auth", () => {
     await auth.api.signUpEmail({ body: u });
     for (let i = 0; i < 12; i++)
       expect((await failureOf(signIn(auth, u.email, u.password)))?.status).toBe(403);
-    expect(await guard.lockRemainingSeconds(u.email)).toBe(0);
+    expect(await guard.lockRemainingSeconds(u.email, null)).toBe(0);
   });
 
   it("X-Forwarded-For scris de client nu ocolește limita când nu există proxy de încredere", async () => {
@@ -184,14 +175,15 @@ describe("rate limiting și blocare pe Better Auth", () => {
     const u = newUser();
     await auth.api.signUpEmail({ body: u });
     let limitedAt = 0;
-    for (let i = 1; i <= 8; i++) {
+    // fără IP de încredere pragul pe pereche e ×3 (15 eșecuri): clientul care rotește adresa nu scapă de limită
+    for (let i = 1; i <= 20; i++) {
       const headers = new Headers({ "x-forwarded-for": `198.51.100.${i}` });
       if ((await failureOf(signIn(auth, u.email, rand(), headers)))?.status === 429) {
         limitedAt = i;
         break;
       }
     }
-    expect(limitedAt).toBe(6);
+    expect(limitedAt).toBe(16);
   });
 
   it("cu un proxy de încredere, IP-ul vine din ultima adresă a lanțului, nu din cea falsificată", async () => {
@@ -246,7 +238,7 @@ describe("rate limiting și blocare pe Better Auth", () => {
       { warn },
       100,
     );
-    const settings = authSettings({ requireEmailVerification: false, loginMaxAttempts: 100 });
+    const settings = authSettings({ requireEmailVerification: false, loginMaxAttempts: 2 });
     const guard = new AuthGuard(store, settings);
     const auth = createAuth({
       db,
@@ -259,8 +251,9 @@ describe("rate limiting și blocare pe Better Auth", () => {
     });
     const u = newUser();
     await auth.api.signUpEmail({ body: u });
-    for (let i = 0; i < 10; i++) await failureOf(signIn(auth, u.email, rand()));
-    expect(await failureOf(signIn(auth, u.email, u.password))).not.toBeNull();
+    // fără IP de încredere pragul pe pereche e 2 × 3 = 6
+    for (let i = 0; i < 6; i++) await failureOf(signIn(auth, u.email, rand()));
+    expect((await failureOf(signIn(auth, u.email, u.password)))?.status).toBe(429);
     expect(warn).toHaveBeenCalled();
     dead.disconnect();
   });

@@ -44,6 +44,7 @@ const deadPrimary = (): CounterStore => ({
   set: down,
   ttl: down,
   delete: down,
+  deleteByPrefix: down,
 });
 
 const logger = () => ({ warn: vi.fn() }) satisfies ResilientLogger;
@@ -97,6 +98,7 @@ describe("ResilientCounterStore", () => {
       set: guarded((k: string, t: number) => real.set(k, t)),
       ttl: guarded((k: string) => real.ttl(k)),
       delete: guarded((...k: string[]) => real.delete(...k)),
+      deleteByPrefix: guarded((p: string) => real.deleteByPrefix(p)),
     };
     const s = new ResilientCounterStore(flaky, new MemoryCounterStore(), logger(), 50);
     await s.set("lock:y", 900); // Redis căzut
@@ -114,5 +116,44 @@ describe("ResilientCounterStore", () => {
     await s.set("lock:z", 900);
     await s.delete("lock:z");
     expect(await s.ttl("lock:z")).toBe(0);
+  });
+});
+
+describe("deleteByPrefix (admin:unlock fără a cunoaște adresele IP)", () => {
+  it("MemoryCounterStore șterge doar cheile cu prefixul dat", async () => {
+    const s = new MemoryCounterStore();
+    await s.increment("lfail:pair:abc:1.1.1.1", 60);
+    await s.set("lock:pair:abc:2.2.2.2", 60);
+    await s.set("lock:pair:abd:2.2.2.2", 60);
+    await s.deleteByPrefix("lock:pair:abc:");
+    await s.deleteByPrefix("lfail:pair:abc:");
+    expect(await s.ttl("lock:pair:abc:2.2.2.2")).toBe(0);
+    expect(await s.ttl("lfail:pair:abc:1.1.1.1")).toBe(0);
+    expect(await s.ttl("lock:pair:abd:2.2.2.2")).toBeGreaterThan(0);
+  });
+
+  it("ResilientCounterStore o trimite și către memoria procesului, chiar dacă Redis nu răspunde", async () => {
+    const memory = new MemoryCounterStore();
+    await memory.set("lock:x:1", 60);
+    const broken: CounterStore = {
+      increment: async () => {
+        throw new Error("jos");
+      },
+      set: async () => {
+        throw new Error("jos");
+      },
+      ttl: async () => {
+        throw new Error("jos");
+      },
+      delete: async () => {
+        throw new Error("jos");
+      },
+      deleteByPrefix: async () => {
+        throw new Error("jos");
+      },
+    };
+    const resilient = new ResilientCounterStore(broken, memory, { warn: vi.fn() }, 50);
+    await resilient.deleteByPrefix("lock:x:");
+    expect(await memory.ttl("lock:x:1")).toBe(0);
   });
 });

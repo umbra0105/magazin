@@ -31,6 +31,11 @@ export default async function globalSetup(): Promise<void> {
   // `register-ip:::1`, iar o rulare curată (100 de conturi) ar fi fix la limită: orice reîncercare dă 429.
   // Limita în sine se testează separat, în teste unitare.
   await setTestSetting(process.env["TEST_DATABASE_URL"], "auth.registerMaxAttempts", 100);
+  // Conectările din browser (formularul de login, folosit de aproape toate testele) pornesc toate de la ACELAȘI IP (socketul
+  // local; testele nu pot seta `X-Forwarded-For` în browser). Ritmul pe adresă (implicit 60/minut) și blocarea pe adresă
+  // (30 de eșecuri) ar îneca suita: aici se ridică la maxim. Politica în sine se testează pe Redis real, în teste de integrare.
+  await setTestSetting(process.env["TEST_DATABASE_URL"], "auth.loginRatePerMinutePerIp", 100_000);
+  await setTestSetting(process.env["TEST_DATABASE_URL"], "auth.loginIpMaxAttempts", 10_000);
   // Contoarele de limitare ale unei rulări anterioare nu trebuie să le afecteze pe cele ale acesteia.
   await clearE2eRateLimits();
 
