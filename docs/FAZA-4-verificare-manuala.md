@@ -633,37 +633,39 @@ Pune **OK** sau **Problemă** și, la problemă, un cuvânt în „Observații�
 
 | Secțiune | Ce verifici | Rezultat (OK / Problemă) | Observații |
 | --- | --- | --- | --- |
-| 0 | Servicii pornite, date demo create, conturi de test, setări din Studio | | |
-| 1 | Listă, căutare, filtre, sortare, paginare | | |
-| 2.1–2.6 | Produs nou, TVA extras corect, preț redus, SKU duplicat, modificări nesalvate | | |
-| 2.7–2.10 | Generator de variante, editare/ștergere variantă, ultima variantă | | |
-| 3 | Preț de achiziție (Owner): salvare, istoric, valori greșite cu mesaj în română | | |
-| 4.1–4.2 | Editare directă în listă (titlu, stare, stoc, preț) | | |
-| 4.3–4.6 | Editare în masă (procent, stare, brand, categorie) | | |
-| 5.1–5.6 | Categorii: creare, mutare (tastatură și glisare), mutare ilegală, redenumire | | |
-| 5.7–5.9 | Categorii: ștergere refuzată/reușită, nume interzis | | |
-| 6 | Branduri: creare, logo, duplicat, ștergere cu produse | | |
-| 7 | Atribute: creare, valori pe produs, tip blocat, ștergere refuzată | | |
-| 8.1 | Imagini produs (adăugare, ordine, scoatere) | | |
-| 8.2–8.4 | Documente: valid, fals refuzat, editare, ștergere | | |
-| 8.5–8.7 | Conformitate, SEO, produse asociate | | |
-| 9 | Fișe explodate (flag, creare, hotspot, asociere, ștergere) | | |
-| 10 | Duplicare, arhivare, coș, restaurare, ștergere definitivă cu confirmare | | |
-| 11 | Export CSV în Excel (coloane separate, diacritice, fără cost), XLSX, selecție, filtre | | |
-| 12.1–12.5 | Import generic: șablon, erori, import corect, a doua rulare, actualizare | | |
-| 12.6–12.7 | Cost nu se importă; fișiere greșite cu mesaj în română | | |
-| 13 | Import WooCommerce (fișierul real): verificare, aplicare, a doua rulare, audit pe produs | | |
-| 14 | Imagini din adrese: domenii permise/nepermise, progres, a doua rulare | | |
-| 15 | Istoric importuri/exporturi, raport CSV în Excel | | |
-| 16.1 | Editor: fără cost, fără butoane de import/export, refuz pe pagini | | |
-| 16.2 | Suport: fără Produse, „Acces interzis” | | |
-| 16.3 | Manager: vede costul, nu îl poate modifica | | |
-| 16.4 | Blocare după greșeli: mesaj, nu blochează Owner-ul, deblocare | | |
-| 16.5 | Toate erorile în română, fără text tehnic | | |
-| 16.6 | Auditul arată `[ascuns]` la cost | | |
-| 17 | Curățenie făcută | | |
+| 0 | Servicii pornite, date demo create, conturi de test, setări din Studio |ok | |
+| 1 | Listă, căutare, filtre, sortare, paginare |ok | |
+| 2.1–2.6 | Produs nou, TVA extras corect, preț redus, SKU duplicat, modificări nesalvate |ok | |
+| 2.7–2.10 | Generator de variante, editare/ștergere variantă, ultima variantă |ok | |
+| 3 | Preț de achiziție (Owner): salvare, istoric, valori greșite cu mesaj în română |ok | |
+| 4.1–4.2 | Editare directă în listă (titlu, stare, stoc, preț) |ok | |
+| 4.3–4.6 | Editare în masă (procent, stare, brand, categorie) |ok | |
+| 5.1–5.6 | Categorii: creare, mutare (tastatură și glisare), mutare ilegală, redenumire |ok | |
+| 5.7–5.9 | Categorii: ștergere refuzată/reușită, nume interzis |ok | |
+| 6 | Branduri: creare, logo, duplicat, ștergere cu produse |ok | |
+| 7 | Atribute: creare, valori pe produs, tip blocat, ștergere refuzată |ok | |
+| 8.1 | Imagini produs (adăugare, ordine, scoatere) |ok | |
+| 8.2–8.4 | Documente: valid, fals refuzat, editare, ștergere |ok | |
+| 8.5–8.7 | Conformitate, SEO, produse asociate |ok | |
+| 9 | Fișe explodate (flag, creare, hotspot, asociere, ștergere) |ok | |
+| 10 | Duplicare, arhivare, coș, restaurare, ștergere definitivă cu confirmare |ok | |
+| 11 | Export CSV în Excel (coloane separate, diacritice, fără cost), XLSX, selecție, filtre |ok | |
+| 12.1–12.5 | Import generic: șablon, erori, import corect, a doua rulare, actualizare |ok | |
+| 12.6–12.7 | Cost nu se importă; fișiere greșite cu mesaj în română |ok | |
+| 13 | Import WooCommerce (fișierul real): verificare, aplicare, a doua rulare, audit pe produs |ok | |
+| 14 | Imagini din adrese: domenii permise/nepermise, progres, a doua rulare |ok | |
+| 15 | Istoric importuri/exporturi, raport CSV în Excel |ok | |
+| 16.1 | Editor: fără cost, fără butoane de import/export, refuz pe pagini |ok | |
+| 16.2 | Suport: fără Produse, „Acces interzis” |ok | |
+| 16.3 | Manager: vede costul, nu îl poate modifica |ok | |
+| 16.4 | Blocare după greșeli: mesaj, nu blochează Owner-ul, deblocare |ok | |
+| 16.5 | Toate erorile în română, fără text tehnic |ok | |
+| 16.6 | Auditul arată `[ascuns]` la cost |ok | |
+| 17 | Curățenie făcută |ok | |
 
-**Rezultat general:** ☐ totul OK — pot confirma Faza 4 · ☐ am probleme (le-am trecut mai sus)
+**Rezultat general:** ☒ totul OK — pot confirma Faza 4 · ☐ am probleme (le-am trecut mai sus)
+
+*Parcurs de utilizator și confirmat în chat la 2026-10-21: fără observații.*
 
 ---
 
