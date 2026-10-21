@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@ecom/db";
 import type { StorageDriver } from "@ecom/integrations";
 import type { getLogger } from "@ecom/shared";
-import { AuditService } from "../../audit/audit-service";
+import type { AuditService } from "../../audit/audit-service";
 import type { DecodeLimiter } from "../../media/decode-limiter";
 import { MediaService } from "../../media/media-service";
 import { createPrismaMediaStore } from "../../media/media-store";
@@ -14,6 +14,7 @@ import {
 } from "../product-assignments";
 import { ProductImageImporter, type ImageProcessOutcome } from "./woo/image-importer";
 import { createPrismaProductImportStore } from "./import-store";
+import { RowAuditCollector } from "./row-audit";
 
 /**
  * Fabrica importatorului de imagini, folosită de workerul din fundal. Dependențele de rețea sunt LEGATE AICI,
@@ -21,16 +22,6 @@ import { createPrismaProductImportStore } from "./import-store";
  * comutator, variabilă de mediu sau opțiune care să dezactiveze verificările; testele construiesc direct
  * `ProductImageImporter` cu un rezolvator și un conector false.
  */
-
-/** Auditul rândurilor e înlocuit de evenimentul agregat `product.import.images`. */
-const SILENT_AUDIT = new AuditService({
-  async append() {
-    /* agregat */
-  },
-  async list() {
-    return [];
-  },
-});
 
 export interface ProductImageImporterRuntimeDeps {
   db: PrismaClient;
@@ -52,7 +43,10 @@ export function createProductImageImporter(
   const { db, settings } = deps;
   const store = createPrismaProductImportStore(db);
   const permissions = new PermissionService(db);
+  // atașarea imaginilor la produse: evenimente pe entitate, colectate pe durata jobului și marcate cu `importId` (C-12)
+  const rowAudit = new RowAuditCollector(deps.audit, deps.logger);
   return new ProductImageImporter({
+    rowAudit,
     tasks: store.images,
     imports: store,
     fetchImage: (url, policy) => safeFetchImage(url, policy),
@@ -65,7 +59,7 @@ export function createProductImageImporter(
     processMedia: deps.processMedia,
     assignments: new ProductAssignmentsService({
       store: createPrismaProductAssignmentStore(db),
-      audit: SILENT_AUDIT,
+      audit: rowAudit.audit,
       logger: deps.logger,
       storage: deps.storage,
     }),

@@ -275,22 +275,28 @@ describe("import pe baza reală", () => {
           .costPrice,
       ).toBe(777_777);
 
-      // UN singur eveniment de audit pentru import, fără evenimentele pe rând
+      // UN singur eveniment agregat pentru import
       const events = await tx.auditLog.findMany({
         where: { action: "product.import", entityId: analysis.importId },
       });
       expect(events).toHaveLength(1);
       expect(events[0]?.after).toMatchObject({ created: 1, updated: 1, skipped: 2, errors: 2 });
-      expect(
-        await tx.auditLog.count({
-          where: {
-            action: { in: ["product.create", "product.update", "product.variant.update"] },
-            entityId: {
-              in: [created.productId, base.existing.product.id, base.existing.variant.id],
-            },
-          },
-        }),
-      ).toBe(0);
+      // ȘI evenimentele pe entitate (Blocul C, C-12): cine a creat/modificat ce, cu importul ca origine
+      const rowEvents = await tx.auditLog.findMany({
+        where: {
+          action: { in: ["product.create", "product.update", "product.variant.update"] },
+          entityId: { in: [created.productId, base.existing.product.id, base.existing.variant.id] },
+        },
+      });
+      const createEvent = rowEvents.find((e) => e.action === "product.create");
+      expect(createEvent?.entityId).toBe(created.productId);
+      expect(createEvent?.actorId).toBe(manager?.userId);
+      expect(rowEvents.length).toBeGreaterThanOrEqual(2);
+      for (const event of rowEvents) {
+        expect(event.after).toMatchObject({ importId: analysis.importId });
+      }
+      // nicio valoare de cost în evenimentele pe entitate
+      expect(JSON.stringify(rowEvents)).not.toContain("777777");
 
       // fișierul a fost șters, importul e încheiat, raportul nu conține costul
       expect(files.size).toBe(0);

@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@ecom/db";
 import type { StorageDriver } from "@ecom/integrations";
 import type { getLogger } from "@ecom/shared";
-import { AuditService } from "../../audit/audit-service";
+import type { AuditService } from "../../audit/audit-service";
 import { PermissionService } from "../../rbac/permission-service";
 import type { SettingsService } from "../../settings/settings-service";
 import { AttributeService, createPrismaAttributeStore } from "../attribute-service";
@@ -19,22 +19,14 @@ import { createPrismaProductStore } from "../product-store";
 import type { ImageJobQueue, ImportJobQueue } from "./import-service";
 import { ProductImportService } from "./import-service";
 import { createPrismaProductImportStore } from "./import-store";
+import { RowAuditCollector } from "./row-audit";
 
 /**
  * Fabrica serviciului de import, folosită de aplicația web și de workerul din fundal ca să aibă
- * exact aceeași configurare. Importul scrie UN singur eveniment de audit agregat, deci serviciile
- * catalogului pe care le chemă pe rând (`ProductService`, atribuirea categoriilor) primesc un audit
- * „tăcut”; auditul real (`audit`) e folosit doar de import.
+ * exact aceeași configurare. Importul scrie un eveniment agregat (`product.import`) ȘI evenimentele pe entitate ale
+ * serviciilor catalogului pe care le chemă pe rând (`ProductService`, atribuirea categoriilor, categorii, branduri…),
+ * colectate de `RowAuditCollector` și marcate cu `importId` (Blocul C, C-12).
  */
-
-const SILENT_AUDIT = new AuditService({
-  async append() {
-    /* auditul rândurilor e înlocuit de evenimentul agregat `product.import` */
-  },
-  async list() {
-    return [];
-  },
-});
 
 export interface ProductImportRuntimeDeps {
   db: PrismaClient;
@@ -52,47 +44,50 @@ export interface ProductImportRuntimeDeps {
 
 export function createProductImportService(deps: ProductImportRuntimeDeps): ProductImportService {
   const { db, settings } = deps;
+  // evenimentele pe entitate ale serviciilor catalogului (create/update/…): colectate cât rulează importul și scrise la
+  // sfârșit, marcate cu `importId` (C-12); evenimentul agregat `product.import` rămâne în plus
+  const rowAudit = new RowAuditCollector(deps.audit, deps.logger);
   const products = new ProductService({
     store: createPrismaProductStore(db),
-    audit: SILENT_AUDIT,
+    audit: rowAudit.audit,
     defaultManageStock: async () => (await settings.getGroup("inventory")).manageStock,
     defaultWarrantyMonths: async () => (await settings.getGroup("catalog")).defaultWarrantyMonths,
     logger: deps.logger,
   });
   const assignments = new ProductAssignmentsService({
     store: createPrismaProductAssignmentStore(db),
-    audit: SILENT_AUDIT,
+    audit: rowAudit.audit,
     logger: deps.logger,
     storage: deps.storage,
   });
   const permissions = new PermissionService(db);
-  // profilul WooCommerce: categorii, branduri, atribute și relații, tot cu audit tăcut
+  // profilul WooCommerce: categorii, branduri, atribute și relații, cu același colector de audit
   const wooLogger = { warn: deps.logger.warn };
   const woo = {
     categories: new CategoryService({
       store: createPrismaCategoryStore(db),
-      audit: SILENT_AUDIT,
+      audit: rowAudit.audit,
       logger: wooLogger,
     }),
     brands: new BrandService({
       store: createPrismaBrandStore(db),
-      audit: SILENT_AUDIT,
+      audit: rowAudit.audit,
       logger: wooLogger,
     }),
     attributeDefs: new AttributeService({
       store: createPrismaAttributeStore(db),
-      audit: SILENT_AUDIT,
+      audit: rowAudit.audit,
       logger: wooLogger,
     }),
     attributeValues: new ProductAttributesService({
       store: createPrismaProductAttributeStore(db),
       attributes: createPrismaAttributeStore(db),
-      audit: SILENT_AUDIT,
+      audit: rowAudit.audit,
       logger: wooLogger,
     }),
     relations: new ProductRelationsService({
       store: createPrismaProductRelationStore(db),
-      audit: SILENT_AUDIT,
+      audit: rowAudit.audit,
       logger: wooLogger,
     }),
     getTimezone: async () => (await settings.getGroup("regional")).timezone,
@@ -101,6 +96,7 @@ export function createProductImportService(deps: ProductImportRuntimeDeps): Prod
     store: createPrismaProductImportStore(db),
     storage: deps.storage,
     audit: deps.audit,
+    rowAudit,
     products,
     assignments,
     woo,

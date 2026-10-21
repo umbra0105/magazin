@@ -105,7 +105,12 @@ export interface ProductImportDeps {
   store: ProductImportStore;
   storage: Pick<StorageDriver, "put" | "get" | "delete">;
   audit: AuditService;
-  /** Servicii cu AUDIT TĂCUT: importul scrie un singur eveniment agregat. */
+  /**
+   * Colectorul auditului pe entitate (C-12): evenimentele serviciilor de mai jos (create/update/…) se strâng cât rulează
+   * importul și se scriu la sfârșit, marcate cu `importId`; fără el, ele nu lasă urme pe rând.
+   */
+  rowAudit?: { run<T>(importId: string, fn: () => Promise<T>): Promise<T> };
+  /** Serviciile catalogului; auditul lor trece prin `rowAudit`, iar importul scrie și evenimentul agregat. */
   products: Pick<ProductService, "create" | "update" | "updateVariant"> &
     Partial<Pick<ProductService, "createVariable">>;
   assignments: Pick<ProductAssignmentsService, "setCategories">;
@@ -826,7 +831,17 @@ export class ProductImportService {
   }
 
   /** Aplică planul rând cu rând, fiecare izolat; scrie raportul final, șterge fișierul și auditează o singură dată. */
-  private async execute(
+  /** Rulează planul; evenimentele de audit pe entitate se colectează și se scriu la sfârșit, marcate cu `importId` (C-12). */
+  private execute(
+    record: ImportRecord,
+    subject: PermissionSubject,
+    plan: ImportPlan,
+  ): Promise<ImportReport> {
+    const run = () => this.executePlan(record, subject, plan);
+    return this.deps.rowAudit ? this.deps.rowAudit.run(record.id, run) : run();
+  }
+
+  private async executePlan(
     record: ImportRecord,
     subject: PermissionSubject,
     plan: ImportPlan,

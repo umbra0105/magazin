@@ -17,6 +17,7 @@ import { assertTestBucket } from "../../../../../../test/support/test-env";
 import { createLogger } from "@ecom/shared";
 import { wooCsv, type WooFixtureRow } from "../../../../test/woo-fixture";
 import { AuditService } from "../../../audit/audit-service";
+import { RowAuditCollector } from "../row-audit";
 import { createPrismaAuditStore } from "../../../audit/prisma-store";
 import { MemoryDecodeLimiter } from "../../../media/decode-limiter";
 import { MediaService } from "../../../media/media-service";
@@ -188,7 +189,10 @@ async function withImages<T>(
       logger: silent,
     });
     const permissions = new PermissionService(tx);
+    // Blocul C, C-12: atașarea imaginilor la produse lasă urme pe entitate, marcate cu importul
+    const rowAudit = new RowAuditCollector(new AuditService(createPrismaAuditStore(tx)), silent);
     const importer = new ProductImageImporter({
+      rowAudit,
       tasks: store.images,
       imports: store,
       fetchImage: (url, fetchPolicy) =>
@@ -216,12 +220,7 @@ async function withImages<T>(
       },
       assignments: new ProductAssignmentsService({
         store: createPrismaProductAssignmentStore(dbx),
-        audit: new AuditService({
-          async append() {},
-          async list() {
-            return [];
-          },
-        }),
+        audit: rowAudit.audit,
         logger: silent,
         storage,
       }),
@@ -442,6 +441,12 @@ describe("aplicare și descărcare în fundal", () => {
       expect(applied?.after).toMatchObject({ imagesTotal: 2, imagesRejected: 1, imagesQueued: 1 });
       expect(finished?.after).toMatchObject({ downloaded: 1, existing: 0, failed: 0, attached: 1 });
       expect(JSON.stringify(events)).not.toContain(HOST);
+      // atașarea imaginii la produs: un eveniment pe entitate, cu importul ca origine (C-12)
+      const mediaEvents = (
+        await tx.auditLog.findMany({ where: { action: "product.media.update" } })
+      ).filter((e) => (e.after as { importId?: string } | null)?.importId === validation.importId);
+      expect(mediaEvents).toHaveLength(1);
+      expect(JSON.stringify(mediaEvents)).not.toContain(HOST);
     });
   });
 

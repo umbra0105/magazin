@@ -53,6 +53,8 @@ export interface ImageImporterDeps {
   getMediaLimits: () => Promise<ImageLimits>;
   loadSubject: (userId: string) => Promise<PermissionSubject | null>;
   audit: AuditService;
+  /** Colectorul auditului pe entitate (C-12): atașarea imaginilor (`product.media.update`) se scrie cu `importId`. */
+  rowAudit?: { run<T>(importId: string, fn: () => Promise<T>): Promise<T> };
   invalidate?: (tags: readonly string[]) => Promise<void> | void;
   logger: Pick<ReturnType<typeof getLogger>, "warn" | "error">;
 }
@@ -166,6 +168,13 @@ export class ProductImageImporter {
    * oricând (jobul căzut la mijloc, reîncercarea celor eșuate): ce e gata nu se mai atinge.
    */
   async run(importId: string): Promise<ImageImportSummary> {
+    const { rowAudit } = this.deps;
+    return rowAudit
+      ? rowAudit.run(importId, () => this.runInner(importId))
+      : this.runInner(importId);
+  }
+
+  private async runInner(importId: string): Promise<ImageImportSummary> {
     const { deps } = this;
     const summary: ImageImportSummary = { downloaded: 0, existing: 0, failed: 0, attached: 0 };
     const record = await deps.imports.get(importId);

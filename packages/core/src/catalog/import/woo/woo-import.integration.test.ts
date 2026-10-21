@@ -307,20 +307,23 @@ describe("import WooCommerce pe baza reală", () => {
         ["upsell", "WC-103"],
       ]);
 
-      // un singur eveniment de audit al importului; fără evenimente pe rânduri
+      // evenimentul agregat al importului ȘI evenimentele pe entitate (Blocul C, C-12), cu importul ca origine
       expect(
         await tx.auditLog.count({
           where: { action: "product.import", entityId: validation.importId },
         }),
       ).toBe(1);
-      expect(
-        await tx.auditLog.count({
-          where: {
-            action: { in: ["product.create", "category.create", "brand.create"] },
-            actorId: owner?.userId,
-          },
-        }),
-      ).toBe(0);
+      const entityEvents = await tx.auditLog.findMany({
+        where: {
+          action: { in: ["product.create", "category.create", "brand.create"] },
+          actorId: owner?.userId,
+        },
+      });
+      expect(entityEvents.filter((e) => e.action === "category.create").length).toBeGreaterThan(0);
+      expect(entityEvents.filter((e) => e.action === "product.create").length).toBeGreaterThan(0);
+      for (const event of entityEvents) {
+        expect(event.after).toMatchObject({ importId: validation.importId });
+      }
 
       // a doua rulare: tot «neschimbat» (rândurile murdare rămân erori), nimic de aplicat
       const second = await check(service, owner);
