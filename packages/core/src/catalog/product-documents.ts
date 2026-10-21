@@ -116,6 +116,23 @@ export interface DocumentRecord {
   createdAt: Date;
 }
 
+/** Rândul public: doar câmpurile `DocumentRecord`, fără cheia privată de stocare sau alte câmpuri interne. */
+function toPublicRecord(row: DocumentRecord): DocumentRecord {
+  return {
+    id: row.id,
+    productId: row.productId,
+    type: row.type,
+    title: row.title,
+    originalName: row.originalName,
+    mime: row.mime,
+    sizeBytes: row.sizeBytes,
+    language: row.language,
+    position: row.position,
+    showInTab: row.showInTab,
+    createdAt: row.createdAt,
+  };
+}
+
 interface NewDocumentRow {
   productId: string;
   type: ProductDocumentType;
@@ -405,7 +422,8 @@ export class ProductDocumentsService {
           after[key] = value;
           (changes as Record<string, unknown>)[key] = value;
         }
-        if (Object.keys(changes).length === 0) return doc;
+        // `doc` vine din `store.get`, care include cheia privată de stocare: răspunsul ajunge în browser (C-21)
+        if (Object.keys(changes).length === 0) return toPublicRecord(doc);
         const record = await this.deps.store.update(documentId, changes);
         await this.deps.audit.record({
           actorId: subject.userId,

@@ -460,6 +460,19 @@ describe("ștergere, înlocuire, ordine, descărcare", () => {
     expect(s.storage.objects.size).toBe(1);
   });
 
+  /**
+   * Blocul C, C-21: un patch care nu schimba nimic întorcea înregistrarea din `store.get` (care include `storageKey`) direct în
+   * răspunsul acțiunii către browser: cheia privată `private/product-documents/<uuid>.pdf`, pe care rândul public nu o are.
+   */
+  it("un patch fără schimbări nu scurge cheia privată de stocare", async () => {
+    const s = setup();
+    const a = await upload(s, "a.pdf");
+    const unchanged = await s.service.update(editor(), a.id, { title: a.title });
+    expect(unchanged).not.toHaveProperty("storageKey");
+    expect(JSON.stringify(unchanged)).not.toContain("private/");
+    expect(unchanged).toEqual(a);
+  });
+
   it("metadate: titlu/tip/limbă/afișare; neschimbat nu auditează; ordinea cere lista exactă", async () => {
     const s = setup();
     const a = await upload(s, "a.pdf");
