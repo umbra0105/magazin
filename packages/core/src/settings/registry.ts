@@ -79,6 +79,11 @@ export const settingGroups = {
     /** Cât e valabil linkul de resetare a parolei (unică folosință). */
     passwordResetMinutes: z.number().int().min(5).max(1440).default(60),
     /**
+     * După câte zile se șterg conturile cu emailul neverificat (doar dacă verificarea emailului e cerută; fără roluri). Termenul
+     * efectiv nu e mai scurt decât valabilitatea linkului de verificare plus 24 de ore.
+     */
+    unverifiedAccountRetentionDays: z.number().int().min(2).max(365).default(7),
+    /**
      * Conectări EȘUATE ale aceleiași perechi (email, adresă IP) în fereastră, după care perechea se blochează temporar
      * (progresiv: `lockoutMinutes`, dublu la fiecare blocare repetată în 24 h). Se numără doar eșecurile.
      */
@@ -88,10 +93,21 @@ export const settingGroups = {
     loginIpMaxAttempts: z.number().int().min(1).max(10_000).default(30),
     /** Încercări de conectare (reușite sau nu) pe adresă pe minut: frână pentru costul argon2 al fiecărei cereri. */
     loginRatePerMinutePerIp: z.number().int().min(1).max(100_000).default(120),
+    /** Înregistrări cu ACELAȘI email în fereastră (de la orice adrese). */
     registerMaxAttempts: z.number().int().min(1).max(100).default(5),
+    /** Înregistrări de pe aceeași adresă IP în fereastră (IPv6 pe /64); fără IP de încredere, coș global ×10. */
+    registerMaxPerIp: z.number().int().min(1).max(1000).default(20),
     registerWindowMinutes: z.number().int().min(1).max(1440).default(60),
+    /** Cereri de resetare a parolei pentru ACELAȘI email în fereastră. */
     passwordResetMaxAttempts: z.number().int().min(1).max(100).default(5),
+    /** Cereri de resetare a parolei de pe aceeași adresă IP în fereastră (coș global ×10 fără IP de încredere). */
+    passwordResetMaxPerIp: z.number().int().min(1).max(1000).default(20),
     passwordResetWindowMinutes: z.number().int().min(1).max(1440).default(60),
+    /** Retrimiteri ale emailului de verificare pentru ACELAȘI email în fereastră (contor separat de resetare). */
+    verificationResendMaxAttempts: z.number().int().min(1).max(100).default(5),
+    /** Retrimiteri ale emailului de verificare de pe aceeași adresă IP în fereastră (contor separat de resetare). */
+    verificationResendMaxPerIp: z.number().int().min(1).max(1000).default(20),
+    verificationResendWindowMinutes: z.number().int().min(1).max(1440).default(60),
     /** Încercări de confirmare a emailului (`/api/verify-email`) per IP în fereastră. */
     verifyEmailMaxAttempts: z.number().int().min(1).max(1000).default(10),
     verifyEmailWindowMinutes: z.number().int().min(1).max(1440).default(15),

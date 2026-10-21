@@ -1,8 +1,9 @@
 /**
- * Procesul de worker: `pnpm worker`. Consumă cozile `emails`, `media`, `product-import` și `product-import-images`. În dezvoltare, `pnpm dev:web`
+ * Procesul de worker: `pnpm worker`. Consumă cozile `emails`, `media`, `product-import` și `product-import-images`, și rulează periodic retenția conturilor neverificate. În dezvoltare, `pnpm dev:web`
  * pornește aceiași workeri în procesul aplicației, deci nu trebuie rulat separat.
  */
 import { getLogger } from "@ecom/shared";
+import { startAuthRetentionFromEnv } from "./auth-retention";
 import { startImageImportWorkerFromEnv } from "./image-import-runtime";
 import { startImportWorkerFromEnv } from "./import-runtime";
 import { startMediaWorkerFromEnv } from "./media-runtime";
@@ -19,6 +20,7 @@ const email = startEmailWorkerFromEnv();
 const media = startMediaWorkerFromEnv();
 const imports = startImportWorkerFromEnv();
 const importImages = startImageImportWorkerFromEnv();
+const authRetention = startAuthRetentionFromEnv();
 logger.info(
   { queues: ["emails", "media", "product-import", "product-import-images"] },
   "worker pornit (Ctrl+C pentru oprire)",
@@ -30,6 +32,7 @@ async function shutdown(signal: string): Promise<void> {
   stopping = true;
   logger.info({ signal }, "worker: opresc după joburile în curs");
   try {
+    authRetention.close();
     await Promise.all([email.close(), media.close(), imports.close(), importImages.close()]);
   } finally {
     process.exit(0);

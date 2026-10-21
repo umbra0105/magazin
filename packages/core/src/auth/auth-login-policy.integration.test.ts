@@ -23,8 +23,11 @@ const RUN = randomBytes(4).toString("hex");
 const emails: string[] = [];
 const rand = () => randomBytes(18).toString("base64url");
 let ipCounter = 0;
-/** IP propriu fiecărui test (TEST-NET-2), ca testele să nu se amestece în contoarele Redis. */
-const ip = () => `198.51.100.${(Math.floor(Math.random() * 200) + 1 + ipCounter++) % 250 || 1}`;
+/**
+ * Adresă proprie fiecărui test ȘI fiecărei rulări: un /64 IPv6 unic (contoarele Redis ale unei rulări anterioare, cu blocări
+ * încă active, nu trebuie să atingă rularea curentă).
+ */
+const ip = () => `2001:${RUN.slice(0, 4)}:${RUN.slice(4)}:${(++ipCounter).toString(16)}::1`;
 const headersOf = (address: string) => new Headers({ "x-forwarded-for": `9.9.9.9, ${address}` });
 
 interface Locks {
