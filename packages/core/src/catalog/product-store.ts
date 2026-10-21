@@ -92,10 +92,20 @@ export interface GeneratedVariantRow {
   selections: readonly { option: string; value: string }[];
 }
 
+/** Aruncat de `bulkApply` când un preț nu mai e cel citit: întreaga operație se oprește (tot sau nimic). */
+export class BulkPriceConflict extends Error {
+  constructor() {
+    super("Prețul unei variante s-a schimbat între citire și scriere");
+    this.name = "BulkPriceConflict";
+  }
+}
+
 export interface BulkVariantUpdate {
   variantId: string;
   price: number;
   salePrice: number | null;
+  /** Prețul și promoția CITITE la calcul: scrierea reușește doar dacă sunt încă acestea (altfel `BulkPriceConflict`). */
+  expected: { price: number; salePrice: number | null };
   /** Prețul efectiv nou, de scris în istoric, dacă s-a schimbat. */
   priceRecord: { price: number; at: Date } | null;
 }
@@ -508,10 +518,16 @@ export function createPrismaProductStore(db: Db): ProductStore {
           });
         }
         for (const update of command.variantUpdates) {
-          await tx.productVariant.update({
-            where: { id: update.variantId },
+          // gardă optimistă: o editare de preț făcută între citire și scriere nu se suprascrie în tăcere (C-14)
+          const written = await tx.productVariant.updateMany({
+            where: {
+              id: update.variantId,
+              price: update.expected.price,
+              salePrice: update.expected.salePrice,
+            },
             data: { price: update.price, salePrice: update.salePrice },
           });
+          if (written.count !== 1) throw new BulkPriceConflict();
           if (update.priceRecord) {
             await tx.priceHistory.upsert({
               where: {

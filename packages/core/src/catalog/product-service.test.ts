@@ -6,6 +6,7 @@ import { DEFAULT_ROLES } from "../rbac/catalog";
 import { ProductFieldsForbiddenError } from "./product-write";
 import { MAX_MONEY } from "./product-schemas";
 import { ProductService } from "./product-service";
+import { BulkPriceConflict } from "./product-store";
 import type {
   BulkApplyCommand,
   GeneratedVariantRow,
@@ -235,6 +236,9 @@ class MemoryStore implements ProductStore {
     }
     for (const u of command.variantUpdates) {
       const current = this.variants.get(u.variantId) as VariantRecord;
+      if (current.price !== u.expected.price || current.salePrice !== u.expected.salePrice) {
+        throw new BulkPriceConflict();
+      }
       this.variants.set(u.variantId, { ...current, price: u.price, salePrice: u.salePrice });
       if (u.priceRecord) this.priceHistory.push({ variantId: u.variantId, ...u.priceRecord });
     }

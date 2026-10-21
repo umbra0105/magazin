@@ -31,6 +31,7 @@ import type {
   VariantRecord,
   VariantWithOptions,
 } from "./product-store";
+import { BulkPriceConflict } from "./product-store";
 import { generateUniqueSlug, isValidSlug, slugify } from "./slug";
 import {
   buildSkus,
@@ -741,6 +742,7 @@ export class ProductService {
               variantId: v.id,
               price,
               salePrice,
+              expected: { price: v.price, salePrice: v.salePrice },
               priceRecord: after !== before ? { price: after, at } : null,
             });
           }
@@ -760,12 +762,22 @@ export class ProductService {
         ...(changes.manageStock !== undefined && { manageStock: changes.manageStock }),
         ...(changes.brandId !== undefined && { brandId: changes.brandId }),
       };
-      await this.deps.store.bulkApply({
-        productIds: ids,
-        productData,
-        addCategoryId: changes.addCategoryId ?? null,
-        variantUpdates,
-      });
+      try {
+        await this.deps.store.bulkApply({
+          productIds: ids,
+          productData,
+          addCategoryId: changes.addCategoryId ?? null,
+          variantUpdates,
+        });
+      } catch (error) {
+        if (error instanceof BulkPriceConflict) {
+          throw new CatalogError(
+            "CATALOG_BULK_CONFLICT",
+            "Prețul unei variante a fost modificat de altcineva cât pregăteai ajustarea; nu s-a modificat nimic. Reîncarcă lista și reia.",
+          );
+        }
+        throw error;
+      }
       if (changes.status === "active") await this.applyActivationDefaults(subject, ids);
 
       // Un singur eveniment agregat: lista de id-uri și ce s-a schimbat (valori nesensibile).
