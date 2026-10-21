@@ -131,6 +131,10 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Announcement bar, 404, 500, mentenanță, skeletons
 
 ## FAZA 7 — Storefront catalog · ~7-9 zile
+- [ ] ⚠️ **ÎNAINTE DE LANSARE — C-18: istoric de preț pentru Omnibus** (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`). Tranzițiile programate (`saleStartsAt/saleEndsAt`) nu scriu punct de istoric, iar `PriceHistory` se scrie doar la salvarea din admin; `docs/04:650` planifică un snapshot zilnic, absent. Se face un job zilnic care scrie punctul de preț efectiv și calculează «cel mai mic preț din ultimele 30 de zile» pentru afișare. **Legat de o întrebare către contabil/avocat despre Omnibus** (ce se afișează exact, pentru ce reduceri, de la ce dată curge perioada de 30 de zile pentru produsele migrate din WooCommerce, fără istoric). Fără răspuns, afișarea reducerilor în storefront nu se lansează.
+- [ ] (C-35) «Mută mai sus/jos» cu index absolut: mutarea poate cădea pe altă poziție dacă alt administrator adaugă/șterge un frate între timp. Propunere: `move` primește `beforeId`/`afterId` (față de un frate), nu un index. Se decide semantica înainte de implementare (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
+- [ ] (C-37) Worker-ul nu invalidează cache-ul (`revalidateTag` depinde de un tab de admin deschis); regenerarea media șterge imediat variantele vechi. Se tratează odată cu cache-ul vitrinei de mai sus (cheie Redis «versiune catalog» + ștergere întârziată) (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
+- [ ] (C-43) Slugul produsului e câmp de conținut (Editorul îl poate schimba), fără istoric de slug/redirecționări 301 — de rezolvat înainte de storefront: slug în `products.write` sau istoric de slug (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
 - [ ] ⚠️ **Cache și regenerare pentru vitrină**: acum `/` (și zonele `(auth)`, `(admin)`, `/cont`) sunt `force-dynamic` pe segment. Vitrina trebuie să citească setările/brandingul cu cache (tag-uri, `revalidate`) ca să poată fi servită din cache și regenerată (viteză, SEO). Restrânge `force-dynamic` doar la rutele care chiar au nevoie de el
 - [ ] PLP cu grid, sortare, paginare, descriere SEO
 - [ ] Filtre faceted cu contorizări, sincronizate în URL, funcționale fără JS
@@ -323,6 +327,10 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Audit SEO intern în admin
 
 ## FAZA 18 — Instalator și neutralitate white-label · ~5-6 zile 🔑
+- [ ] **(C-02) Instalatorul setează `auth.trustedProxyHops`** (1 în spatele Caddy) și **avertisment în Setări** când pagina de setări există și valoarea e 0 în producție. Aplicația avertizează deja la pornire (log) și are limită globală de rezervă, dar în modul fără IP de încredere pragul de blocare e ×3 și blocarea e plafonată la 1 minut, deci rămâne un DoS limitat rezidual (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
+- [ ] **(C-02/C-40) Setările de autentificare din registru nu au UI de administrare** (`auth.registerMaxAttempts`, `auth.loginRatePerMinutePerIp`, `passwordResetMax*`, `verificationResend*`, `unverifiedAccountRetentionDays`, `import.stepMaxAttempts`…): se editează acum doar prin registru/seed; câmpurile apar în pagina de Setări când se construiește. Valoarea implicită `loginRatePerMinutePerIp = 120` poate limita un NAT mare (birou/CGNAT): de reevaluat la instalare.
+- [ ] (C-20) Antete de securitate: CSP (cu nonce pentru scriptul de temă), `frame-ancestors`/`X-Frame-Options`, HSTS, `nosniff` global, Referrer-Policy; `GET /api/auth/error?...` afișează text controlat de atacator pe originea magazinului (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
+- [ ] (C-41) `settings.write` poate schimba orice cheie (inclusiv `auth.*`, `imageImport.allowedHosts`, `monitoring.sentryDsn`): permisiune separată `settings.security.write` când apare UI-ul de setări (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
 - [ ] Wizard `/install` complet (`08-instalare-si-distributie.md` §2)
 - [ ] Notă: **tu faci instalările**, deci wizard-ul poate presupune un utilizator tehnic. Fără „prost-rezistență" extremă. Economie ~2-3 zile.
 - [ ] Verificare cerințe, test conexiune DB, rulare migrații cu progres
@@ -353,6 +361,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] CI care testează update-ul de la fiecare versiune minoră anterioară
 
 ## FAZA 20 — Rapoarte, performanță, hardening · ~5 zile
+- [ ] **Curățare din Blocul C (constatări minore, fiecare cu test care pică întâi)** (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`): C-24 (scrieri la variantă pe produse din coș) · C-25 (istoricul exporturilor arată actorii altora) · C-27 (`error.message` brut în raportul de import) · C-28 (`validate`/`cancel` condiționate de stare) · C-29 (testul «rețea doar prin `safeFetchImage`» pe AST, extins la tot repo-ul) · C-30 (index unic `lower(sku)`) · C-31 (`isDefault` în `updateVariant`) · C-32 (`mapDbError` la granița serviciilor; coduri lipsă în `DOMAIN_CODES`) · C-33 (timeout-uri și pool `pg` explicite pentru lacătul categoriilor) · C-36 (schimbarea tipului unui atribut în tranzacție) · C-39 (limite pe `name`/`image`; emailul e deja validat) · C-42 (tokenuri de resetare anterioare; limitare la `change-password`) · C-44 (CHECK pereche `costPrice`/`costPriceDate`, limite pe relații/documente, escape la `ILIKE`, OFFSET) · C-45 (descrierile rolurilor Depozit/Contabil, teste de arhitectură mai strânse).
 - [ ] Dashboard cu KPI reali + grafice
 - [ ] Rapoarte: vânzări, stoc, retururi, cupoane, TVA, clienți, **vânzări per grup**
 - [ ] Export XLSX/CSV + rapoarte programate pe email
@@ -364,6 +373,9 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Audit de accesibilitate cu axe
 
 ## FAZA 21 — Împachetare și distribuție · ~4-5 zile 🔑
+- [ ] (C-26) Filtrul de conținut activ din PDF nu vede obiecte comprimate (`/ObjStm`) și lasă `/OpenAction`, `/URI`, `/SubmitForm`, `/AA`, `/GoToR`, `/ImportData`: adaugă marcajele și respinge `/ObjStm` cu conținut activ. Fișierele se servesc doar ca `attachment` cu `nosniff` și CSP `sandbox` (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
+- [ ] (C-38) Audit pentru resetarea/schimbarea parolei și conectare; mascarea `auth.*Password*` păstrează diferența (nu «[ascuns]» la ambele valori); `documents.reorder`, încărcarea/anularea importului și scripturile CLI nu lasă urmă — rezolvat odată cu auditul în aceeași tranzacție (outbox) de mai jos (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
+- [ ] ⚠️ **Licențe ale dependențelor, înainte de vânzare** (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`): produsul se distribuie către clienți, deci `THIRD-PARTY-NOTICES.md` (generat cu `node scripts/generate-third-party-notices.mjs`) se livrează cu pachetul și se arată unui avocat înainte de prima vânzare: LGPL (libvips / `@img/sharp-*`), CC-BY-4.0 (`caniuse-lite`), FSL-1.1-Apache-2.0 (`sentry` = Sentry CLI, doar la build; se exclude din instalarea de producție dacă nu se încarcă source maps). Dependențe cu avize `pnpm audit` (postcss din `next@15.5.28` nereparat, reparat doar în `next@16`): reevaluate la saltul de versiune major.
 - [ ] ⚠️ **Audit în aceeași tranzacție cu modificarea**, acolo unde datele sunt în Postgres: acum auditul și scrierea sunt stores separate (la eșecul auditului, modificarea rămâne, iar apelantul primește `AUDIT_WRITE_FAILED`). Servicii cu `tx` comun sau outbox; integrări cu stare externă rămân best-effort, cu alertă
 - [ ] Dockerfile multi-stage cu `output: 'standalone'` (app + worker separat)
 - [ ] `docker-compose.prod.yml`: app, worker, postgres, redis, caddy
