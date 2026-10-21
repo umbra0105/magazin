@@ -112,14 +112,26 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] (15c) **Descriere bogată** (HTML sanitizat, editor, randare în storefront), **înainte de Faza 6**; apoi reimport al descrierilor din exportul WooCommerce original cu profilul WooCommerce (în 15a descrierile se reduc la text simplu, tabelele devin linii «Etichetă: valoare»)
 - [x] (16) E2E, verificare manuală cap-coadă (`docs/FAZA-4-verificare-manuala.md`) și închiderea fazei (TODO, PROGRESS)
 
-## FAZA 5 — Stoc · ~3 zile
-- [ ] Schema: Warehouse, InventoryItem, StockMovement, StockReservation, BackInStockAlert
-- [ ] Service cu `reserve/release/commit/adjust/transfer`, tranzacții + `SELECT FOR UPDATE`
-- [ ] **Ocolire completă a logicii de stoc când `manageStock = false`**: fără rezervare, fără decrement, fără alerte. Disponibilitatea = bifa `stockStatus`.
-- [ ] **Test de concurență**: 10 cereri simultane pe stoc 1 → una singură reușește
-- [ ] Cron de eliberare a rezervărilor expirate
-- [ ] Admin: stoc per depozit, ajustări cu motiv, istoric, alerte stoc mic
-- [ ] Multi-depozit în DB, dar UI simplu în spatele feature flag-ului
+## FAZA 5 — Stoc · ~9-11 zile
+
+> **Plan aprobat de utilizator** (`docs/FAZA-5-plan.md`, versiunea a patra; deciziile D1–D6 și D11 și răspunsurile utilizatorului în `docs/PROGRESS.md`, intrarea din 2026-10-21). Numerotarea de mai jos e cea din plan; un commit per punct; teste care pică întâi; concurența intră din punctul 5. Estimarea inițială (~3 zile) era înainte de D1 (SmartBill), D6 (La comandă) și D11 (unități și cantități zecimale).
+> **Decizii (rezumat):** SmartBill = sursa cantității fizice, aplicația ține «angajat» și «rezervat» (D1) · inventarul îl face utilizatorul, până atunci produsele sunt negestionate (D2) · o singură locație «Depozit principal» (D3) · card 15 min, ramburs imediat, transfer bancar 3 zile lucrătoare, coșul nu rezervă (D4) · fără stoc negativ, în bază (D5) · patru stări vizibile, termen produs → brand → global, hibrid cu `allowBackorder` oprit, coșuri mixte «toată odată» (D6) · unități și cantități zecimale: `BIGINT` cu 4 zecimale, pas de vânzare pe produs/variantă, rest nevandabil ascuns clientului, R1/R2 **provizoriu** (D11) · «angajat» cu referință generică (tip + id) și unicitate, înlocuită cu FK în Faza 9 · `manageStock` implicit ON pentru produse noi, importurile setează `false`, migrare de date pentru produsele existente fără `InventoryItem`.
+> **Întrebări către contabil:** `docs/INTREBARI-CONTABIL.md`; **către avocat:** `docs/INTREBARI-AVOCAT.md`. **Ce aduce utilizatorul:** exportul SmartBill «stoc la zi» (în `local-data/`, nu se comite) și unitățile SmartBill ale celor 6 produse-exemplu, înainte de punctul 12.
+
+- [ ] (1) **Schema și migrația** (singura migrație a fazei): `MeasureUnit`; pe produs `measureUnitId`, `priceBasis` (unitate / pas), `saleStep`, `minSteps`; pe variantă aceleași (nul = moștenește) + conversia SmartBill (aceeași unitate / pași / raport + numele unității); `Warehouse` («Depozit principal», redenumibil, creat de seed); `InventoryItem` (fizic + «valabil la», angajat, rezervat, prag în pași); `StockSnapshot`; `StockMovement` (imuabil, ora efectivă, motiv); `StockReservation`; **angajarea cu referință generică (tip + id) și unicitate** (aceeași comandă nu poate angaja de două ori aceeași variantă); `BackInStockAlert`; `Product.leadTimeDays`, `Brand.defaultLeadTimeDays`; toate cantitățile `BIGINT` în zecimi de miime; CHECK-uri (≥ 0, unic per variantă + depozit, `IS NULL` explicit + test «una setată, una nulă»); setările `inventory.*`; **migrare de date:** `manageStock = false` doar pentru produsele existente fără `InventoryItem` (produsele noi păstrează implicitul ON)
+- [ ] (2) **Cantități exacte:** modulul `Quantity` în `packages/shared` (`bigint`, citire/formatare cu virgulă, multiplu de pas, număr de pași, plafoane, erori tipate), primitiva exactă preț × cantitate fără regulă de rotunjire; teste numerice cu cele 6 produse (3 × 2,03 = 6,09 …), multipli / nemultipli, referință cu fracții exacte, depășiri; test de arhitectură «nicio cantitate ca număr zecimal»
+- [ ] (3) **Unități, pas și configurare:** pagina «Unități de măsură» (listă, creare, editare, dezactivare, nume SmartBill, zecimale); în editorul de produs unitate, baza prețului, pas, minim; pasul pe fiecare variantă (moștenire din produs); validarea «orice comandă valabilă se convertește exact către SmartBill»; mesaje în română
+- [ ] (4) **Disponibilitatea și stările** (modul pur): trei ramuri explicite (negestionat / «La comandă» cu termen produs → brand → global / gestionat: Fizică − Angajat − Rezervat, disponibil în pași, rest nevandabil, hibrid); digitalele mereu disponibile; teste pe tabel de stări
+- [ ] (5) **Rezervare / eliberare / angajare / oglindire** în multipli de pas: o singură comandă condiționată + blocare de rând + CHECK; idempotente; expirare și la citire; linii în ordine fixă; regula D1 (angajat vs oglindit). **Teste de concurență pe Postgres real aici:** 10 cereri / stoc 1, 100 / stoc 10, 10 × 0,3 pe 1,0 → exact 3, liner 5 cereri pe 100 mp → exact 2, webhook dublu, confirmare vs expirare, coș cu linii gestionate + negestionate + «la comandă», cursa poză vs factură, aceeași comandă angajată de două ori
+- [ ] (6) **Ajustări cu ora efectivă:** precizia unității, motive fixe (D8), «Vânzare în magazin», refuz sub 0, regula «poza înlocuiește ajustările dinainte»
+- [ ] (7) **Joburi:** eliberarea rezervărilor expirate; transfer bancar cu expirare în zile lucrătoare; verificarea «poza e prea veche»; curățarea vechilor `BackInStockAlert`
+- [ ] (8) **Admin `/admin/stoc`:** pe variantă Fizică (valabilă la …), Angajat, Rezervat, Disponibil (în unitate și în pași), Rest nevandabil; ajustări cu motiv, istoric, `inventory.*`, audit, dialoguri proprii în română
+- [ ] (9) **Tabul Stoc din produs, brand, listă; afișarea prețului; import/export:** stare la negestionate («negestionat până la inventar»), bifa «Gestionează stocul», hibridul, termen pe produs / implicit pe brand, prețul pe unitate și pe pas marcat provizoriu (fără regulă de rotunjire; dacă apare o decizie de rotunjire, 🛑), coloane noi în import/export (CSV doar prin funcția comună, virgulă zecimală, pas în Excel)
+- [ ] (10) **Alerte:** stoc mic (prag în pași, implicit 2, suprascriere pe variantă), lista «Stoc mic», avertisment «rest nevandabil», contor în panou, «poza SmartBill e veche»
+- [ ] (11) **«Anunță-mă când revine»** (server): cerere, trimitere o singură dată, ștergerea adresei
+- [ ] (12) **Import «stoc la zi» din SmartBill:** șablon, «valabil la», separator zecimal explicit, conversie SmartBill → unitatea noastră (rotunjire în jos + avertisment), verificare fără modificări cu raport, aplicare toată-sau-deloc, istoricul pozelor, audit; `FileInput`; regula D2 în importul WooCommerce (negestionat, «în stoc», «buc»)
+- [ ] (13) **Multi-depozit în spatele comutatorului `multiWarehouse`:** CRUD depozite, selector, transfer; oprit = invizibil
+- [ ] (14) **Închiderea fazei:** E2E, testul de concurență final în suită, acoperirea față de cerințe, `docs/FAZA-5-verificare-manuala.md` (cu cele 6 produse ca scenarii), lista «înainte de lansare» (D1.5) în TODO, adăugirile pentru Fazele 8, 9, 12, 13, 15, 22 (vezi `docs/FAZA-5-plan.md` §4), PROGRESS, `docs/04`/`docs/15`
 
 ## FAZA 6 — Design system și layout · ~4-5 zile
 - [ ] ⚠️ **PRIMUL PAS, înainte de orice lucru pe design: skill-ul `frontend-design` pentru storefront (verificat împreună cu utilizatorul).** Utilizatorul aduce fișierul `SKILL.md`; îl citim INTEGRAL și verificăm că nu conține instrucțiuni care contrazic `CLAUDE.md` (accesibilitate, performanță, conversie, referințele UX alese de utilizator, regulile de securitate, fără culori sau texte hardcodate). Abia apoi îl punem în `.claude/skills/`, într-un commit separat. **Nu se rulează `npx claude-code-templates` sau alt instalator:** doar fișierul text, copiat și citit. Nu se instalează fără confirmarea explicită a utilizatorului
@@ -167,6 +179,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 
 ## FAZA 9 — Checkout și plasare comandă · ~8-10 zile ⚠️ partea critică
 - [ ] `Order.channelId` (implicit canalul `web`), `Order.externalId`, `Order.externalData` (JSON brut, pentru depanare), pregătite pentru eMAG (mutate din Faza 4, punctul 5; `12` §2)
+- [ ] ⚠️ **Din Faza 5:** angajarea de stoc ține o referință generică (tip + id, cu unicitate) spre comandă, fiindcă `Order` nu exista. Aici se înlocuiește cu **cheie străină** spre `Order`/`OrderLine`, cu **validarea datelor existente** (referințe orfane) înainte de migrație, și testele de concurență din Faza 5 se rulează din nou pe schema nouă
 - [ ] `Order.parentSubscriptionId` (câmp pregătitor pentru abonamente, nefolosit; mutat din Faza 4, punctul 4)
 - [ ] Schema: Order, OrderLine, OrderEvent, Payment, Address, ShippingZone, ShippingMethod
 - [ ] Motor de livrare: zone pe județ/localitate, tarife, praguri, taxă ramburs, **ridicare personală de la sediu**
@@ -464,12 +477,12 @@ Astea patru sunt „taxa" pe care o plătești acum ca să nu rescrii nimic mai 
 
 | | Zile de lucru |
 |---|---|
-| **MVP vandabil, produse fizice** (Fazele 0-15) | ~70-82 |
+| **MVP vandabil, produse fizice** (Fazele 0-15) | ~76-90 |
 | + Produse digitale (Faza 14b) | inclus mai sus |
 | + Pachet distribuibil (Fazele 18, 19, 21) | +14-16 |
 | + CMS, marketing, SEO, rapoarte (Fazele 16, 17, 20) | +17-20 |
-| **Complet, fără eMAG** | **~101-118** |
+| **Complet, fără eMAG** | **~107-126** |
 | + eMAG Marketplace (Faza 22b) | +8-12 |
-| **Total** | **~109-130** |
+| **Total** | **~115-138** |
 
 Sugestia mea: lansează magazinul propriu (Fazele 0-17) pentru **un client real**, încasează, apoi adaugă instalatorul și eMAG. eMAG nu are sens înainte ca magazinul tău să funcționeze impecabil — penalizările lor sunt reale.
