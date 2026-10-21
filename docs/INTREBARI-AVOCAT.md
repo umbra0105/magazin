@@ -6,6 +6,15 @@ Magazin online din România (B2C, persoane fizice și firme), echipamente și ma
 bancar, plus produse digitale (tutoriale video). Vânzare doar în România. Întrebările vin din ce construim acum și din ce urmează.
 Unde apare **(adăugată de Claude)**, întrebarea nu era în planul inițial: a apărut din analiza de față și trebuie confirmată că e relevantă.
 
+## Ce știm deja de la proprietar (nu mai trebuie întrebat)
+
+- Se vând produse în **ml, mp, kg, litri și bucăți**, cu **pas de vânzare**: se comandă doar multipli ai ambalajului (rolă de liner de 41,25 mp,
+  cutie de mozaic de 2,03 mp, sac de bisulfat de 25 kg, țeavă în multipli de 2,5 ml, lemn în bucăți de 1,5 / 1,8 / 2,1 / 2,6 ml). **Nu se taie
+  la cerere** în magazinul online.
+- Se vând și produse **comandate la furnizor după comandă** („la comandă”), cu termen de livrare afișat; în comenzi mixte, livrarea se face
+  **toată odată**.
+- Facturile le emite SmartBill; magazinul fizic, cel online și depozitul sunt în aceeași locație.
+
 **Cum răspunzi:** scrie sub fiecare întrebare, în „Răspuns”. „Nu e nevoie” sau „depinde de …” sunt răspunsuri bune.
 
 ---
@@ -102,7 +111,7 @@ Răspuns:
 ## 4. Vânzarea la metru, pe suprafață și în ambalaje (adăugată de Claude)
 
 Vindem și produse la **metru liniar, metru pătrat sau kilogram**, în cantități care sunt multipli ai unui ambalaj (rolă de liner de
-41,25 mp, cutie de mozaic de 2,03 mp, țeavă în multipli de 2,5 ml). Online se vinde doar ambalajul sau multiplii lui; nu se taie la cerere.
+41,25 mp, cutie de mozaic de 2,03 mp, țeavă în multipli de 2,5 ml). Online se vinde doar ambalajul sau multiplii lui (pas de vânzare); nu se taie la cerere.
 
 **4.1.** Dreptul de retragere de 14 zile se aplică normal acestor produse (rolă întreagă, cutie întreagă, sac sigilat)? Ce se întâmplă cu
 un produs deschis sau tăiat de client?

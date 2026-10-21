@@ -1,70 +1,50 @@
-# Întrebări pentru contabil — stoc, unități de măsură, cantități zecimale și facturare
+# Întrebări pentru contabil — stoc, unități de măsură, cantități cu zecimale
 
-**Stare:** de trimis · **Întocmit:** 2026-10-21 · **Pentru:** contabilul magazinului (și, la întrebările despre SmartBill, persoana care administrează contul SmartBill)
+**Stare:** de trimis · **Actualizat:** 2026-10-21 · **Timp de completat:** ~15 minute (11 întrebări)
 
-Magazinul online vinde echipamente și materiale pentru piscine, cu TVA 21% inclus în prețul afișat. Facturile le emite SmartBill. Pregătim
-partea de **stoc**, iar unele produse se vând la metri, metri pătrați, kilograme sau în ambalaje (rolă, sac, cutie), nu doar la bucată.
-De răspunsurile de mai jos depinde cum calculăm totalurile și ce trimitem către SmartBill, ca **suma încasată de la client să fie
-exact suma de pe factură**.
+Magazinul online vinde echipamente și materiale pentru piscine, cu TVA 21% inclus în preț. Facturile le emite SmartBill. Unele produse
+se vând la metri, metri pătrați, kilograme, litri sau în ambalaje (rolă, sac, cutie). Vrem ca **suma încasată de la client să fie exact
+suma de pe factură**. Răspunde sub fiecare întrebare; „nu știu” sau „verific în SmartBill” sunt răspunsuri bune. Cifrele din exemple sunt
+inventate.
 
-**Cum răspunzi:** scrie sub fiecare întrebare, în spațiul „Răspuns”. Dacă nu știi, scrie „nu știu” sau „verific cu SmartBill”; e un
-răspuns bun. Unde apare un exemplu cu cifre, cifrele sunt inventate, doar ca să se înțeleagă întrebarea.
+## Ce știm deja de la proprietar (nu mai trebuie întrebat)
 
-**Cuvinte folosite:** *gestiune* = locul în care SmartBill ține stocul (depozit, magazin) · *unitate de măsură* = „buc”, „ml”, „mp”, „kg” …
-· *linie de factură* = un rând de pe factură (produs, cantitate, preț) · *preț brut* = prețul cu TVA inclus, cel afișat clientului.
+- Produsele au **gestiune activă în SmartBill**.
+- Când se emite factura, **stocul scade automat în SmartBill**.
+- Magazinul fizic, magazinul online și depozitul sunt **în aceeași locație** (o singură gestiune pentru stocul din magazin).
+- Se vând produse în **ml, mp, kg, litri și bucăți**, cu **pas de vânzare** (se comandă doar multipli ai ambalajului). Exemple reale:
 
----
+  | Produs | Se vinde în | Cantități posibile |
+  |---|---|---|
+  | Țeavă PVC-U | ml, multipli de 2,5 | 2,5 · 5 · 7,5 … ml |
+  | Liner de placare | mp, rola de 41,25 | 41,25 · 82,5 … mp |
+  | Bisulfat de sodiu | kg, sacul de 25 (preț pe sac) | 25 · 50 … kg |
+  | Furtun de dozare | ml | 1 · 2 · 3 … ml |
+  | Mozaic de placare | mp, cutia de 2,03 | 2,03 · 4,06 · 6,09 … mp |
+  | Lemn de abachi | ml, bucăți de 1,5 / 1,8 / 2,1 / 2,6 | multipli ai lungimii alese |
 
-## A. Stocul în SmartBill
+- Se vând și produse **comandate la furnizor după comandă** („la comandă”, cu termen de livrare afișat).
+- Răspunsuri mai vechi (`docs/10`): un retur parțial se stornează parțial; seria și numărul facturii le dă SmartBill; e-Factura o transmite SmartBill.
 
-Planul nostru: **SmartBill rămâne sursa stocului real** (el știe și vânzările din magazinul fizic). Magazinul online citește periodic stocul
-din SmartBill, iar între două citiri scade din stocul disponibil doar comenzile online încă nefacturate.
-
-**A1. Gestiunile.** Magazinul fizic, vânzările online și depozitul sunt într-o **singură gestiune** în SmartBill, sau sunt mai multe
-gestiuni (de exemplu „Magazin” și „Depozit”)? Dacă sunt mai multe, cum se numesc?
-
-Răspuns:
-
-**A2. Factura din magazinul online scade stocul.** Când magazinul online emite automat o factură în SmartBill, poate fi legată de o
-**anumită gestiune**, astfel încât produsele facturate să scadă din acea gestiune? (Dacă nu știi, la ce secțiune din SmartBill se verifică?)
-
-Răspuns:
-
-**A3. Stoc negativ.** Ce se întâmplă în SmartBill dacă se facturează un produs care are stoc 0 (sau mai puțin decât cantitatea
-facturată): factura se emite și stocul devine negativ, sau SmartBill refuză factura? Se poate alege acest comportament din setări?
-
-Răspuns:
-
-**A4. Raportul „stoc la zi”.** Ne trebuie un raport/export din SmartBill cu stocul curent al fiecărui produs (de preferat Excel sau CSV).
-(a) Cum se numește raportul și cum se obține? (b) Ce coloane are (cod produs, denumire, gestiune, unitate de măsură, cantitate …)?
-(c) Apare **data și ora** la care a fost generat? (d) Pentru produsele vândute la metru/kg, cantitatea apare cu zecimale?
-*Ideal:* trimite-ne un exemplu real cu 20–30 de rânduri, care să conțină și produsele din tabelul de la B1.
-
-Răspuns:
-
-**A5. Codul produsului.** Codul de produs din SmartBill (cel din coloana „cod”) este același cu **SKU-ul** pe care îl folosim în magazinul
-online? Dacă există produse la care diferă, le putem lista?
-
-Răspuns:
+Ce aduce proprietarul (nu e pentru contabil): raportul „stoc la zi” din SmartBill (cu cele 6 produse) și verificarea că SKU-ul din magazin
+este același cu codul de produs din SmartBill.
 
 ---
 
-## B. Unități de măsură și cantități cu zecimale
+## Pentru contabil
 
-Unele produse nu se vând la bucată. Exemple reale din magazin:
+### Stoc
 
-| # | Produs | Se vinde în | Cantități posibile |
-|---|---|---|---|
-| 1 | Țeavă PVC-U | ml, doar în multipli de 2,5 ml | 2,5 · 5 · 7,5 · 10 … ml |
-| 2 | Liner de placare | mp, doar rola întreagă de 41,25 mp | 41,25 · 82,5 · 123,75 … mp |
-| 3 | Bisulfat de sodiu | kg, doar sacul de 25 kg (preț pe sac) | 25 · 50 · 75 … kg |
-| 4 | Furtun de dozare | ml | 1 · 2 · 3 … ml |
-| 5 | Mozaic de placare | mp, doar cutia de 2,03 mp | 2,03 · 4,06 · 6,09 · 8,12 … mp |
-| 6 | Lemn de abachi (saună) | ml, bucăți de 1,5 / 1,8 / 2,1 / 2,6 ml | multipli ai lungimii alese |
+**1. Stoc negativ.** Dacă se facturează un produs cu stoc 0 (sau mai mic decât cantitatea facturată), SmartBill emite factura și stocul
+devine negativ, sau o refuză? Se poate alege din setări?
 
-**B1. Cum ține SmartBill stocul acestor produse?** Pentru fiecare din cele 6 produse (sau pentru produsele cu SKU-urile pe care ți le dăm):
-în ce **unitate de măsură** este stocul în SmartBill (ml / mp / kg sau buc / rolă / sac / cutie) și cu **câte zecimale** poate fi ținută
-cantitatea? Exemplu: liner stocat „2 role” sau „82,5 mp”?
+Răspuns:
+
+### Unități și zecimale în SmartBill
+
+**2. Unitatea și zecimalele stocului.** Pentru cele 6 produse de mai sus: în ce unitate este ținut stocul în SmartBill și cu câte zecimale?
+Exemplu: liner stocat „2 role” sau „82,5 mp”. Putem adăuga în cont unitățile care lipsesc (sac, rolă, cutie)? Dacă stocul e în kg, dar se
+vinde în saci de 25 kg, SmartBill descarcă corect gestiunea (2 saci facturați = 50 kg)?
 
 | Produs | Unitatea în SmartBill | Zecimale la cantitate |
 |---|---|---|
@@ -75,102 +55,58 @@ cantitatea? Exemplu: liner stocat „2 role” sau „82,5 mp”?
 | Mozaic de placare | | |
 | Lemn de abachi | | |
 
-**B2. Lista unităților de măsură din SmartBill.** Care sunt unitățile definite în cont și cum apar scrise pe factură (de exemplu „buc”, „ml”,
-„mp”, „kg”, „l”, „set”, „sac”, „rolă”, „cutie”)? Putem adăuga unități noi (sac, rolă, cutie) dacă lipsesc?
+Răspuns (unități lipsă / descărcare):
+
+**3. Zecimale pe factură.** Câte zecimale acceptă SmartBill pe o linie: la **cantitate** (ex. 6,09 mp) și la **prețul unitar** (ex. 123,45 lei/mp)?
 
 Răspuns:
 
-**B3. Câte zecimale acceptă SmartBill** pe o linie de factură: (a) la **cantitate** (de exemplu 6,09 mp sau 82,5 mp: câte zecimale
-maxim?) și (b) la **prețul unitar** (de exemplu 123,45 lei/mp: câte zecimale?).
+**4. Rotunjirea.** La o linie cu cantitate zecimală, SmartBill rotunjește **pe fiecare linie** sau doar **totalul facturii**? Pornește de la
+prețul **fără TVA** (net × cantitate, apoi TVA) sau **cu TVA** (brut × cantitate, apoi se extrage TVA)? Cum e configurată rotunjirea
+documentelor în cont?
+
+*Exemplu:* 3 cutii de mozaic = 6,09 mp la 123,45 lei/mp cu TVA. Calculat pe cantitatea totală: 123,45 × 6,09 = 751,8105 → **751,81 lei**
+(net 621,33 + TVA 130,48). Dacă s-ar rotunji întâi prețul unei cutii: 250,60 × 3 = **751,80 lei** (1 ban diferență). Magazinul calculează
+ca în primul caz; factura trebuie să iasă exact 751,81. Ce recomandați dacă SmartBill face altfel?
 
 Răspuns:
 
-**B4. Rotunjirea pe linie sau pe total.** La o linie cu cantitate zecimală, SmartBill calculează valoarea liniei = cantitate × preț unitar
-și o **rotunjește pe fiecare linie** sau rotunjește doar **totalul facturii**? Se pornește de la prețul **fără TVA** (net × cantitate, apoi
-se adaugă TVA) sau de la prețul **cu TVA** (brut × cantitate, apoi se extrage TVA)? Cum e configurată rotunjirea documentelor în contul nostru?
-
-*Exemplu:* clientul cumpără 3 cutii de mozaic = 6,09 mp, la 123,45 lei/mp **cu TVA**.
-- Calcul pe cantitatea totală: 123,45 × 6,09 = 751,8105 → **751,81 lei** (net 621,33 + TVA 130,48).
-- Dacă s-ar rotunji întâi prețul unei cutii: 123,45 × 2,03 = 250,6035 → 250,60; × 3 = **751,80 lei**. Diferență: 1 ban.
-
-Magazinul calculează ca în primul caz (o singură rotunjire pe linie, pe cantitatea totală). Vrem să fim siguri că **factura SmartBill iese
-exact 751,81**. Ce ne recomandați dacă SmartBill face altfel?
+**5. Produse pe ambalaj.** Un sac de 25 kg costă **120,00 lei pe sac**; clientul cumpără 2 (240,00 lei). Pe factură trebuie **„2 sac × 120,00”**
+sau **„50 kg × 4,80 lei/kg”**? Prima dă totalul exact. Care e varianta corectă contabil și o acceptă contul nostru?
 
 Răspuns:
 
-**B5. Ce trimitem pe factură la produsele vândute pe ambalaj.** Pentru un sac de bisulfat de 25 kg cu prețul **120,00 lei pe sac**, clientul
-cumpără 2 saci (240,00 lei). Pe factură trebuie să apară **„2 sac × 120,00”** sau **„50 kg × 4,80 lei/kg”**? Prima variantă dă totalul
-exact; a doua ar cere un preț pe kg cu mai multe zecimale. Contul nostru acceptă ambele (unitatea „sac” ca unitate de vânzare)? Care e
-varianta corectă contabil?
+**6. Rest rămas dintr-un ambalaj.** Dacă dintr-o rolă se taie și se vinde în magazinul fizic o parte (online se vinde doar rola întreagă),
+cum se înregistrează diferența în SmartBill (scădere, transformare în alt articol, alt document)?
 
 Răspuns:
 
-**B6. Același produs în două unități.** Dacă un produs se ține în stoc în kg, dar se vinde în saci de 25 kg (sau se ține în role și se
-vinde în mp), SmartBill poate descărca gestiunea corect (2 saci facturați = 50 kg scăzuți)? Sau trebuie ținut stocul în aceeași unitate în
-care se facturează?
+### Produse „la comandă”
+
+**7. Când se emite factura** pentru o comandă cu produse „la comandă”: la plată, la expediere sau altfel? Se poate factura un produs care
+nu e încă în stoc, fără stoc negativ? Dacă o comandă are și produse din stoc, și produse „la comandă”, trimise toate odată, se emite o
+singură factură, la ce dată?
 
 Răspuns:
 
-**B7. Rest rămas dintr-un ambalaj.** Dacă dintr-o rolă de 41,25 mp se taie și se vinde pe loc în magazinul fizic o parte (restul nu se
-mai poate vinde online, pentru că online se vinde doar rola întreagă), cum se înregistrează în SmartBill diferența (scădere din stoc,
-transformare în alt articol, alt document)? Doar ca să înțelegem cum apar astfel de diferențe în raportul „stoc la zi”.
+**8. Ramburs.** Dacă clientul refuză colețul cu un produs adus special, cum se tratează contabil (storno, transport suportat de magazin)?
+Recomandați să nu permitem ramburs la produsele „la comandă”?
 
 Răspuns:
 
 ---
 
-## C. Produse „la comandă” (aduse special de la furnizor)
+## Mai târziu (nu blochează stocul)
 
-Planificăm o stare „La comandă” pentru produse care nu sunt în stoc, dar pot fi aduse în câteva zile (cu termen de livrare afișat).
-Clientul le poate comanda și plăti înainte să existe în stoc.
-
-**C1. Când se emite factura** pentru o astfel de comandă: **la plata comenzii** (cum am stabilit la card), **la expedierea produsului**
-sau altfel? Contează dacă factura se emite înainte ca produsul să intre în gestiune (se poate factura un produs care nu e încă în stoc,
-fără stoc negativ)?
+**9. Vouchere cadou.** Un voucher **cumpărat** (plată anticipată) apare pe factura finală ca **metodă de plată**, nu reduce baza de TVA. E
+corect? Ce termen minim de valabilitate se aplică și ce se întâmplă cu soldul neutilizat la expirare? (răspunsul anterior: „reducere din comandă”)
 
 Răspuns:
 
-**C2. Ramburs la produse „la comandă”.** Dacă clientul refuză colețul la livrare (produs adus special), cum se tratează contabil
-(storno, costuri de transport suportate de magazin, produs rămas în stoc)? Din punct de vedere contabil, recomandați să **nu** permitem
-ramburs pentru produsele „la comandă” (doar plată în avans)?
+**10. Puncte de loialitate.** Produse de 100 lei, 10 lei plătiți cu puncte: TVA se calculează pe 100 sau pe 90 lei? Reducerea apare ca linie separată?
 
 Răspuns:
 
-**C3. Comandă cu produse în stoc și produse „la comandă”.** Dacă o comandă conține și produse din stoc, și produse „la comandă”, și
-trimitem totul odată (când sosește ultimul produs), se emite **o singură factură** pentru toată comanda? La ce dată?
+**11. Transportul la retur parțial.** La storno parțial pentru produse, transportul plătit de client se returnează, se păstrează sau depinde de motiv?
 
 Răspuns:
-
-**C4. Furnizorul nu mai poate livra.** Dacă după comandă și plată furnizorul nu mai poate livra produsul, ce document emitem pentru
-partea anulată (storno parțial, ca la retur parțial) și cum se returnează banii?
-
-Răspuns:
-
----
-
-## D. Întrebări rămase deschise din etape anterioare (se vor folosi mai târziu, nu blochează stocul)
-
-Le repetăm aici ca să trimitem totul într-un singur mesaj. Detaliile sunt în `docs/10-decizii-deschise.md`, Partea III.
-
-**D1. Vouchere cadou.** Răspunsul primit a fost „reducere din comandă”. Distingem două lucruri: **voucher cumpărat** de un client (plată
-anticipată, datorie până la utilizare) și **cod de reducere gratuit** (promoție). Pentru cel cumpărat, pe factura finală apare ca **metodă
-de plată** (nu reduce baza de TVA). E corect? Ce termen minim de valabilitate se aplică și cum se tratează soldul neutilizat la expirare?
-
-Răspuns:
-
-**D2. TVA pe puncte de loialitate.** Un client cumpără produse de 100 lei și plătește 10 lei cu puncte de loialitate. TVA se calculează pe
-**100 lei** sau pe **90 lei**? Cum arată factura (reducerea ca linie separată)?
-
-Răspuns:
-
-**D3. Transportul la retur parțial.** La un retur parțial, cu storno parțial pentru produse, ce se întâmplă cu **transportul** plătit de
-client (se returnează, se păstrează, depinde de motiv)?
-
-Răspuns:
-
----
-
-## Rezumat (pentru contabil)
-
-Cele mai importante, dacă nu ai timp pentru toate: **A2, A3, A4, B1, B3, B4, B5, C1.** Cu răspunsurile la ele putem construi corect
-calculul totalurilor și importul stocului.
