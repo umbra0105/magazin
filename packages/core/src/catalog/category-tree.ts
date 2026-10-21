@@ -33,6 +33,8 @@ export interface NodeUpdate {
   depth: number;
   path: string;
   sortOrder: number;
+  /** Adresa nouă, doar la redenumire: se scrie în aceeași tranzacție cu căile (C-15). */
+  slug?: string;
 }
 
 export const pathFor = (parentPath: string | null, slug: string): string =>
@@ -197,7 +199,14 @@ export function planRename(
   const parent = node.parentId ? nodes.find((n) => n.id === node.parentId) : undefined;
   const newPath = pathFor(parent?.path ?? null, newSlug);
   const updates: NodeUpdate[] = [
-    { id, parentId: node.parentId, depth: node.depth, path: newPath, sortOrder: node.sortOrder },
+    {
+      id,
+      parentId: node.parentId,
+      depth: node.depth,
+      path: newPath,
+      sortOrder: node.sortOrder,
+      slug: newSlug,
+    },
   ];
   for (const d of descendantIds(nodes, id)) {
     const child = nodes.find((n) => n.id === d) as CategoryNode;

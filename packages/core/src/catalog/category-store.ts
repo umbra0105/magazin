@@ -136,7 +136,13 @@ export function createPrismaCategoryStore(db: Db): CategoryStore {
         for (const u of updates) {
           await tx.category.update({
             where: { id: u.id },
-            data: { parentId: u.parentId, depth: u.depth, path: u.path, sortOrder: u.sortOrder },
+            data: {
+              parentId: u.parentId,
+              depth: u.depth,
+              path: u.path,
+              sortOrder: u.sortOrder,
+              ...(u.slug !== undefined && { slug: u.slug }),
+            },
           });
         }
       });

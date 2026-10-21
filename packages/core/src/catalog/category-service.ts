@@ -291,16 +291,32 @@ export class CategoryService {
       const diff = changedFields(before as unknown as Record<string, unknown>, patch);
       if (Object.keys(diff.after).length === 0) return before;
 
-      let result = await this.deps.store.update(id, patch as Partial<NewCategoryData>);
-      if (patch.slug !== undefined && patch.slug !== before.slug) {
-        const newSlug = patch.slug;
-        // calea categoriei și a descendenților, din noua adresă; citire + plan + scriere sub blocarea arborelui
+      const renamed = patch.slug !== undefined && patch.slug !== before.slug;
+      if (renamed) {
+        const newSlug = patch.slug as string;
+        // Slug-ul și căile categoriei și ale descendenților se scriu ÎNTR-O singură tranzacție, sub blocarea arborelui
+        // (C-15). Înainte, slug-ul se scria separat: un eșec între cei doi pași lăsa slug nou cu cale veche, iar două
+        // redenumiri simultane puteau lăsa slug-ul uneia și calea celeilalte. Starea se citește proaspăt, sub lacăt.
         await this.deps.store.serialized(async () => {
           const nodes = asNodes(await this.deps.store.listAll());
+          const node = nodes.find((n) => n.id === id);
+          if (!node) {
+            throw new CatalogError("CATEGORY_NOT_FOUND", REFUSAL_MESSAGES.CATEGORY_NOT_FOUND);
+          }
+          if (newSlug.toLowerCase() !== node.slug.toLowerCase()) {
+            const owner = await this.deps.store.findSiblingBySlug(node.parentId, newSlug, id);
+            if (owner) throw this.conflict(newSlug, owner);
+          }
           await this.deps.store.applyUpdates(planRename(nodes, id, newSlug));
         });
-        result = (await this.deps.store.get(id)) ?? result;
       }
+      // restul câmpurilor (nume, descriere, SEO…) nu sunt structurale
+      const rest: Partial<typeof patch> = { ...patch };
+      delete rest.slug;
+      const result =
+        Object.keys(rest).length > 0
+          ? await this.deps.store.update(id, rest as Partial<NewCategoryData>)
+          : ((await this.deps.store.get(id)) as CategoryRecord);
       await this.deps.audit.record({
         actorId: subject.userId,
         actorLabel: subject.email,
