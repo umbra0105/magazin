@@ -1,12 +1,12 @@
 # Faza 5 (Stoc) — plan revizuit, pentru aprobare
 
-**Stare:** doar planificare. Niciun cod, nicio migrație, nicio schimbare în baza de date. Nimic nu începe până nu aprobi
-(sau nu corectezi) acest plan. Prima versiune: 2026-10-21; **revizuit pe 2026-10-21 după deciziile D2–D5 și faptele noi
-despre SmartBill (D1) și „La comandă” (D6).**
+**Stare:** doar planificare. Niciun cod, nicio migrație, nicio schimbare în baza de date. Nimic din punctul 1 nu începe până nu
+aprobi planul revizuit. Versiuni: prima 2026-10-21; a doua după D2–D5, D1 și D6; **a treia (2026-10-21): D1 și D6 APROBATE, iar
+D11 se schimbă — unități de măsură și cantități zecimale.**
 
-Surse: `docs/06-todo-master.md` (Faza 5, 9, 13, 14, 15), `docs/04-backend-admin.md`, `docs/10-decizii-deschise.md`,
-`docs/12-emag-marketplace.md`, `docs/15-specific-nisa-piscine.md`, `docs/09-preturi-si-parteneri.md`, regulile din
-`CLAUDE.md`, starea reală din cod și fișierul tău WooCommerce din `local-data/`.
+Surse: `docs/06-todo-master.md` (Faza 5, 8, 9, 12, 13, 15), `docs/04-backend-admin.md`, `docs/09-preturi-si-parteneri.md`,
+`docs/10-decizii-deschise.md`, `docs/12-emag-marketplace.md`, `docs/15-specific-nisa-piscine.md`, regulile din `CLAUDE.md`, starea
+reală din cod (schema Prisma, import/export, mesaje) și fișierul tău WooCommerce din `local-data/`.
 
 ---
 
@@ -16,35 +16,308 @@ Surse: `docs/06-todo-master.md` (Faza 5, 9, 13, 14, 15), `docs/04-backend-admin.
 | --- | --- | --- |
 | — | Gestiunea „ca în WooCommerce”: setare globală `inventory.manageStock` + bifă pe produs + bifă pe variantă (moștenește de la produs). `manageStock = false` → doar „în stoc / indisponibil / la comandă”, **ramură explicită în cod**, zero rezervări | specificație |
 | — | Rezervarea începe la inițierea plății; **coșul nu rezervă nimic** | specificație + D4 |
-| — | Modelul multi-depozit rămâne în bază; în interfață o singură locație | specificație + **D3** |
 | — | La stoc 0: „indisponibil” + „anunță-mă când revine” | specificație |
 | — | Test obligatoriu de concurență: 10 cereri deodată pe ultima bucată → una singură reușește | specificație |
-| **D2** | Inventarul (SKU și cantitate) îl faci tu. **Până atunci produsele rămân „în stoc” fără cantitate (negestionate).** Importul WooCommerce le pune negestionate | tu |
-| **D3** | O singură locație în interfață (magazinul fizic, magazinul online și depozitul sunt în același loc). Modelul multi-depozit rămâne în bază, comutatorul `multiWarehouse` oprit | tu |
-| **D4** | Card: rezervare 15 minute. Ramburs: **scade imediat** la plasare. Transfer bancar: 3 zile lucrătoare, **setabil**. Coșul nu rezervă | tu |
-| **D5** | **Fără stoc negativ**, garantat în baza de date. Diferențele se corectează printr-o ajustare cu motiv | tu |
-| D1 (fapte) | Produsele au **gestiune activă în SmartBill**, iar **factura scade automat stocul** acolo. Se vinde și din magazinul fizic, facturat tot în SmartBill. **SmartBill este sursa cantității fizice**; magazinul online ține disponibilitatea pentru comenzile online și se aliniază periodic la SmartBill. Modelul exact: vezi **D1** mai jos | tu |
-| D6 (fapt) | „La comandă” devine **stare reală** pe produs: comandat la furnizor după ce primim comanda, **termen estimat în zile**, fără limită de cantitate, fără rezervare. Stările vizibile: **În stoc / Stoc limitat / La comandă (termen X zile) / Indisponibil**. Pentru coșuri mixte, recomandarea ta este „livrare toată odată”. Detaliile: vezi **D6** mai jos | tu |
+| **D1** | **APROBAT: varianta A, „poză + angajat”.** SmartBill este sursa cantității fizice; aplicația ține „angajatul” (comenzi online încă neoglindite) și „rezervatul”; **regula: o bucată se scade o singură dată** (factură înainte de poză → oglindită; după poză → încă angajată). Soluția de trecere în Faza 5: **importul „stoc la zi” din SmartBill (punctul 11)**. **Condițiile „înainte de lansare” rămân în plan** (Anexa A, D1.5). Integrarea reală cu SmartBill rămâne în **Faza 13/15** | tu |
+| **D2** | Inventarul (SKU și cantitate) îl faci tu. Până atunci produsele rămân „în stoc” fără cantitate (**negestionate**); importul WooCommerce le pune așa | tu |
+| **D3** | O singură locație în interfață, numită **„Depozit principal”** (**redenumibilă**); magazinul fizic, cel online și depozitul sunt în același loc. Modelul multi-depozit rămâne în bază, comutatorul `multiWarehouse` oprit | tu |
+| **D4** | Card: rezervare **15 minute**. Ramburs: scade **imediat** la plasare. Transfer bancar: **3 zile lucrătoare, setabil**. Coșul nu rezervă | tu |
+| **D5** | **Fără stoc negativ**, garantat în baza de date (și cu cantități zecimale: vezi D11) | tu |
+| **D6** | **APROBAT cum a fost recomandat:** patru stări vizibile (În stoc / Stoc limitat / La comandă cu termen / Indisponibil); termen în zile **pe produs, cu implicit din brand, apoi din setarea globală**; **hibrid** (produsul gestionat devine „La comandă” la epuizare) cu `allowBackorder` **oprit implicit**; coșuri mixte: **livrare toată odată**, livrarea pe părți ca opțiune ulterioară. Detalii: Anexa B | tu |
+| **D11** | **SCHIMBAT: NU doar bucăți întregi.** Se vând produse la **metri liniari, metri pătrați, kilograme, litri** etc.; **cantitățile pot fi zecimale.** Proiectarea completă și alternativele: secțiunea 2 (D11) | tu |
 
-**Fapte din cod și din fișiere, relevante pentru D1/D6:**
+## Ce am găsit în codul actual despre unitatea de măsură (verificat)
 
-- Azi toate produsele au `manageStock = true`, dar nu există nicio cantitate nicăieri. Importul WooCommerce ignoră stocul
-  („stocul nu se importă (Faza 5)”).
-- **Fișierul tău WooCommerce nu are cantități:** toate cele 8 produse au „În stoc?” = 1 și „Stoc” gol; „Precomenzile sunt
-  permise?” = 0.
-- **`Meta: _smartbill_sku` există în fișier, dar este GOL la toate cele 8 produse.** Deci **nu pot confirma din fișier** că
-  SKU-ul din magazin este egal cu codul de produs din SmartBill. Cele 8 SKU-uri au forme diferite (numerice, alfanumerice, cu
-  liniuță jos), ceea ce pare cod propriu, nu un cod generat de SmartBill. **Verificarea reală** se face cu un export SmartBill
-  (vezi „Ce îmi trebuie”): raportul de import arată exact ce SKU-uri nu se potrivesc.
-- Pe produs există deja: `manageStock`, `stockStatus` (`instock` / `outofstock` / `onbackorder`), `allowBackorder`,
-  `expectedRestockDate`. Pe variantă: `manageStock` și `stockStatus` care suprascriu produsul. Pagina `/admin/stoc` e în meniu, dar
-  goală. Permisiunile `inventory.read/write` există (Owner, Admin, Manager, Depozit).
+| Loc | Ce există | Concluzie |
+| --- | --- | --- |
+| **Produs / variantă** (`schema.prisma`) | **Nimic.** Niciun câmp, enum sau tabel de unități. Prețul, stocul (viitor) și SKU-ul sunt pe variantă, implicit „pe bucată” | De la zero |
+| **Atribute tehnice** (`Attribute.unit`) | Text liber (ex. `mm`, `kW`, `m³/h`), doar la atributele numerice, afișat lângă valoare și în filtre | **Altceva** (specificație tehnică, nu unitate de vânzare). Nu se refolosește |
+| **Greutate / dimensiuni** (`weightGrams`, `lengthMm` …) | Numere întregi în grame / milimetri, pe variantă (implicit pentru **o unitate vândută**) | La cantități zecimale, greutatea liniei = greutate pe unitate × cantitate (Faza 12) |
+| **Import / export generic** | Fără coloană de unitate; fără minim/pas | Se adaugă (punctul 8) |
+| **Import WooCommerce** | „Unități” din formular = kg/g și cm/mm/m, **doar pentru conversia greutății și dimensiunilor** | Nu e unitate de vânzare |
+| **Fișierul tău WooCommerce** | Nicio coloană de unitate de vânzare. Există `Meta: woodmart_price_unit_of_measure` (eticheta de unitate din tema veche), **goală la toate cele 8 produse**; nu există minim/pas | Toate cele 8 se importă „buc” |
+| **Mesaje în română** | „Unitate de măsură” apare doar la atribute | — |
+| **Motorul de prețuri** (Faza 8) | Încă nescris | Va primi cantitatea ca număr zecimal (miimi), cu **o singură rotunjire pe linie** (regula din `CLAUDE.md`) |
+
+**Alte fapte din cod și din fișiere, relevante:**
+
+- Azi toate produsele au `manageStock = true`, dar nu există nicio cantitate. Importul WooCommerce ignoră stocul („stocul nu se
+  importă (Faza 5)”). Toate cele 8 produse au „În stoc?” = 1, „Stoc” gol, „Precomenzile sunt permise?” = 0.
+- `Meta: _smartbill_sku` este **gol la cele 8 produse**: potrivirea SKU = cod SmartBill se verifică doar cu un export SmartBill.
+- Pe produs există `manageStock`, `stockStatus` (`instock` / `outofstock` / `onbackorder`), `allowBackorder`, `expectedRestockDate`;
+  pe variantă `manageStock` și `stockStatus`. Permisiunile `inventory.read/write` există (Owner, Admin, Manager, Depozit).
 
 ---
 
 # 2. Decizii rămase deschise pentru tine
 
-## D1 — SmartBill este sursa cantității fizice: cum ținem și cum aliniem stocul
+## D11 — Unități de măsură și cantități zecimale
+
+Răspunsurile la (a)–(i) din cerere. Pentru fiecare: alternative, **recomandare** și consecințe. Nimic de aici nu e decis până nu
+alegi.
+
+### (a) Unitățile: listă configurabilă, cu precizie zecimală
+
+| Variantă | Cum arată | Avantaje | Dezavantaje |
+| --- | --- | --- | --- |
+| **A. Tabel „Unități de măsură”, configurabil din admin (RECOMANDAT)** | Fiecare unitate are: cod stabil, denumire, simbol afișat, **precizie (0–3 zecimale)**, **numele din SmartBill**, pas implicit, prag de stoc mic implicit, activă. Seed inițial: **buc, m, mp, kg, l, rolă, set, cutie, pachet** (editabil). O unitate folosită nu se șterge, doar se dezactivează | Respectă „nimic hardcodat” (alt client, alte unități); precizia stă lângă unitate; mapare SmartBill într-un singur loc | O pagină de administrare în plus (mică, ca „Atribute”) |
+| B. Enum fix în cod | O listă scrisă în program | Cel mai simplu | Contrazice regula #1 a proiectului; orice unitate nouă cere modificarea codului |
+| C. Text liber pe variantă | Scrii „m” sau „metri” | Flexibil | Fără precizie, fără validare, fără mapare SmartBill; „m”, „ml”, „metru” devin trei lucruri diferite |
+
+- **Unde stă unitatea:** pe **variantă** (obligatorie, implicit „buc”). Motiv: stocul, prețul, SKU-ul și produsul SmartBill sunt pe
+  variantă, iar „rolă” și „metru” pot fi variante diferite ale aceluiași produs. Editorul de produs o copiază la variantele noi.
+- **Precizia propusă** (de confirmat cu exemplele tale): buc, rolă, set, cutie, pachet = 0; m, mp = 2; kg, l = 3.
+- Toate cantitățile folosesc **cel mult 3 zecimale** (vezi (b)).
+
+### (b) Tipul și precizia cantităților în bază; „fără stoc negativ” cu zecimale
+
+| Variantă | Cum | Avantaje | Dezavantaje |
+| --- | --- | --- | --- |
+| **B1. Număr întreg în miimi (RECOMANDAT)** — `2,350 m` se stochează `2350`; un modul `Quantity` în `packages/shared` (analog lui `Money`) citește/afișează după precizia unității | Aritmetică exactă, fără biblioteci; aceeași regulă ca la bani („niciodată float”); **actualizarea condiționată dintr-o singură comandă SQL** rămâne la fel; CHECK `≥ 0` simplu | Limită practică: ~2.147.483 de unități (la 3 zecimale); mult peste orice stoc realist; dacă ai nevoie de mai mult, trecem pe BIGINT |
+| B2. `NUMERIC(12,3)` în Postgres + `Prisma.Decimal` în JS | Exact, fără limită practică | Bibliotecă de numere zecimale în tot codul; riscul ca o valoare să treacă accidental prin `number` (float); comparațiile și sumele cer disciplină |
+| B3. `float` | **NU**: `0,1 + 0,2 ≠ 0,3`; ar permite stoc „puțin negativ” din rotunjiri | — |
+
+- **Garanția „fără negativ”:** CHECK-uri în bază (`fizic ≥ 0`, `angajat ≥ 0`, `rezervat ≥ 0`), plus rezervarea ca **o singură comandă
+  condiționată** („scade doar dacă disponibilul ≥ cantitatea cerută”). Funcționează identic cu zecimale, pentru că toate calculele sunt
+  pe numere întregi exacte. **Test:** 10 cereri deodată de 0,3 pe stoc 1,0 → exact 3 reușesc, rămâne exact 0,1; cantitate peste precizia
+  unității (de ex. 0,001 m cu precizie 2) → refuzată cu mesaj.
+- **Ce NU poate garanta baza singură:** precizia după unitate (depinde de unitatea variantei) — o garantează serviciul și un test de
+  arhitectură; în bază rămân garantate „întreg” și „≥ 0”.
+
+### (c) Cantitate minimă de comandă și pas
+
+- Pe **variantă**: `cantitate minimă` (implicit 1 unitate) și `pas` (implicit 1 unitate). **Regula** (ca în WooCommerce): cantitatea e
+  validă dacă este ≥ minim **și** (cantitate − minim) este multiplu de pas. Exemple: furtun, m: minim 1, pas 0,5 → 1; 1,5; 2 …; rolă:
+  minim 1, pas 1; sare, kg: minim 1, pas 1.
+- Pasul nu poate fi mai fin decât precizia unității (la m cu 2 zecimale: pas ≥ 0,01).
+- **Unde se validează:** la adăugarea în coș, la modificarea cantității, la plasarea comenzii (server, de la zero) și la rezervare.
+  Mesaj în română: „Cantitatea minimă este 5 m, în pași de 0,5 m.” În Faza 5 construim câmpurile, validarea și testele; coșul și
+  checkout-ul o apelează în Faza 8/9.
+- **Consecință pentru stoc („rest sub minim”):** dacă mai ai 0,4 m și minimul e 1 m, produsul apare **Indisponibil** (sau „La comandă”
+  cu hibrid) deși fizic există material; adminul vede „rest nevandabil: 0,4 m”. Disponibilul vândut e cea mai mare cantitate **validă**
+  ≤ disponibil.
+- *Alternativă:* minim/pas pe produs, nu pe variantă — mai puține câmpuri, dar rola și metrul nu pot avea reguli diferite.
+  **Recomand variantă.**
+- Nu includem acum: cantitate maximă pe comandă (rămâne o limită tehnică de siguranță pe linie, setabilă).
+
+### (d) Prețul pe unitate și rotunjirea (legătura cu TVA-ul inclus și cu factura SmartBill)
+
+- **Prețul variantei = prețul unei unități de vânzare**, brut cu TVA, în bani (ex. 12,50 lei/m = 1250). **Linia = preț × cantitate,
+  rotunjit o singură dată la bani (jumătate în sus)**; totalul = suma liniilor; TVA-ul liniei se extrage din brutul liniei (regulile
+  din `CLAUDE.md`, neschimbate). Exemplu: 12,50 lei/m × 2,35 m = 29,375 → **29,38 lei**.
+- Reducerile (grup, cupon) se aplică pe linia **nerotunjită** și se rotunjește o singură dată; la cantități întregi rezultatul rămâne
+  identic cu cel de azi. Motorul de prețuri (Faza 8) va primi cantitatea în miimi.
+- Nu permitem prețuri cu mai mult de 2 zecimale pe unitate (ex. 0,125 lei/m). Dacă ai astfel de produse, spune: alternativa e „preț
+  pentru 100 m”, nu acum.
+- **Factura SmartBill — de confirmat cu contabilul și în documentația API (Faza 13):**
+  1. SmartBill rotunjește **pe linie** sau **pe total**? Pe ce bază (preț net × cantitate sau brut)? Dacă diferă de regula noastră, totalul facturii poate ieși cu **1 ban** diferit de suma încasată.
+  2. Câte zecimale acceptă **cantitatea** în SmartBill (2? 3?) și cum se numește câmpul de **unitate** în facturi.
+  3. Cum e configurată în contul tău rotunjirea documentelor.
+  - Variante de aliniere (se alege după răspuns): (i) trimitem preț unitar brut + cantitate și verificăm pe 20 de cazuri numerice (recomandat, testat în Faza 13); (ii) ajustăm prețul unitar trimis (nu recomand: pierde claritatea); (iii) acceptăm diferența de 1 ban (numai cu acordul contabilului).
+- *Afișare legală:* pentru produse preambalate vândute la greutate/volum poate fi obligatorie afișarea **prețului pe unitatea de referință**
+  (lei/kg, lei/l); **de verificat cu avocatul**. Modelul permite ulterior un câmp „cantitate de referință” fără schimbări majore.
+- **Transport:** greutatea variantei este pe unitate vândută; la 2,35 m greutatea liniei = greutate pe unitate × cantitate (se notează
+  pentru Faza 12).
+
+### (e) Produs vândut și ca rolă întreagă, și la metru
+
+| Variantă | Cum | Când se potrivește | Dezavantaje |
+| --- | --- | --- | --- |
+| E1. Două variante cu stocuri separate (rolă / metru) | Fiecare cu SKU și stoc propriu | Când în SmartBill sunt **două produse** diferite | Dacă materialul fizic e același, îl numeri de două ori |
+| **E2. O singură variantă în metri + scurtătură „ambalaj” (RECOMANDAT când e un singur produs în SmartBill)** | Stocul în metri; butonul „Rolă întreagă = 25 m” setează cantitatea | Prețul pe metru e același și SmartBill are un singur produs în m | Nu poate avea alt preț pe rolă |
+| E3. Conversie automată între variante | Rola scade 25 m din stocul în metri | — | Complex și ambiguu; **nu acum** |
+
+- **Regula simplă:** modelăm exact ca în SmartBill — **un SKU = un produs SmartBill = o unitate.** Dacă în SmartBill sunt două produse,
+  sunt două variante; dacă e unul în metri, e o variantă în metri. Scurtătura „ambalaj” (mărimea ambalajului) vine cu vitrina (Faza 7);
+  în Faza 5 există minimul și pasul.
+
+### (f) Afișare, import și export
+
+- **Afișare:** virgulă zecimală; unitatea lângă cantitate („128,5 m”, „2 rolă”); prețul „12,50 lei / m”; zecimalele afișate = cele
+  necesare, cel mult precizia unității; în editare, câmp text (nu `type="number"`), acceptă virgulă sau punct, mesaje în română
+  („Cantitatea poate avea cel mult 2 zecimale pentru m.”).
+- **Import/export de produse:** coloane noi: **„Unitate de măsură”** (denumire sau simbol din listă; necunoscută = eroare cu lista
+  valorilor), **„Cantitate minimă”**, **„Pas de cantitate”**. Exportul are aceleași coloane ca importul.
+- **Import „stoc la zi”:** cantitatea se citește cu **separator zecimal ales explicit** (virgulă / punct, detectat din fișier); celulele
+  ambigue (`1.234`) se refuză cu explicație; separatorul de mii se acceptă doar dacă e neechivoc (`1.234,50`). Cantitatea peste precizia
+  unității se **rotunjește în jos** (nu creează stoc inexistent), cu avertisment în raport.
+- **Reguli CSV existente (`CLAUDE.md`):** doar prin funcția comună (BOM UTF-8 + `sep=;`), antet în română; la deschidere cu dublu-click în
+  Excel, coloanele sunt separate. Cantitățile zecimale se scriu cu **virgulă**; **atenție:** Excel poate transforma un text de tip `1.5` într-o
+  dată; pentru fișiere cu cantități recomand **XLSX** (cantități ca numere, coduri ca text), iar în CSV virgula.
+- **WooCommerce:** nu are unitate de vânzare; toate produsele importate devin „buc”. Dacă `woodmart_price_unit_of_measure` e completat,
+  îl citim ca **etichetă** și îl potrivim cu lista (altfel „buc”). Unitățile, minimul și pasul le setezi apoi în admin sau cu importul generic.
+
+### (g) Maparea la unitățile SmartBill
+
+- Câmpul **„nume în SmartBill”** pe fiecare unitate (text exact, ex. `buc`, `mp`, `ml`). Îl folosim (1) la facturi (Faza 13) ca unitate a liniei și (2)
+  la importul „stoc la zi”: dacă unitatea din fișier ≠ unitatea variantei, rândul apare în raport („SmartBill: kg · magazin: buc”) și **nu se
+  aplică**.
+- Lista unităților din SmartBill diferă de la un cont la altul; **îmi trebuie lista ta** (export sau captură). Nu pot afirma din memorie cum
+  validează API-ul numele unităților: se citește în Faza 13.
+
+### (h) Impactul asupra rezervării, angajatului și alertelor
+
+- Rezervarea, angajatul și oglindirea (Anexa A) lucrează la fel, pe cantități în miimi; condiția „disponibil ≥ cantitate” e aceeași.
+- **Praguri** (stoc mic, stoc limitat, tampon): în unitatea variantei, cu valoare implicită luată din unitate (ex. buc 2, m 10) și
+  suprascriere pe variantă. Alertele compară cu pragul; „rest sub minim” apare ca avertisment separat.
+- „Anunță-mă când revine”: revenirea înseamnă disponibil ≥ **cantitatea minimă**.
+- Poza SmartBill cu mai multe zecimale decât unitatea → rotunjire în jos + avertisment (niciodată supravânzare).
+- Teste de concurență cu zecimale (vezi (b)) și un test de arhitectură: nicio cantitate nu se manipulează ca `number` zecimal în afara modulului `Quantity`.
+
+### (i) Impactul asupra punctelor și noua estimare
+
+- **Punct nou „2. Unități de măsură și cantități”** (modulul `Quantity`, lista de unități cu pagina de administrare, validarea minim/pas),
+  deci **13 puncte** în loc de 12 (păstrez fiecare punct mic). Alternativa: îl comasez în punctul 1 (punct mare, mai greu de verificat).
+- Se schimbă: **1** (schema), **3** (stările: „rest sub minim”), **4** (rezervare cu zecimale + teste), **5** (ajustări cu precizie),
+  **7** (admin stoc: unități), **8** (editor: unitate/minim/pas + import/export), **9** (praguri în unitate), **11** (importul „stoc la zi”).
+- **Estimare: de la 6–8 zile la 8–10 zile** de lucru efectiv (+1,5–2 zile: modulul `Quantity`, lista de unități, validarea și testele
+  numerice).
+
+### Ce rămâne de decis de tine la D11
+
+1. Alegerile: **(a) A / B / C · (b) B1 / B2 · (c) minim și pas pe variantă (da / pe produs) · (e) regula „un SKU = un produs SmartBill”
+   (da / nu)** · comasarea punctului 2 în 1 (da / nu).
+2. **Lista inițială de unități**, cu precizia fiecăreia și numele din SmartBill (propunerea mea: buc, rolă, set, cutie, pachet = 0; m, mp = 2;
+   kg, l = 3).
+3. **Cele 5–10 exemple reale de produse** (tabelul de mai jos), ca să validăm schema.
+4. **Contabil/SmartBill:** rotunjire pe linie sau pe total, zecimalele cantității, numele unităților, rotunjirea documentelor.
+5. Prețuri cu mai mult de 2 zecimale pe unitate: există? Produse preambalate la greutate/volum: avem nevoie de „preț pe unitate de referință”?
+
+**Tabel pentru exemplele tale** (completează 5–10 rânduri; câteva sunt scrise cu titlu de model, înlocuiește-le cu produse reale):
+
+| Produs real | SKU / cod SmartBill | Unitate | Precizie | Minim | Pas | Preț pe unitate (cu TVA) | Se vinde și ca ambalaj? |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| *(model)* Furtun piscină | | m | 2 | 1 | 0,5 | 12,50 | rolă 25 m |
+| *(model)* Folie liner | | mp | 2 | 1 | 0,5 | | |
+| *(model)* Clor granule | | kg | 3 | 1 | 1 | | |
+| *(model)* Soluție pH | | l | 3 | 1 | 1 | | |
+| *(model)* Pompă | | buc | 0 | 1 | 1 | | |
+
+## Parametri rămași din D1 și D6 (aprobate; doar cifrele)
+
+| Parametru | Propunere | Tu |
+| --- | --- | --- |
+| Fereastra de siguranță în jurul orei pozei (D1) | 30 de minute | ___ |
+| Tampon de siguranță implicit pentru stoc mic (D1) | 0 sau 1 unitate (în unitatea variantei) | ___ |
+| Frecvența sincronizării până la API (D1) | zilnică, la o oră fixă; cine o face | ___ |
+| Avertisment „poza e veche” după (D1) | 24 de ore | ___ |
+| Termen global implicit „La comandă” (D6) | 14 zile | ___ |
+| Prag „Stoc limitat” afișat clientului (D6) | același cu „stoc mic” | ___ |
+| Ramburs interzis dacă în coș e un produs „La comandă” (D6; se decide în Faza 9) | da | ___ |
+| Cele 4 întrebări către contabil (D1) și 2 (D6: momentul facturii, ramburs) + rotunjirea (D11) | — | ___ |
+
+## Alte decizii mai puțin urgente
+
+| # | Ce | Recomandare | Când trebuie |
+| --- | --- | --- | --- |
+| **D7** | **Praguri.** „Stoc mic” (intern) și „Stoc limitat” (afișat) | Aceeași valoare implicită **pe unitate** (buc 2, m 10 etc.), suprascriere pe variantă. *Valori reale?* | Înainte de punctul 9 |
+| **D8** | **Istoric și motive de ajustare.** Istoric permanent, imuabil; motive fixe + text liber obligatoriu | *Vânzare în magazin · Recepție marfă · Retur · Inventariere (corecție) · Deteriorat · Pierdut/Furt · Alt motiv* | Înainte de punctul 5 |
+| **D9** | **Variante.** Stoc pe variantă; la produsul cu variante, lista arată suma (doar dacă variantele au aceeași unitate; altfel nu se însumează); bifa se poate coborî pe variantă; coș cu variante gestionate + negestionate; produsele digitale nu au stoc | Confirm | Înainte de punctul 3 |
+| **D10** | **Cine ajustează stocul.** `inventory.write`: Owner, Admin, Manager, Depozit; `inventory.read` la fel | Rămâne așa (Contabilul nu vede stocul acum) | Înainte de punctul 7 |
+| **D12** | **„Anunță-mă când revine”.** O trimitere, apoi ștergerea adresei (sau după 90 de zile); formularul în Faza 7; textul GDPR în Faza 18 | Confirm | Înainte de punctul 10 |
+| **D13** | **Retururi.** Pe produsele cu SmartBill, **stornoul din SmartBill returnează stocul**; local nu se adaugă manual | Se detaliază în Faza 14 | Faza 14 |
+
+---
+
+# 3. Ce îmi trebuie de la tine
+
+**Înainte de punctul 1 (schema):**
+1. Alegerile **D11** (casetele de mai sus) și lista inițială de unități cu precizie.
+2. **5–10 exemple reale de produse** (tabelul din D11): unitate, minim, pas, preț pe unitate.
+3. **Lista unităților de măsură din SmartBill** (export sau captură) și cum le numești în facturi.
+4. **Răspunsurile contabilului:** cele 4 întrebări din D1, cele 2 din D6 și cele despre **rotunjire / zecimalele cantității** din D11.
+5. Parametrii din tabelul „Parametri rămași” (pot fi aproximativi, se pot schimba din setări).
+
+**Înainte de punctul 11 (importul „stoc la zi”) — de preferat mai devreme, ca să verificăm potrivirea SKU:**
+6. Un **export SmartBill de tip „stoc la zi”** (formatul tău real, cu toate coloanele, chiar și 20–30 de rânduri; cu cantități zecimale dacă
+   există). Fișierul real nu intră în repo, teste sau loguri, ca și `local-data/`.
+7. Confirmarea că **SKU-ul din magazin = codul de produs din SmartBill** (sau lista excepțiilor). `_smartbill_sku` din WooCommerce e gol.
+8. Cine și la ce oră face sincronizarea zilnică până apare API-ul.
+
+**Înainte de punctul 9:** pragurile (D7). **Înainte de punctul 5:** motivele (D8). **Mai târziu (Faza 13/15):** documentația API SmartBill
+(gestiune la factură, unități, rotunjire), citită înainte de implementare, cum cere `CLAUDE.md`.
+
+---
+
+# 4. Împărțirea în puncte (13, cu punctul nou 2)
+
+Estimare nouă: **8–10 zile** de lucru efectiv (față de ~3 în planul inițial și 6–8 în a doua versiune), cu pauzele tale de confirmare.
+Fiecare punct: 🟢 ÎNCEP, teste care pică întâi, commit separat, ✅ GATA cu „👉 VERIFICĂ TU”. Concurența intră din punctele 3–4.
+
+| # | Punct | Ce rezultă | 👉 Cum verifici tu (scurt) |
+| --- | --- | --- | --- |
+| 1 | **Schema și migrația** (singura migrație a fazei): `MeasureUnit` (unități), pe variantă `measureUnitId`, `quantityMin`, `quantityStep` (în miimi); `Warehouse` („Depozit principal”, redenumibil, creat de seed); `InventoryItem` (cantitate **fizică** + „valabilă la”, **angajat**, **rezervat**, prag; toate în **miimi, întregi**); `StockSnapshot`; `StockMovement` (imuabil, ora efectivă, motiv, referință); `StockReservation` (activă → angajată → oglindită / eliberată / expirată; ora facturii); `BackInStockAlert`; `Product.leadTimeDays`, `Brand.defaultLeadTimeDays`; CHECK-uri (`≥ 0`, unic per variantă+depozit, `IS NULL` explicit + test „una setată, una nulă”); setările `inventory.*` (modul sursă fizică `app`/`smartbill`, 15 min, 3 zile lucrătoare, fereastră de siguranță, avertisment poză veche, tampon, termen global, prag stoc limitat) | Tabele goale, depozit și unități de bază | Prisma Studio: tabelele noi, „Depozit principal”, lista de unități; un rând din `StockMovement` nu se poate modifica |
+| 2 | **NOU — Unități de măsură și cantități:** modulul `Quantity` în `packages/shared` (citire/formatare/validare după precizie, fără `number` zecimal), pagina **„Unități de măsură”** în admin (listă, creare, editare, dezactivare, nume SmartBill, precizie), validarea minim/pas (`validateOrderQuantity`), mesaje în română, testul de arhitectură „nicio cantitate ca număr zecimal în afara modulului” | Unitățile funcționează izolat | Browser: creezi „m” cu 2 zecimale; încerci precizie 4 → refuzat; unitate folosită nu se șterge, doar se dezactivează |
+| 3 | **Disponibilitatea și stările** (modul pur): o funcție care întoarce starea vizibilă pe **trei ramuri explicite** — (i) negestionat (doar `stockStatus`), (ii) „La comandă” (comandabil, fără stoc/rezervare, termen produs → brand → global), (iii) gestionat (**Fizică − Angajat − Rezervat**, **cea mai mare cantitate validă** ≤ disponibil, „rest sub minim”, hibrid). Digitalele mereu disponibile. Teste pe tabel de stări, cu cantități zecimale | Logica pură, testată | Script de probă (`npm.cmd run dev:stock-probe -- <SKU>`): starea vizibilă și termenul pentru 4 produse alese de tine |
+| 4 | **Rezervare / eliberare / angajare / oglindire** cu cantități zecimale: o singură comandă condiționată + blocare de rând + CHECK; idempotente; expirare și la citire; linii în ordine fixă; regula D1 (angajat vs oglindit, cu fereastra de siguranță); modul `app`. **Teste pe Postgres real:** 10 cereri/stoc 1; 100/stoc 10; **10 × 0,3 pe 1,0 → exact 3**; webhook dublu; confirmare vs. expirare; coș cu linii gestionate + negestionate + „la comandă”; **cursa poză vs. factură** | Serviciul de bază | Script de probă: rezervi ultima bucată din două terminale deodată → una reușește |
+| 5 | **Ajustări cu ora efectivă** (precizia unității, motivele D8, „Vânzare în magazin”, refuz sub 0, regula „poza înlocuiește ajustările dinainte, rămân cele de după”) | Operațiile de depozit | Probă în script, apoi în admin (punctul 7) |
+| 6 | **Joburi:** eliberarea rezervărilor expirate; transfer bancar cu expirare în zile lucrătoare; verificarea „poza e prea veche”; curățarea vechilor `BackInStockAlert` | Eliberare automată + alertă | Rezervare de probă cu expirare 1 minut → disponibilitatea revine singură |
+| 7 | **Admin `/admin/stoc`:** pe variantă — **Fizică (valabilă la …) · Angajat · Rezervat · Disponibil**, **cu unitatea lângă cantitate**, bannerul „stoc verificat la …”, „Ajustează” cu motiv și oră efectivă, istoric pe variantă, drepturi `inventory.*`, audit, dialoguri proprii în română | Ecranul principal | Browser: ajustezi 2,5 m cu motiv „Vânzare în magazin”, vezi „128,5 m”, rândul din istoric; Depozit poate, Editor/Suport nu |
+| 8 | **Tabul Stoc din produs, brand, listă; import/export de produse:** selector de stare la negestionate, bifa „Gestionează stocul”, hibridul, **unitate / minim / pas** pe variantă, „Termen de livrare (zile)” pe produs și „Termen implicit” pe brand, coloana „Stoc” cu starea/cantitatea și unitatea; **coloane noi în import/export:** Unitate de măsură, Cantitate minimă, Pas, Stare stoc, Termen livrare | Editorul integrat | Browser: setezi „Furtun” în m, minim 1, pas 0,5; „La comandă (10 zile)” la altul; exporți în Excel: coloanele noi apar separate |
+| 9 | **Alerte:** stoc mic (prag în unitate, implicit din unitate, suprascriere pe variantă), lista „Stoc mic”, avertisment „rest sub minim”, contor în panou, „poza SmartBill e veche” | Avertizări | Browser: cobori o cantitate sub prag → listă + contor; mutăm ora pozei înapoi → avertisment |
+| 10 | **„Anunță-mă când revine”** (server): cerere, trimitere o singură dată (disponibil ≥ minim), ștergerea adresei | Partea de server | Probă: cerere de test, adaugi stoc → un singur email în Mailpit |
+| 11 | **Import „stoc la zi” din SmartBill:** șablon, câmpul „valabil la”, separator zecimal explicit, verificare fără modificări cu raportul (necunoscute în ambele sensuri, **unitate diferită**, negative, rotunjiri, diferențe), aplicare toată-sau-deloc, istoricul pozelor, audit; CSV doar prin funcția comună (BOM + `sep=;`); `FileInput`; regula D2 în importul WooCommerce (negestionat, „în stoc”, „buc”; eticheta de unitate dacă există) | Încărcarea cantităților | Browser + Excel: încarci exportul tău real, vezi raportul (zero necunoscute la produsele active), aplici; a doua rulare = „neschimbate” |
+| 12 | **Multi-depozit în spatele comutatorului:** CRUD depozite, selector, transfer; oprit = invizibil | Pregătire pentru creștere | Browser: oprit → nu apare; pornit (Prisma Studio) → apare și transferul funcționează |
+| 13 | **Închiderea fazei:** E2E, test de concurență final în suită, acoperirea față de cerințe, `docs/FAZA-5-verificare-manuala.md`, **lista „înainte de lansare”** (Anexa A, D1.5) în TODO (Faza 13, 15, 22), PROGRESS, TODO, `docs/04`/`docs/15` | 🏁 | Ghidul tău de ~1 oră |
+
+**Adăugiri propuse în TODO pentru fazele următoare** (le fac la punctul 13, cu aprobarea ta): **Faza 8** — motorul de prețuri primește
+cantitate zecimală (miimi), cu o singură rotunjire pe linie; **Faza 9** — termen și stare în coș/plată, cantitate minimă/pas la
+adăugare și plasare, ramburs la „la comandă”, coșuri mixte; **Faza 12** — greutatea liniei = greutate pe unitate × cantitate; **Faza 13** —
+ora facturii pe comandă (`settle`), unitățile și rotunjirea SmartBill, 20 de cazuri numerice, lista „comenzi fără factură”; **Faza 15** —
+poza prin API în locul fișierului; **Faza 22** — testul de realitate din D1.5.
+
+---
+
+# 5. Riscuri
+
+| Risc | Ce se poate întâmpla | Măsura |
+| --- | --- | --- |
+| **Două comenzi pentru ultima bucată / ultimii metri** | Se vinde de două ori | O singură comandă SQL condiționată + CHECK; teste cu 10 și 100 de cereri, inclusiv cu zecimale, **la punctul 4** |
+| **Rotunjiri cu zecimale** | 0,1 + 0,2 ≠ 0,3; stoc „puțin negativ” | Numere întregi în miimi (nu float); modul `Quantity` unic; test de arhitectură |
+| **Precizie greșită după unitate** (0,001 m cu precizie 2) | Cantități imposibil de livrat | Validare în serviciu + mesaj; import rotunjește în jos cu avertisment |
+| **Total încasat ≠ total factură SmartBill** (diferență de 1 ban) | Factură care nu corespunde plății | Întrebări către contabil; 20 de cazuri numerice în Faza 13; regula unică de rotunjire pe linie |
+| **Unitate diferită între magazin și SmartBill** | Cantități aplicate pe produs cu altă unitate | Verificarea unității la import; rândul nu se aplică; raport |
+| **Rest sub minim** | Material care nu se mai poate vinde | Avertisment în admin; ajustare/inventariere |
+| **Scădere dublă (online + SmartBill)** | Subvânzare temporară | Regula înainte/după poză (Anexa A), testată pe ore; fereastra de siguranță prudentă |
+| **Poză veche / sincronizare uitată** | Supravânzare la produsele rare | Indicator „verificat la”, avertisment, tampon, procedură de supravânzare |
+| **Ora pozei greșită** | Comenzi marcate oglindite prea devreme | Implicit ora fișierului; avertisment; fereastra de siguranță; autor și oră în istoric |
+| **Cod SmartBill ≠ SKU** | Cantități neaplicate sau pe produs greșit | Raportul listează nepotrivirile; nu se aplică potriviri aproximative; coloană „Cod SmartBill” doar dacă e nevoie |
+| **Cantitate negativă în SmartBill** | Conflict cu D5 | Se aplică 0, cu avertisment |
+| **Confirmare vs. expirare simultane** | Stoc eliberat și vândut altcuiva, plată reușită | Stare explicită a rezervării, trecere o singură dată; expirare și la citire |
+| **Webhook de plată dublu** | Angajare dublă | Operații idempotente |
+| **Coș cu mai multe produse** | Blocaj reciproc (deadlock) | Blocare în ordine fixă; test cu comenzi încrucișate |
+| **Produs „la comandă” cumpărat în cantitate foarte mare** | Furnizorul nu poate livra | Fără limită de cantitate (decizia ta), dar limită tehnică de siguranță pe linie (setabilă) |
+| **Partea din stoc rămâne blocată** în coșuri mixte | Stoc nevândut săptămâni | Se vede în „angajat”; livrarea pe părți ulterior |
+| **Comutarea bifei `manageStock`** | Pierdere/reapariție de cantități | OFF nu șterge; ON reia cu avertisment |
+| **Greutatea liniei la cantități zecimale** | Transport calculat greșit | Notă pentru Faza 12 (greutate pe unitate × cantitate) |
+| **Excel strică cantitățile zecimale în CSV** (`1.5` → dată) | Cantități greșite la import | Virgulă în CSV, XLSX recomandat, separator ales explicit, celule ambigue refuzate |
+| **Istoricul crește** | Tabel mare | Index pe variantă + dată; paginat; nu se șterge |
+| **Două evidențe (aplicație + SmartBill)** | Diferențe | SmartBill rămâne sursa; raport săptămânal de diferențe |
+| **eMAG, mai târziu** | Stoc vândut și pe site, și pe eMAG | Aceeași funcție de disponibilitate, cu tampon (`docs/12`) |
+| **Conexiuni la bază în sezon** (vârf 5–10×) | Cereri blocate | Operații scurte; teste de încărcare în Faza 20 |
+| **Spam „stoc mic” / „a revenit”** | Emailuri repetate | O singură trimitere pe eveniment, marcată în bază |
+| **GDPR la „Anunță-mă”** | Date personale păstrate | Doar emailul, o trimitere, ștergere; consimțământ în Faza 7/18 |
+
+**Regulile de lucru pe care le respect și aici:** fără float, logica în `packages/core`, scrieri de admin cu audit, erori tipate cu cod
+stabil, mesaje în română, fără widget-uri native, CSV doar prin funcția comună, teste care pică întâi, un commit per punct, verificare
+completă citită înainte de commit, push doar cu secvența obișnuită, nimic la dev serverul tău fără să-ți spun.
+
+---
+
+# 6. Ce îți cer acum
+
+1. **Aprobare** (sau corecturi) pe planul revizuit: cele **13 puncte** și estimarea **8–10 zile**.
+2. **Alegerile D11** (a, b, c, e), comasarea punctului 2 (da / nu), **lista de unități** și **5–10 exemple reale**.
+3. **Numele din SmartBill ale unităților**, răspunsurile contabilului (inclusiv rotunjirea) și, când poți, exportul „stoc la zi”.
+4. Cifrele din „Parametri rămași” (pot fi aproximative).
+
+După aprobare, urmează 🟢 ÎNCEP pe punctul 1. Până atunci nu se atinge niciun fișier de cod.
+
+---
+
+# Anexe (aprobate): D1 și D6, detalii de proiectare
+
+## Anexa A — D1 (APROBAT: varianta A, „poză + angajat”): detalii de proiectare
 
 ### D1.0 Trei cuvinte, pe înțelesul tuturor
 
@@ -153,12 +426,10 @@ Cazuri limită și ce facem:
 factura emisă prin API poate fi legată de o anumită gestiune, ca să scadă din ea? (3) ce se întâmplă în SmartBill dacă stocul
 ajunge negativ (permis/blocat)? (4) cum arată exportul „stoc la zi” (coloane, are ora generării?).
 
-> **Decizia ta pe D1:** ☐ varianta A (recomandat) · ☐ B · ☐ C · ☐ D · ☐ alta. Plus: fereastra de siguranță (30 min?), tamponul
-> implicit (0 / 1 buc.?), frecvența sincronizării până la API (zilnic?).
 
 ---
 
-## D6 — „La comandă” ca stare reală pe produs
+## Anexa B — D6 (APROBAT cum a fost recomandat): detalii de proiectare
 
 ### D6.1 Ce stări vede clientul și de unde vin
 
@@ -215,105 +486,3 @@ livrarea pe părți mai târziu.
 4. **Dacă furnizorul nu mai poate livra** după comandă: anulare parțială cu rambursare/storno parțial (reguli deja stabilite pentru
    retur parțial).
 
-> **Decizia ta pe D6:** ☐ termen: varianta A (recomandat) / B / C · ☐ hibrid (da / nu) · ☐ coșuri mixte: toată odată (da) · ☐
-> ramburs interzis la „la comandă” (da / nu) · valoarea implicită a termenului global (zile): ___ · prag „stoc limitat”: ___ buc.
-
----
-
-## Alte decizii încă deschise (mai puțin urgente; renumerotate)
-
-| # | Ce | Recomandare | Când trebuie |
-| --- | --- | --- | --- |
-| **D7** | **Praguri.** Prag „stoc mic” pentru alerte (intern) și prag „Stoc limitat” (afișat clientului) | Aceeași valoare implicită **2 bucăți**, suprascriere pe variantă. *Tu ce valori reale vrei?* | Înainte de punctul 8 |
-| **D8** | **Istoric și motive de ajustare.** Istoric permanent, imuabil; motive fixe + text liber obligatoriu | *Vânzare în magazin · Recepție marfă · Retur · Inventariere (corecție) · Deteriorat · Pierdut/Furt · Alt motiv* (transferul doar cu multi-depozit) | Înainte de punctul 4 |
-| **D9** | **Variante.** Stoc pe variantă; la produsul cu variante, lista arată suma; bifa se poate coborî pe variantă; coș cu variante gestionate + negestionate; produsele digitale nu au stoc | Confirm | Înainte de punctul 2 |
-| **D10** | **Cine ajustează stocul.** `inventory.write`: Owner, Admin, Manager, Depozit; `inventory.read` la fel | Rămâne așa (Contabilul nu vede stocul acum) | Înainte de punctul 6 |
-| **D11** | **Unități.** Doar bucăți întregi | Confirm (dacă vinzi vrac la metru/kg/litru, spune acum) | Înainte de punctul 1 |
-| **D12** | **„Anunță-mă când revine”.** O trimitere, apoi ștergerea adresei (sau după 90 de zile); formularul vine în Faza 7; textul GDPR în Faza 18 | Confirm | Înainte de punctul 9 |
-| **D13** | **Retururi.** Regula pe produsele cu SmartBill: **stornoul din SmartBill returnează stocul**; local nu se adaugă manual | Se detaliază în Faza 14 | Faza 14 |
-
----
-
-# 3. Ce îmi trebuie de la tine
-
-**Înainte de punctul 1 (schema):**
-1. Deciziile **D1** și **D6** (casetele de mai sus), plus **D11** (unități).
-2. **Numele locației/depozitului** care apare în aplicație (ex. „Depozit principal”).
-3. **Răspunsurile contabilului** la cele 4 întrebări din D1 și la cele 2 din D6 (momentul facturii, ramburs).
-
-**Înainte de punctul 10 (importul „stoc la zi”) — de preferat mai devreme, ca să verificăm potrivirea SKU:**
-4. Un **export SmartBill de tip „stoc la zi”** (formatul pe care îl folosești, cu toate coloanele, chiar și 20–30 de rânduri).
-   Fișierul real nu intră în repo, teste sau loguri, ca și `local-data/`.
-5. Confirmarea că **SKU-ul din magazin = codul de produs din SmartBill** (sau lista excepțiilor).
-6. Cine și la ce oră face sincronizarea zilnică până apare API-ul.
-
-**Înainte de punctul 8:** pragurile (D7) și motivele (D8). **Mai târziu (Faza 13/15):** documentația API SmartBill (câmpurile de
-gestiune la factură), citită înainte de implementare, cum cere `CLAUDE.md`.
-
----
-
-# 4. Împărțirea în puncte (aceleași 12, ajustate)
-
-Estimarea din plan e ~3 zile; cu D1/D6 și testele de concurență, realist **6–8 zile** de lucru efectiv, cu pauzele tale. Fiecare
-punct: 🟢 ÎNCEP, teste care pică întâi, commit separat, ✅ GATA cu „👉 VERIFICĂ TU”. Concurența intră din punctele 2–3.
-
-| # | Punct | Ce rezultă | 👉 Cum verifici tu (scurt) |
-| --- | --- | --- | --- |
-| 1 | **Schema și migrația** (singura migrație a fazei): `Warehouse` (depozitul implicit creat de seed), `InventoryItem` (cantitate **fizică** + data/ora „valabilă la”, **angajat**, **rezervat**, prag), `StockSnapshot` (fiecare poză: sursă, ora, fișier, utilizator, număr de rânduri), `StockMovement` (imuabil, cu **ora efectivă**, motiv, referință), `StockReservation` (stări: activă → confirmată/angajată → oglindită, sau eliberată/expirată; câmpuri pentru ora facturii), `BackInStockAlert`; pe produs `leadTimeDays` (termen implicit), pe brand `defaultLeadTimeDays`; CHECK-uri în bază (cantități ≥ 0, unic per variantă+depozit, comparații explicite cu `IS NULL`, test „una setată, una nulă”); setările `inventory.*` (modul sursă fizică: `app` / `smartbill`, minute rezervare = 15, zile lucrătoare transfer bancar = 3, fereastră de siguranță, ore până la avertismentul de poză veche, tampon, termen global, prag stoc limitat) | Tabele goale, depozit implicit | Prisma Studio: tabelele noi; încerci să modifici un rând din `StockMovement` → refuzat; coloanele noi pe produs/brand |
-| 2 | **Disponibilitatea și stările** (modul pur, fără ecran): o singură funcție care întoarce **starea vizibilă** (În stoc / Stoc limitat / La comandă + termen / Indisponibil) pentru o variantă, pe **trei ramuri explicite**: (i) negestionat → doar lista `stockStatus`, zero atingere de inventar; (ii) „La comandă” → mereu comandabil, fără stoc, fără rezervare, termenul rezolvat produs → brand → global; (iii) gestionat → **Fizică − Angajat − Rezervat**, cu hibridul (D6.3). Digitalele mereu disponibile. Teste pe tabel de stări | Logica pură, testată | Script de probă (`npm.cmd run dev:stock-probe -- <SKU>`): pentru 4 produse alese de tine, afișează starea vizibilă și termenul |
-| 3 | **Rezervare / eliberare / angajare / oglindire** (`reserve`, `release`, `commit`, `settle`): o singură comandă condiționată + blocare de rând + CHECK; idempotente; expirare și la citire; linii blocate în ordine fixă; regula D1.1 (angajat vs oglindit, cu fereastra de siguranță) și modul `app` (în care angajarea scade direct cantitatea). **Teste pe Postgres real:** 10 cereri/stoc 1; 100/stoc 10; webhook dublu; confirmare vs. expirare simultane; coș cu linii gestionate + negestionate + „la comandă”; **cursa poză vs. factură** (scenariile din D1.1, inclusiv „poza vine între confirmare și factură”) | Serviciul de bază | Script de probă: rezervi ultima bucată din două terminale simultan → una reușește, una „stoc insuficient” |
-| 4 | **Ajustări cu ora efectivă** (`adjust`): motivele din D8 (inclusiv „Vânzare în magazin”), refuz sub 0, istoric; regula D1.4 (ajustarea cu ora după poză rămâne; cea dinainte e înlocuită de poză); invariant: cantitatea = poza + ajustările de după ea | Operațiile de depozit | Probă în script, apoi în admin (punctul 6) |
-| 5 | **Joburi:** eliberarea rezervărilor expirate (la 5–10 min; corectitudinea nu depinde de job); transfer bancar cu expirare în zile lucrătoare; **verificarea „poza e prea veche”**; curățarea vechilor `BackInStockAlert` | Eliberare automată + alertă | Rezervare de probă cu expirare 1 minut → disponibilitatea revine singură |
-| 6 | **Admin `/admin/stoc`:** pe variantă — **Fizică (valabilă la …) · Angajat · Rezervat · Disponibil**, bannerul „stoc verificat la …” (roșu dacă e prea vechi), căutare/filtre, „Ajustează” cu motiv și oră efectivă, istoricul pe variantă, drepturi `inventory.*`, audit pe orice scriere, dialoguri proprii în română | Ecranul principal | Browser: ajustezi cu motivul „Vânzare în magazin”, vezi cantitatea și rândul din istoric; Depozit poate, Editor/Suport nu |
-| 7 | **Tabul Stoc din produs, brand și lista de produse:** selector de stare (În stoc / La comandă / Indisponibil) la negestionate, bifa „Gestionează stocul” (arată/ascunde cantitățile), bifa „La epuizare, se poate comanda” (hibrid), „Termen de livrare (zile)” pe produs și „Termen implicit” pe brand, mesaj dacă termenul lipsește; coloana „Stoc” din listă afișează starea vizibilă/cantitatea; câmpurile noi în export/import generic (Stare stoc, Termen livrare) | Editorul integrat | Browser: setezi un produs „La comandă (10 zile)” și un altul gestionat cu hibrid; vezi stările în listă; dezactivarea gestiunii **nu șterge** cantitățile |
-| 8 | **Alerte:** stoc mic (prag implicit + pe variantă), lista „Stoc mic”, contor în panou, avertisment „poza SmartBill e veche” | Avertizări | Browser: cobori o cantitate sub prag → apare în listă și în contor; mutăm ora pozei înapoi → apare avertismentul |
-| 9 | **„Anunță-mă când revine”** (server): cerere, trimitere o singură dată când disponibilul revine, ștergerea adresei | Partea de server | Probă: cerere de test, adaugi stoc → un singur email în Mailpit |
-| 10 | **Import „stoc la zi” din SmartBill** (CSV/XLSX): șablon pe formatul exportului tău, câmpul „valabil la”, mapare, **verificare fără modificări** cu raportul din D1.3 (necunoscute în ambele sensuri, negative, diferențe), aplicare toată-sau-deloc, istoricul pozelor, audit; **CSV doar prin funcția comună (BOM + `sep=;`)**; `FileInput`; regula D2 în importul WooCommerce (negestionat + „în stoc”); gata să fie înlocuit de API (același serviciu `applySnapshot`) | Încărcarea cantităților | Browser + Excel: încarci exportul tău real, vezi raportul (zero necunoscute la produsele active), aplici; a doua rulare = „neschimbate” |
-| 11 | **Multi-depozit în spatele comutatorului:** CRUD depozite, selector, transfer; cu comutatorul oprit nu se vede nimic din asta | Pregătire pentru creștere | Browser: oprit → nu apare; pornit (Prisma Studio) → apare și funcționează transferul |
-| 12 | **Închiderea fazei:** E2E, test de concurență final în suită, acoperirea față de cerințe, `docs/FAZA-5-verificare-manuala.md`, **lista „înainte de lansare”** din D1.5 în TODO (Faza 13, 15, 22), PROGRESS, TODO, `docs/04`/`docs/15` | 🏁 | Ghidul tău de ~1 oră |
-
-**Adăugiri propuse în TODO pentru fazele următoare** (le fac la punctul 12, cu aprobarea ta): **Faza 9** — afișarea termenului și a
-stării în coș/plată, regula ramburs la „la comandă”, coșuri mixte; **Faza 13** — la emiterea facturii se notează ora ei pe comandă
-(`settle`), citirea documentației API SmartBill despre gestiune, lista „comenzi fără factură”; **Faza 15** — înlocuirea importului
-de fișier cu poza prin API; **Faza 22** — testul de realitate din D1.5.
-
----
-
-# 5. Riscuri
-
-| Risc | Ce se poate întâmpla | Măsura |
-| --- | --- | --- |
-| **Două comenzi pentru ultima bucată** | Se vinde de două ori | Rezervarea e **o singură comandă SQL condiționată** + CHECK; teste cu 10 și 100 de cereri deodată pe Postgres real, **la punctul 3** |
-| **Scădere dublă (online + SmartBill)** | Disponibil prea mic (subvânzare) | Regula înainte/după poză (D1.1), testată pe scenariile cu ore; fereastra de siguranță alege varianta prudentă |
-| **Poză veche / sincronizare uitată** | Supravânzare la produsele rare | Indicator „verificat la”, avertisment, tampon, procedură de supravânzare (D1.5) |
-| **Ora pozei greșită** (introdusă manual) | Comenzi marcate oglindite prea devreme → supravânzare | Implicit ora fișierului; avertisment când ora introdusă e mult după fișier; fereastra de siguranță; ora și autorul rămân în istoric |
-| **Cod SmartBill ≠ SKU** | Cantități neaplicate sau puse pe produs greșit | Raportul de import listează nepotrivirile în ambele sensuri; nimic nu se aplică pe baza unei potriviri aproximative; coloană „Cod SmartBill” doar dacă e nevoie |
-| **Cantitate negativă în SmartBill** | Conflict cu regula D5 | Se aplică 0, cu avertisment în raport |
-| **Confirmare vs. expirare simultane** | Stoc eliberat și vândut altcuiva, plată reușită | Stare explicită a rezervării, trecere o singură dată; expirare verificată și la citire; test dedicat |
-| **Webhook de plată dublu** | Angajare dublă | Operații idempotente pe rezervare |
-| **Coș cu mai multe produse** | Blocaj reciproc (deadlock) | Blocare mereu în aceeași ordine; test cu comenzi încrucișate |
-| **Produs „la comandă” cumpărat în cantitate mare** | Furnizorul nu poate livra | Fără limită de cantitate (decizia ta), dar cu limită tehnică de siguranță pe linie (setabilă) și procedura D6 |
-| **Partea din stoc rămâne blocată** în coșuri mixte | Stoc nevândut săptămâni | Se vede în „angajat”; opțiunea de livrare pe părți apare ulterior |
-| **Comutarea bifei `manageStock`** ON→OFF→ON | Pierdere/reapariție de cantități | OFF nu șterge, ignoră; ON reia cu avertisment |
-| **Toate produsele existente sunt „gestionate” fără cantități** | Ar apărea „epuizate” în vitrină | Regula D2: importul le pune negestionate; punct de verificare înainte de Faza 7 |
-| **Istoricul crește** | Tabel mare | Index pe variantă + dată; paginat; nu se șterge; revizuire la Faza 20 |
-| **Două evidențe (aplicație + SmartBill)** | Diferențe | SmartBill rămâne sursa; raport săptămânal de diferențe; aliniere la fiecare poză |
-| **eMAG, mai târziu** | Stoc vândut și pe site, și pe eMAG | Aceeași funcție de disponibilitate, cu tampon (`docs/12`); în Faza 5 nu blocăm canalul |
-| **Conexiuni la bază în sezon** (vârf 5–10×) | Cereri blocate | Operații scurte, o conexiune per operație; teste de încărcare în Faza 20 |
-| **Spam „stoc mic” / „a revenit”** | Emailuri repetate | Trimitere o singură dată pe eveniment, marcată în bază |
-| **GDPR la „Anunță-mă”** | Date personale păstrate | Doar emailul, o trimitere, ștergere; consimțământ în Faza 7/18 |
-
-**Regulile de lucru pe care le respect și aici:** fără float (cantități întregi), logica în `packages/core`, scrieri de admin cu
-audit, erori tipate cu cod stabil, mesaje în română, fără widget-uri native, CSV doar prin funcția comună, teste care pică
-întâi, un commit per punct, verificare completă citită înainte de commit, push doar cu secvența obișnuită, nimic la dev serverul
-tău fără să-ți spun.
-
----
-
-# 6. Ce îți cer acum
-
-1. **Aprobare** (sau corecturi) pe planul revizuit și pe cele 12 puncte.
-2. **Deciziile D1 și D6** (casetele de decizie), plus **D11** (unități) și, dacă poți, D7–D13.
-3. **Numele locației**, **răspunsurile contabilului** și, când poți, **exportul SmartBill „stoc la zi”**.
-
-După aprobare, urmează 🟢 ÎNCEP pe punctul 1. Până atunci nu se atinge niciun fișier de cod.
