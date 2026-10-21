@@ -629,6 +629,21 @@ describe("generarea variantelor", () => {
     { name: "Culoare", values: ["Roșu", "Albastru"] },
   ];
 
+  /** Blocul C, C-19: prețul variantelor generate nu avea plafon (doar «întreg ≥ 0»); peste `MAX_MONEY` ajungea în baza de date. */
+  it("prețul variantelor generate are plafonul sumelor (MAX_MONEY)", async () => {
+    const { store, service } = setup();
+    const p = store.seedProduct({ slug: "tricou-plafon", title: "Tricou" });
+    store.seedVariant(p.id, { sku: "TRP", isDefault: true });
+    await expect(
+      service.generateVariants(roleSubject("manager"), p.id, { options, price: MAX_MONEY + 1 }),
+    ).rejects.toMatchObject({ code: "CATALOG_PRICE_INVALID" });
+    const ok = await service.generateVariants(roleSubject("manager"), p.id, {
+      options,
+      price: MAX_MONEY,
+    });
+    expect(ok.created.length).toBeGreaterThan(0);
+  });
+
   it("creează toate combinațiile, cu SKU derivat din varianta implicită; a doua rulare nu adaugă nimic", async () => {
     const { store, service, auditRows } = setup();
     const p = store.seedProduct({ slug: "tricou", title: "Tricou" });

@@ -479,10 +479,10 @@ export class ProductService {
     request: { options: readonly OptionInput[]; price: number; baseSku?: string },
   ): Promise<{ created: VariantRecord[]; existing: number; orphaned: number }> {
     assertCan(subject, "products.write");
-    if (!Number.isInteger(request.price) || request.price < 0) {
+    if (!Number.isInteger(request.price) || request.price < 0 || request.price > MAX_MONEY) {
       throw new CatalogError(
         "CATALOG_PRICE_INVALID",
-        "Prețul variantelor trebuie să fie un număr întreg de bani, ≥ 0",
+        "Prețul variantelor trebuie să fie un număr întreg de bani, între 0 și plafonul permis",
       );
     }
     const product = await this.deps.store.getProduct(productId);

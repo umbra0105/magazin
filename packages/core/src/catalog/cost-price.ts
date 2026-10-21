@@ -2,6 +2,7 @@ import { DomainError, ValidationError, type getLogger } from "@ecom/shared";
 import type { AuditService } from "../audit/audit-service";
 import { assertCan, can, type PermissionSubject } from "../rbac/can";
 import type { CostPriceSource } from "./constants";
+import { MAX_MONEY } from "./product-schemas";
 
 /**
  * Prețul de achiziție (NIR, fără TVA) al unei variante: cea mai sensibilă informație din catalog.
@@ -167,6 +168,11 @@ export class CostPriceService {
     // Mesajele de validare NU repetă valorile primite.
     if (!Number.isInteger(input.costPrice) || input.costPrice < 0) {
       throw new ValidationError("Prețul de achiziție trebuie să fie un număr întreg de bani, ≥ 0");
+    }
+    // același plafon ca prețurile (coloana e `int4`): o valoare mai mare nu trebuie să ajungă în baza de date, unde eroarea
+    // brută ar purta valoarea în text (C-19)
+    if (input.costPrice > MAX_MONEY) {
+      throw new ValidationError("Prețul de achiziție depășește plafonul permis pentru o sumă");
     }
     if (Number.isNaN(input.effectiveDate.getTime())) {
       throw new ValidationError("Data intrării nu e validă");

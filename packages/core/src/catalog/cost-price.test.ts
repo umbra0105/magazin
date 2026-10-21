@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLogger, ForbiddenError, UnauthenticatedError } from "@ecom/shared";
+import { createLogger, ForbiddenError, UnauthenticatedError, ValidationError } from "@ecom/shared";
 import { AuditService, type AuditRow, type AuditStore } from "../audit/audit-service";
 import type { PermissionSubject } from "../rbac/can";
 import { DEFAULT_ROLES } from "../rbac/catalog";
@@ -14,6 +14,7 @@ import {
   type CostPriceStore,
   type VariantCost,
 } from "./cost-price";
+import { MAX_MONEY } from "./product-schemas";
 
 const COST = 123456;
 const OLDER_COST = 654321;
@@ -168,6 +169,24 @@ describe("scrierea costului: permisiuni", () => {
     await expect(service.setCost(plain, input)).rejects.toBeInstanceOf(ForbiddenError);
     await expect(service.setCost(null, input)).rejects.toBeInstanceOf(UnauthenticatedError);
     expect(store.applied).toEqual([]);
+  });
+
+  /**
+   * Blocul C, C-19: prețul de achiziție nu avea plafon (doar «întreg ≥ 0»); 30.000.000 de lei depășea coloana `int4` și
+   * ajungea în Postgres, de unde eroarea brută (cu valoarea în text) mergea în jurnale și în Sentry, unde redactarea pe nume
+   * de câmp nu o prinde. Plafonul comun al sumelor (`MAX_MONEY`) se aplică și costului, înaintea bazei de date.
+   */
+  it("un cost peste plafonul sumelor se refuză cu ValidationError, fără valoare în mesaj și fără scriere", async () => {
+    const { service, store, auditRows } = setup();
+    const tooBig = { ...input, costPrice: MAX_MONEY + 1 };
+    const error = await service.setCost(full, tooBig).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ValidationError);
+    expect((error as Error).message).not.toContain(String(MAX_MONEY + 1));
+    expect(store.applied).toEqual([]);
+    expect(auditRows).toEqual([]);
+    await expect(service.setCost(full, { ...input, costPrice: MAX_MONEY })).resolves.toEqual({
+      applied: true,
+    });
   });
 
   it("cu edit + view: reușește, iar răspunsul nu conține valoarea", async () => {

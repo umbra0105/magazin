@@ -127,5 +127,30 @@ export function productFailure(error: unknown): ProductActionFailure {
     };
   }
   if (e?.name === "ZodError") return { ok: false, code: "VALIDATION_ERROR" };
-  throw error;
+  throw sanitizeDatabaseError(error);
+}
+
+/**
+ * Erorile de bază de date (Prisma, driver Postgres) poartă în mesaj valori (rândul care a încălcat un CHECK, valoarea care nu
+ * încape într-un `int4`), iar redactarea din jurnale și din Sentry lucrează pe NUME de câmp, nu pe text (C-19). Se rearuncă
+ * curățate: doar codul și, dacă există, modelul și numele coloanelor. Orice altă eroare rămâne neschimbată (stack-ul contează).
+ */
+function sanitizeDatabaseError(error: unknown): unknown {
+  const e = error as { name?: unknown; code?: unknown; meta?: unknown } | null;
+  const code = typeof e?.code === "string" ? e.code : undefined;
+  const isPrisma = typeof e?.name === "string" && e.name.startsWith("PrismaClient");
+  const isPrismaCode = code !== undefined && /^P\d{4}$/.test(code);
+  // SQLSTATE: 5 caractere (clasa 2 caractere + 3); driverul `pg` își numește erorile «error» și le dă un `severity`
+  const isDriver =
+    code !== undefined &&
+    /^[0-9A-Z]{5}$/.test(code) &&
+    typeof (error as { severity?: unknown }).severity === "string";
+  if (!isPrisma && !isPrismaCode && !isDriver) return error;
+  const meta = (e?.meta ?? {}) as { modelName?: unknown; target?: unknown };
+  const parts = [`cod ${code ?? "necunoscut"}`];
+  if (typeof meta.modelName === "string") parts.push(`model ${meta.modelName}`);
+  if (Array.isArray(meta.target)) {
+    parts.push(`câmpuri ${meta.target.filter((t) => typeof t === "string").join(", ")}`);
+  }
+  return new Error(`Eroare de bază de date (${parts.join("; ")})`);
 }
