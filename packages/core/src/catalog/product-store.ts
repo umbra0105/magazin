@@ -146,11 +146,15 @@ export interface ProductStore {
   listOptions(productId: string): Promise<{ name: string; values: string[] }[]>;
   /**
    * Șterge o variantă (legăturile ei de opțiuni, media și istoricele se șterg în cascadă). Dacă era
-   * implicită, prima rămasă devine implicită, în aceeași tranzacție. Întoarce ce s-a șters.
+   * implicită, prima rămasă devine implicită, în aceeași tranzacție. Întoarce ce s-a șters; `null` dacă varianta nu
+   * există; `"last"` dacă e ultima a produsului (verificat ÎN tranzacție, cu produsul blocat: două ștergeri simultane
+   * din două variante nu pot lăsa produsul fără nicio variantă).
    */
   deleteVariant(
     id: string,
-  ): Promise<{ productId: string; sku: string; wasDefault: boolean; remaining: number } | null>;
+  ): Promise<
+    { productId: string; sku: string; wasDefault: boolean; remaining: number } | "last" | null
+  >;
   /** Produsele cerute (existente), cu variantele lor. */
   getManyWithVariants(
     ids: readonly string[],
@@ -412,11 +416,22 @@ export function createPrismaProductStore(db: Db): ProductStore {
 
     async deleteVariant(id) {
       return inTransaction(db, async (tx) => {
+        const found = await tx.productVariant.findUnique({
+          where: { id },
+          select: { productId: true },
+        });
+        if (!found) return null;
+        // Produsul se blochează: ștergerile simultane ale variantelor lui se serializează, iar numărătoarea de mai jos
+        // vede starea după ștergerea făcută de cealaltă tranzacție (C-13).
+        await tx.$queryRaw`SELECT id FROM product WHERE id = ${found.productId} FOR UPDATE`;
         const variant = await tx.productVariant.findUnique({
           where: { id },
           select: { id: true, productId: true, sku: true, isDefault: true },
         });
         if (!variant) return null;
+        if ((await tx.productVariant.count({ where: { productId: variant.productId } })) <= 1) {
+          return "last" as const;
+        }
         await tx.productVariant.delete({ where: { id } });
         const remaining = await tx.productVariant.findMany({
           where: { productId: variant.productId },

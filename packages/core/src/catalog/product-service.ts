@@ -632,6 +632,13 @@ export class ProductService {
     }
     const deleted = await this.deps.store.deleteVariant(variantId);
     if (!deleted) throw new CatalogError("CATALOG_VARIANT_NOT_FOUND", "Varianta nu există");
+    if (deleted === "last") {
+      // verificarea din tranzacție (cu produsul blocat) a prins o ștergere simultană a celeilalte variante
+      throw new CatalogError(
+        "CATALOG_VARIANT_LAST",
+        "Nu poți șterge ultima variantă: un produs are nevoie de cel puțin una",
+      );
+    }
     await this.deps.audit.record({
       actorId: subject.userId,
       actorLabel: subject.email,
