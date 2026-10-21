@@ -85,3 +85,43 @@ describe("AuditService.record", () => {
     expect(f.rows[0]?.requestId).toBe("req-audit-1");
   });
 });
+
+describe("AuditService.recordMany", () => {
+  const input = (i: number) => ({
+    ...actor,
+    action: "product.update",
+    entity: "product",
+    entityId: `p-${i}`,
+    before: { costPrice: 111, title: "vechi" },
+    after: { costPrice: 222, title: "nou", token: "secret-abc" },
+  });
+
+  it("scrie toate rândurile într-o singură operație de depozit (appendMany), cu aceeași mascare ca record", async () => {
+    const batches: Omit<AuditRow, "id" | "createdAt">[][] = [];
+    const store: AuditStore = {
+      async append() {
+        throw new Error("nu trebuia apelat rând cu rând");
+      },
+      async appendMany(rows) {
+        batches.push([...rows]);
+      },
+      async list() {
+        return [];
+      },
+    };
+    await new AuditService(store).recordMany([input(1), input(2), input(3)]);
+    expect(batches).toHaveLength(1);
+    expect(batches[0]?.map((r) => r.entityId)).toEqual(["p-1", "p-2", "p-3"]);
+    expect(batches[0]?.[0]?.after).toEqual({ costPrice: REDACTED, title: "nou", token: REDACTED });
+    expect(batches[0]?.[0]?.before).toEqual({ costPrice: REDACTED, title: "vechi" });
+  });
+
+  it("fără appendMany în depozit, scrie rând cu rând, în ordine; o listă goală nu face nimic", async () => {
+    const f = fakeStore();
+    const service = new AuditService(f.store);
+    await service.recordMany([]);
+    expect(f.rows).toHaveLength(0);
+    await service.recordMany([input(1), input(2)]);
+    expect(f.rows.map((r) => r.entityId)).toEqual(["p-1", "p-2"]);
+  });
+});

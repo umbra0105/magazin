@@ -77,8 +77,8 @@ describe("audit_log este doar de adăugare", () => {
     expect(violations(files)).toEqual([]);
   });
 
-  it("AuditService expune doar record și list", () => {
+  it("AuditService expune doar adăugare (record, recordMany) și citire (list): niciun update/delete", () => {
     const methods = Object.getOwnPropertyNames(AuditService.prototype).sort();
-    expect(methods).toEqual(["constructor", "list", "record"]);
+    expect(methods).toEqual(["constructor", "list", "record", "recordMany"]);
   });
 });

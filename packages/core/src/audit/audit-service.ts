@@ -48,7 +48,23 @@ export interface AuditFilter {
  */
 export interface AuditStore {
   append(row: Omit<AuditRow, "id" | "createdAt">): Promise<void>;
+  /** Opțional: mai multe rânduri într-o singură operație (importuri mari). Tot DOAR de adăugare. */
+  appendMany?(rows: readonly Omit<AuditRow, "id" | "createdAt">[]): Promise<void>;
   list(filter: AuditFilter): Promise<AuditRow[]>;
+}
+
+function toRow(input: AuditInput): Omit<AuditRow, "id" | "createdAt"> {
+  return {
+    actorId: input.actorId,
+    actorLabel: input.actorLabel,
+    action: input.action,
+    entity: input.entity,
+    entityId: input.entityId ?? null,
+    before: input.before === undefined ? null : redactSensitive(input.before),
+    after: input.after === undefined ? null : redactSensitive(input.after),
+    requestId: getRequestContext()?.requestId ?? null,
+    outcome: input.outcome ?? "success",
+  };
 }
 
 export class AuditService {
@@ -56,17 +72,21 @@ export class AuditService {
 
   /** Adaugă o înregistrare. `before`/`after` trec prin aceeași mascare ca loggerul. */
   async record(input: AuditInput): Promise<void> {
-    await this.store.append({
-      actorId: input.actorId,
-      actorLabel: input.actorLabel,
-      action: input.action,
-      entity: input.entity,
-      entityId: input.entityId ?? null,
-      before: input.before === undefined ? null : redactSensitive(input.before),
-      after: input.after === undefined ? null : redactSensitive(input.after),
-      requestId: getRequestContext()?.requestId ?? null,
-      outcome: input.outcome ?? "success",
-    });
+    await this.store.append(toRow(input));
+  }
+
+  /**
+   * Adaugă mai multe înregistrări (aceeași mascare). Cu `appendMany` în depozit, într-o singură operație (un import de
+   * mii de rânduri nu face mii de inserări separate); altfel, rând cu rând, în ordine.
+   */
+  async recordMany(inputs: readonly AuditInput[]): Promise<void> {
+    if (inputs.length === 0) return;
+    const rows = inputs.map(toRow);
+    if (this.store.appendMany) {
+      await this.store.appendMany(rows);
+      return;
+    }
+    for (const row of rows) await this.store.append(row);
   }
 
   list(filter: AuditFilter = {}): Promise<AuditRow[]> {

@@ -24,6 +24,30 @@ describe("audit_log: garanții în Postgres (în tranzacții anulate)", () => {
     await db.$disconnect();
   });
 
+  it("recordMany scrie un lot într-o singură operație, mascat, în ordine, și 5.000 de rânduri durează câteva sute de ms", async () => {
+    await inTx(async (tx) => {
+      const audit = new AuditService(createPrismaAuditStore(tx));
+      const batch = Array.from({ length: 5000 }, (_, i) => ({
+        actorId: "u-batch",
+        actorLabel: "batch@magazin.test",
+        action: "product.update",
+        entity: "product",
+        entityId: `batch-${i}`,
+        before: { costPrice: 111, title: "vechi" },
+        after: { costPrice: 222, title: "nou", importId: "imp-batch" },
+      }));
+      const started = performance.now();
+      await audit.recordMany(batch);
+      const elapsed = performance.now() - started;
+      const rows = await tx.auditLog.findMany({ where: { actorId: "u-batch" }, take: 5001 });
+      expect(rows).toHaveLength(5000);
+      expect(JSON.stringify(rows[0]?.after)).not.toContain("222");
+      expect(rows.some((r) => r.entityId === "batch-4999")).toBe(true);
+      // rând cu rând costa ~0,8 ms/rând (≈4 s); într-un singur lot e de ordinul sutelor de ms
+      expect(elapsed).toBeLessThan(3000);
+    });
+  });
+
   it("triggerele de protecție sunt ACTIVE în baza de date (nu doar în migrație)", async () => {
     const rows = await db.$queryRaw<{ tgname: string; tgenabled: string }[]>`
       select tgname::text as tgname, tgenabled::text as tgenabled from pg_trigger
