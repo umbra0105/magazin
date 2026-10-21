@@ -580,6 +580,45 @@ describe("import pe baza reală", () => {
     );
   });
 
+  /**
+   * Blocul C, C-23: jobul verifica `permissions.has("products.write")`, nu `can()`, care aplică și invariantul `admin.access`
+   * (fără acces la administrare nicio permisiune nu produce efecte). Un cont care a pierdut doar `admin.access` și și-a păstrat
+   * `products.write` își termina importul din coadă.
+   */
+  it("jobul din fundal respectă invariantul admin.access: fără acces la administrare importul eșuează, nimic aplicat", async () => {
+    await withImport(
+      async ({ tx, service, as, reconfigure, tag }) => {
+        const manager = await as("manager");
+        await baseline(tx, tag);
+        reconfigure({ syncMaxRows: 1 });
+        const analysis = await service.register(
+          manager,
+          csv([HEAD, [`R1-${tag}`, "A", "1", "", ""], [`R2-${tag}`, "B", "2", "", ""]]),
+        );
+        const validation = await service.validate(manager, {
+          importId: analysis.importId,
+          columns: MAP,
+        });
+        await service.apply(manager, {
+          importId: analysis.importId,
+          confirm: true,
+          expectedPlanHash: validation.planHash,
+        });
+        // între timp, rolul pierde DOAR accesul la administrare; products.write rămâne
+        await tx.rolePermission.deleteMany({
+          where: { role: { key: "manager" }, permission: { key: "admin.access" } },
+        });
+
+        await service.runQueued(analysis.importId);
+        const row = await tx.productImport.findUniqueOrThrow({ where: { id: analysis.importId } });
+        expect(row.status).toBe("failed");
+        expect(row.errorMessage).toMatch(/nu mai are permisiunea/);
+        expect(await tx.productVariant.count({ where: { sku: { startsWith: "R1-" } } })).toBe(0);
+      },
+      { withQueue: true },
+    );
+  });
+
   it("curățare: importurile expirate (cu fișier) dispar la următoarea încărcare; cele în lucru rămân", async () => {
     await withImport(async ({ tx, service, files, as, tag }) => {
       const manager = await as("manager");
