@@ -88,16 +88,41 @@ există `tenantId`. În schimb:
   facturare sau grup `cost_plus`), ambele configurabile în setări. Peste limită, metoda
   se ascunde.
 
-### Stoc — model WooCommerce
+### Stoc — model WooCommerce (citește docs/FAZA-5-plan.md)
 
 - Setare globală `inventory.manageStock` (implicit ON) = valoarea implicită pentru
-  produsele noi. Bifă per produs `manageStock` care o suprascrie. La produse cu
-  variante, bifa poate coborî și la nivel de variantă.
-- `manageStock = true`: cantități reale, rezervare la inițierea plății cu expirare
-  15 minute, decrement la confirmare, alerte de stoc mic, istoric de mișcări.
+  produsele **noi**. Bifă per produs `manageStock` care o suprascrie. La produse cu
+  variante, bifa poate coborî și la nivel de variantă. Importurile setează explicit
+  `false` (inventarul îl face utilizatorul); produsele negestionate se văd în editor ca
+  «negestionat până la inventar».
+- `manageStock = true`: cantități reale, istoric imuabil de mișcări, alerte de stoc mic.
+  **Disponibil = Fizică − Angajat − Rezervat** (niciodată sub 0). Cantitatea fizică vine
+  din SmartBill (poză periodică, la început importul «stoc la zi»); aplicația ține
+  «angajat» (comenzi online confirmate, încă neoglindite în poză) și «rezervat»
+  (plăți în curs). **O bucată se scade o singură dată** (factură înainte de poză =
+  oglindită, după poză = încă angajată).
+- **Rezervarea (D4):** coșul NU rezervă nimic. Card: rezervare la inițierea plății, expirare
+  15 minute (`inventory.reservationMinutes`). Ramburs: scade imediat la plasare. Transfer
+  bancar: 3 zile lucrătoare, setabil. **Fără stoc negativ, garantat în baza de date**
+  (CHECK ≥ 0 + rezervare dintr-o singură comandă SQL condiționată); concurența se testează
+  pe Postgres real, în punctul care introduce rezervarea.
 - `manageStock = false`: disponibilitatea e un simplu dropdown `stockStatus`
   (în stoc / stoc epuizat / la comandă). ZERO InventoryItem, zero rezervări,
   zero decrement. Ramură explicită în cod — NU simula cu o cantitate mare.
+- **Stări vizibile (D6):** În stoc / Stoc limitat / La comandă (cu termen în zile) /
+  Indisponibil. Termenul de livrare: pe produs, apoi implicit pe brand, apoi setarea
+  globală. Hibrid: produsul gestionat devine «La comandă» la epuizare doar dacă
+  `allowBackorder` e pornit (implicit oprit). «La comandă» nu are rezervare și nu are
+  limită de cantitate. Coșuri mixte: livrare toată odată (termenul cel mai lung).
+- **Cantități și unități (D11):** cantitatea e un întreg `BIGINT` cu 4 zecimale (zecimi de
+  miime), niciodată `float`; aritmetica trece doar prin modulul `Quantity` din
+  `packages/shared` (test de arhitectură). Cantitatea comandată e mereu multiplu EXACT
+  al pasului de vânzare (pe produs sau pe variantă); disponibilitatea și pragurile se
+  exprimă în pași; restul nevandabil se vede doar în admin. Regula de rotunjire (R1 pe
+  unitate / R2 pe pas, PROVIZORIE până confirmă contabilul) aparține motorului de prețuri;
+  în `packages/shared` stă doar primitiva exactă preț × cantitate, fără rotunjire.
+- O singură locație vizibilă, «Depozit principal» (redenumibilă); modelul multi-depozit
+  rămâne în bază, în spatele flag-ului `multiWarehouse`.
 
 ### Produse digitale (docs/11-produse-digitale.md)
 
@@ -207,11 +232,27 @@ există `tenantId`. În schimb:
 
 ### Comenzi utile
 
+Comenzile generale ale proiectului (cele din documentația de instalare și de pe serverele unde
+`pnpm` funcționează):
+
 - `pnpm dev` — pornește aplicația
 - `pnpm db:migrate` / `pnpm db:seed` / `pnpm db:studio`
 - `pnpm test` / `pnpm test:e2e`
 - `pnpm lint` / `pnpm typecheck`
 - `docker compose -f docker/docker-compose.dev.yml up -d`
+
+**⚠️ Specific PC-ului Windows al utilizatorului (nu e o regulă a produsului):** acolo `pnpm.exe` și
+`turbo.exe` sunt blocate de Windows Application Control, iar setările de securitate nu se ating.
+Scripturile din `package.json` sunt scripturi `node`, deci aceleași nume rulează prin `npm.cmd`.
+Pe acel calculator folosesc, în loc de comenzile de mai sus:
+
+- `npm.cmd run dev:web` (aplicația), `npm.cmd run db:migrate` / `db:seed` / `db:studio`
+- `npm.cmd run test` (unitare), `npm.cmd run test:integration`, `npm.cmd run test:e2e`
+- `node scripts/run-all.mjs lint` și `node scripts/run-all.mjs typecheck` (în loc de `pnpm lint/typecheck`)
+- `npm.cmd run lint:root`, `npm.cmd run format:check` (= `prettier --check .` pe tot repo-ul)
+
+Nimic din documentația de instalare, din scripturile livrate sau din CI nu trebuie să depindă de
+`npm.cmd`/`node scripts/run-all.mjs`; CI-ul și serverele rulează cu `pnpm`.
 
 ### Definiția de „gata"
 
@@ -235,6 +276,32 @@ Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
 - La finalul fiecărei sesiuni, actualizează `docs/PROGRESS.md` în formatul din §4
   al protocolului.
 - Un commit per punct terminat. Fără commit-uri uriașe la final de zi.
+- Se lucrează după mesajele utilizatorului din conversație; prompturile numerotate din
+  `docs/07-prompturi-claude-code.md` sunt depășite și se ignoră.
+
+## Verificare, commit și push — regulă permanentă
+
+- **Teste care pică întâi:** pentru orice constrângere (CHECK, unicitate, permisiune, regulă
+  numerică) scriu întâi testul, văd că pică pe codul fără ea, apoi implementez.
+- **Concurența intră din punctul de rezervare**, nu la final: testele cu cereri simultane pe
+  Postgres real se scriu odată cu codul care rezervă/angajează.
+- **Verificare completă înainte de ORICE commit de cod, citită integral:** unitare, integrare,
+  lint, `lint:root`, typecheck, `prettier --check .` pe TOT repo-ul și E2E complet pe build de
+  producție (număr de teste trecute, picate, nerulate). NU fac commit înainte de a fi citit
+  rezultatul complet; un test picat se repară înainte de commit. Fixture-urile comune cu
+  curățare globală se folosesc dintr-un singur fișier de teste.
+- **Niciun `git push` fără autorizarea utilizatorului**, în conversație, pentru acel moment.
+  Când e autorizat, arăt MAI ÎNTÂI `git status --short` și `git log --oneline origin/main..HEAD`
+  și mă opresc dacă apare ceva neașteptat; apoi rulez, în ordine: `prettier --check .` pe tot
+  repo-ul, lint, `lint:root`, typecheck; abia apoi `git push origin main`.
+- **După push aștept «CI verde» de la utilizator** înainte de punctul următor (excepție doar când
+  utilizatorul spune explicit altceva; dacă CI-ul pică, mă opresc și raportez).
+- **Nu ating dev serverul utilizatorului.** Spun când trebuie repornit (după migrații și după
+  orice modificare în nucleu, singletonurile păstrează codul vechi).
+- **Migrațiile le aplică utilizatorul** pe baza de dezvoltare; eu le verific doar pe baza `*_test`.
+- **Decizii care ating bani, TVA, facturare sau obligații legale:** mă opresc cu 🛑 și le aduc
+  utilizatorului înainte; punctele deschise rămase le decid cu recomandarea din plan și le notez
+  în `docs/PROGRESS.md`.
 
 ## Procese, porturi și build-uri — regulă permanentă
 
@@ -247,7 +314,7 @@ strică munca lui fără ca eu să observ.
   alegi alt port; nu te bazezi pe ce răspunde pe un port ocupat și nu îl „eliberezi".
 - **Nu rula build-uri care scriu peste `.next` cât timp poate exista un server de dev pornit.**
   Pentru probe folosește un director de build separat: `NEXT_DIST_DIR=.next-probe pnpm build:web`
-  (și `next start` cu același `NEXT_DIST_DIR`). După probă ștergi `apps/web/.next-probe` și restabilești
+  (pe PC-ul Windows al utilizatorului: variabila setată în shell, apoi `npm.cmd run build:web`; și `next start` cu același `NEXT_DIST_DIR`). După probă ștergi `apps/web/.next-probe` și restabilești
   fișierele pe care Next le rescrie la build: `git checkout -- apps/web/tsconfig.json apps/web/next-env.d.ts`.
 - Înainte să pornești un server sau un build, verifică ce ascultă pe portul ales.
 
