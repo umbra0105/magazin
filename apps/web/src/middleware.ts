@@ -51,6 +51,15 @@ export function middleware(request: NextRequest) {
   return response;
 }
 
+/**
+ * Rutele de ÎNCĂRCARE (media, documente de produs, fișiere de import) sunt scoase din middleware: cu middleware, Next
+ * memorează corpul cererii înainte de orice verificare, iar pentru ele limita ar trebui ridicată la 50 MB, deci orice
+ * anonim ar putea hrăni orice rută cu corpuri de 50 MB (Blocul C, C-07). Handlerele lor își citesc singure corpul pe flux,
+ * cu limită proprie, și verifică origine, sesiune, permisiune și rată înaintea oricărei lucrări (testele de rută).
+ * Restul rutelor rămân sub middleware, cu limita mică din `next.config.ts`.
+ */
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/media$|api/admin/product-imports$|api/admin/products/[^/]+/documents$).*)",
+  ],
 };
