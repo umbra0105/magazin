@@ -76,4 +76,53 @@ describe("parseEnv", () => {
     const env = parseEnv({ ...base, STORAGE_DRIVER: "local", SENTRY_DSN: "" });
     expect(env.SENTRY_DSN).toBeUndefined();
   });
+
+  // Blocul C, C-10: cheia din .env.example nu are voie să ajungă într-un site de producție real.
+  describe("APP_KEY în producție (C-10)", () => {
+    const KNOWN = "ZGV2LW9ubHktYXBwLWtleS0zMi1ieXRlcy1sb25nISE="; // valoarea din .env.example
+    const prod = { ...base, STORAGE_DRIVER: "local", NODE_ENV: "production" };
+    const random = Buffer.from(Array.from({ length: 32 }, (_, i) => (i * 37 + 11) % 251)).toString(
+      "base64",
+    );
+
+    it("respinge cheia publicată în .env.example pe un domeniu public", () => {
+      expect(() => parseEnv({ ...prod, APP_URL: "https://magazin.ro", APP_KEY: KNOWN })).toThrow(
+        /APP_KEY.*(exemplu|.env.example)/s,
+      );
+    });
+
+    it("respinge o cheie cu entropie mică (același octet repetat, secvență)", () => {
+      for (const key of [Buffer.alloc(32, 1), Buffer.alloc(32, 0), Buffer.from("a".repeat(32))]) {
+        expect(() =>
+          parseEnv({ ...prod, APP_URL: "https://magazin.ro", APP_KEY: key.toString("base64") }),
+        ).toThrow(/APP_KEY/);
+      }
+    });
+
+    it("acceptă o cheie aleatorie pe un domeniu public", () => {
+      expect(parseEnv({ ...prod, APP_URL: "https://magazin.ro", APP_KEY: random }).APP_KEY).toBe(
+        random,
+      );
+    });
+
+    it("pe localhost (rulări locale în mod producție: build de probă, E2E) cheia de exemplu rămâne acceptată", () => {
+      for (const url of ["http://localhost:3100", "http://127.0.0.1:3100", "http://magazin.test"]) {
+        expect(() => parseEnv({ ...prod, APP_URL: url, APP_KEY: KNOWN })).not.toThrow();
+      }
+    });
+
+    it("în dezvoltare și test cheia de exemplu rămâne acceptată pe orice adresă", () => {
+      for (const NODE_ENV of ["development", "test"]) {
+        expect(() =>
+          parseEnv({
+            ...base,
+            STORAGE_DRIVER: "local",
+            NODE_ENV,
+            APP_URL: "https://magazin.ro",
+            APP_KEY: KNOWN,
+          }),
+        ).not.toThrow();
+      }
+    });
+  });
 });

@@ -63,12 +63,49 @@ export class EnvValidationError extends Error {
   }
 }
 
+/** Cheia publicată în `.env.example` (decodat: «dev-only-app-key-32-bytes-long!!»): doar pentru dezvoltare. */
+const EXAMPLE_APP_KEY = "ZGV2LW9ubHktYXBwLWtleS0zMi1ieXRlcy1sb25nISE=";
+/** Sub atâtea valori distincte de octet, cheia (32 de octeți) nu poate fi aleatorie (una aleatorie are ~30). */
+const MIN_DISTINCT_KEY_BYTES = 16;
+
+/** Adrese locale: dezvoltare, build-uri de probă și E2E rulează cu `NODE_ENV=production` pe localhost. */
+function isLocalHost(appUrl: string): boolean {
+  const host = new URL(appUrl).hostname.replace(/^[|]$/g, "").toLowerCase();
+  return (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".test")
+  );
+}
+
+/**
+ * Din `APP_KEY` derivă secretul sesiunilor, cheia linkurilor semnate (documente private), cheia credențialelor de
+ * integrare și sigiliul joburilor de email: o cheie publicată sau slabă într-un site real le compromite pe toate (C-10).
+ * Verificarea se aplică în producție, pe adrese care nu sunt locale.
+ */
+function weakProductionKeyIssue(env: Env): string | null {
+  if (env.NODE_ENV !== "production" || isLocalHost(env.APP_URL)) return null;
+  if (env.APP_KEY === EXAMPLE_APP_KEY) {
+    return "APP_KEY: este cheia de exemplu din .env.example, publică; generează una proprie (openssl rand -base64 32)";
+  }
+  if (new Set(Buffer.from(env.APP_KEY, "base64")).size < MIN_DISTINCT_KEY_BYTES) {
+    return "APP_KEY: cheie prea slabă (octeți repetați); generează una aleatorie (openssl rand -base64 32)";
+  }
+  return null;
+}
+
 /** Validează variabilele de mediu și aruncă EnvValidationError cu mesaje în română. */
 export function parseEnv(source: Record<string, string | undefined>): Env {
   // Șirurile goale (ex. `SENTRY_DSN=`) sunt tratate ca absente.
   const cleaned = Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ""));
   const result = envSchema.safeParse(cleaned);
-  if (result.success) return result.data;
+  if (result.success) {
+    const weak = weakProductionKeyIssue(result.data);
+    if (weak) throw new EnvValidationError([weak]);
+    return result.data;
+  }
 
   throw new EnvValidationError(
     result.error.issues.map((issue) => {
