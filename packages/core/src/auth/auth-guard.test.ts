@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { authSettings } from "../test-utils/auth-settings";
 import { AuthGuard, RateLimitedError } from "./auth-guard";
+import { ipKey } from "./client-ip";
 import { MemoryCounterStore } from "./counter-store";
 
 function setup(overrides = {}) {
@@ -157,22 +158,85 @@ describe("AuthGuard", () => {
     expect(await guard.lockRemainingSeconds("b@x.test", "1.1.1.1")).toBeLessThanOrEqual(180);
   });
 
-  it("înregistrarea e limitată pe IP și pe email; fără IP rămâne doar emailul", async () => {
-    const { guard } = setup({ registerMaxAttempts: 2 });
+  it("înregistrarea: 20 pe oră pe adresă (implicit), 5 pe oră pe email; a 21-a de pe aceeași adresă primește 429", async () => {
+    const { guard } = setup();
+    for (let i = 0; i < 20; i++) await guard.checkRegister(`u${i}@x.test`, "1.1.1.1");
+    const err = await guard.checkRegister("nou@x.test", "1.1.1.1").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RateLimitedError);
+    expect((err as RateLimitedError).retryAfterSeconds).toBeGreaterThan(0);
+    await expect(guard.checkRegister("nou@x.test", "1.1.1.2")).resolves.toBeUndefined();
+  });
+
+  it("înregistrarea: același email de la adrese diferite e limitat la 5 pe oră", async () => {
+    const { guard } = setup();
+    for (let i = 0; i < 5; i++) await guard.checkRegister("a@x.test", `10.0.0.${i + 1}`);
+    await expect(guard.checkRegister("a@x.test", "10.0.0.99")).rejects.toBeInstanceOf(
+      RateLimitedError,
+    );
+  });
+
+  it("limitele de înregistrare vin din setări: registerMaxPerIp (adresă) și registerMaxAttempts (email)", async () => {
+    const { guard } = setup({ registerMaxPerIp: 2, registerMaxAttempts: 50 });
     await guard.checkRegister("a@x.test", "1.1.1.1");
     await guard.checkRegister("b@x.test", "1.1.1.1");
     await expect(guard.checkRegister("c@x.test", "1.1.1.1")).rejects.toBeInstanceOf(
       RateLimitedError,
     );
-    // Fără IP de încredere, utilizatori diferiți nu se blochează între ei.
-    for (let i = 0; i < 6; i++) await guard.checkRegister(`u${i}@x.test`, null);
   });
 
-  it("resetarea parolei e limitată pe email", async () => {
-    const { guard } = setup({ passwordResetMaxAttempts: 2 });
-    await guard.checkPasswordReset("a@x.test", null);
-    await guard.checkPasswordReset("a@x.test", null);
-    await expect(guard.checkPasswordReset("a@x.test", null)).rejects.toBeInstanceOf(
+  it("fără IP de încredere există un coș GLOBAL de rezervă (de 10 ori limita pe adresă), nu limită zero", async () => {
+    const { guard } = setup({ registerMaxPerIp: 3, registerMaxAttempts: 100 });
+    for (let i = 0; i < 30; i++) await guard.checkRegister(`u${i}@x.test`, null);
+    await expect(guard.checkRegister("alt@x.test", null)).rejects.toBeInstanceOf(RateLimitedError);
+  });
+
+  it("IPv6: adrese diferite din același /64 împart limita (cheie /64)", async () => {
+    const { guard } = setup({ registerMaxPerIp: 2, registerMaxAttempts: 50 });
+    // resolveClientIp întoarce deja cheia /64: două adrese din același /64 ajung la aceeași cheie
+    const key = ipKey("2001:db8:1:2::1");
+    expect(key).toBe(ipKey("2001:db8:1:2:ffff::9"));
+    await guard.checkRegister("a@x.test", key);
+    await guard.checkRegister("b@x.test", key);
+    await expect(guard.checkRegister("c@x.test", key)).rejects.toBeInstanceOf(RateLimitedError);
+  });
+
+  it("resetarea parolei: 20 pe adresă, 5 pe email; fără IP, coș global", async () => {
+    const { guard } = setup({ passwordResetMaxAttempts: 2, passwordResetMaxPerIp: 3 });
+    await guard.checkPasswordReset("a@x.test", "1.1.1.1");
+    await guard.checkPasswordReset("a@x.test", "1.1.1.2");
+    await expect(guard.checkPasswordReset("a@x.test", "1.1.1.3")).rejects.toBeInstanceOf(
+      RateLimitedError,
+    );
+    for (let i = 0; i < 3; i++) await guard.checkPasswordReset(`u${i}@x.test`, "2.2.2.2");
+    await expect(guard.checkPasswordReset("nou@x.test", "2.2.2.2")).rejects.toBeInstanceOf(
+      RateLimitedError,
+    );
+    for (let i = 0; i < 20; i++) await guard.checkPasswordReset(`g${i}@x.test`, null);
+  });
+
+  it("retrimiterea verificării are contoare SEPARATE de resetarea parolei (aceeași adresă, același email)", async () => {
+    const { guard } = setup({ passwordResetMaxAttempts: 2, verificationResendMaxAttempts: 2 });
+    await guard.checkPasswordReset("a@x.test", "1.1.1.1");
+    await guard.checkPasswordReset("a@x.test", "1.1.1.1");
+    await expect(guard.checkPasswordReset("a@x.test", "1.1.1.1")).rejects.toBeInstanceOf(
+      RateLimitedError,
+    );
+    // epuizarea resetării nu consumă nimic din retrimitere
+    await guard.checkVerificationResend("a@x.test", "1.1.1.1");
+    await guard.checkVerificationResend("a@x.test", "1.1.1.1");
+    await expect(guard.checkVerificationResend("a@x.test", "1.1.1.1")).rejects.toBeInstanceOf(
+      RateLimitedError,
+    );
+  });
+
+  it("retrimiterea verificării: limitată pe adresă (20 implicit) și pe email (5 implicit)", async () => {
+    const { guard } = setup();
+    for (let i = 0; i < 5; i++) await guard.checkVerificationResend("a@x.test", `10.0.1.${i + 1}`);
+    await expect(guard.checkVerificationResend("a@x.test", "10.0.1.99")).rejects.toBeInstanceOf(
+      RateLimitedError,
+    );
+    for (let i = 0; i < 20; i++) await guard.checkVerificationResend(`u${i}@x.test`, "3.3.3.3");
+    await expect(guard.checkVerificationResend("nou@x.test", "3.3.3.3")).rejects.toBeInstanceOf(
       RateLimitedError,
     );
   });

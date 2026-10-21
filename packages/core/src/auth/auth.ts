@@ -157,11 +157,10 @@ export function createAuth(deps: CreateAuthDeps) {
             await deps.guard.checkLogin(email, ip);
           } else if (ctx.path === "/sign-up/email") {
             await deps.guard.checkRegister(email, ip);
-          } else if (
-            ctx.path === "/request-password-reset" ||
-            ctx.path === "/send-verification-email"
-          ) {
+          } else if (ctx.path === "/request-password-reset") {
             await deps.guard.checkPasswordReset(email, ip);
+          } else if (ctx.path === "/send-verification-email") {
+            await deps.guard.checkVerificationResend(email, ip);
           }
         } catch (error) {
           if (error instanceof RateLimitedError) throw tooManyRequests(error);

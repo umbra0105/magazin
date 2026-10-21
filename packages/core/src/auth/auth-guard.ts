@@ -149,16 +149,55 @@ export class AuthGuard {
     await this.store.delete(`lfail:email:${fingerprint}`);
   }
 
+  /**
+   * Limită pe adresă + limită pe email (C-02, C-40). Fără adresă de încredere (`trustedProxyHops = 0`) nu se renunță la
+   * limita pe adresă: există un coș GLOBAL de rezervă, cu plafon de 10 ori mai mare, ca un atacator cu emailuri diferite să nu
+   * poată trimite emailuri nelimitat din SMTP-ul magazinului (și ca instalarea fără proxy să rămână, cel puțin, mărginită).
+   */
+  private async hitIpAndEmail(
+    scope: string,
+    email: string,
+    ip: string | null,
+    limits: { perIp: number; perEmail: number; windowMinutes: number },
+  ): Promise<void> {
+    await this.hit(
+      `${scope}-ip:${ip ?? "-"}`,
+      ip ? limits.perIp : limits.perIp * UNKNOWN_IP_RATE_FACTOR,
+      limits.windowMinutes,
+    );
+    await this.hit(
+      `${scope}-email:${emailFingerprint(email)}`,
+      limits.perEmail,
+      limits.windowMinutes,
+    );
+  }
+
   async checkRegister(email: string, ip: string | null): Promise<void> {
-    const { registerMaxAttempts: max, registerWindowMinutes: win } = this.settings;
-    if (ip) await this.hit(`register-ip:${ip}`, max, win);
-    await this.hit(`register-email:${emailFingerprint(email)}`, max, win);
+    const s = this.settings;
+    await this.hitIpAndEmail("register", email, ip, {
+      perIp: s.registerMaxPerIp,
+      perEmail: s.registerMaxAttempts,
+      windowMinutes: s.registerWindowMinutes,
+    });
   }
 
   async checkPasswordReset(email: string, ip: string | null): Promise<void> {
-    const { passwordResetMaxAttempts: max, passwordResetWindowMinutes: win } = this.settings;
-    if (ip) await this.hit(`reset-ip:${ip}`, max, win);
-    await this.hit(`reset-email:${emailFingerprint(email)}`, max, win);
+    const s = this.settings;
+    await this.hitIpAndEmail("reset", email, ip, {
+      perIp: s.passwordResetMaxPerIp,
+      perEmail: s.passwordResetMaxAttempts,
+      windowMinutes: s.passwordResetWindowMinutes,
+    });
+  }
+
+  /** Retrimiterea emailului de verificare: contoare separate de resetarea parolei. */
+  async checkVerificationResend(email: string, ip: string | null): Promise<void> {
+    const s = this.settings;
+    await this.hitIpAndEmail("resend", email, ip, {
+      perIp: s.verificationResendMaxPerIp,
+      perEmail: s.verificationResendMaxAttempts,
+      windowMinutes: s.verificationResendWindowMinutes,
+    });
   }
 
   /**

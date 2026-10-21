@@ -202,12 +202,21 @@ describe("rate limiting și blocare pe Better Auth", () => {
     expect(limitedAt).toBe(6);
   });
 
-  it("înregistrarea e limitată pe IP (5/oră) și răspunde 429", async () => {
+  it("înregistrarea e limitată pe adresă (20/oră implicit) și răspunde 429; o adresă IPv6 din același /64 e aceeași adresă", async () => {
     const { auth } = setup({ trustedProxyHops: 1 });
     const headers = new Headers({ "x-forwarded-for": "203.0.113.50" });
-    for (let i = 0; i < 5; i++) await auth.api.signUpEmail({ body: newUser(), headers });
+    for (let i = 0; i < 20; i++) await auth.api.signUpEmail({ body: newUser(), headers });
     const limited = await failureOf(auth.api.signUpEmail({ body: newUser(), headers }));
     expect(limited?.status).toBe(429);
+    // IPv6: două adrese diferite din același /64 împart coșul
+    const v6 = (host: string) =>
+      new Headers({ "x-forwarded-for": `2001:db8:${RUN.slice(0, 4)}:1::${host}` });
+    for (let i = 0; i < 20; i++)
+      await auth.api.signUpEmail({ body: newUser(), headers: v6(String(i + 1)) });
+    const limitedV6 = await failureOf(
+      auth.api.signUpEmail({ body: newUser(), headers: v6("ffff") }),
+    );
+    expect(limitedV6?.status).toBe(429);
   });
 
   it("recuperarea parolei: același răspuns pentru email existent și inexistent; limitată pe email", async () => {
@@ -222,6 +231,23 @@ describe("rate limiting și blocare pe Better Auth", () => {
     await auth.api.requestPasswordReset({ body: { email: u.email } });
     const limited = await failureOf(auth.api.requestPasswordReset({ body: { email: u.email } }));
     expect(limited?.status).toBe(429);
+  });
+
+  it("retrimiterea verificării și resetarea parolei au contoare separate, pe Better Auth real", async () => {
+    const { auth } = setup({ passwordResetMaxAttempts: 2, verificationResendMaxAttempts: 2 });
+    const u = newUser();
+    await auth.api.signUpEmail({ body: u });
+    await auth.api.requestPasswordReset({ body: { email: u.email } });
+    await auth.api.requestPasswordReset({ body: { email: u.email } });
+    expect(
+      (await failureOf(auth.api.requestPasswordReset({ body: { email: u.email } })))?.status,
+    ).toBe(429);
+    // resetarea e epuizată, dar retrimiterea verificării are bugetul ei întreg
+    await auth.api.sendVerificationEmail({ body: { email: u.email } });
+    await auth.api.sendVerificationEmail({ body: { email: u.email } });
+    expect(
+      (await failureOf(auth.api.sendVerificationEmail({ body: { email: u.email } })))?.status,
+    ).toBe(429);
   });
 
   it("cu Redis căzut, blocarea merge în continuare din memoria procesului", async () => {
