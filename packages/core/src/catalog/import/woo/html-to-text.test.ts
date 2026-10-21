@@ -110,6 +110,65 @@ describe("htmlToPlainText", () => {
     expect(result.text.endsWith("…")).toBe(true);
   });
 
+  /**
+   * Regresie (Blocul C, C-03): deschideri repetate cu o închidere FĂRĂ «>» făceau eliminarea blocurilor pătratică
+   * (fiecare deschidere recitea textul până la capăt): 0,3–0,8 s blocate pe o celulă de 100 KB, 4 rânduri ≈ 9 s cu
+   * bucla de evenimente blocată. Acum e liniar (câteva milisecunde); pragul e larg ca să nu depindă de mașină.
+   */
+  it("deschideri repetate fără închidere validă nu fac timpul pătratic", () => {
+    const hostile: [string, string][] = [
+      ["svg", "<svg>".repeat(19_800) + "</svg "],
+      ["comentarii", "<!--".repeat(25_000)],
+      ["comentarii cu --", "<!--x--".repeat(14_000)],
+      ["script", "<script>".repeat(12_400) + "</script "],
+      ["style", "<style>".repeat(14_000) + "</style"],
+      ["iframe", "<iframe>".repeat(12_000) + "</iframe x"],
+    ];
+    for (const [name, input] of hostile) {
+      const started = performance.now();
+      const result = htmlToPlainText(input);
+      const elapsed = performance.now() - started;
+      expect(elapsed, name).toBeLessThan(150);
+      expect(result.text, name).not.toMatch(/<\/?[a-z!]/i);
+    }
+  });
+
+  it("«<» fără «>» în apropiere nu costă 500 de pași la fiecare apariție, iar textul rămâne neschimbat", () => {
+    for (const unit of ["<a ", "<p ", "<div", "<td "]) {
+      const input = unit.repeat(Math.floor(99_000 / unit.length));
+      const started = performance.now();
+      const result = htmlToPlainText(input);
+      expect(performance.now() - started, unit).toBeLessThan(60);
+      expect(result.text.startsWith(unit.trim()), unit).toBe(true);
+    }
+    expect(text("a < b și c > d")).toBe("a < b și c > d");
+    expect(text("x <b y")).toBe("x <b y");
+    expect(text("1 < 2 <i>bold</i> 3 < 4")).toBe("1 < 2 bold 3 < 4");
+  });
+
+  it("același text lung de mai multe ori (șiruri partajate dintr-un XLSX) se calculează o singură dată", () => {
+    const input = "[a_b ".repeat(20_000);
+    const first = htmlToPlainText(input);
+    const started = performance.now();
+    let last = first;
+    for (let i = 0; i < 50; i++) last = htmlToPlainText(input);
+    expect(performance.now() - started).toBeLessThan(60);
+    expect(last).toEqual(first);
+    // rezultatul întors nu se partajează: modificarea lui nu strică următorul apel
+    last.stats.links = 99;
+    expect(htmlToPlainText(input).stats.links).toBe(first.stats.links);
+  });
+
+  it("eliminarea blocurilor: perechi multiple, majuscule, închideri cu spații, nepereche la sfârșit", () => {
+    expect(text("a<script>1</script>b<SCRIPT>2</Script  >c")).toBe("a b c");
+    expect(text("<svg><g/></svg>x<svg>y</svg>z")).toBe("x z");
+    // a doua deschidere nu are închidere: se taie de acolo până la capăt
+    expect(text("p<style>a</style>q<style>b")).toBe("p q");
+    expect(text("înainte <!-- a --> mijloc <!-- b --> după <!-- neînchis")).toBe(
+      "înainte mijloc după",
+    );
+  });
+
   it("intrări ostile: etichete deformate nu blochează și nu lasă etichete", () => {
     const messy =
       '<p><a href="x"<b>text</b><img src=x onerror=alert(1)><table><tr><td>a<td>b</table>';

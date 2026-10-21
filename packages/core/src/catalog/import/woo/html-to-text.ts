@@ -131,6 +131,25 @@ const NUL = new RegExp(chars([0]), "g");
 /** Marcaje de sfârșit de linie / de paragraf, puse de etichete și strânse la final (două etichete lipite dau o singură ruptură). */
 const LB = chars([1]);
 const PB = chars([2]);
+/** Înlocuiește temporar un «<» care nu poate începe o etichetă (fără «>» în următoarele 500 de caractere). */
+const LT = chars([3]);
+
+/**
+ * Un «<» fără «>» în următoarele ~500 de caractere nu poate începe nicio etichetă recunoscută (toate se caută cu
+ * `[^>]{0,500}>`), dar fiecare asemenea apariție făcea regulile să parcurgă 500 de caractere: «<a » repetat de 33 000 de
+ * ori costa ~0,2 s. O singură trecere de la coadă la cap le marchează, iar la final marcajul revine la «<».
+ */
+function markLooseLessThan(input: string): string {
+  if (!input.includes("<")) return input;
+  let nextGt = -1;
+  const parts: string[] = new Array<string>(input.length);
+  for (let i = input.length - 1; i >= 0; i--) {
+    const ch = input[i] as string;
+    if (ch === ">") nextGt = i;
+    parts[i] = ch === "<" && (nextGt < 0 || nextGt - i > 501) ? LT : ch;
+  }
+  return parts.join("");
+}
 
 const MAX_ENTITY_CODEPOINT = 0x10ffff;
 
@@ -149,24 +168,51 @@ function decodeEntities(input: string): string {
   });
 }
 
-/** Elimină blocurile `tag` cu tot conținutul; un bloc deschis și neînchis se taie până la capătul textului. */
+/**
+ * Elimină blocurile `tag` cu tot conținutul; un bloc deschis și neînchis se taie până la capătul textului.
+ * O singură trecere de la stânga la dreapta: fiecare deschidere caută închiderea doar înainte de ea, iar când
+ * nu mai există nicio închidere, restul se taie (înainte, o regulă cu «[\s\S]*?» recitea textul până la capăt pentru
+ * FIECARE deschidere: timp pătratic pe «<svg>» repetat cu o închidere fără «>»).
+ */
 function dropBlocks(html: string, tag: string, stats: HtmlToTextStats): string {
-  const pair = new RegExp(`<${tag}\\b[^>]{0,500}>[\\s\\S]*?</${tag}\\s*>`, "gi");
-  // fără nicio închidere nu are rost să căutăm perechi (ar fi pătratic pe multe deschideri)
-  let out = html.toLowerCase().includes(`</${tag}`)
-    ? html.replace(pair, () => {
-        stats.removedBlocks += 1;
-        return " ";
-      })
-    : html;
-  const open = new RegExp(`<${tag}\\b[^>]{0,500}>`, "i");
-  const rest = open.exec(out);
-  if (rest) {
+  const opener = new RegExp(`<${tag}\\b[^>]{0,500}>`, "gi");
+  const closer = new RegExp(`</${tag}\\s*>`, "gi");
+  let out = "";
+  let cursor = 0;
+  for (;;) {
+    opener.lastIndex = cursor;
+    const open = opener.exec(html);
+    if (!open) break;
+    closer.lastIndex = open.index + open[0].length;
+    const close = closer.exec(html);
+    if (!close) {
+      // nicio închidere de aici încolo: blocul nepereche se taie până la capăt
+      stats.removedBlocks += 1;
+      return stripLoose(out + html.slice(cursor, open.index), tag);
+    }
     stats.removedBlocks += 1;
-    out = out.slice(0, rest.index);
+    out += html.slice(cursor, open.index) + " ";
+    cursor = close.index + close[0].length;
   }
   // etichete rămase (închideri singure, forme cu «/>»)
-  return out.replace(new RegExp(`</?${tag}\\b[^>]{0,500}>`, "gi"), " ");
+  return stripLoose(out + html.slice(cursor), tag);
+}
+
+const stripLoose = (html: string, tag: string): string =>
+  html.replace(new RegExp(`</?${tag}\\b[^>]{0,500}>`, "gi"), " ");
+
+function dropComments(html: string, stats: HtmlToTextStats): string {
+  let out = "";
+  let cursor = 0;
+  for (;;) {
+    const open = html.indexOf("<!--", cursor);
+    if (open < 0) return out + html.slice(cursor);
+    stats.removedBlocks += 1;
+    const close = html.indexOf("-->", open + 4);
+    if (close < 0) return out + html.slice(cursor, open);
+    out += html.slice(cursor, open) + " ";
+    cursor = close + 3;
+  }
 }
 
 const stripTags = (value: string): string => value.replace(/<\/?[a-z!][^>]{0,500}>/gi, " ");
@@ -210,7 +256,32 @@ function stripShortcodes(text: string, stats: HtmlToTextStats): string {
   );
 }
 
+/**
+ * Memorie mică pentru texte lungi identice: într-un XLSX, un singur șir partajat poate fi referit de mii de celule, iar
+ * conversia aceluiași text s-ar relua de fiecare dată. Doar textele peste `MEMO_MIN_LENGTH`, cel mult
+ * `MEMO_MAX_ENTRIES` intrări; se întoarce mereu o copie a rezultatului (apelantul poate modifica statisticile).
+ */
+const MEMO_MIN_LENGTH = 1000;
+const MEMO_MAX_ENTRIES = 32;
+const memo = new Map<string, HtmlToTextResult>();
+
+const copyResult = (result: HtmlToTextResult): HtmlToTextResult => ({
+  ...result,
+  stats: { ...result.stats },
+});
+
 export function htmlToPlainText(input: string, maxLength = 100_000): HtmlToTextResult {
+  if (input.length < MEMO_MIN_LENGTH) return convert(input, maxLength);
+  const key = `${maxLength}:${input}`;
+  const cached = memo.get(key);
+  if (cached) return copyResult(cached);
+  const result = convert(input, maxLength);
+  if (memo.size >= MEMO_MAX_ENTRIES) memo.delete(memo.keys().next().value as string);
+  memo.set(key, copyResult(result));
+  return result;
+}
+
+function convert(input: string, maxLength: number): HtmlToTextResult {
   const stats: HtmlToTextStats = {
     tables: 0,
     links: 0,
@@ -220,16 +291,11 @@ export function htmlToPlainText(input: string, maxLength = 100_000): HtmlToTextR
   };
   let html = input.replace(/\r\n?/g, "\n").replace(NUL, "");
 
-  // comentarii (inclusiv blocurile WordPress «<!-- wp:paragraph -->»); unul neînchis taie restul
-  html = html.replace(/<!--[\s\S]*?-->/g, () => {
-    stats.removedBlocks += 1;
-    return " ";
-  });
-  const unclosedComment = html.indexOf("<!--");
-  if (unclosedComment >= 0) {
-    stats.removedBlocks += 1;
-    html = html.slice(0, unclosedComment);
-  }
+  // comentarii (inclusiv blocurile WordPress «<!-- wp:paragraph -->»); unul neînchis taie restul. O singură
+  // trecere (indexOf înainte): un «<!--» repetat fără «-->» nu mai recitește textul de la fiecare deschidere.
+  html = dropComments(html, stats);
+  // abia după comentarii (un «<!--» neînchis nu are «>» și ar fi marcat ca «<» liber)
+  html = markLooseLessThan(html);
   for (const tag of DROPPED_BLOCKS) html = dropBlocks(html, tag, stats);
 
   html = html.replace(/<img\b[^>]{0,500}>/gi, () => {
@@ -276,6 +342,7 @@ export function htmlToPlainText(input: string, maxLength = 100_000): HtmlToTextR
     )
     .trim();
 
+  text = text.replaceAll(LT, "<");
   let truncated = false;
   if (text.length > maxLength) {
     truncated = true;
