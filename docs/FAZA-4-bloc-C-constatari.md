@@ -80,3 +80,48 @@ Licențe (workspace, doar producție: 181 de pachete unice): MIT 123, Apache-2.0
 - **De reparat acum (cu test care pică întâi, câte un commit):** C-01, C-02 (cel puțin punctele 1–3), C-03, C-05, C-06, C-07, C-08, C-09, C-10, C-11, C-13, C-15, C-17, C-21, C-23.
 - **Imediat după, dacă aprobi:** C-04, C-12, C-14, C-16, C-34, C-40 (cu valorile tale), C-19.
 - **Pe lista de datorii (cu motiv):** C-18 (cu storefront-ul / Faza 7), C-20 (Faza 18), C-26 (Faza 21), C-37 (când apar consumatorii de cache), C-38 (outbox, Faza 21), C-35 (propunere, după ce stabilești semantica), C-41 (când apare UI de setări), C-43 (Faza 7), restul «Mic» ca curățare.
+
+## Starea finală a constatărilor (actualizat la sfârșitul Loturilor 1–4)
+
+Legendă: **reparată** = test care pica înainte + remediere în commit separat; **parțial** = partea de aplicație reparată, restul e datorie cu fază; **datorie** = nu se repară acum, trecută în `docs/06-todo-master.md` cu fază și motiv; **respinsă** = nicio constatare respinsă (toate au fost confirmate în cod sau prin PoC).
+
+| ID | Stare | Commit / fază | Note |
+|---|---|---|---|
+| C-01 | reparată | `d110195` | Limite pe celule populate, buget de text expandat și de umplutură; PoC-ul de 1,4 KB e test de regresie cu limită de heap și timp |
+| C-02 | **parțial** | `f3d59e9`, `5f275fd` | Reparat în aplicație: limită globală când IP-ul e necunoscut, job de retenție, avertisment clar la pornire în producție cu `trustedProxyHops = 0`. **Datorie:** instalatorul setează valoarea (Faza 18) și avertisment în Setări când pagina există (Faza 18) |
+| C-03 | reparată | `9c37f4d` | Conversia HTML→text liniară; PoC-urile sunt teste cu limită de timp |
+| C-04 | reparată | `d110195`, `0cc7a50` | Costul XLSX proporțional cu fișierul; pașii analizează/verifică au limită pe utilizator (`import.stepMaxAttempts`) |
+| C-05 | reparată | `be878bc` | Doar eșecurile se numără; blocare progresivă pe (email, IP) și pe IP; un străin nu poate bloca global contul unui Owner |
+| C-06 | reparată | `be878bc`, `c8d71bf` | Contor pe IP (IPv6 /64) și semafor cu coadă pentru argon2 (429 la saturare) |
+| C-07 | reparată | `ed81805`, `48a5ad7` | Email validat în hook (≤254), chei doar cu amprentă; rutele de încărcare ies din middleware, `middlewareClientMaxBodySize` coborât la 2 MB |
+| C-08 | reparată | `22a8469` | Plafon de scriere pentru refuzurile de server actions (per actor, per IP, rezumat) |
+| C-09 | reparată | `a06789f` | `/api/health` cu cache de 5 s și cereri comasate |
+| C-10 | reparată | `45866d3` | `APP_KEY` de exemplu sau slabă e refuzată în producție |
+| C-11 | reparată | `1dd6cfd` | `verification.storeIdentifier = "hashed"` |
+| C-12 | reparată | `9408e89`, `6ce8073` | Audit pe entitate la import, cu `importId`, scris în lot (`recordMany`) |
+| C-13 | reparată | `e26f84d` | Blocare de rând pe produs și renumărare în tranzacție |
+| C-14 | reparată | `48966c8` | Gardă optimistă la ajustarea de preț în masă (`CATALOG_BULK_CONFLICT`) |
+| C-15 | reparată | `8c1ddb1` | Slug și căi într-o singură tranzacție, sub lacăt |
+| C-16 | reparată | `8e5dae3` | Ștergerea e refuzată cu lista mapărilor (`CATEGORY_HAS_CHANNEL_MAPPINGS`) |
+| C-17 | reparată | `98db747` | Jobul eșuat se șterge înainte de `add`; importurile întrerupte se pot opri (capacitate pe server; **butonul din UI nu există încă**) |
+| C-18 | **datorie** | Faza 7, «înainte de lansare» | Istoric de preț Omnibus: legat de întrebarea către contabil/avocat despre Omnibus (vezi TODO) |
+| C-19 | reparată | `7162268` | Plafon `MAX_MONEY` la cost și la `generateVariants`; erorile DB nu scurg valori |
+| C-20 | datorie | Faza 18 | Antete de securitate (CSP, HSTS, `frame-ancestors`) |
+| C-21 | reparată | `04d0c93` | Patch fără schimbări întoarce înregistrarea publică |
+| C-22 | reparată (documentație) | `20fd689` | `products.archive` rămâne rezervată; docs aliniate la ce se aplică (arhivarea și purge cer `products.write`); **permisiunile nu s-au schimbat** |
+| C-23 | reparată | `203741c` | Jobul de import folosește `can()` |
+| C-24…C-25 | datorie | Faza 20 (curățare) | Gardă de coș pe scrierile la variantă; istoric de exporturi fără actorii altora |
+| C-26 | datorie | Faza 21 | Filtrul PDF pentru conținut activ (`/ObjStm`, `/OpenAction`…) |
+| C-27…C-33 | datorie | Faza 20 (curățare) | `error.message` în raport; `validate`/`cancel` condiționate; test AST de rețea; index `lower(sku)`; `isDefault` în `updateVariant`; `mapDbError`; timeout-uri de pool |
+| C-34 | reparată | `c23cfbd` | Relațiile imbricate șterse în timpul citirii nu mai dau `TypeError` |
+| C-35 | datorie | Faza 7 | «Mută mai sus» cu index absolut: doar propunere (`beforeId`/`afterId`), după ce stabilești semantica. **Dovadă măsurată (2026-10-21):** 13 din 14 eșecuri intermitente ale testului E2E «Owner…» au ca cauză acest index (vezi PROGRESS); testul a fost mutat pe frați proprii |
+| C-36 | datorie | Faza 20 (curățare) | Schimbarea tipului unui atribut, în tranzacție |
+| C-37 | datorie | Faza 7 | Invalidare de cache din worker, când apar consumatorii de cache |
+| C-38 | datorie | Faza 21 | Audit pentru autentificare/parolă, outbox |
+| C-39 | datorie | Faza 20 (curățare) | Emailul e validat în hook (C-07); `name`/`image` rămân de limitat |
+| C-40 | reparată | `93a1384`, `979b2ae` | 20/h pe adresă, 5/h pe email, IPv6 /64, contoare separate la resetare și retrimitere; setări în registru (fără UI de administrare încă) |
+| C-41 | datorie | Faza 18 | `settings.security.write`, când apare UI-ul de setări |
+| C-42 | datorie | Faza 20 (curățare) | Tokenuri de resetare anterioare; limitare la `change-password` |
+| C-43 | datorie | Faza 7 | Slugul produsului: istoric/redirecționări înainte de storefront |
+| C-44 | datorie | Faza 20 (curățare) | CHECK pereche cost/dată, limite, `ILIKE`, OFFSET |
+| C-45 | datorie | Faza 20 (curățare) | Descrierile rolurilor, teste mai strânse |
