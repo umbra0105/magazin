@@ -92,6 +92,23 @@ export function getProductImportUploadDeps(): ProductImportUploadDeps {
   };
 }
 
+/**
+ * Limita pașilor «analizează» și «verifică» (fiecare reparsează fișierul întreg), per utilizator; contor propriu.
+ * Depășirea întoarce `RateLimitedError` (cod `AUTH_RATE_LIMITED`), pe care acțiunea o transformă în răspuns.
+ */
+export async function checkImportStepRate(userId: string): Promise<void> {
+  const group = await getSettings().getGroup("import");
+  await new MediaUploadGuard(
+    getCounterStore(),
+    {
+      uploadMaxAttempts: group.stepMaxAttempts,
+      uploadWindowMinutes: group.uploadWindowMinutes,
+      refusedAuditMaxAttempts: group.refusedAuditMaxAttempts,
+    },
+    "product-import-step",
+  ).checkUpload(userId, null);
+}
+
 export function getProductImportDownloadDeps(): ProductImportDownloadDeps {
   return {
     getSubject: getCurrentSubject,

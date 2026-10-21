@@ -4,7 +4,7 @@ import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { CATALOG_TAG } from "@ecom/core";
 import { productFailure as failure } from "@/lib/product-action-support";
-import { getProductImportService } from "@/lib/product-imports";
+import { checkImportStepRate, getProductImportService } from "@/lib/product-imports";
 import { withPermission } from "@/lib/session";
 
 /**
@@ -26,6 +26,7 @@ export const analyzeProductImport = withPermission(
   async (input: unknown, subject) => {
     try {
       const { importId, delimiter } = analyzeInput.parse(input);
+      await checkImportStepRate(subject.userId);
       const analysis = await getProductImportService().analyze(subject, importId, {
         ...(delimiter && { delimiter }),
       });
@@ -41,6 +42,7 @@ export const validateProductImport = withPermission(
   "products.write",
   async (input: unknown, subject) => {
     try {
+      await checkImportStepRate(subject.userId);
       const validation = await getProductImportService().validate(subject, input);
       return { ok: true as const, validation };
     } catch (error) {

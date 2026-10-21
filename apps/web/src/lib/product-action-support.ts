@@ -94,6 +94,8 @@ const DOMAIN_CODES = new Set([
   "BRAND_NOT_FOUND",
   "VALIDATION_ERROR",
   "AUDIT_WRITE_FAILED",
+  // limitele pe utilizator (pașii importului): mesajul e deja în română și se arată ca atare
+  "AUTH_RATE_LIMITED",
 ]);
 
 function issueFields(details: unknown): Record<string, string> | undefined {

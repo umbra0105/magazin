@@ -177,6 +177,11 @@ export const settingGroups = {
     uploadWindowMinutes: z.number().int().min(1).max(1440).default(10),
     /** Încercări refuzate (origine, sesiune, permisiune) pe IP care mai intră în jurnalul de audit. */
     refusedAuditMaxAttempts: z.number().int().min(1).max(10_000).default(20),
+    /**
+     * Pași «analizează»/«verifică» ai importului per utilizator în fereastra `uploadWindowMinutes` (fiecare reparsează
+     * fișierul întreg; contor separat de încărcări și de rapoarte).
+     */
+    stepMaxAttempts: z.number().int().min(1).max(10_000).default(40),
   },
   productExport: {
     /**
