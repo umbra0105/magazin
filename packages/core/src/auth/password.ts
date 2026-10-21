@@ -49,8 +49,46 @@ function requireArgon2(): typeof nodeCrypto.argon2 {
 }
 
 type Argon2Parameters = Parameters<typeof nodeCrypto.argon2>[1];
+/**
+ * Concurență mărginită pentru argon2 (Blocul C, C-06). Fiecare operație ține ~19 MiB și un fir al pool-ului libuv (4 implicit),
+ * partajat cu fs, DNS și sharp: fără limită, un flux de cereri de autentificare ocupa tot pool-ul și oprea aplicația.
+ * `maxConcurrent` rulează deodată; restul așteaptă în coadă, iar la `queueLimit` rutele de autentificare răspund 429
+ * imediat (`isPasswordWorkSaturated`), în loc să lase coada să crească.
+ */
+export const PASSWORD_WORK = { maxConcurrent: 2, queueLimit: 64 } as const;
+
+let active = 0;
+let peakActive = 0;
+const waiting: (() => void)[] = [];
+
+export function passwordWorkStats(): { active: number; queued: number; peakActive: number } {
+  return { active, queued: waiting.length, peakActive };
+}
+
+/** Coada de operații argon2 e plină: cererile noi de autentificare trebuie respinse imediat (429). */
+export function isPasswordWorkSaturated(): boolean {
+  return waiting.length >= PASSWORD_WORK.queueLimit;
+}
+
+async function withPasswordSlot<T>(work: () => Promise<T>): Promise<T> {
+  if (active >= PASSWORD_WORK.maxConcurrent) {
+    await new Promise<void>((resolve) => waiting.push(resolve));
+  } else {
+    active++;
+  }
+  peakActive = Math.max(peakActive, active);
+  try {
+    return await work();
+  } finally {
+    const next = waiting.shift();
+    if (next)
+      next(); // locul rămâne ocupat, trece direct la următorul din coadă
+    else active--;
+  }
+}
+
 const derive = (parameters: Argon2Parameters): Promise<Buffer> =>
-  promisify(requireArgon2())("argon2id", parameters);
+  withPasswordSlot(() => promisify(requireArgon2())("argon2id", parameters));
 
 const b64 = (bytes: Uint8Array): string => Buffer.from(bytes).toString("base64").replace(/=+$/, "");
 
