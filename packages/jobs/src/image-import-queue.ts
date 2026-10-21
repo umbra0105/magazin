@@ -1,4 +1,5 @@
 import { Queue, type JobsOptions } from "bullmq";
+import { removeFinishedJob } from "./import-queue";
 import type { ImageJobQueue } from "@ecom/core";
 import { redisConnectionFromUrl } from "./connection";
 
@@ -32,7 +33,9 @@ export function createImageImportQueue(
 }
 
 export async function enqueueImageImport(queue: ImageImportQueue, importId: string): Promise<void> {
-  await queue.add("images", { importId }, { jobId: `import-images-${importId}` });
+  const jobId = `import-images-${importId}`;
+  await removeFinishedJob(queue, jobId); // un job eșuat cu același id ar face `add` un no-op (C-17)
+  await queue.add("images", { importId }, { jobId });
 }
 
 /** Adaptorul cerut de `ProductImportService`, cu un timeout la punerea în coadă. */

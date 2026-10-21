@@ -451,6 +451,36 @@ describe("pașii și protecțiile", () => {
     });
   });
 
+  /**
+   * Blocul C, C-17: un import rămas în «queued»/«running» fără ca jobul să mai avanseze (jobul a căzut înainte de propriul
+   * try/catch) nu avea nicio ieșire: `cancel` îl refuza, iar fișierul rămânea. După `interruptedAfterMinutes` fără activitate
+   * (starea «întrerupt» din istoric) poate fi oprit: se marchează eșuat (rămâne în istoric), iar fișierul se șterge.
+   */
+  it("un import întrerupt (fără activitate de peste interruptedAfterMinutes) poate fi oprit; unul recent nu", async () => {
+    const ctx = setup();
+    const stuck = await ctx.service.register(manager, csv(["SKU;Titlu;Preț", "S1;Blocat;10"]));
+    const record = ctx.store.records.get(stuck.importId)!;
+    record.status = "running";
+    record.updatedAt = new Date(NOW.getTime() - 31 * 60_000);
+    await ctx.service.cancel(manager, stuck.importId);
+    const after = ctx.store.records.get(stuck.importId)!;
+    expect(after.status).toBe("failed");
+    expect(after.errorMessage).toMatch(/întrerupt/i);
+    expect(after.storageKey).toBeNull();
+    expect(ctx.files.size).toBe(0);
+
+    const queued = await ctx.service.register(manager, csv(["SKU;Titlu;Preț", "Q1;Coadă;10"]));
+    const q = ctx.store.records.get(queued.importId)!;
+    q.status = "queued";
+    q.updatedAt = new Date(NOW.getTime() - 5 * 60_000);
+    await expect(ctx.service.cancel(manager, queued.importId)).rejects.toMatchObject({
+      code: "IMPORT_STATE_INVALID",
+    });
+    q.updatedAt = new Date(NOW.getTime() - 45 * 60_000);
+    await ctx.service.cancel(manager, queued.importId);
+    expect(ctx.store.records.get(queued.importId)!.status).toBe("failed");
+  });
+
   it("fișierul încărcat peste limite nu se stochează", async () => {
     const ctx = setup();
     await expect(

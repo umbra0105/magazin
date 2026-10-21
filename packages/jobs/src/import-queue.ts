@@ -34,7 +34,33 @@ export function createImportQueue(
 
 /** Pune importul în coadă; `jobId` stabil, deci aceeași cerere repetată nu dublează jobul. */
 export async function enqueueProductImport(queue: ImportQueue, importId: string): Promise<void> {
-  await queue.add("import", { importId }, { jobId: `import-${importId}` });
+  const jobId = `import-${importId}`;
+  await removeFinishedJob(queue, jobId);
+  await queue.add("import", { importId }, { jobId });
+}
+
+/**
+ * Un job EȘUAT (reținut 24 h pentru diagnostic) sau terminat cu același `jobId` face ca un `add` nou să fie ignorat de
+ * BullMQ: importul rămânea blocat, iar «Reia» nu făcea nimic (Blocul C, C-17). Un asemenea job se scoate înainte de `add`; unul
+ * în așteptare sau în lucru rămâne (aceeași cerere repetată nu dublează jobul). Folosit și de coada de imagini.
+ */
+export async function removeFinishedJob(
+  queue: {
+    getJob(
+      id: string,
+    ): Promise<{ getState(): Promise<string>; remove(): Promise<void> } | undefined>;
+  },
+  jobId: string,
+): Promise<void> {
+  const existing = await queue.getJob(jobId);
+  if (!existing) return;
+  const state = await existing.getState();
+  if (state !== "failed" && state !== "completed") return;
+  try {
+    await existing.remove();
+  } catch {
+    // dispărut între timp: `add` merge oricum
+  }
 }
 
 /** Adaptorul cerut de `ProductImportService`, cu un timeout la punerea în coadă. */

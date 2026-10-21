@@ -796,7 +796,7 @@ export class ProductImportService {
       record.createdById && this.deps.loadSubject
         ? await this.deps.loadSubject(record.createdById)
         : null;
-    if (!subject || !subject.permissions.has("products.write")) {
+    if (!subject || !can(subject, "products.write")) {
       await fail("Contul care a pornit importul nu mai are permisiunea de a modifica produse.");
       return;
     }
@@ -1170,7 +1170,25 @@ export class ProductImportService {
     assertCan(subject, "products.write");
     const record = await this.own(subject, importId);
     if (record.status === "running" || record.status === "queued") {
-      throw new ImportError("IMPORT_STATE_INVALID", "Importul rulează; așteaptă să se termine");
+      // Un import fără activitate de peste `interruptedAfterMinutes` (starea «întrerupt» din istoric) nu mai are cine să-l
+      // termine (jobul a căzut): poate fi oprit. Se marchează eșuat și rămâne în istoric; fișierul se șterge (C-17).
+      const limits = await this.limits();
+      const idleMs = this.now().getTime() - record.updatedAt.getTime();
+      if (idleMs <= limits.interruptedAfterMinutes * 60_000) {
+        throw new ImportError("IMPORT_STATE_INVALID", "Importul rulează; așteaptă să se termine");
+      }
+      // tranziție condiționată: dacă între timp jobul și-a revenit și a avansat, starea s-a schimbat și oprirea se refuză
+      if (!(await this.deps.store.transition(record.id, [record.status], "failed"))) {
+        throw new ImportError("IMPORT_STATE_INVALID", "Importul rulează; așteaptă să se termine");
+      }
+      await this.deps.store.update(record.id, {
+        errorMessage: "Import întrerupt (jobul nu mai avansa); oprit de utilizator.",
+        finishedAt: this.now(),
+        storageKey: null,
+        expiresAt: new Date(this.now().getTime() + limits.historyRetentionDays * 86_400_000),
+      });
+      await this.deleteFile(record.storageKey);
+      return;
     }
     await this.deleteFile(record.storageKey);
     await this.deps.store.delete(record.id);
