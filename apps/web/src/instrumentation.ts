@@ -6,6 +6,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { sentry } = await import("./lib/sentry");
     await sentry.sync();
+    // Avertismente de configurare (de ex. producție fără proxy de încredere); niciodată o oprire.
+    const { runStartupChecks } = await import("./lib/startup-checks");
+    await runStartupChecks();
     // Doar în dezvoltare: workerul de emailuri rulează în procesul serverului (`pnpm dev:web`).
     if (process.env.NODE_ENV === "development") {
       const { startDevEmailWorker } = await import("./lib/dev-worker");
