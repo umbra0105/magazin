@@ -36,6 +36,7 @@ import {
   subtractQuantity,
   sumQuantities,
   type Quantity,
+  type QuantityDelta,
 } from "./quantity";
 
 // ---------------------------------------------------------------------------
@@ -465,6 +466,35 @@ describe("aritmetică pe cantități: fără negativ, fără depășire", () => 
     expect(code(() => stepsToQuantity(-1, q("2")))).toBe("QUANTITY_INVALID_ARGUMENT");
     expect(code(() => stepsToQuantity(1.5, q("2")))).toBe("QUANTITY_INVALID_ARGUMENT");
     expect(stepsToQuantity(0, q("2"))).toBe(0n);
+  });
+
+  it("variațiile cu semn acceptă «+» (formatSignedDelta îl produce), iar cantitățile obișnuite nu", () => {
+    expect(parseSignedDelta("+2,5")).toBe(25_000n);
+    expect(parseSignedDelta(" +3 ")).toBe(30_000n);
+    expect(parseSignedDelta("+0")).toBe(0n);
+    for (const bad of ["+", "++5", "+-5", "-+5", "+ 5", "+,5", "+1,2,3"]) {
+      expect(
+        code(() => parseSignedDelta(bad)),
+        bad,
+      ).toBe("QUANTITY_INVALID_FORMAT");
+    }
+    expect(code(() => parseSignedDelta("+2,00001"))).toBe("QUANTITY_TOO_MANY_DECIMALS");
+    expect(code(() => parseSignedDelta("+100000001"))).toBe("QUANTITY_OVERFLOW");
+    // parserul și formatorul se închid unul pe altul, pentru orice variație
+    for (const ticks of [
+      -1_000_000_000_000n,
+      -25_000n,
+      -1n,
+      0n,
+      1n,
+      412_500n,
+      1_000_000_000_000n,
+    ]) {
+      const delta = ticks as QuantityDelta;
+      expect(parseSignedDelta(formatSignedDelta(delta)), String(ticks)).toBe(delta);
+    }
+    // cantitatea obișnuită rămâne strictă
+    expect(code(() => parseQuantity("+5"))).toBe("QUANTITY_INVALID_FORMAT");
   });
 
   it("variațiile (ajustări): pozitive, negative, zero, și aplicarea lor", () => {

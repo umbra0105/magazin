@@ -291,11 +291,23 @@ Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
   numerică) scriu întâi testul, văd că pică pe codul fără ea, apoi implementez.
 - **Concurența intră din punctul de rezervare**, nu la final: testele cu cereri simultane pe
   Postgres real se scriu odată cu codul care rezervă/angajează.
+- **Testele de integrare nu presupun date de seed.** CI-ul rulează doar `prisma migrate deploy`
+  (fără seed), pe când `ecom_test` local poate avea seed rulat de mână: un test care trece doar pe
+  a doua e roșu în CI. Orice test care are nevoie de depozit implicit, unități (`buc`, `mp` …),
+  roluri, setări sau alte date de sistem le CREEAZĂ singur (în tranzacția anulată, cu
+  `runBaseSeed(tx)` sau cu fixture-uri), iar când numără ce există compară înainte/după, nu cu o
+  valoare fixă («exact 1 depozit implicit» e o presupunere de seed). Nu se schimbă CI-ul ca să
+  se potrivească testului.
 - **Verificare completă înainte de ORICE commit de cod, citită integral:** unitare, integrare,
   lint, `lint:root`, typecheck, `prettier --check .` pe TOT repo-ul și E2E complet pe build de
   producție (număr de teste trecute, picate, nerulate). NU fac commit înainte de a fi citit
   rezultatul complet; un test picat se repară înainte de commit. Fixture-urile comune cu
   curățare globală se folosesc dintr-un singur fișier de teste.
+- **Integrarea se rulează pe DOUĂ baze, ambele citite integral:** `ecom_test` (seed-uită) ȘI o bază
+  doar migrată, ca în CI. Pentru a doua: `TEST_DATABASE_URL` către o bază nouă cu «test» în nume
+  (de exemplu `ecom_ci_test`, pe același server; `test:integration` o creează și o migrează singur),
+  apoi `npm.cmd run test:integration`; după verificare o ștergi cu `DROP DATABASE` (doar baza pe
+  care ai creat-o tu). Un test care trece pe una și pică pe cealaltă se repară în test, nu în CI.
 - **Niciun `git push` fără autorizarea utilizatorului**, în conversație, pentru acel moment.
   Când e autorizat, arăt MAI ÎNTÂI `git status --short` și `git log --oneline origin/main..HEAD`
   și mă opresc dacă apare ceva neașteptat; apoi rulez, în ordine: `prettier --check .` pe tot

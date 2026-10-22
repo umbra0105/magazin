@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@ecom/db";
 import {
+  MAX_QUANTITY,
   ValidationError,
   addQuantity,
   assertOrderQuantity,
@@ -9,10 +10,19 @@ import {
   type Quantity,
   type QuantityDelta,
 } from "@ecom/shared";
+import {
+  ADJUSTMENT_NOTE_MAX,
+  ADJUSTMENT_REASON_LABELS,
+  adjustmentSignProblem,
+  effectiveAtProblem,
+  fitsUnitPrecision,
+} from "./adjustment-rules";
 import { computeAvailability, type ManagedInventory } from "./availability";
+import { ADJUSTMENT_REASONS, type AdjustmentReason } from "./constants";
 import { reconcileSnapshot } from "./reconcile";
 import { effectiveSaleStep } from "./sale-config";
 import { StockError } from "./stock-errors";
+import { effectiveMeasureUnit } from "./units";
 
 /**
  * Serviciul de stoc (Faza 5, punctul 5): rezervare, eliberare, confirmare (angajare), angajare directă, oglindire și
@@ -89,6 +99,39 @@ export type ApplySnapshotResult =
       mirroredIds: string[];
       stillCommittedIds: string[];
     };
+
+/** Ajustare manuală a stocului fizic (inventariere, recepție, vânzare în magazin …). */
+export interface AdjustPhysicalInput {
+  variantId: string;
+  /** Depozitul; implicit depozitul implicit */
+  warehouseId?: string;
+  /** Variația cu semn, în unitatea variantei (nu are legătură cu pasul de vânzare) */
+  delta: QuantityDelta;
+  reason: AdjustmentReason;
+  /** Text liber, obligatoriu */
+  note: string;
+  /** Când s-a petrecut cu adevărat; implicit acum. Hotărăște dacă poza următoare o înlocuiește sau o păstrează. */
+  effectiveAt?: Date;
+  actor?: { id: string; label: string };
+}
+
+/**
+ * - `effective_before_snapshot`: ora efectivă e cel târziu la ora pozei deja aplicate; dacă evenimentul era deja în
+ *   SmartBill la acea poză, e scăzut de două ori până la poza următoare (subvânzare temporară, nu supravânzare).
+ * - `below_commitments`: stocul fizic a coborât sub ce e angajat + rezervat (disponibilul devine 0).
+ */
+export type AdjustmentWarning = "effective_before_snapshot" | "below_commitments";
+
+export interface AdjustPhysicalResult {
+  variantId: string;
+  warehouseId: string;
+  movementId: string;
+  delta: QuantityDelta;
+  physicalBefore: Quantity;
+  physicalAfter: Quantity;
+  effectiveAt: Date;
+  warnings: AdjustmentWarning[];
+}
 
 export interface ConsistencyReport {
   ok: boolean;
@@ -435,16 +478,20 @@ export class StockService {
     tx: Tx,
     data: {
       key: ItemKey;
-      kind: "commit" | "release" | "mirror" | "snapshot";
+      kind: "commit" | "release" | "mirror" | "snapshot" | "adjustment";
       deltaPhysical?: bigint;
       deltaCommitted?: bigint;
       after: Counters;
       ref?: StockRef;
       snapshotId?: string;
       effectiveAt: Date;
+      reason?: AdjustmentReason;
+      note?: string;
+      actor?: { id: string; label: string };
     },
-  ): Promise<void> {
-    await tx.stockMovement.create({
+  ): Promise<string> {
+    const created = await tx.stockMovement.create({
+      select: { id: true },
       data: {
         variantId: data.key.variantId,
         warehouseId: data.key.warehouseId,
@@ -456,8 +503,12 @@ export class StockService {
         effectiveAt: data.effectiveAt,
         ...(data.ref && { refType: data.ref.refType, refId: data.ref.refId }),
         ...(data.snapshotId && { snapshotId: data.snapshotId }),
+        ...(data.reason && { reason: data.reason }),
+        ...(data.note !== undefined && { note: data.note }),
+        ...(data.actor && { actorId: data.actor.id, actorLabel: data.actor.label }),
       },
     });
+    return created.id;
   }
 
   /** Angajarea există deja pentru comandă și linie? Eliberată = comanda anulată, nu se mai angajează. */
@@ -925,6 +976,171 @@ export class StockService {
         committed: quantityFromTicks(after.committed),
         mirroredIds: result.mirroredIds,
         stillCommittedIds: result.stillCommittedIds,
+      };
+    });
+  }
+
+  /**
+   * Ajustare manuală a stocului FIZIC cu ora efectivă (D8, D1.4). Se aplică imediat (rândul blocat, o singură comandă
+   * condiționată, mișcare imuabilă în registru); ora efectivă hotărăște doar soarta ei la poza următoare: o poză
+   * înlocuiește ajustările cu ora cel târziu la ora ei și le păstrează pe cele de după (`applySnapshot`).
+   *
+   * Reguli: motiv fix + text liber obligatoriu; semnul cerut de motiv; precizia unității (zecimalele ei), NU pasul de
+   * vânzare; stocul nu coboară sub 0 și nu trece de plafon; ora efectivă nu e în viitor (peste toleranță). Doar variante
+   * gestionate (rândul de stoc se creează la prima ajustare). Nimic nu se modifică la refuz.
+   */
+  async adjustPhysical(input: AdjustPhysicalInput): Promise<AdjustPhysicalResult> {
+    const now = this.now();
+    const effectiveAt = input.effectiveAt ?? now;
+    if (!(ADJUSTMENT_REASONS as readonly string[]).includes(input.reason)) {
+      throw new StockError("STOCK_ADJUSTMENT_INVALID_REASON", "Motivul ajustării nu este valid", {
+        reason: input.reason,
+      });
+    }
+    const note = input.note.trim();
+    if (note === "") {
+      throw new StockError(
+        "STOCK_ADJUSTMENT_NOTE_REQUIRED",
+        "Textul ajustării e obligatoriu: scrie pe scurt ce s-a întâmplat",
+      );
+    }
+    if (note.length > ADJUSTMENT_NOTE_MAX) {
+      throw new StockError(
+        "STOCK_ADJUSTMENT_NOTE_TOO_LONG",
+        `Textul ajustării are cel mult ${ADJUSTMENT_NOTE_MAX} de caractere`,
+        { max: ADJUSTMENT_NOTE_MAX },
+      );
+    }
+    if (input.delta === 0n) {
+      throw new StockError(
+        "STOCK_ADJUSTMENT_ZERO",
+        "Ajustarea trebuie să schimbe stocul (nu poate fi 0)",
+      );
+    }
+    const signProblem = adjustmentSignProblem(input.reason, input.delta);
+    if (signProblem) {
+      const label = ADJUSTMENT_REASON_LABELS[input.reason];
+      throw new StockError(
+        "STOCK_ADJUSTMENT_WRONG_SIGN",
+        signProblem === "must_decrease"
+          ? `«${label}» scade stocul: introdu o cantitate negativă`
+          : `«${label}» adaugă în stoc: introdu o cantitate pozitivă`,
+        { reason: input.reason, required: signProblem },
+      );
+    }
+    const timeProblem = effectiveAtProblem(effectiveAt, now);
+    if (timeProblem === "invalid") {
+      throw new StockError("STOCK_ADJUSTMENT_INVALID_TIME", "Ora efectivă nu este o dată validă");
+    }
+    if (timeProblem === "future") {
+      throw new StockError(
+        "STOCK_ADJUSTMENT_FUTURE",
+        "Ora efectivă nu poate fi în viitor: alege momentul real al evenimentului",
+      );
+    }
+
+    return this.atomic(async (tx) => {
+      const warehouseId = input.warehouseId ?? (await this.defaultWarehouseId(tx));
+      const key: ItemKey = { variantId: input.variantId, warehouseId };
+      const variant = await tx.productVariant.findUnique({
+        where: { id: key.variantId },
+        select: {
+          manageStock: true,
+          measureUnit: { select: { decimals: true } },
+          product: {
+            select: {
+              type: true,
+              manageStock: true,
+              measureUnit: { select: { decimals: true } },
+            },
+          },
+        },
+      });
+      if (!variant) {
+        throw new StockError("STOCK_VARIANT_NOT_FOUND", "Varianta nu există", {
+          variantId: key.variantId,
+        });
+      }
+      const managed =
+        variant.product.type !== "digital" && (variant.manageStock ?? variant.product.manageStock);
+      if (!managed) {
+        throw new StockError(
+          "STOCK_NOT_MANAGED",
+          "Produsul nu are stoc gestionat: pornește gestionarea stocului înainte să ajustezi cantitatea",
+          { variantId: key.variantId },
+        );
+      }
+      // o unitate nulă înseamnă «buc» (fără zecimale), fără a căuta vreun rând «buc» în bază
+      const { decimals } = effectiveMeasureUnit(variant.measureUnit, variant.product.measureUnit, {
+        decimals: 0,
+      });
+      if (!fitsUnitPrecision(input.delta, decimals)) {
+        throw new StockError(
+          "STOCK_ADJUSTMENT_PRECISION",
+          decimals === 0
+            ? "Unitatea acestui produs nu are zecimale: introdu o cantitate întreagă"
+            : `Unitatea acestui produs are cel mult ${decimals} ${decimals === 1 ? "zecimală" : "zecimale"}`,
+          { decimals },
+        );
+      }
+      if (!(await tx.warehouse.findUnique({ where: { id: warehouseId }, select: { id: true } }))) {
+        throw new StockError("STOCK_NO_WAREHOUSE", "Depozitul nu există", { warehouseId });
+      }
+
+      await tx.$executeRaw(Prisma.sql`
+        INSERT INTO inventory_item (id, "variantId", "warehouseId", "updatedAt")
+        VALUES (${randomUUID()}, ${key.variantId}, ${key.warehouseId}, ${now})
+        ON CONFLICT ("variantId", "warehouseId") DO NOTHING`);
+      const row = (await lockItems(tx, [key])).get(keyId(key));
+      if (!row) throw new StockError("STOCK_VARIANT_NOT_FOUND", "Rândul de stoc nu există");
+
+      // a doua gardă: variația se aplică DOAR dacă rezultatul rămâne în [0, plafon], într-o singură comandă
+      const [after] = await tx.$queryRaw<Counters[]>(Prisma.sql`
+        UPDATE inventory_item
+        SET physical = physical + ${input.delta}, "updatedAt" = ${now}
+        WHERE "variantId" = ${key.variantId} AND "warehouseId" = ${key.warehouseId}
+          AND physical + ${input.delta} >= 0 AND physical + ${input.delta} <= ${MAX_QUANTITY}
+        RETURNING physical, committed, reserved`);
+      if (!after) {
+        if (row.physical + input.delta < 0n) {
+          throw new StockError(
+            "STOCK_ADJUSTMENT_BELOW_ZERO",
+            "Stocul nu poate deveni negativ: ajustarea scade mai mult decât există",
+            { available: row.physical.toString(), requested: input.delta.toString() },
+          );
+        }
+        throw new StockError(
+          "STOCK_ADJUSTMENT_OVERFLOW",
+          "Ajustarea depășește cantitatea maximă care se poate ține în stoc",
+          { available: row.physical.toString(), requested: input.delta.toString() },
+        );
+      }
+
+      const movementId = await this.movement(tx, {
+        key,
+        kind: "adjustment",
+        deltaPhysical: input.delta,
+        after,
+        effectiveAt,
+        reason: input.reason,
+        note,
+        ...(input.actor && { actor: input.actor }),
+      });
+
+      const warnings: AdjustmentWarning[] = [];
+      if (row.physicalAsOf && effectiveAt.getTime() <= row.physicalAsOf.getTime()) {
+        warnings.push("effective_before_snapshot");
+      }
+      if (after.physical < after.committed + after.reserved) warnings.push("below_commitments");
+      return {
+        variantId: key.variantId,
+        warehouseId,
+        movementId,
+        delta: input.delta,
+        physicalBefore: quantityFromTicks(row.physical),
+        physicalAfter: quantityFromTicks(after.physical),
+        effectiveAt,
+        warnings,
       };
     });
   }

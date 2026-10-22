@@ -127,9 +127,16 @@ function decimalsMessage(decimals: number): string {
     : `Cantitatea poate avea cel mult ${decimals} ${decimals === 1 ? "zecimală" : "zecimale"}.`;
 }
 
-function parseCore(input: string, options: ParseOptions, floor: boolean): ParsedCore {
+function parseCore(
+  input: string,
+  options: ParseOptions,
+  floor: boolean,
+  signed = false,
+): ParsedCore {
   const decimals = resolveDecimals(options.maxDecimals);
-  const text = typeof input === "string" ? input.trim() : "";
+  const trimmed = typeof input === "string" ? input.trim() : "";
+  // variațiile cu semn acceptă și «+» în față (`formatSignedDelta` îl produce); cantitățile obișnuite rămân stricte
+  const text = signed ? trimmed.replace(/^\+(?=[0-9])/, "") : trimmed;
   const match =
     text.length > 0 && text.length <= MAX_INPUT_LENGTH ? NUMBER_PATTERN.exec(text) : null;
   if (!match) {
@@ -190,7 +197,7 @@ export function parseQuantityDetailed(
 
 /** Variație cu semn (ajustări de stoc): `-2,5`, `2,5`, `0`; în intervalul ±plafon, fără rotunjire. */
 export function parseSignedDelta(input: string, options: ParseOptions = {}): QuantityDelta {
-  const parsed = parseCore(input, options, false);
+  const parsed = parseCore(input, options, false, true);
   return (parsed.negative ? -parsed.ticks : parsed.ticks) as QuantityDelta;
 }
 

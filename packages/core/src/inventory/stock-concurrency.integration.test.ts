@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createDbClient } from "@ecom/db";
-import { formatQuantity, parseQuantity, type Quantity } from "@ecom/shared";
+import { formatQuantity, parseQuantity, parseSignedDelta, type Quantity } from "@ecom/shared";
 import {
   addStockProduct,
   createStockContext,
@@ -563,3 +563,165 @@ async function protectedCounts() {
     systemUnits: await db.measureUnit.count({ where: { isSystem: true } }),
   };
 }
+
+describe("ajustări fizice: concurență", () => {
+  const adjust = (
+    variantId: string,
+    delta: string,
+    reason: "sale_in_store" | "receipt" | "inventory_correction" = "inventory_correction",
+    effectiveAt?: Date,
+  ) =>
+    service.adjustPhysical({
+      variantId,
+      warehouseId: ctx.warehouseId,
+      delta: parseSignedDelta(delta),
+      reason,
+      note: "concurență",
+      ...(effectiveAt && { effectiveAt }),
+    });
+
+  const adjustmentMoves = (variantId: string) =>
+    db.stockMovement.findMany({ where: { variantId, kind: "adjustment" } });
+
+  it("10 vânzări de câte 1 deodată pe stoc 5 → exact 5 reușesc, stocul ajunge la 0, fiecare vede un alt «stoc după»", async () => {
+    const { variants } = await addStockProduct(db, ctx, { variants: [{ physical: "5" }] });
+    const v = variants[0]!;
+    const { ok, failed } = await race(10, () => adjust(v.id, "-1", "sale_in_store"));
+    expect(ok).toHaveLength(5);
+    expect(failed).toHaveLength(5);
+    expect(new Set(failed.map((f) => f.code))).toEqual(new Set(["STOCK_ADJUSTMENT_BELOW_ZERO"]));
+    expect((await item(v.id)).physical).toBe(0n);
+    const moves = await adjustmentMoves(v.id);
+    expect(moves).toHaveLength(5);
+    // execuție serială: fiecare ajustare a văzut o valoare diferită (4,3,2,1,0), nu două peste aceeași
+    expect(new Set(moves.map((m) => m.physicalAfter))).toEqual(
+      new Set([q("4"), q("3"), q("2"), q("1"), 0n]),
+    );
+    await expectConsistent(v.id);
+  });
+
+  it("100 de scăderi deodată pe stoc 10 → exact 10, niciodată sub zero", async () => {
+    const { variants } = await addStockProduct(db, ctx, { variants: [{ physical: "10" }] });
+    const v = variants[0]!;
+    const { ok, failed } = await race(100, () => adjust(v.id, "-1"));
+    expect(ok).toHaveLength(10);
+    expect(failed.every((f) => f.code === "STOCK_ADJUSTMENT_BELOW_ZERO")).toBe(true);
+    expect((await item(v.id)).physical).toBe(0n);
+    expect(await adjustmentMoves(v.id)).toHaveLength(10);
+  });
+
+  it("10 × -0,3 pe 1,0 → 3 reușesc (rămân 0,1); ajustările nu au pas de vânzare, dar nici nu coboară sub zero", async () => {
+    const { variants } = await addStockProduct(db, ctx, {
+      step: "0,3",
+      variants: [{ physical: "1" }],
+    });
+    const v = variants[0]!;
+    const { ok } = await race(10, () => adjust(v.id, "-0,3"));
+    expect(ok).toHaveLength(3);
+    expect((await item(v.id)).physical).toBe(q("0,1"));
+  });
+
+  it("recepții și vânzări amestecate: stocul final = recepțiile − vânzările reușite, suma registrului = stocul", async () => {
+    const { variants } = await addStockProduct(db, ctx, { variants: [{ physical: "0" }] });
+    const v = variants[0]!;
+    const { ok, failed } = await race(30, (i) =>
+      i % 3 === 0 ? adjust(v.id, "+2", "receipt") : adjust(v.id, "-1", "sale_in_store"),
+    );
+    const receipts = ok.filter((r) => r.delta > 0n).length;
+    const sales = ok.filter((r) => r.delta < 0n).length;
+    expect(receipts).toBe(10);
+    expect(failed.every((f) => f.code === "STOCK_ADJUSTMENT_BELOW_ZERO")).toBe(true);
+    const row = await item(v.id);
+    expect(row.physical).toBe(q(String(receipts * 2 - sales)));
+    const moves = await adjustmentMoves(v.id);
+    expect(moves).toHaveLength(ok.length);
+    expect(moves.reduce((sum, m) => sum + m.deltaPhysical, 0n)).toBe(row.physical);
+    await expectConsistent(v.id);
+  });
+
+  it("ajustări ↔ rezervări pe același rând: contoare coerente, nimic negativ, fiecare reușită are urma ei", async () => {
+    for (let round = 0; round < 8; round++) {
+      const { variants } = await addStockProduct(db, ctx, { variants: [{ physical: "3" }] });
+      const v = variants[0]!;
+      const { ok } = await race(8, async (i) =>
+        i % 2 === 0
+          ? await service.reserve(ref(`r${round}-${i}`), [line(v.id, "1")], soon())
+          : await adjust(v.id, "-1", "sale_in_store"),
+      );
+      const reserved = ok.filter((r) => Array.isArray(r)).length;
+      const adjusted = ok.length - reserved;
+      const row = await item(v.id);
+      expect(row.physical, `runda ${round}`).toBe(q(String(3 - adjusted)));
+      expect(row.reserved, `runda ${round}`).toBe(q(String(reserved)));
+      expect(await adjustmentMoves(v.id), `runda ${round}`).toHaveLength(adjusted);
+      expect(row.physical >= 0n && row.reserved >= 0n).toBe(true);
+      await expectConsistent(v.id);
+    }
+  });
+
+  it("ajustare ↔ poză, cu ora efectivă DUPĂ poză: în orice ordine, rezultatul e același (10 − 1 = 9)", async () => {
+    for (let round = 0; round < 12; round++) {
+      const { variants } = await addStockProduct(db, ctx, { variants: [{ physical: "10" }] });
+      const v = variants[0]!;
+      const takenAt = new Date(Date.now() - 10 * 60_000);
+      const snapshotId = (
+        await db.stockSnapshot.create({
+          data: { warehouseId: ctx.warehouseId, takenAt, source: "import" },
+        })
+      ).id;
+      ctx.snapshotIds.push(snapshotId);
+      const results = await Promise.all([
+        service.applySnapshot({
+          variantId: v.id,
+          warehouseId: ctx.warehouseId,
+          snapshotId,
+          quantity: q("10"),
+          takenAt,
+          safetyWindowMinutes: 30,
+        }),
+        adjust(v.id, "-1", "sale_in_store", new Date()),
+      ]);
+      expect(results[0]).toMatchObject({ applied: true });
+      expect((await item(v.id)).physical, `runda ${round}`).toBe(q("9"));
+      await expectConsistent(v.id);
+    }
+  });
+
+  it("ajustare ↔ poză, cu ora efectivă ÎNAINTEA pozei: rezultatul urmează ordinea reală (avertisment ⇔ poza a fost prima)", async () => {
+    const outcomes = new Set<string>();
+    for (let round = 0; round < 12; round++) {
+      const { variants } = await addStockProduct(db, ctx, { variants: [{ physical: "10" }] });
+      const v = variants[0]!;
+      const takenAt = new Date(Date.now() - 5 * 60_000);
+      const snapshotId = (
+        await db.stockSnapshot.create({
+          data: { warehouseId: ctx.warehouseId, takenAt, source: "import" },
+        })
+      ).id;
+      ctx.snapshotIds.push(snapshotId);
+      const [, adjustment] = await Promise.all([
+        service.applySnapshot({
+          variantId: v.id,
+          warehouseId: ctx.warehouseId,
+          snapshotId,
+          quantity: q("10"),
+          takenAt,
+          safetyWindowMinutes: 30,
+        }),
+        adjust(v.id, "-1", "sale_in_store", new Date(takenAt.getTime() - 60_000)),
+      ]);
+      const physical = (await item(v.id)).physical;
+      if (adjustment.warnings.includes("effective_before_snapshot")) {
+        // poza a fost prima: ajustarea scade acum, peste o poză care o conține (risc acceptat)
+        expect(physical, `runda ${round}`).toBe(q("9"));
+        outcomes.add("poza-prima");
+      } else {
+        // ajustarea a fost prima: poza o înlocuiește
+        expect(physical, `runda ${round}`).toBe(q("10"));
+        outcomes.add("ajustarea-prima");
+      }
+      await expectConsistent(v.id);
+    }
+    expect(outcomes.size).toBeGreaterThan(0);
+  });
+});

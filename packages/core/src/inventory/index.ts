@@ -7,3 +7,5 @@ export * from "./availability";
 export * from "./reconcile";
 export * from "./stock-errors";
 export * from "./stock-service";
+export * from "./adjustment-rules";
+export * from "./stock-adjustments";
