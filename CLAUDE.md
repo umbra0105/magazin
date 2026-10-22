@@ -121,6 +121,10 @@ există `tenantId`. În schimb:
   exprimă în pași; restul nevandabil se vede doar în admin. Regula de rotunjire (R1 pe
   unitate / R2 pe pas, PROVIZORIE până confirmă contabilul) aparține motorului de prețuri;
   în `packages/shared` stă doar primitiva exactă preț × cantitate, fără rotunjire.
+- **O unitate nulă pe produs sau variantă înseamnă EXACT «buc»** (unitatea implicită, fără zecimale, de sistem):
+  rezolvarea unității și comparațiile trec prin `effectiveMeasureUnit` / `sameMeasureUnit` (`inventory/units.ts`),
+  iar în formulare alegerea «buc» se salvează ca „fără unitate”. «buc» nu se dezactivează, nu își schimbă codul și
+  nu primește zecimale (validat în serviciu).
 - O singură locație vizibilă, «Depozit principal» (redenumibilă); modelul multi-depozit
   rămâne în bază, în spatele flag-ului `multiWarehouse`.
 
@@ -164,8 +168,10 @@ există `tenantId`. În schimb:
 ### Bani și taxe
 
 - Sumele sunt `int` în bani (minor units). `1999` = 19,99 RON. Niciodată `float`.
-- Folosește helperul `Money` din `packages/shared`. Rotunjirea se face pe linia de
-  comandă, o singură dată (vezi „Prețuri"), nu pe total.
+- Un helper `Money` nu există încă. Calculul exact al **cantităților** e în
+  `packages/shared/src/quantity.ts` (`Quantity`, fără rotunjire); motorul de prețuri și helperul de
+  bani vin în Faza 8 (până atunci sumele sunt `int` în bani, iar TVA se extrage cu `vat.ts`).
+  Rotunjirea se face pe linia de comandă, o singură dată (vezi „Prețuri"), nu pe total.
 - TVA-ul se stochează pe linia de comandă (rată + valoare) și nu se recalculează
   retroactiv. Cotele vin din setări, nu sunt hardcodate.
 

@@ -143,6 +143,7 @@ export const ro = {
       categories: "Categorii",
       brands: "Branduri",
       attributes: "Atribute",
+      measureUnits: "Unități de măsură",
       partsDiagrams: "Fișe explodate",
     },
     userMenu: {
@@ -516,6 +517,96 @@ export const ro = {
           "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",
       },
     },
+    measureUnits: {
+      title: "Unități de măsură",
+      description:
+        "Ce măsoară prețul și stocul produselor (bucată, metru, kilogram, litru …) și câte zecimale are voie cantitatea. Numele din SmartBill se folosește la importul stocului.",
+      readOnly: "Poți vedea unitățile, dar nu le poți modifica.",
+      defaultNote:
+        "«buc» este unitatea implicită: un produs fără unitate aleasă se vinde la bucată. Nu poate fi dezactivată, nu își schimbă codul și rămâne fără zecimale.",
+      create: "Unitate nouă",
+      empty: "Nu există nicio unitate de măsură.",
+      listLabel: "Lista unităților de măsură",
+      columns: {
+        name: "Nume",
+        code: "Cod",
+        symbol: "Simbol",
+        decimals: "Zecimale",
+        smartbill: "Nume în SmartBill",
+        usage: "Folosită de",
+        status: "Stare",
+        actions: "Acțiuni",
+      },
+      decimalsValue: (n: number) =>
+        n === 0 ? "fără zecimale" : n === 1 ? "1 zecimală" : `${n} zecimale`,
+      usage: (products: number, variants: number) =>
+        products + variants === 0
+          ? "—"
+          : [
+              products > 0 ? (products === 1 ? "1 produs" : `${products} produse`) : null,
+              variants > 0 ? (variants === 1 ? "1 variantă" : `${variants} variante`) : null,
+            ]
+              .filter(Boolean)
+              .join(", "),
+      noSmartbill: "—",
+      status: { active: "Activă", inactive: "Dezactivată", default: "Implicită" },
+      actions: {
+        edit: (name: string) => `Editează unitatea ${name}`,
+        editLabel: "Editează",
+        deactivate: (name: string) => `Dezactivează unitatea ${name}`,
+        deactivateLabel: "Dezactivează",
+        activate: (name: string) => `Activează unitatea ${name}`,
+        activateLabel: "Activează",
+      },
+      form: {
+        createTitle: "Unitate nouă",
+        editTitle: (name: string) => `Editează «${name}»`,
+        code: "Cod",
+        codeHelp:
+          "Doar litere mici, cifre și «_», începe cu o literă (ex. palet, ml). Nu se mai schimbă după creare.",
+        codeLocked: "Codul nu se mai schimbă după creare.",
+        name: "Nume",
+        symbol: "Simbol afișat lângă cantitate",
+        symbolHelp: "Ex. mp, kg, buc: apare în coș și pe pagina produsului (82,5 mp).",
+        decimals: "Zecimale permise la cantitate",
+        decimalsHelp:
+          "Cantitățile și pasul de vânzare pot avea cel mult atâtea zecimale. Zecimalele nu pot scădea sub ce folosesc deja produsele sau stocul.",
+        decimalsLocked: "Unitatea implicită rămâne fără zecimale.",
+        decimalsOption: (n: number) => (n === 0 ? "0 — numere întregi" : String(n)),
+        smartbillName: "Numele în SmartBill",
+        smartbillHelp: "Cum se numește unitatea în SmartBill (opțional, îl adaugi când îl știi).",
+        save: "Salvează",
+        saving: "Se salvează…",
+        cancel: "Anulează",
+        saved: "Salvat.",
+        close: "Închide",
+      },
+      live: {
+        created: (name: string) => `Unitatea ${name} a fost creată.`,
+        updated: (name: string) => `Unitatea ${name} a fost salvată.`,
+        activated: (name: string) => `Unitatea ${name} a fost activată.`,
+        deactivated: (name: string) => `Unitatea ${name} a fost dezactivată.`,
+      },
+      errors: {
+        generic: "Acțiunea a eșuat. Încearcă din nou.",
+        codeRequired: "Codul e obligatoriu.",
+        codeInvalid:
+          "Codul poate conține doar litere mici, cifre și «_», începe cu o literă și are cel mult 30 de caractere.",
+        nameRequired: "Numele e obligatoriu.",
+        symbolRequired: "Simbolul e obligatoriu.",
+        MEASURE_UNIT_NOT_FOUND: "Unitatea nu mai există. Reîncarcă pagina.",
+        MEASURE_UNIT_CODE_CONFLICT: "Codul e deja folosit de altă unitate.",
+        MEASURE_UNIT_CODE_IMMUTABLE: "Codul unei unități nu se schimbă după creare.",
+        MEASURE_UNIT_DEFAULT_PROTECTED:
+          "«buc» este unitatea implicită: nu poate fi dezactivată, nu i se schimbă codul și rămâne fără zecimale.",
+        MEASURE_UNIT_DECIMALS_IN_USE:
+          "Zecimalele nu pot scădea: produse sau stoc folosesc deja mai multe.",
+        VALIDATION_ERROR: "Datele introduse nu sunt valide.",
+        AUTH_FORBIDDEN: "Nu ai permisiunea pentru această acțiune.",
+        AUDIT_WRITE_FAILED:
+          "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",
+      },
+    },
     products: {
       title: "Produse",
       description: "Lista produselor magazinului: caută, filtrează și modifică direct din listă.",
@@ -732,6 +823,7 @@ export const ro = {
         tabs: {
           general: "General",
           pricing: "Prețuri",
+          sale: "Unitate și pas",
           stock: "Stoc",
           categories: "Categorii",
           media: "Media",
@@ -759,6 +851,44 @@ export const ro = {
           required: "obligatoriu",
           generic: "Salvarea a eșuat. Încearcă din nou.",
           none: "— Niciuna —",
+        },
+        sale: {
+          heading: "Unitate și pas de vânzare",
+          intro:
+            "Alege în ce se vinde produsul. Cantitatea comandată este mereu un multiplu exact al pasului de vânzare.",
+          unit: "Unitate de măsură",
+          unitHelp:
+            "Fără alegere, produsul se vinde la bucată. Unitățile se gestionează în «Unități de măsură».",
+          unitDefault: (name: string, symbol: string) => `${name} (${symbol}) — implicită`,
+          unitOption: (name: string, symbol: string) => `${name} (${symbol})`,
+          unitInactive: "dezactivată",
+          priceBasis: "Prețul introdus la variante este",
+          basisUnit: (symbol: string) => `pe unitate (lei / ${symbol})`,
+          basisStep: "pe pas (prețul unui ambalaj întreg)",
+          basisHelp:
+            "Ex.: linerul la 87,35 lei/mp e «pe unitate»; sacul de 25 kg la 120 lei e «pe pas».",
+          step: "Pas de vânzare",
+          stepHelp: (symbol: string, decimals: number) =>
+            `În ${symbol}, cu cel mult ${decimals} ${decimals === 1 ? "zecimală" : "zecimale"} (ex. 2,03). Gol = o unitate.`,
+          minSteps: "Cantitate minimă (în pași)",
+          minHelp: "Gol = un pas.",
+          showStepPrice:
+            "Arată și prețul unui pas pe pagina produsului (ex. «Rola de 41,25 mp ≈ …»)",
+          preview: "Se poate comanda",
+          previewList: (values: string[], symbol: string) => `${values.join(" · ")} … ${symbol}`,
+          previewMin: (quantity: string, symbol: string) => `Minimum: ${quantity} ${symbol}`,
+          errors: {
+            stepInvalid: "Introdu un număr valid, cu virgulă (ex. 2,03).",
+            stepDecimals: (n: number) =>
+              n === 0
+                ? "Unitatea aleasă nu admite zecimale: introdu un număr întreg."
+                : `Pasul poate avea cel mult ${n} ${n === 1 ? "zecimală" : "zecimale"} la această unitate.`,
+            stepPositive: "Pasul trebuie să fie mai mare decât zero.",
+            stepTooBig: "Pasul este prea mare (cel mult 214.748 de unități).",
+            minInvalid: "Introdu un număr întreg de pași, cel puțin 1.",
+            ratioInvalid: "Introdu raportul ca număr pozitiv, cu cel mult 4 zecimale (ex. 41,25).",
+            ratioMissing: "Introdu raportul: câte unități ale magazinului are o unitate SmartBill.",
+          },
         },
         general: {
           title: "Titlu",
@@ -1056,7 +1186,28 @@ export const ro = {
             price: "Preț (lei, cu TVA)",
             sale: "Preț redus",
             warranty: "Garanție (luni)",
+            step: "Pas de vânzare",
             actions: "Acțiuni",
+          },
+          stepInherited: "de la produs",
+          stepField: "Pas de vânzare",
+          stepFieldHelp: (inherited: string) =>
+            `Gol = moștenește de la produs (${inherited}). Se scrie cu virgulă.`,
+          minField: "Minim (pași)",
+          minFieldHelp: "Gol = moștenește de la produs.",
+          smartbill: {
+            heading: "Stocul în SmartBill",
+            mode: "Cum ține SmartBill stocul",
+            modes: {
+              none: "Nesetat (aceeași unitate)",
+              same_unit: "În aceeași unitate",
+              steps: "1 bucată SmartBill = 1 pas",
+              ratio: "Cu raport",
+            },
+            unitName: "Numele unității în SmartBill",
+            ratio: (symbol: string) => `O unitate SmartBill = … ${symbol}`,
+            ratioHelp:
+              "Câte unități ale magazinului are o unitate SmartBill (ex. rola de 41,25 mp). Orice comandă trebuie să se convertească exact.",
           },
           noOptions: "Fără opțiuni",
           defaultVariant: "implicită",

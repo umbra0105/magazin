@@ -57,6 +57,11 @@ const FIELD_LABELS: Readonly<Record<string, string>> = {
   brandId: "brand",
   categories: "categorii",
   excludeFromGroupDiscount: "excludere de la discountul de grup",
+  measureUnitId: "unitatea de măsură",
+  priceBasis: "baza prețului",
+  saleStep: "pasul de vânzare",
+  minSteps: "minimul comandat",
+  showStepPrice: "afișarea prețului pasului",
 };
 
 export type ProductUpdatePayload = Readonly<Record<string, unknown>>;

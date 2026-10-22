@@ -317,6 +317,11 @@ export function assertSaleStep(value: number | bigint, unitDecimals = QUANTITY_S
   return step as Quantity;
 }
 
+/** Pasul validat ca număr întreg pentru coloana `INT` (cererile către server îl trimit așa); exact, fără rotunjire. */
+export function saleStepToInt(step: bigint): number {
+  return Number.parseInt(assertSaleStep(step).toString(), 10);
+}
+
 function requirePositiveStep(step: Quantity): void {
   if (typeof step !== "bigint" || step <= 0n) {
     fail("invalid_argument", "Pasul de vânzare trebuie să fie pozitiv.");

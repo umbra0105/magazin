@@ -15,6 +15,7 @@ import {
   getPartsDiagramService,
   getProductService,
 } from "@/lib/catalog";
+import { getMeasureUnitService } from "@/lib/inventory";
 import { getProductDocumentsService } from "@/lib/product-documents";
 import { getFeatureFlags, getSettings } from "@/lib/services";
 import { formatZonedLocal } from "@/lib/zoned-time";
@@ -29,6 +30,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 const TAB_IDS = [
   "general",
   "preturi",
+  "vanzare",
   "variante",
   "stoc",
   "categorii",
@@ -123,6 +125,7 @@ export default async function ProductEditorPage({
     inventory,
     catalog,
     documentSettings,
+    measureUnits,
   ] = await Promise.all([
     assignments.getCategories(subject, id),
     assignments.listMedia(subject, id),
@@ -137,6 +140,7 @@ export default async function ProductEditorPage({
     getSettings().getGroup("inventory"),
     getSettings().getGroup("catalog"),
     getSettings().getGroup("documents"),
+    getMeasureUnitService().list(subject),
   ]);
 
   const nodes: CategoryNode[] = categoryRows.map((c) => ({
@@ -171,6 +175,11 @@ export default async function ProductEditorPage({
     isDefault: v.isDefault,
     weightGrams: v.weightGrams,
     manufacturerPartNumber: v.manufacturerPartNumber,
+    saleStep: v.saleStep,
+    minSteps: v.minSteps,
+    smartbillMode: v.smartbillMode,
+    smartbillUnitName: v.smartbillUnitName,
+    smartbillRatio: v.smartbillRatio,
     label: v.selections.map((s) => `${s.option}: ${s.value}`).join(", "),
   }));
 
@@ -212,6 +221,11 @@ export default async function ProductEditorPage({
           excludeFromGroupDiscount: product.excludeFromGroupDiscount,
           manageStock: product.manageStock,
           stockStatus: product.stockStatus,
+          measureUnitId: product.measureUnitId,
+          priceBasis: product.priceBasis,
+          saleStep: product.saleStep,
+          minSteps: product.minSteps,
+          showStepPrice: product.showStepPrice,
           seoTitle: product.seoTitle,
           seoDescription: product.seoDescription,
           energyClass: product.energyClass,
@@ -235,6 +249,14 @@ export default async function ProductEditorPage({
         spareParts={spareParts}
         documentMaxMb={Math.max(1, Math.floor(documentSettings.maxUploadBytes / (1024 * 1024)))}
         variants={editorVariants}
+        units={measureUnits.map((u) => ({
+          id: u.id,
+          code: u.code,
+          name: u.name,
+          symbol: u.symbol,
+          decimals: u.decimals,
+          isActive: u.isActive,
+        }))}
         variantOptions={variantData.options}
         attributes={attributeEntries.map((entry) => ({
           id: entry.attribute.id,

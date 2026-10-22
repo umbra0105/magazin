@@ -14,6 +14,7 @@ import type {
   ProductFieldsData,
   ProductRecord,
   ProductStore,
+  SaleUnitRecord,
   SlugOwner,
   VariantFieldsData,
   VariantRecord,
@@ -64,6 +65,11 @@ class MemoryStore implements ProductStore {
       stockStatus: "instock",
       allowBackorder: false,
       expectedRestockDate: null,
+      measureUnitId: null,
+      priceBasis: "unit",
+      saleStep: null,
+      minSteps: null,
+      showStepPrice: false,
       excludeFromGroupDiscount: false,
       energyClass: null,
       eprelUrl: null,
@@ -99,12 +105,31 @@ class MemoryStore implements ProductStore {
       manufacturerName: null,
       manageStock: null,
       stockStatus: null,
+      measureUnitId: null,
+      priceBasis: null,
+      saleStep: null,
+      minSteps: null,
+      smartbillMode: null,
+      smartbillUnitName: null,
+      smartbillRatio: null,
       position: 0,
       isDefault: false,
       ...over,
     };
     this.variants.set(record.id, record);
     return record;
+  }
+
+  async getMeasureUnit(): Promise<SaleUnitRecord | null> {
+    return null;
+  }
+
+  async getDefaultMeasureUnit(): Promise<SaleUnitRecord | null> {
+    return null;
+  }
+
+  async findStockPrecisionMisfits(): Promise<string[]> {
+    return [];
   }
 
   async findSlugOwner(slug: string, excludeProductId?: string): Promise<SlugOwner | null> {

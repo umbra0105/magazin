@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "@ecom/db";
+import { DEFAULT_MEASURE_UNIT_CODE } from "../inventory/constants";
 import type { OptionInput } from "./variant-generator";
 import { combinationKey } from "./variant-generator";
 
@@ -23,6 +24,15 @@ export interface ProductRecord {
   stockStatus: string;
   allowBackorder: boolean;
   expectedRestockDate: Date | null;
+  /** Unitatea de măsură a produsului; nul = «buc» (vezi `effectiveMeasureUnit`). */
+  measureUnitId: string | null;
+  /** «unit» (prețul e pe unitate) | «step» (prețul e pe pas) */
+  priceBasis: string;
+  /** Pasul de vânzare în zecimi de miime; nul = o unitate. */
+  saleStep: number | null;
+  /** Minimul comandat, în pași; nul = 1. */
+  minSteps: number | null;
+  showStepPrice: boolean;
   excludeFromGroupDiscount: boolean;
   energyClass: string | null;
   eprelUrl: string | null;
@@ -54,8 +64,26 @@ export interface VariantRecord {
   manufacturerName: string | null;
   manageStock: boolean | null;
   stockStatus: string | null;
+  /** Unitate, bază de preț, pas și minim proprii; nul = moștenește de la produs. */
+  measureUnitId: string | null;
+  priceBasis: string | null;
+  saleStep: number | null;
+  minSteps: number | null;
+  /** Cum ține SmartBill stocul: «same_unit» | «steps» | «ratio»; nul = aceeași unitate. */
+  smartbillMode: string | null;
+  smartbillUnitName: string | null;
+  smartbillRatio: number | null;
   position: number;
   isDefault: boolean;
+}
+
+/** O unitate de măsură, cât trebuie validării de vânzare. */
+export interface SaleUnitRecord {
+  id: string;
+  code: string;
+  name: string;
+  decimals: number;
+  isActive: boolean;
 }
 
 /** Varianta cu alegerile ei de opțiuni, în ordinea opțiunilor produsului. */
@@ -171,6 +199,15 @@ export interface ProductStore {
   ): Promise<{ id: string; slug: string; deletedAt: Date | null; variants: VariantRecord[] }[]>;
   categoryExists(id: string): Promise<boolean>;
   brandExists(id: string): Promise<boolean>;
+  /** Unitatea de măsură cu acest id (sau `null`). */
+  getMeasureUnit(id: string): Promise<SaleUnitRecord | null>;
+  /** Unitatea implicită, «buc» (cea la care duce o unitate nulă); `null` dacă seed-ul nu a rulat. */
+  getDefaultMeasureUnit(): Promise<SaleUnitRecord | null>;
+  /**
+   * Variantele (din `variantIds`) ale căror cantități de stoc (fizic, angajat, rezervat, tampon) NU sunt multipli ai
+   * `granularity` (10^(4 − zecimale)), adică au mai multe zecimale decât permite o unitate.
+   */
+  findStockPrecisionMisfits(variantIds: readonly string[], granularity: bigint): Promise<string[]>;
   /**
    * Pune garanția implicită pe variantele produselor date care nu au una (`NULL`); cele cu valoare
    * proprie rămân neatinse. Întoarce câte variante au fost actualizate.
@@ -201,6 +238,11 @@ const productSelect = {
   stockStatus: true,
   allowBackorder: true,
   expectedRestockDate: true,
+  measureUnitId: true,
+  priceBasis: true,
+  saleStep: true,
+  minSteps: true,
+  showStepPrice: true,
   excludeFromGroupDiscount: true,
   energyClass: true,
   eprelUrl: true,
@@ -232,9 +274,24 @@ const variantSelect = {
   manufacturerName: true,
   manageStock: true,
   stockStatus: true,
+  measureUnitId: true,
+  priceBasis: true,
+  saleStep: true,
+  minSteps: true,
+  smartbillMode: true,
+  smartbillUnitName: true,
+  smartbillRatio: true,
   position: true,
   isDefault: true,
 } satisfies Prisma.ProductVariantSelect;
+
+const unitSelect = {
+  id: true,
+  code: true,
+  name: true,
+  decimals: true,
+  isActive: true,
+} satisfies Prisma.MeasureUnitSelect;
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -493,6 +550,36 @@ export function createPrismaProductStore(db: Db): ProductStore {
 
     async brandExists(id) {
       return (await db.brand.count({ where: { id } })) > 0;
+    },
+
+    getMeasureUnit: (id) => db.measureUnit.findUnique({ where: { id }, select: unitSelect }),
+
+    getDefaultMeasureUnit: () =>
+      db.measureUnit.findUnique({ where: { code: DEFAULT_MEASURE_UNIT_CODE }, select: unitSelect }),
+
+    async findStockPrecisionMisfits(variantIds, granularity) {
+      if (variantIds.length === 0 || granularity <= 1n) return [];
+      const rows = await db.inventoryItem.findMany({
+        where: { variantId: { in: [...variantIds] } },
+        select: {
+          variantId: true,
+          physical: true,
+          committed: true,
+          reserved: true,
+          safetyBuffer: true,
+        },
+      });
+      const misfits = new Set<string>();
+      for (const row of rows) {
+        if (
+          [row.physical, row.committed, row.reserved, row.safetyBuffer].some(
+            (value) => value % granularity !== 0n,
+          )
+        ) {
+          misfits.add(row.variantId);
+        }
+      }
+      return [...misfits];
     },
 
     async bulkApply(command) {

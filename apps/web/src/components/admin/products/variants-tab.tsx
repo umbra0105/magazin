@@ -3,7 +3,8 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
-import { Badge, Button, Dialog, Input } from "@ecom/ui";
+import { formatQuantity, quantityFromTicks } from "@ecom/shared/quantity";
+import { Badge, Button, Dialog, Input, Select } from "@ecom/ui";
 import {
   deleteProductVariant,
   generateProductVariants,
@@ -14,9 +15,15 @@ import { formatMoney, formatMoneyInput, parseMoneyInput } from "@/lib/money-inpu
 import type { ProductActionFailure } from "@/lib/product-action-support";
 import { getMessages } from "@/messages";
 import { describeFailure } from "./editor-support";
-import type { EditorCaps, EditorOption, EditorVariant } from "./editor-types";
+import type { EditorCaps, EditorOption, EditorProduct, EditorVariant } from "./editor-types";
 import { Field } from "./editor-ui";
 import { buildVariantPatch, validatePricing, type PricingValues } from "./pricing-form";
+import {
+  buildVariantSalePatch,
+  formatStepInput,
+  type SaleUnit,
+  type VariantSaleValues,
+} from "./sale-form";
 
 const m = getMessages().admin.products;
 const e = m.editor;
@@ -26,6 +33,20 @@ interface VariantsContext {
   currency: string;
   locale: string;
   timezone: string;
+}
+
+/** Produsul și unitățile, pentru pasul efectiv al fiecărei variante (propriu sau moștenit de la produs). */
+interface SaleContext {
+  product: EditorProduct;
+  units: readonly SaleUnit[];
+}
+
+/** Unitatea produsului (nulă = «buc», 0 zecimale): variantele o moștenesc. */
+function productUnit(sale: SaleContext): { symbol: string; decimals: number } {
+  const own = sale.units.find((u) => u.id === sale.product.measureUnitId);
+  const fallback = sale.units.find((u) => u.code === "buc");
+  const unit = own ?? fallback;
+  return { symbol: unit?.symbol ?? "buc", decimals: unit?.decimals ?? 0 };
 }
 
 interface PlanView {
@@ -52,12 +73,14 @@ export function VariantsTab({
   productId,
   variants,
   options,
+  sale,
   caps,
   context,
 }: {
   productId: string;
   variants: readonly EditorVariant[];
   options: readonly EditorOption[];
+  sale: SaleContext;
   caps: EditorCaps;
   context: VariantsContext;
 }) {
@@ -100,6 +123,9 @@ export function VariantsTab({
                 <th scope="col" className="p-3 font-medium">
                   {v.columns.warranty}
                 </th>
+                <th scope="col" className="p-3 font-medium">
+                  {v.columns.step}
+                </th>
                 {editable && (
                   <th scope="col" className="p-3 font-medium">
                     {v.columns.actions}
@@ -113,8 +139,9 @@ export function VariantsTab({
                   <EditRow
                     key={variant.id}
                     variant={variant}
-                    colSpan={editable ? 7 : 6}
+                    colSpan={editable ? 8 : 7}
                     context={context}
+                    sale={sale}
                     onCancel={() => setEditingId(null)}
                     onSaved={() => {
                       setStatus(v.saved(variant.sku));
@@ -145,6 +172,9 @@ export function VariantsTab({
                         : formatMoney(variant.salePrice, context.currency, context.locale)}
                     </td>
                     <td className="p-3">{variant.warrantyMonths ?? "—"}</td>
+                    <td className="p-3" data-variant-step={variant.sku}>
+                      <StepCell variant={variant} sale={sale} />
+                    </td>
                     {editable && (
                       <td className="p-3">
                         <div className="flex gap-1">
@@ -206,16 +236,31 @@ export function VariantsTab({
   );
 }
 
+/** Pasul efectiv al variantei: propriu, sau moștenit de la produs (cu mențiune), sau o unitate. */
+function StepCell({ variant, sale }: { variant: EditorVariant; sale: SaleContext }) {
+  const unit = productUnit(sale);
+  const own = variant.saleStep !== null;
+  const ticks = variant.saleStep ?? sale.product.saleStep ?? 10_000;
+  return (
+    <span className="flex flex-wrap items-baseline gap-1">
+      <span>{`${formatQuantity(quantityFromTicks(ticks))} ${unit.symbol}`}</span>
+      {!own && <span className="text-xs text-muted-foreground">({v.stepInherited})</span>}
+    </span>
+  );
+}
+
 function EditRow({
   variant,
   colSpan,
   context,
+  sale,
   onCancel,
   onSaved,
 }: {
   variant: EditorVariant;
   colSpan: number;
   context: VariantsContext;
+  sale: SaleContext;
   onCancel: () => void;
   onSaved: () => void;
 }) {
@@ -232,6 +277,18 @@ function EditRow({
     manufacturerPartNumber: variant.manufacturerPartNumber ?? "",
   };
   const [values, setValues] = useState<PricingValues>(initial);
+  const unit = productUnit(sale);
+  const initialSale: VariantSaleValues = {
+    saleStep: formatStepInput(variant.saleStep),
+    minSteps: variant.minSteps === null ? "" : String(variant.minSteps),
+    smartbillMode: variant.smartbillMode ?? "",
+    smartbillUnitName: variant.smartbillUnitName ?? "",
+    smartbillRatio: variant.smartbillRatio === null ? "" : formatStepInput(variant.smartbillRatio),
+  };
+  const [saleValues, setSaleValues] = useState<VariantSaleValues>(initialSale);
+  const setSaleField = (key: keyof VariantSaleValues, value: string) =>
+    setSaleValues((c) => ({ ...c, [key]: value }));
+  const inheritedStep = formatStepInput(sale.product.saleStep) || "1";
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [problem, setProblem] = useState<string | null>(null);
   const set = (key: keyof PricingValues, value: string) =>
@@ -242,14 +299,19 @@ function EditRow({
     event.preventDefault();
     setProblem(null);
     const changed = Object.keys(initial).filter((k) => values[k] !== initial[k]);
-    if (changed.length === 0) {
+    const changedSale = Object.keys(initialSale).filter((k) => saleValues[k] !== initialSale[k]);
+    if (changed.length === 0 && changedSale.length === 0) {
       onCancel();
       return;
     }
-    const found = validatePricing(values, changed, {
-      ...e.pricing,
-      weightInvalid: v.weightInvalid,
-    });
+    const salePatch = buildVariantSalePatch(saleValues, changedSale, unit.decimals, e.sale.errors);
+    const found = {
+      ...validatePricing(values, changed, {
+        ...e.pricing,
+        weightInvalid: v.weightInvalid,
+      }),
+      ...(salePatch.ok ? {} : salePatch.errors),
+    };
     setErrors(found);
     if (Object.keys(found).length > 0) {
       setProblem(e.common.formError);
@@ -262,7 +324,10 @@ function EditRow({
       try {
         const result = await saveVariantFields({
           variantId: variant.id,
-          patch: buildVariantPatch(values, changed),
+          patch: {
+            ...buildVariantPatch(values, changed),
+            ...(salePatch.ok ? salePatch.patch : {}),
+          },
         });
         if (result.ok) {
           onSaved();
@@ -388,6 +453,98 @@ function EditRow({
               )}
             </Field>
           </div>
+          <fieldset className="flex flex-col gap-4 rounded-md border border-border p-3">
+            <legend className="px-1 text-sm font-medium">{e.sale.heading}</legend>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field
+                id={id("saleStep")}
+                label={v.stepField}
+                help={v.stepFieldHelp(`${inheritedStep} ${unit.symbol}`)}
+                error={errors["saleStep"]}
+              >
+                {(control) => (
+                  <Input
+                    {...control}
+                    value={saleValues.saleStep}
+                    onChange={(ev) => setSaleField("saleStep", ev.target.value)}
+                    inputMode="decimal"
+                    autoComplete="off"
+                  />
+                )}
+              </Field>
+              <Field
+                id={id("minSteps")}
+                label={v.minField}
+                help={v.minFieldHelp}
+                error={errors["minSteps"]}
+              >
+                {(control) => (
+                  <Input
+                    {...control}
+                    value={saleValues.minSteps}
+                    onChange={(ev) => setSaleField("minSteps", ev.target.value)}
+                    inputMode="numeric"
+                    autoComplete="off"
+                  />
+                )}
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field
+                id={id("smartbillMode")}
+                label={v.smartbill.mode}
+                error={errors["smartbillMode"]}
+              >
+                {(control) => (
+                  <Select
+                    {...control}
+                    value={saleValues.smartbillMode}
+                    onChange={(ev) => setSaleField("smartbillMode", ev.target.value)}
+                  >
+                    <option value="">{v.smartbill.modes.none}</option>
+                    <option value="same_unit">{v.smartbill.modes.same_unit}</option>
+                    <option value="steps">{v.smartbill.modes.steps}</option>
+                    <option value="ratio">{v.smartbill.modes.ratio}</option>
+                  </Select>
+                )}
+              </Field>
+              {saleValues.smartbillMode !== "" && (
+                <Field
+                  id={id("smartbillUnitName")}
+                  label={v.smartbill.unitName}
+                  error={errors["smartbillUnitName"]}
+                >
+                  {(control) => (
+                    <Input
+                      {...control}
+                      value={saleValues.smartbillUnitName}
+                      onChange={(ev) => setSaleField("smartbillUnitName", ev.target.value)}
+                      maxLength={40}
+                      autoComplete="off"
+                    />
+                  )}
+                </Field>
+              )}
+              {saleValues.smartbillMode === "ratio" && (
+                <Field
+                  id={id("smartbillRatio")}
+                  label={v.smartbill.ratio(unit.symbol)}
+                  help={v.smartbill.ratioHelp}
+                  error={errors["smartbillRatio"]}
+                >
+                  {(control) => (
+                    <Input
+                      {...control}
+                      value={saleValues.smartbillRatio}
+                      onChange={(ev) => setSaleField("smartbillRatio", ev.target.value)}
+                      inputMode="decimal"
+                      autoComplete="off"
+                    />
+                  )}
+                </Field>
+              )}
+            </div>
+          </fieldset>
           {problem && (
             <p
               role="alert"

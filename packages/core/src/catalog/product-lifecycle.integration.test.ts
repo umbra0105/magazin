@@ -82,6 +82,11 @@ async function fullProduct(tx: TestTx) {
   });
   const image = await media(tx);
   const productImage = await media(tx);
+  const mpUnit = await tx.measureUnit.upsert({
+    where: { code: "mp" },
+    create: { code: "mp", name: "Metru pătrat", symbol: "mp", decimals: 4, isSystem: true },
+    update: {},
+  });
   const part = await tx.product.create({ data: { slug: `lc-part-${tag}`, title: "Piesă" } });
   const other = await tx.product.create({ data: { slug: `lc-other-${tag}`, title: "Alt produs" } });
 
@@ -106,6 +111,12 @@ async function fullProduct(tx: TestTx) {
       publishedAt: new Date("2026-01-01T00:00:00Z"),
       manageStock: true,
       stockStatus: "instock",
+      // configurarea de vânzare (D11): se copiază, ca o copie a mozaicului să rămână mozaic
+      measureUnitId: mpUnit.id,
+      priceBasis: "step",
+      saleStep: 20_300,
+      minSteps: 2,
+      showStepPrice: true,
     },
   });
   await tx.productCategory.create({
@@ -144,6 +155,11 @@ async function fullProduct(tx: TestTx) {
         manufacturerName: "Producător",
         position: index,
         isDefault: index === 0,
+        saleStep: index === 0 ? 412_500 : null,
+        minSteps: index === 0 ? 1 : null,
+        smartbillMode: index === 0 ? "ratio" : null,
+        smartbillRatio: index === 0 ? 412_500 : null,
+        smartbillUnitName: index === 0 ? "rolă" : null,
       },
     });
     await tx.variantOptionValue.create({
@@ -280,6 +296,12 @@ describe("duplicare pe baza reală", () => {
         gpsrManufacturerName: "Producător SRL",
         safetyWarnings: "Atenție",
         seoTitle: "SEO titlu",
+        // și configurarea de vânzare
+        measureUnitId: f.source.measureUnitId,
+        priceBasis: "step",
+        saleStep: 20_300,
+        minSteps: 2,
+        showStepPrice: true,
       });
       expect(copy.slug).not.toBe(f.source.slug);
       expect(copy.slug).toMatch(/copie/);
@@ -290,6 +312,19 @@ describe("duplicare pe baza reală", () => {
         orderBy: { position: "asc" },
       });
       expect(copied).toHaveLength(2);
+      // configurarea de vânzare a variantelor (pas, minim, conversie SmartBill) se copiază
+      expect(copied[0]).toMatchObject({
+        saleStep: 412_500,
+        minSteps: 1,
+        smartbillMode: "ratio",
+        smartbillRatio: 412_500,
+        smartbillUnitName: "rolă",
+      });
+      expect(copied[1]).toMatchObject({
+        saleStep: null,
+        smartbillMode: null,
+        smartbillRatio: null,
+      });
       for (const [index, variant] of copied.entries()) {
         const original = f.variants[index];
         expect(variant.id).not.toBe(original?.id);

@@ -28,6 +28,7 @@ import {
   parseQuantityDetailed,
   parseSignedDelta,
   quantityFromTicks,
+  saleStepToInt,
   remainderAfterSteps,
   splitScaledMoney,
   stepsIn,
@@ -359,6 +360,16 @@ describe("pas de vânzare: multipli EXACȚI", () => {
     expect(code(() => assertSaleStep(412_500, 1))).toBe("QUANTITY_INVALID_STEP");
     expect(code(() => assertSaleStep(1, 3))).toBe("QUANTITY_INVALID_STEP");
     expect(assertSaleStep(1, 4)).toBe(1n);
+  });
+
+  it("pasul către coloana INT: exact, doar în limita ei", () => {
+    expect(saleStepToInt(q("2,03"))).toBe(20_300);
+    expect(saleStepToInt(q("41,25"))).toBe(412_500);
+    expect(saleStepToInt(quantityFromTicks(MAX_SALE_STEP))).toBe(2_147_483_647);
+    expect(code(() => saleStepToInt(quantityFromTicks(MAX_SALE_STEP + 1n)))).toBe(
+      "QUANTITY_INVALID_STEP",
+    );
+    expect(code(() => saleStepToInt(0n as Quantity))).toBe("QUANTITY_INVALID_STEP");
   });
 
   it("minimul: implicit un pas; configurabil în pași", () => {

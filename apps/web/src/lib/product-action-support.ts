@@ -93,6 +93,11 @@ const DOMAIN_CODES = new Set([
   "IMPORT_FILE_CELL_TOO_LONG",
   "CATEGORY_NOT_FOUND",
   "BRAND_NOT_FOUND",
+  "MEASURE_UNIT_NOT_FOUND",
+  "MEASURE_UNIT_CODE_CONFLICT",
+  "MEASURE_UNIT_CODE_IMMUTABLE",
+  "MEASURE_UNIT_DEFAULT_PROTECTED",
+  "MEASURE_UNIT_DECIMALS_IN_USE",
   "VALIDATION_ERROR",
   "AUDIT_WRITE_FAILED",
   // limitele pe utilizator (pașii importului): mesajul e deja în română și se arată ca atare

@@ -1112,3 +1112,128 @@ export async function countE2eProductsBySku(skus: readonly string[]): Promise<nu
     return (result.rows[0]?.n as number) ?? 0;
   });
 }
+
+const trackedUnits = new Set<string>();
+
+/** Înregistrează o unitate de măsură creată prin interfață (cod `e2e_…`), ca să fie ștearsă la final. */
+export function trackE2eUnit(code: string): void {
+  trackedUnits.add(code);
+}
+
+/**
+ * Șterge unitățile de test create de acest worker. Produsele de test se șterg ÎNAINTE (o unitate folosită nu se șterge);
+ * unitățile de sistem nu se ating niciodată.
+ */
+export async function removeE2eUnits(): Promise<number> {
+  const codes = [...trackedUnits];
+  trackedUnits.clear();
+  if (codes.length === 0) return 0;
+  return withClient(async (db) => {
+    const result = await db.query(
+      `delete from measure_unit where code = any($1::text[]) and "isSystem" = false and code like 'e2e%'`,
+      [codes],
+    );
+    return result.rowCount ?? 0;
+  });
+}
+
+/** Unitatea de măsură cu codul dat, așa cum e în bază. */
+export async function readE2eUnit(code: string): Promise<{
+  name: string;
+  symbol: string;
+  decimals: number;
+  smartbillName: string | null;
+  isActive: boolean;
+  isSystem: boolean;
+} | null> {
+  return withClient(async (db) => {
+    const found = await db.query(
+      `select name, symbol, decimals, "smartbillName", "isActive", "isSystem" from measure_unit where code = $1`,
+      [code],
+    );
+    return (found.rows[0] as never) ?? null;
+  });
+}
+
+/** Configurarea de vânzare a unui produs și a variantelor lui, din bază (unitatea ca COD). */
+export async function readE2eProductSale(slug: string): Promise<{
+  unit: string | null;
+  priceBasis: string;
+  saleStep: number | null;
+  minSteps: number | null;
+  showStepPrice: boolean;
+  variants: Array<{
+    sku: string;
+    saleStep: number | null;
+    minSteps: number | null;
+    smartbillMode: string | null;
+    smartbillUnitName: string | null;
+    smartbillRatio: number | null;
+  }>;
+} | null> {
+  return withClient(async (db) => {
+    const found = await db.query(
+      `select p.id, u.code as unit, p."priceBasis", p."saleStep", p."minSteps", p."showStepPrice"
+       from product p left join measure_unit u on u.id = p."measureUnitId" where p.slug = $1`,
+      [slug],
+    );
+    const row = found.rows[0] as
+      | {
+          id: string;
+          unit: string | null;
+          priceBasis: string;
+          saleStep: number | null;
+          minSteps: number | null;
+          showStepPrice: boolean;
+        }
+      | undefined;
+    if (!row) return null;
+    const variants = await db.query(
+      `select sku, "saleStep", "minSteps", "smartbillMode", "smartbillUnitName", "smartbillRatio"
+       from product_variant where "productId" = $1 order by position, sku`,
+      [row.id],
+    );
+    return {
+      unit: row.unit,
+      priceBasis: row.priceBasis,
+      saleStep: row.saleStep,
+      minSteps: row.minSteps,
+      showStepPrice: row.showStepPrice,
+      variants: variants.rows as never,
+    };
+  });
+}
+
+/** Creează direct în bază o unitate de măsură de probă (cod `e2e_…`), ștearsă de `removeE2eUnits`. */
+export async function seedE2eUnit(input: {
+  code: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+}): Promise<void> {
+  trackedUnits.add(input.code);
+  await withClient(async (db) => {
+    await db.query(
+      `insert into measure_unit (id, code, name, symbol, decimals, "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $3, $4, 900, now())`,
+      [input.code, input.name, input.symbol, input.decimals],
+    );
+  });
+}
+
+/** Adaugă variante (SKU-uri date) unui produs de test, cu prețul primei variante. */
+export async function seedE2eVariants(slug: string, skus: readonly string[]): Promise<void> {
+  await withClient(async (db) => {
+    const found = await db.query(`select id from product where slug = $1`, [slug]);
+    const productId = found.rows[0]?.id as string | undefined;
+    if (!productId) throw new Error(`Produsul de probă ${slug} nu există`);
+    let position = 1;
+    for (const sku of skus) {
+      await db.query(
+        `insert into product_variant (id, "productId", sku, price, position, "isDefault", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, 10000, $3, false, now())`,
+        [productId, sku, position++],
+      );
+    }
+  });
+}

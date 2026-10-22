@@ -26,6 +26,8 @@ import { PricingTab } from "./pricing-tab";
 import { RelationsTab } from "./relations-tab";
 import { SeoTab } from "./seo-tab";
 import { SparePartsTab, type SparePartsDiagram } from "./spare-parts-tab";
+import { SaleTab } from "./sale-tab";
+import type { SaleUnit } from "./sale-form";
 import { StockTab } from "./stock-tab";
 import { UnsavedChangesProvider, useDirtyKeys } from "./unsaved-changes";
 import { VariantsTab } from "./variants-tab";
@@ -36,6 +38,8 @@ const e = m.editor;
 export interface ProductEditorProps {
   product: EditorProduct;
   variants: readonly EditorVariant[];
+  /** Unitățile de măsură (toate; cele dezactivate nu se pot alege pe alte produse). */
+  units: readonly SaleUnit[];
   brands: readonly PickOption[];
   categoryOptions: readonly CategoryOption[];
   assigned: { ids: string[]; primaryId: string | null };
@@ -82,6 +86,7 @@ export function ProductEditor(props: ProductEditorProps) {
 function EditorBody({
   product,
   variants,
+  units,
   brands,
   categoryOptions,
   assigned,
@@ -125,6 +130,12 @@ function EditorBody({
       ),
     },
     {
+      id: "vanzare",
+      label: e.tabs.sale,
+      badge: badge("sale"),
+      panel: <SaleTab product={product} units={units} caps={caps} />,
+    },
+    {
       id: "variante",
       label: e.tabs.variants,
       badge: badge("variants"),
@@ -133,6 +144,7 @@ function EditorBody({
           productId={product.id}
           variants={variants}
           options={variantOptions}
+          sale={{ product, units }}
           caps={caps}
           context={{
             currency: pricing.currency,

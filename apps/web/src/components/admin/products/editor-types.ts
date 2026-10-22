@@ -16,6 +16,14 @@ export interface EditorProduct {
   excludeFromGroupDiscount: boolean;
   manageStock: boolean;
   stockStatus: string;
+  /** Unitatea de măsură; `null` = «buc» (unitatea implicită). */
+  measureUnitId: string | null;
+  /** «unit» (preț pe unitate) | «step» (preț pe pas) */
+  priceBasis: string;
+  /** Pasul de vânzare în zecimi de miime (25000 = 2,5); `null` = o unitate. */
+  saleStep: number | null;
+  minSteps: number | null;
+  showStepPrice: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
   energyClass: string | null;
@@ -52,6 +60,12 @@ export interface EditorVariant {
   isDefault: boolean;
   weightGrams: number | null;
   manufacturerPartNumber: string | null;
+  /** Pas și minim proprii (`null` = moștenește de la produs) și conversia SmartBill. */
+  saleStep: number | null;
+  minSteps: number | null;
+  smartbillMode: string | null;
+  smartbillUnitName: string | null;
+  smartbillRatio: number | null;
   /** Alegerile de opțiuni, ca text („Culoare: Alb”); gol la o variantă fără opțiuni. */
   label: string;
 }

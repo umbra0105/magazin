@@ -7,6 +7,7 @@ import {
   STOCK_STATUSES,
   ENERGY_CLASSES,
 } from "./constants";
+import { PRICE_BASES, SMARTBILL_MODES } from "../inventory/constants";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "./slug";
 
 /**
@@ -20,6 +21,27 @@ import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "./slug";
 export const MAX_MONEY = 1_000_000_000;
 
 const money = z.number().int().min(0).max(MAX_MONEY);
+
+/**
+ * Configurarea de vânzare (D11). Pasul e în zecimi de miime de unitate (25000 = 2,5) și încape în coloana `INT`;
+ * regulile care depind de unitate (zecimale) și de conversia SmartBill se verifică în serviciu, pe valorile efective.
+ */
+const INT4_MAX = 2_147_483_647;
+const entityRef = z.string().min(1).max(40);
+const saleStep = z
+  .number()
+  .int()
+  .min(1, "Pasul trebuie să fie pozitiv")
+  .max(INT4_MAX)
+  .nullable()
+  .optional();
+const minSteps = z
+  .number()
+  .int()
+  .min(1, "Minimul este cel puțin un pas")
+  .max(1_000_000)
+  .nullable()
+  .optional();
 const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
 
 const slug = z
@@ -54,6 +76,19 @@ const variantFields = {
   manufacturerName: optionalText(150),
   manageStock: z.boolean().nullable().optional(),
   stockStatus: z.enum(STOCK_STATUSES).nullable().optional(),
+  measureUnitId: entityRef.nullable().optional(),
+  priceBasis: z.enum(PRICE_BASES).nullable().optional(),
+  saleStep,
+  minSteps,
+  smartbillMode: z.enum(SMARTBILL_MODES).nullable().optional(),
+  smartbillUnitName: z
+    .string()
+    .trim()
+    .min(1, "Numele unității SmartBill nu poate fi gol")
+    .max(40)
+    .nullable()
+    .optional(),
+  smartbillRatio: z.number().int().min(1).max(INT4_MAX).nullable().optional(),
   isDefault: z.boolean().optional(),
 };
 
@@ -114,6 +149,11 @@ const productFields = {
   requiresInstallation: z.boolean().optional(),
   manageStock: z.boolean().optional(),
   stockStatus: z.enum(STOCK_STATUSES).optional(),
+  measureUnitId: entityRef.nullable().optional(),
+  priceBasis: z.enum(PRICE_BASES).optional(),
+  saleStep,
+  minSteps,
+  showStepPrice: z.boolean().optional(),
   allowBackorder: z.boolean().optional(),
   expectedRestockDate: z.coerce.date().nullable().optional(),
   excludeFromGroupDiscount: z.boolean().optional(),

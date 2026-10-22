@@ -17,8 +17,11 @@ import {
   productUpdateSchema,
   variantUpdateSchema,
   type ProductCreateInput,
+  type ProductUpdateInput,
   type VariantInput,
+  type VariantUpdateInput,
 } from "./product-schemas";
+import { SaleSetupValidator } from "./sale-setup";
 import { ProductUpdateGuard } from "./product-write";
 import type {
   BulkApplyCommand,
@@ -139,6 +142,80 @@ export class ProductService {
         { skus: taken },
       );
     }
+  }
+
+  /**
+   * Configurarea de vânzare după o schimbare pe PRODUS (unitate sau pas): se verifică fiecare variantă cu valorile
+   * ei efective (pas față de zecimalele unității, conversie SmartBill exactă) și, la schimbarea unității, stocul existent.
+   */
+  private async assertProductSaleSetup(
+    before: ProductRecord,
+    patch: ProductUpdateInput,
+  ): Promise<void> {
+    const validator = new SaleSetupValidator(this.deps.store);
+    const unitChanged =
+      patch.measureUnitId !== undefined && patch.measureUnitId !== before.measureUnitId;
+    if (unitChanged)
+      await validator.assertUnitAssignable(patch.measureUnitId, before.measureUnitId);
+    const product = {
+      measureUnitId: patch.measureUnitId === undefined ? before.measureUnitId : patch.measureUnitId,
+      saleStep: patch.saleStep === undefined ? before.saleStep : patch.saleStep,
+    };
+    const variants = await this.deps.store.listVariantsOf(before.id);
+    await validator.validate(
+      product,
+      variants.map((v) => ({ ...v })),
+      {
+        path: patch.saleStep !== undefined ? "saleStep" : "measureUnitId",
+      },
+    );
+    if (unitChanged) await validator.validateStockPrecision(product, variants);
+  }
+
+  /** Configurarea de vânzare după o schimbare pe VARIANTĂ (unitate, pas sau conversie SmartBill). */
+  private async assertVariantSaleSetup(
+    before: VariantRecord,
+    patch: VariantUpdateInput,
+  ): Promise<void> {
+    const product = await this.deps.store.getProduct(before.productId);
+    if (!product) throw PRODUCT_NOT_FOUND();
+    const validator = new SaleSetupValidator(this.deps.store);
+    const unitChanged =
+      patch.measureUnitId !== undefined && patch.measureUnitId !== before.measureUnitId;
+    if (unitChanged)
+      await validator.assertUnitAssignable(patch.measureUnitId, before.measureUnitId);
+    const merged = {
+      id: before.id,
+      sku: patch.sku ?? before.sku,
+      measureUnitId: patch.measureUnitId === undefined ? before.measureUnitId : patch.measureUnitId,
+      saleStep: patch.saleStep === undefined ? before.saleStep : patch.saleStep,
+      smartbillMode: patch.smartbillMode === undefined ? before.smartbillMode : patch.smartbillMode,
+      smartbillRatio:
+        patch.smartbillRatio === undefined ? before.smartbillRatio : patch.smartbillRatio,
+    };
+    await validator.validate(product, [merged], null);
+    if (unitChanged) await validator.validateStockPrecision(product, [merged]);
+  }
+
+  /** Configurarea de vânzare la crearea unui produs: produsul și variantele lui, ca la modificare. */
+  private async assertCreateSaleSetup(data: ProductCreateInput): Promise<void> {
+    const validator = new SaleSetupValidator(this.deps.store);
+    await validator.assertUnitAssignable(data.measureUnitId, null);
+    for (const variant of data.variants)
+      await validator.assertUnitAssignable(variant.measureUnitId, null);
+    const product = { measureUnitId: data.measureUnitId ?? null, saleStep: data.saleStep ?? null };
+    await validator.validate(
+      product,
+      data.variants.map((v) => ({
+        id: null,
+        sku: v.sku,
+        measureUnitId: v.measureUnitId ?? null,
+        saleStep: v.saleStep ?? null,
+        smartbillMode: v.smartbillMode ?? null,
+        smartbillRatio: v.smartbillRatio ?? null,
+      })),
+      { path: data.saleStep !== undefined ? "saleStep" : "measureUnitId" },
+    );
   }
 
   private async invalidate(tags: readonly string[]): Promise<void> {
@@ -281,6 +358,7 @@ export class ProductService {
 
     const skus = data.variants.map((v) => v.sku);
     await this.assertSkusFree(skus);
+    await this.assertCreateSaleSetup(data);
 
     const slug =
       data.slug ??
@@ -376,6 +454,9 @@ export class ProductService {
       if (patch.slug !== undefined && patch.slug.toLowerCase() !== before.slug.toLowerCase()) {
         await this.assertSlugFree(patch.slug, productId);
       }
+      if (patch.measureUnitId !== undefined || patch.saleStep !== undefined) {
+        await this.assertProductSaleSetup(before, patch);
+      }
 
       const diff = changedFields(before as unknown as Record<string, unknown>, patch);
       if (Object.keys(diff.after).length === 0) return before;
@@ -441,6 +522,14 @@ export class ProductService {
     }
     if (patch.sku !== undefined && patch.sku.toLowerCase() !== before.sku.toLowerCase()) {
       await this.assertSkusFree([patch.sku], variantId);
+    }
+    if (
+      patch.measureUnitId !== undefined ||
+      patch.saleStep !== undefined ||
+      patch.smartbillMode !== undefined ||
+      patch.smartbillRatio !== undefined
+    ) {
+      await this.assertVariantSaleSetup(before, patch);
     }
 
     const diff = changedFields(before as unknown as Record<string, unknown>, patch);
