@@ -121,10 +121,19 @@ interface PurgeTargets {
   unitIds: string[];
 }
 
-async function assertTestDatabase(db: PrismaClient): Promise<void> {
+/**
+ * Garda curățării: refuză orice bază al cărei nume nu conține cuvântul «test» ca segment (`ecom_test`, `test`, `ecom-test-2`),
+ * nu ca subșir (`contest`, `latest_orders`). Curățarea oprește un trigger de imuabilitate și șterge mișcări de stoc.
+ */
+const TEST_DATABASE_NAME = /(^|[_-])test($|[_-])/i;
+
+export async function assertStockTestDatabase(db: PrismaClient): Promise<void> {
   const database = await db.$queryRaw<Array<{ name: string }>>`select current_database() as name`;
-  if (!/test/i.test(database[0]?.name ?? "")) {
-    throw new Error("REFUZ să șterg date de stoc pe o bază fără «test» în nume");
+  const name = database[0]?.name ?? "";
+  if (!TEST_DATABASE_NAME.test(name)) {
+    throw new Error(
+      `REFUZ să șterg date de stoc pe baza «${name}»: numele ei nu conține «test» ca segment`,
+    );
   }
 }
 
@@ -159,7 +168,7 @@ async function purgeRows(db: PrismaClient, targets: PurgeTargets): Promise<void>
 
 /** Șterge TOT ce a creat contextul, inclusiv mișcările imuabile. Doar pe baza de test. */
 export async function purgeStockContext(db: PrismaClient, ctx: StockContext): Promise<void> {
-  await assertTestDatabase(db);
+  await assertStockTestDatabase(db);
   await purgeRows(db, {
     variantIds: ctx.variantIds,
     productIds: ctx.productIds,
@@ -175,7 +184,7 @@ export async function purgeStockContext(db: PrismaClient, ctx: StockContext): Pr
  * exemplu exportul de produse) numără tot ce e în bază: un rest ar strica rezultatul lor. Se apelează la începutul fișierului.
  */
 export async function purgeStockLeftovers(db: PrismaClient): Promise<number> {
-  await assertTestDatabase(db);
+  await assertStockTestDatabase(db);
   const products = await db.product.findMany({
     where: { slug: { startsWith: "st-" }, title: { startsWith: "Produs stoc " } },
     select: { id: true, variants: { select: { id: true } } },
