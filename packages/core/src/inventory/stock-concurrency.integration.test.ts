@@ -497,11 +497,69 @@ describe("igiena datelor comise", () => {
       warehouses: await db.warehouse.count({ where: { code: { startsWith: "w_" } } }),
       units: await db.measureUnit.count({ where: { code: { startsWith: "u_" } } }),
     });
+    const protectedBefore = await protectedCounts();
     expect((await traces()).products).toBeGreaterThan(0);
     await purgeStockLeftovers(db);
     expect(await traces()).toEqual({ products: 0, reservations: 0, warehouses: 0, units: 0 });
-    // depozitul implicit și unitățile de sistem rămân neatinse
-    expect(await db.warehouse.count({ where: { isDefault: true } })).toBe(1);
-    expect(await db.measureUnit.count({ where: { isSystem: true } })).toBeGreaterThan(0);
+    // depozitul implicit și unitățile de sistem (câte or fi: baza poate fi seed-uită sau doar migrată) nu se ating
+    expect(await protectedCounts()).toEqual(protectedBefore);
+  });
+
+  it("purgeStockLeftovers nu șterge un depozit implicit sau o unitate de sistem, nici când codurile lor seamănă cu ale fixture-ului", async () => {
+    // Sentinele cu prefixele pe care curăță funcția (w_, u_). Doar filtrele (isDefault = false, isSystem = false) le
+    // salvează: fără ele, triggerele din bază resping ștergerea și curățarea aruncă. Independent de seed: dacă baza
+    // are deja un depozit implicit (indexul unic permite unul singur), îl scoatem TEMPORAR din rol și îl repunem la final.
+    const seededDefault = await db.warehouse.findFirst({ where: { isDefault: true } });
+    if (seededDefault) {
+      await db.warehouse.update({ where: { id: seededDefault.id }, data: { isDefault: false } });
+    }
+    const defaultsBefore = await protectedCounts();
+    let warehouseId: string | undefined;
+    let unitId: string | undefined;
+    try {
+      warehouseId = (
+        await db.warehouse.create({
+          data: { code: `w_sentinela${ctx.tag}`, name: "Sentinelă implicit", isDefault: true },
+        })
+      ).id;
+      unitId = (
+        await db.measureUnit.create({
+          data: {
+            code: `u_sentinela${ctx.tag}`,
+            name: "Sentinelă sistem",
+            symbol: "s",
+            decimals: 0,
+            isSystem: true,
+          },
+        })
+      ).id;
+      await purgeStockLeftovers(db);
+      expect(await db.warehouse.findUnique({ where: { id: warehouseId } })).not.toBeNull();
+      expect(await db.measureUnit.findUnique({ where: { id: unitId } })).not.toBeNull();
+    } finally {
+      // triggerele din bază nu lasă să dispară un depozit implicit sau o unitate de sistem: întâi le scoatem din rol
+      if (warehouseId) {
+        await db.warehouse.update({ where: { id: warehouseId }, data: { isDefault: false } });
+        await db.warehouse.delete({ where: { id: warehouseId } });
+      }
+      if (unitId) {
+        await db.measureUnit.update({ where: { id: unitId }, data: { isSystem: false } });
+        await db.measureUnit.delete({ where: { id: unitId } });
+      }
+      if (seededDefault) {
+        await db.warehouse.update({ where: { id: seededDefault.id }, data: { isDefault: true } });
+      }
+    }
+    const after = await protectedCounts();
+    expect(after.systemUnits).toBe(defaultsBefore.systemUnits);
+    expect(after.defaultWarehouses).toBe(seededDefault ? 1 : 0);
   });
 });
+
+/** Câte depozite implicite și unități de sistem există acum (0 într-o bază doar migrată, 1 și 10 într-una seed-uită). */
+async function protectedCounts() {
+  return {
+    defaultWarehouses: await db.warehouse.count({ where: { isDefault: true } }),
+    systemUnits: await db.measureUnit.count({ where: { isSystem: true } }),
+  };
+}
