@@ -19,6 +19,7 @@
     ".": "./src/index.ts",
     "./request-id": "./src/request-id.ts",
     "./vat": "./src/vat.ts",
-    "./decimal": "./src/decimal.ts"
+    "./decimal": "./src/decimal.ts",
+    "./quantity": "./src/quantity.ts"
   }
 }
