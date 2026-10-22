@@ -5,3 +5,5 @@ export * from "./measure-unit-service";
 export * from "./measure-unit-store";
 export * from "./availability";
 export * from "./reconcile";
+export * from "./stock-errors";
+export * from "./stock-service";

@@ -19,6 +19,19 @@ const FORBIDDEN: { name: string; pattern: RegExp }[] = [
   { name: "SQL: DROP TABLE audit_log", pattern: /\bdrop\s+table\s+[\\"]*audit_log/i },
 ];
 
+/**
+ * Singura excepție de la «fără oprirea triggerelor»: fixture-ul testelor de stoc oprește TEMPORAR, în tranzacția lui de
+ * curățare, triggerul de imuabilitate al registrului de mișcări (stock_movement), singura cale de a șterge mișcările unor
+ * variante de test, create de testele de concurență (date comise). Excepția e pe FIȘIER și pe acel trigger EXACT: orice altă
+ * oprire de trigger, chiar în același fișier, sau aceeași instrucțiune în alt fișier, tot pică.
+ */
+const TRIGGER_EXCEPTIONS = new Map<string, RegExp>([
+  [
+    "packages/core/src/test-utils/stock-fixtures.ts",
+    /ALTER TABLE "stock_movement" DISABLE TRIGGER "stock_movement_no_update_delete"/g,
+  ],
+]);
+
 const REPO_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 const SKIP_DIRS = new Set(["node_modules", ".next", ".turbo", "dist", "coverage", "generated"]);
 
@@ -39,15 +52,18 @@ function scanTargets(): string[] {
   return roots.flatMap((root) => sourceFiles(root));
 }
 
+function violationsInText(path: string, source: string): string[] {
+  const exception = TRIGGER_EXCEPTIONS.get(path);
+  const text = exception ? source.replace(exception, "") : source;
+  return FORBIDDEN.filter(({ pattern }) => pattern.test(text)).map(
+    ({ name }) => `${path}: ${name}`,
+  );
+}
+
 function violations(files: string[]): string[] {
-  const found: string[] = [];
-  for (const file of files) {
-    const text = readFileSync(file, "utf8");
-    for (const { name, pattern } of FORBIDDEN) {
-      if (pattern.test(text)) found.push(`${relative(REPO_ROOT, file)}: ${name}`);
-    }
-  }
-  return found;
+  return files.flatMap((file) =>
+    violationsInText(relative(REPO_ROOT, file).replaceAll("\\", "/"), readFileSync(file, "utf8")),
+  );
 }
 
 describe("audit_log este doar de adăugare", () => {
@@ -68,6 +84,21 @@ describe("audit_log este doar de adăugare", () => {
     }
     expect(FORBIDDEN.some(({ pattern }) => pattern.test("await db.auditLog.create({})"))).toBe(
       false,
+    );
+  });
+
+  it("excepția pentru fixture-ul de stoc e îngustă: doar acel fișier și doar triggerul stock_movement", () => {
+    const fixture = "packages/core/src/test-utils/stock-fixtures.ts";
+    const allowed = `ALTER TABLE "stock_movement" DISABLE TRIGGER "stock_movement_no_update_delete"`;
+    expect(violationsInText(fixture, allowed)).toEqual([]);
+    // aceeași instrucțiune în alt fișier
+    expect(violationsInText("packages/core/src/altceva.ts", allowed)).toHaveLength(1);
+    // alt trigger, în același fișier
+    expect(violationsInText(fixture, 'ALTER TABLE "audit_log" DISABLE TRIGGER USER')).toHaveLength(
+      1,
+    );
+    expect(violationsInText(fixture, `${allowed}; DROP TRIGGER audit_log_no_update`)).toHaveLength(
+      1,
     );
   });
 
