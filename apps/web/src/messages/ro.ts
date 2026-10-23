@@ -607,6 +607,217 @@ export const ro = {
           "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",
       },
     },
+    inventory: {
+      title: "Stoc",
+      description:
+        "Cantitatea fizică, angajată și rezervată a fiecărei variante, disponibilul în unitate și în pași și restul nevandabil. Cantitatea fizică vine din poza SmartBill și din ajustările de aici.",
+      readOnly: "Poți vedea stocul, dar nu îl poți modifica.",
+      listLabel: "Stocul variantelor",
+      empty: "Nicio variantă nu corespunde filtrelor.",
+      noWarehouse: "Nu există niciun depozit configurat.",
+      truncated: (max: number) =>
+        `Căutarea a găsit mai mult de ${max} de variante; se arată primele. Precizează căutarea.`,
+      resultCount: (n: number) =>
+        n === 1
+          ? "1 variantă"
+          : n % 100 >= 1 && n % 100 <= 19
+            ? `${n} variante`
+            : `${n} de variante`,
+      pagination: {
+        label: "Paginare",
+        page: (page: number, count: number) => `Pagina ${page} din ${count}`,
+        previous: "Înapoi",
+        next: "Înainte",
+      },
+      filters: {
+        label: "Filtre",
+        search: "Caută după produs sau SKU",
+        searchPlaceholder: "De exemplu: liner, bisulfat, SKU",
+        kind: "Tip",
+        state: "Stare",
+        all: "Toate",
+        lowOnly: "Doar stoc mic",
+        apply: "Filtrează",
+        reset: "Resetează",
+        kinds: { managed: "Gestionat", unmanaged: "Negestionat", digital: "Digital" },
+      },
+      states: {
+        in_stock: "În stoc",
+        limited: "Stoc limitat",
+        on_order: "La comandă",
+        unavailable: "Indisponibil",
+      },
+      stockStatus: { instock: "În stoc", outofstock: "Stoc epuizat", onbackorder: "La comandă" },
+      kind: {
+        managed: "Gestionat",
+        notInventoried: "Neinventariat",
+        unmanaged: "Negestionat până la inventar",
+        digital: "Digital, fără stoc",
+      },
+      details: {
+        limited: (steps: string) => `mai sunt ${steps}`,
+        leadTime: (days: string) => `termen ${days}`,
+        remainderOnly: "a rămas doar un rest nevandabil",
+        stepUnit: (symbol: string, step: string) => `${symbol} · pas ${step}`,
+      },
+      plural: {
+        step: { one: "pas", few: "pași", many: "de pași" },
+        day: { one: "zi", few: "zile", many: "de zile" },
+      },
+      columns: {
+        product: "Produs",
+        unit: "Unitate și pas",
+        physical: "Fizică",
+        committed: "Angajat",
+        reserved: "Rezervat",
+        available: "Disponibil",
+        remainder: "Rest nevandabil",
+        state: "Stare",
+        actions: "Acțiuni",
+      },
+      cell: {
+        none: "—",
+        asOf: (at: string) => `valabilă la ${at}`,
+        noSnapshot: "fără poză SmartBill",
+        notInventoried: "neinventariat",
+        manageHint: "Pornește gestionarea stocului din editorul produsului.",
+        digitalHint: "Fără stoc",
+        remainderNone: "—",
+      },
+      total: {
+        label: "Total produs",
+        different_units: "Variantele au unități diferite: nu se însumează.",
+        no_managed: "Nicio variantă nu are stoc gestionat.",
+      },
+      actions: {
+        adjust: "Ajustează",
+        adjustAria: (name: string) => `Ajustează stocul: ${name}`,
+        history: "Istoric",
+        historyAria: (name: string) => `Istoricul stocului: ${name}`,
+      },
+      banner: {
+        label: "Prospețimea stocului",
+        fresh: (at: string, age: string) => `Stoc verificat la ${at} (${age}).`,
+        stale: (at: string, age: string, hours: number) =>
+          `Poza SmartBill e veche: stoc verificat la ${at} (${age}). Pragul este de ${hours} h; vânzările din magazin de după poză nu sunt cunoscute până la poza următoare.`,
+        never:
+          "Nu există nicio poză SmartBill pentru acest depozit: cantitățile afișate sunt cele introduse manual.",
+        none: "Nu există încă stoc gestionat în acest depozit.",
+        age: {
+          lessThanHour: "acum mai puțin de o oră",
+          hours: (n: string) => `acum ${n} h`,
+          days: (n: string) => `acum ${n} ${Number.parseInt(n, 10) === 1 ? "zi" : "zile"}`,
+        },
+      },
+      warnings: {
+        title: "Atenție",
+        effective_before_snapshot: (asOf: string) =>
+          `Ora efectivă este dinaintea pozei SmartBill din ${asOf}. Dacă evenimentul era deja în SmartBill la acea poză, va fi scăzut de două ori până la poza următoare.`,
+        effective_before_snapshot_unknown:
+          "Ora efectivă este dinaintea ultimei poze SmartBill. Dacă evenimentul era deja în SmartBill la acea poză, va fi scăzut de două ori până la poza următoare.",
+        below_commitments:
+          "Stocul fizic a coborât sub cantitatea angajată și rezervată: disponibilul este acum 0.",
+      },
+      adjust: {
+        title: (name: string) => `Ajustează stocul: ${name}`,
+        current: (quantity: string) => `Stoc fizic acum: ${quantity}`,
+        reason: "Motiv",
+        reasonPlaceholder: "Alege motivul",
+        direction: "Sens",
+        add: "Adaugă",
+        subtract: "Scade",
+        amount: "Cantitate",
+        amountHelp: (symbol: string, decimals: number) =>
+          decimals === 0
+            ? `În ${symbol}, număr întreg.`
+            : `În ${symbol}, cu cel mult ${decimals} ${decimals === 1 ? "zecimală" : "zecimale"} (cu virgulă).`,
+        date: "Data efectivă (zz.ll.aaaa)",
+        time: "Ora efectivă (hh:mm)",
+        timeHelp: (zone: string) =>
+          `Când s-a petrecut cu adevărat evenimentul, în ora magazinului (${zone}). Implicit: acum.`,
+        note: "Text (obligatoriu)",
+        noteHelp: "Scrie pe scurt ce s-a întâmplat, de exemplu: bon 123 sau recepție factura 45.",
+        cancel: "Renunță",
+        save: "Salvează ajustarea",
+        saving: "Se salvează…",
+        close: "Închide",
+        saved: (name: string, before: string, after: string) =>
+          `Stoc ajustat pentru ${name}: ${before} → ${after}.`,
+        errors: {
+          reasonRequired: "Alege un motiv.",
+          amountRequired: "Cantitatea e obligatorie.",
+          amountInvalid:
+            "Scrie un număr, de exemplu 3 sau 2,5 (fără semn: sensul se alege separat).",
+          amountZero: "Cantitatea trebuie să fie mai mare decât zero.",
+          amountDecimals: (symbol: string, decimals: number) =>
+            decimals === 0
+              ? `Unitatea «${symbol}» nu are zecimale: scrie un număr întreg.`
+              : `Unitatea «${symbol}» are cel mult ${decimals} ${decimals === 1 ? "zecimală" : "zecimale"}.`,
+          dateRequired: "Data este obligatorie.",
+          dateInvalid: "Scrie data așa: zz.ll.aaaa, de exemplu 23.10.2026.",
+          timeRequired: "Ora este obligatorie.",
+          timeInvalid: "Scrie ora așa: hh:mm, de exemplu 14:30.",
+          future: "Ora efectivă nu poate fi în viitor.",
+          noteRequired: "Textul este obligatoriu.",
+          noteTooLong: (max: number) => `Textul are cel mult ${max} de caractere.`,
+          generic: "Ajustarea nu a putut fi salvată. Încearcă din nou.",
+          STOCK_ADJUSTMENT_BELOW_ZERO:
+            "Stocul nu poate deveni negativ: ajustarea scade mai mult decât există.",
+          STOCK_ADJUSTMENT_WRONG_SIGN: "Sensul ajustării nu se potrivește cu motivul ales.",
+          STOCK_ADJUSTMENT_PRECISION: "Cantitatea are mai multe zecimale decât permite unitatea.",
+          STOCK_ADJUSTMENT_FUTURE: "Ora efectivă nu poate fi în viitor.",
+          STOCK_ADJUSTMENT_OVERFLOW:
+            "Ajustarea depășește cantitatea maximă care se poate ține în stoc.",
+          STOCK_NOT_MANAGED:
+            "Produsul nu are stoc gestionat: pornește gestionarea stocului din editorul produsului.",
+          STOCK_VARIANT_NOT_FOUND: "Varianta nu mai există.",
+          AUTH_FORBIDDEN: "Nu ai permisiunea să modifici stocul.",
+          VALIDATION_ERROR: "Datele introduse nu sunt valide.",
+          AUDIT_WRITE_FAILED:
+            "Ajustarea a fost salvată, dar nu a putut fi înregistrată în jurnalul de audit.",
+        },
+      },
+      history: {
+        title: (name: string) => `Istoric stoc: ${name}`,
+        back: "Înapoi la stoc",
+        breadcrumb: "Istoric",
+        listLabel: "Istoricul mișcărilor",
+        immutable: "Istoricul nu se poate modifica sau șterge.",
+        empty: "Nu există nicio mișcare pentru această variantă.",
+        notFound: "Varianta nu a fost găsită.",
+        summary: {
+          sku: "SKU",
+          unit: "Unitate",
+          physical: "Fizică",
+          committed: "Angajat",
+          reserved: "Rezervat",
+          available: "Disponibil",
+        },
+        columns: {
+          effectiveAt: "Ora efectivă",
+          kind: "Tip",
+          reason: "Motiv",
+          note: "Text",
+          deltaPhysical: "Variație fizic",
+          deltaCommitted: "Variație angajat",
+          physicalAfter: "Fizic după",
+          committedAfter: "Angajat după",
+          actor: "Autor",
+          reference: "Referință",
+        },
+        kinds: {
+          adjustment: "Ajustare",
+          snapshot: "Poză SmartBill",
+          commit: "Angajare",
+          release: "Eliberare",
+          mirror: "Oglindire",
+          transfer_in: "Transfer intrare",
+          transfer_out: "Transfer ieșire",
+        },
+        system: "sistem",
+        recordedAt: (at: string) => `înregistrat la ${at}`,
+      },
+    },
     products: {
       title: "Produse",
       description: "Lista produselor magazinului: caută, filtrează și modifică direct din listă.",

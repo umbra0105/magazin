@@ -20,6 +20,7 @@
     "./request-id": "./src/request-id.ts",
     "./vat": "./src/vat.ts",
     "./decimal": "./src/decimal.ts",
-    "./quantity": "./src/quantity.ts"
+    "./quantity": "./src/quantity.ts",
+    "./zoned-time": "./src/zoned-time.ts"
   }
 }

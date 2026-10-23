@@ -1237,3 +1237,257 @@ export async function seedE2eVariants(slug: string, skus: readonly string[]): Pr
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Stoc (Faza 5, punctul 8): produse, poze și roluri pentru testele ecranului `/admin/stoc`
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface E2eStockVariant {
+  /** SKU-ul variantei (primește prefixul `E2ESTOC` pentru curățare) */
+  sku: string;
+  /** Stocul fizic, ca text cu virgulă («100», «17,5»); `null` = fără rând de stoc */
+  physical: string | null;
+  /** Pasul variantei (suprascrie produsul) */
+  step?: string;
+}
+
+export interface E2eStockProduct {
+  title: string;
+  /** Unitatea produsului (creată pentru test, cod `e2e…`); lipsă = «buc» (unitate nulă) */
+  unit?: { symbol: string; decimals: number };
+  step?: string;
+  manageStock?: boolean;
+  stockStatus?: "instock" | "outofstock" | "onbackorder";
+  allowBackorder?: boolean;
+  type?: "physical" | "digital";
+  variants: E2eStockVariant[];
+}
+
+const E2E_STOCK_SKU_PREFIX = "E2ESTOC";
+const E2E_STOCK_SNAPSHOT = "e2e-stoc";
+
+/** Text cu virgulă → zecimi de miime (ca șir pentru `bigint` din Postgres), fără `float`. */
+function e2eTicks(text: string): string {
+  const [whole = "0", fraction = ""] = text.trim().split(/[.,]/);
+  return BigInt(`${whole}${fraction.padEnd(4, "0").slice(0, 4)}`).toString();
+}
+
+/**
+ * Creează în baza de test produse cu stoc în depozitul implicit (creat de seed-ul din global-setup). `physicalAsOf` al
+ * rândurilor de stoc = `asOfHoursAgo` ore în urmă (null = fără poză aplicată). Întoarce SKU-urile complete, în ordine.
+ */
+export async function seedE2eStock(
+  tag: string,
+  products: readonly E2eStockProduct[],
+  options: { asOfHoursAgo?: number | null } = {},
+): Promise<string[]> {
+  const skus: string[] = [];
+  await withClient(async (db) => {
+    const warehouse = await db.query(`select id from warehouse where "isDefault" limit 1`);
+    const warehouseId = warehouse.rows[0]?.id as string | undefined;
+    if (!warehouseId) throw new Error("Nu există depozitul implicit în baza de test (seed lipsă?)");
+    // orele se trimit ca șiruri ISO (UTC): `pg` ar serializa un `Date` în ora locală a procesului, iar coloanele `timestamp`
+    // (fără fus) se citesc ca UTC de Prisma
+    const asOf =
+      options.asOfHoursAgo === null || options.asOfHoursAgo === undefined
+        ? null
+        : new Date(Date.now() - options.asOfHoursAgo * 3_600_000);
+    for (const [index, product] of products.entries()) {
+      let unitId: string | null = null;
+      if (product.unit) {
+        const unit = await db.query(
+          `insert into measure_unit (id, code, name, symbol, decimals, "sortOrder", "updatedAt")
+           values (gen_random_uuid()::text, $1, $2, $3, $4, 900, now())
+           on conflict (code) do update set code = excluded.code returning id`,
+          [
+            `e2e${tag}${index}`,
+            `Unitate E2E ${tag}${index}`,
+            product.unit.symbol,
+            product.unit.decimals,
+          ],
+        );
+        unitId = unit.rows[0]?.id as string;
+      }
+      const created = await db.query(
+        `insert into product (id, slug, title, type, "manageStock", "stockStatus", "allowBackorder",
+                              "measureUnitId", "saleStep", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, now()) returning id`,
+        [
+          `e2e-stoc-${tag}-${index}`,
+          product.title,
+          product.type ?? "physical",
+          product.manageStock ?? true,
+          product.stockStatus ?? "instock",
+          product.allowBackorder ?? false,
+          unitId,
+          product.step ? Number.parseInt(e2eTicks(product.step), 10) : null,
+        ],
+      );
+      const productId = created.rows[0]?.id as string;
+      for (const [position, variant] of product.variants.entries()) {
+        const sku = `${E2E_STOCK_SKU_PREFIX}${tag}${index}${position}${variant.sku}`.toUpperCase();
+        skus.push(sku);
+        const row = await db.query(
+          `insert into product_variant (id, "productId", sku, price, position, "isDefault", "saleStep", "updatedAt")
+           values (gen_random_uuid()::text, $1, $2, 1000, $3, $4, $5, now()) returning id`,
+          [
+            productId,
+            sku,
+            position,
+            position === 0,
+            variant.step ? Number.parseInt(e2eTicks(variant.step), 10) : null,
+          ],
+        );
+        if (variant.physical !== null) {
+          await db.query(
+            `insert into inventory_item (id, "variantId", "warehouseId", physical, "physicalAsOf", "updatedAt")
+             values (gen_random_uuid()::text, $1, $2, $3::bigint, $4, now())`,
+            [
+              row.rows[0]?.id as string,
+              warehouseId,
+              e2eTicks(variant.physical),
+              asOf?.toISOString() ?? null,
+            ],
+          );
+        }
+      }
+    }
+  });
+  return skus;
+}
+
+/**
+ * Pune (sau scoate) poza SmartBill a depozitului implicit, `hoursAgo` ore în urmă; `null` = nicio poză. Doar pozele create de
+ * test (`fileName = e2e-stoc`) se ating.
+ */
+export async function setE2eStockSnapshot(hoursAgo: number | null): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_STOCK_SNAPSHOT]);
+    if (hoursAgo === null) return;
+    const warehouse = await db.query(`select id from warehouse where "isDefault" limit 1`);
+    const warehouseId = warehouse.rows[0]?.id as string | undefined;
+    if (!warehouseId) throw new Error("Nu există depozitul implicit în baza de test (seed lipsă?)");
+    await db.query(
+      `insert into stock_snapshot (id, "warehouseId", "takenAt", source, "fileName")
+       values (gen_random_uuid()::text, $1, $2, 'import', $3)`,
+      [warehouseId, new Date(Date.now() - hoursAgo * 3_600_000).toISOString(), E2E_STOCK_SNAPSHOT],
+    );
+  });
+}
+
+/** Stocul unei variante (după SKU) și mișcările ei, citite din bază; cantitățile ca text în zecimi de miime. */
+export async function readE2eStock(sku: string): Promise<{
+  variantId: string;
+  physical: string | null;
+  movements: Array<{
+    kind: string;
+    reason: string | null;
+    note: string | null;
+    deltaPhysical: string;
+    physicalAfter: string;
+    effectiveAt: Date;
+    actorLabel: string | null;
+  }>;
+} | null> {
+  return withClient(async (db) => {
+    const variant = await db.query(`select id from product_variant where sku = $1`, [sku]);
+    const variantId = variant.rows[0]?.id as string | undefined;
+    if (!variantId) return null;
+    const item = await db.query(
+      `select physical::text as physical from inventory_item where "variantId" = $1`,
+      [variantId],
+    );
+    const movements = await db.query(
+      `select kind, reason, note, "deltaPhysical"::text as "deltaPhysical", "physicalAfter"::text as "physicalAfter",
+              "effectiveAt", "actorLabel"
+       from stock_movement where "variantId" = $1 order by "effectiveAt" asc, "createdAt" asc`,
+      [variantId],
+    );
+    return {
+      variantId,
+      physical: (item.rows[0]?.physical as string | undefined) ?? null,
+      movements: movements.rows as never,
+    };
+  });
+}
+
+/** Creează un rol de test (cheia începe cu `e2e-`) cu permisiunile date, existente în baza de test. */
+export async function createE2eRole(key: string, permissionKeys: readonly string[]): Promise<void> {
+  if (!key.startsWith("e2e-")) throw new Error("Rolurile de test au cheia care începe cu «e2e-»");
+  await withClient(async (db) => {
+    const role = await db.query(
+      `insert into role (id, key, name, "isSystem") values (gen_random_uuid()::text, $1, $2, false)
+       on conflict (key) do update set name = excluded.name returning id`,
+      [key, `Rol de test ${key}`],
+    );
+    const roleId = role.rows[0]?.id as string;
+    await db.query(`delete from role_permission where "roleId" = $1`, [roleId]);
+    for (const permission of permissionKeys) {
+      const found = await db.query(`select id from permission where key = $1`, [permission]);
+      const permissionId = found.rows[0]?.id as string | undefined;
+      if (!permissionId) throw new Error(`Permisiunea ${permission} nu există în baza de test`);
+      await db.query(`insert into role_permission ("roleId", "permissionId") values ($1, $2)`, [
+        roleId,
+        permissionId,
+      ]);
+    }
+  });
+}
+
+/**
+ * Șterge TOT ce au creat testele de stoc: mișcările (registrul e imuabil: triggerul se oprește TEMPORAR, în aceeași
+ * tranzacție, doar pentru variantele `E2ESTOC…` ale bazei de test), rândurile de stoc, produsele, unitățile, pozele și
+ * rolurile `e2e-…`. Întoarce câte produse s-au șters.
+ */
+export async function removeE2eStock(): Promise<number> {
+  return withClient(async (db) => {
+    await db.query("BEGIN");
+    try {
+      await db.query(
+        'ALTER TABLE "stock_movement" DISABLE TRIGGER "stock_movement_no_update_delete"',
+      );
+      await db.query(
+        `delete from stock_movement where "variantId" in (select id from product_variant where sku like $1)`,
+        [`${E2E_STOCK_SKU_PREFIX}%`],
+      );
+      await db.query(
+        'ALTER TABLE "stock_movement" ENABLE TRIGGER "stock_movement_no_update_delete"',
+      );
+      await db.query(
+        `delete from inventory_item where "variantId" in (select id from product_variant where sku like $1)`,
+        [`${E2E_STOCK_SKU_PREFIX}%`],
+      );
+      await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_STOCK_SNAPSHOT]);
+      const products = await db.query(`delete from product where slug like 'e2e-stoc-%'`);
+      await db.query(
+        `delete from measure_unit where code like 'e2e%' and "isSystem" = false
+           and not exists (select 1 from product p where p."measureUnitId" = measure_unit.id)`,
+      );
+      await db.query(
+        `delete from user_role where "roleId" in (select id from role where key like 'e2e-%')`,
+      );
+      await db.query(`delete from role where key like 'e2e-%' and "isSystem" = false`);
+      await db.query("COMMIT");
+      return products.rowCount ?? 0;
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
+/** Rândurile de audit `stock.adjust` ale unei variante (entityId = `<varianta>:<depozitul>`). */
+export async function readE2eStockAudit(
+  variantId: string,
+): Promise<
+  { outcome: string; actorLabel: string | null; after: Record<string, unknown> | null }[]
+> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select outcome, "actorLabel", after from audit_log
+       where action = 'stock.adjust' and "entityId" like $1 order by "createdAt" asc`,
+      [`${variantId}:%`],
+    );
+    return result.rows as never;
+  });
+}

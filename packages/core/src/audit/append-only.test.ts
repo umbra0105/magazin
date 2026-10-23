@@ -20,12 +20,18 @@ const FORBIDDEN: { name: string; pattern: RegExp }[] = [
 ];
 
 /**
- * Singura excepție de la «fără oprirea triggerelor»: fixture-ul testelor de stoc oprește TEMPORAR, în tranzacția lui de
- * curățare, triggerul de imuabilitate al registrului de mișcări (stock_movement), singura cale de a șterge mișcările unor
+ * Singurele excepții de la «fără oprirea triggerelor» (două fișiere): fixture-ul testelor de stoc și suportul E2E al
+ * ecranului de stoc oprește TEMPORAR, în tranzacția lui de curățare, triggerul de imuabilitate al registrului de mișcări (stock_movement), singura cale de a șterge mișcările unor
  * variante de test, create de testele de concurență (date comise). Excepția e pe FIȘIER și pe acel trigger EXACT: orice altă
  * oprire de trigger, chiar în același fișier, sau aceeași instrucțiune în alt fișier, tot pică.
  */
 const TRIGGER_EXCEPTIONS = new Map<string, RegExp>([
+  [
+    // Curățarea testelor E2E de stoc (Playwright): aceeași instrucțiune, în aceeași tranzacție, doar pentru variantele
+    // «E2ESTOC…» ale bazei de test (funcțiile din fișier refuză orice altă bază).
+    "packages/core/test/e2e-support.ts",
+    /ALTER TABLE "stock_movement" DISABLE TRIGGER "stock_movement_no_update_delete"/g,
+  ],
   [
     "packages/core/src/test-utils/stock-fixtures.ts",
     /ALTER TABLE "stock_movement" DISABLE TRIGGER "stock_movement_no_update_delete"/g,
@@ -100,6 +106,20 @@ describe("audit_log este doar de adăugare", () => {
     expect(violationsInText(fixture, `${allowed}; DROP TRIGGER audit_log_no_update`)).toHaveLength(
       1,
     );
+  });
+
+  it("la fel de îngustă pentru suportul E2E: doar acel fișier, doar acea instrucțiune", () => {
+    const support = "packages/core/test/e2e-support.ts";
+    const allowed = `ALTER TABLE "stock_movement" DISABLE TRIGGER "stock_movement_no_update_delete"`;
+    expect(violationsInText(support, allowed)).toEqual([]);
+    expect(violationsInText(support, `ALTER TABLE "audit_log" DISABLE TRIGGER USER`)).toHaveLength(
+      1,
+    );
+    expect(violationsInText(support, `${allowed}; DROP TRIGGER audit_log_no_update`)).toHaveLength(
+      1,
+    );
+    // celelalte fișiere din test/ nu primesc excepția
+    expect(violationsInText("packages/core/test/alt-suport.ts", allowed)).toHaveLength(1);
   });
 
   it("niciun fișier din aplicație sau din migrații nu modifică/șterge din audit_log", () => {

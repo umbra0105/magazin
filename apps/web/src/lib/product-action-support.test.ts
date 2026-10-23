@@ -73,3 +73,36 @@ describe("productFailure: erori de bază de date", () => {
     );
   });
 });
+
+describe("productFailure: erorile de stoc sunt erori de domeniu (se arată administratorului, nu se rearuncă)", () => {
+  const stockCodes = [
+    "STOCK_ADJUSTMENT_INVALID_REASON",
+    "STOCK_ADJUSTMENT_NOTE_REQUIRED",
+    "STOCK_ADJUSTMENT_NOTE_TOO_LONG",
+    "STOCK_ADJUSTMENT_ZERO",
+    "STOCK_ADJUSTMENT_WRONG_SIGN",
+    "STOCK_ADJUSTMENT_INVALID_TIME",
+    "STOCK_ADJUSTMENT_FUTURE",
+    "STOCK_ADJUSTMENT_PRECISION",
+    "STOCK_ADJUSTMENT_BELOW_ZERO",
+    "STOCK_ADJUSTMENT_OVERFLOW",
+    "STOCK_ADJUSTMENT_AMBIGUOUS_QUANTITY",
+    "STOCK_NOT_MANAGED",
+    "STOCK_VARIANT_NOT_FOUND",
+    "STOCK_NO_WAREHOUSE",
+    "QUANTITY_INVALID_FORMAT",
+    "QUANTITY_TOO_MANY_DECIMALS",
+    "QUANTITY_OVERFLOW",
+    "QUANTITY_NEGATIVE",
+    "QUANTITY_NOT_POSITIVE",
+  ];
+
+  it.each(stockCodes)("%s → eșec cu cod și mesaj", (code) => {
+    const error = Object.assign(new Error("Mesaj pentru administrator"), { code });
+    expect(productFailure(error)).toEqual({
+      ok: false,
+      code,
+      message: "Mesaj pentru administrator",
+    });
+  });
+});
