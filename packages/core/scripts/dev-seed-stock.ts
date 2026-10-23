@@ -1,6 +1,6 @@
 /**
  * Utilitar DOAR pentru dezvoltare (nu face parte din pachetul distribuit; se mută odată cu celelalte scripturi dev-only la
- * Faza 21): creează produse FICTIVE de stoc, ca să încerci ecranul `/admin/stoc`: cele 6 produse-model din plan (țeavă,
+ * Faza 21): creează produse FICTIVE de stoc, ca să încerci ecranul `/admin/produse/stoc`: cele 6 produse-model din plan (țeavă,
  * liner, bisulfat, furtun, mozaic, abachi cu 4 variante) plus cazurile speciale (stoc mic, «La comandă», negestionat,
  * digital) și o poză SmartBill pentru banner.
  *
@@ -262,7 +262,9 @@ async function seed(): Promise<void> {
       ? `Poza SmartBill: acum ${snapshotAgeHours} ore (${takenAt.toISOString()}).`
       : "Fără nicio poză SmartBill.",
   );
-  console.log("Deschide /admin/stoc. Șterge-le cu `npm.cmd run dev:seed-stock -- --remove`.");
+  console.log(
+    "Deschide /admin/produse/stoc. Șterge-le cu `npm.cmd run dev:seed-stock -- --remove`.",
+  );
 }
 
 try {

@@ -47,7 +47,7 @@ export default async function StockHistoryPage({
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-2">
         <Link
-          href="/admin/stoc"
+          href="/admin/produse/stoc"
           className={buttonVariants({ variant: "outline", size: "sm" }) + " w-fit"}
         >
           {m.history.back}
@@ -93,7 +93,9 @@ export default async function StockHistoryPage({
       <Pager
         page={history.page}
         pageCount={history.pageCount}
-        hrefFor={(target) => `/admin/stoc/${variantId}${target > 1 ? `?pagina=${target}` : ""}`}
+        hrefFor={(target) =>
+          `/admin/produse/stoc/${variantId}${target > 1 ? `?pagina=${target}` : ""}`
+        }
       />
     </div>
   );

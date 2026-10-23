@@ -68,7 +68,7 @@ export function createPartsDiagramMediaUsageProvider(db: Db): MediaUsageProvider
           {
             kind: "parts_diagram",
             label: `Fișă explodată: ${row.title}`,
-            href: `/admin/fise-explodate/${row.id}`,
+            href: `/admin/produse/fise-explodate/${row.id}`,
           },
         ]);
       }
@@ -96,7 +96,7 @@ export function createCategoryMediaUsageProvider(db: Db): MediaUsageProvider {
           {
             kind: "category",
             label: `Categorie: ${row.name}`,
-            href: `/admin/categorii?edit=${row.id}`,
+            href: `/admin/produse/categorii?edit=${row.id}`,
           },
         ]);
       }
@@ -124,7 +124,7 @@ export function createBrandMediaUsageProvider(db: Db): MediaUsageProvider {
           {
             kind: "brand",
             label: `Brand: ${row.name}`,
-            href: `/admin/branduri?edit=${row.id}`,
+            href: `/admin/produse/branduri?edit=${row.id}`,
           },
         ]);
       }

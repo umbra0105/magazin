@@ -76,7 +76,7 @@ test.describe("pagina «Unități de măsură»", () => {
     const tag = randomBytes(3).toString("hex");
     const code = `e2e_u_${tag}`;
     trackE2eUnit(code);
-    await login(page, owner, "/admin/unitati-de-masura");
+    await login(page, owner, "/admin/produse/unitati-de-masura");
     await expect(page.getByRole("heading", { level: 1, name: "Unități de măsură" })).toBeVisible();
     // unitățile de pornire, cu «buc» marcată implicită
     await expect(unitRow(page, "buc")).toBeVisible();
@@ -150,7 +150,7 @@ test.describe("pagina «Unități de măsură»", () => {
     baseURL,
   }) => {
     const owner = await createAccount(request, baseURL as string, "owner");
-    await login(page, owner, "/admin/unitati-de-masura");
+    await login(page, owner, "/admin/produse/unitati-de-masura");
     await expect(unitRow(page, "buc")).toBeVisible();
     await expect(
       unitRow(page, "buc").getByRole("button", { name: /Dezactivează unitatea/ }),
@@ -174,7 +174,7 @@ test.describe("pagina «Unități de măsură»", () => {
     baseURL,
   }) => {
     const editor = await createAccount(request, baseURL as string, "editor");
-    await login(page, editor, "/admin/unitati-de-masura");
+    await login(page, editor, "/admin/produse/unitati-de-masura");
     await expect(unitRow(page, "mp")).toBeVisible();
     await expect(page.getByText("Poți vedea unitățile, dar nu le poți modifica.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Unitate nouă" })).toHaveCount(0);

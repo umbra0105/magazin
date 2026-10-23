@@ -200,7 +200,7 @@ function StockRow({
           )}
           {row.kind === "managed" && (
             <Link
-              href={`/admin/stoc/${row.variantId}`}
+              href={`/admin/produse/stoc/${row.variantId}`}
               aria-label={m.actions.historyAria(name)}
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >

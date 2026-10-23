@@ -8,7 +8,7 @@ import { Button, Select } from "@ecom/ui";
 import {
   attachDiagramProduct,
   detachDiagramProduct,
-} from "@/app/(admin)/admin/fise-explodate/actions";
+} from "@/app/(admin)/admin/produse/fise-explodate/actions";
 import type { ProductActionFailure } from "@/lib/product-action-support";
 import { getMessages } from "@/messages";
 import type { EditorCaps } from "./editor-types";
@@ -120,7 +120,7 @@ export function SparePartsTab({
                 )}
                 <div className="flex min-w-0 flex-1 flex-col">
                   <Link
-                    href={`/admin/fise-explodate/${d.id}`}
+                    href={`/admin/produse/fise-explodate/${d.id}`}
                     aria-label={s.open(d.title)}
                     className="truncate text-sm font-medium text-primary underline-offset-2 hover:underline"
                   >
@@ -211,7 +211,7 @@ export function SparePartsTab({
           )}
           <p className="text-sm">
             <Link
-              href="/admin/fise-explodate"
+              href="/admin/produse/fise-explodate"
               className="text-primary underline-offset-2 hover:underline"
             >
               {s.manage}

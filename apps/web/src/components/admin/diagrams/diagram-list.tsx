@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button, Dialog, Input } from "@ecom/ui";
-import { createDiagram } from "@/app/(admin)/admin/fise-explodate/actions";
+import { createDiagram } from "@/app/(admin)/admin/produse/fise-explodate/actions";
 import { Field } from "@/components/admin/products/editor-ui";
 import { getMessages } from "@/messages";
 import { MediaPicker } from "../media/media-picker";
@@ -89,7 +89,7 @@ export function DiagramList({
                   </td>
                   <th scope="row" className="p-3 text-left font-medium">
                     <Link
-                      href={`/admin/fise-explodate/${d.id}`}
+                      href={`/admin/produse/fise-explodate/${d.id}`}
                       aria-label={m.open(d.title)}
                       className="text-primary underline-offset-2 hover:underline"
                     >
@@ -131,7 +131,7 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
       try {
         const result = await createDiagram({ title: title.trim(), mediaId });
         if (result.ok) {
-          router.push(`/admin/fise-explodate/${result.id}`);
+          router.push(`/admin/produse/fise-explodate/${result.id}`);
           return;
         }
         const errorsByCode = m.errors as Record<string, string>;

@@ -4,11 +4,15 @@ import type { FeatureKey, PermissionKey } from "@ecom/core";
  * Registrul navigației de admin. Fiecare secțiune declară permisiunea (și, dacă e opțională,
  * flag-ul) de care depinde: meniul ascunde ce e oprit sau interzis, iar pagina își verifică singură
  * aceleași condiții (meniul nu e o măsură de securitate, doar de ordine).
+ *
+ * Convenție: o intrare de meniu pe GRUP (Produse, apoi Comenzi, Clienți, Marketing, Conținut, Setări), cu
+ * ecranele grupului ca taburi (`tabs`), nu ca intrări separate de meniu.
  */
 export type AdminNavIcon =
   | "dashboard"
   | "orders"
   | "products"
+  | "allProducts"
   | "categories"
   | "brands"
   | "attributes"
@@ -28,6 +32,25 @@ export type AdminNavIcon =
   | "users"
   | "audit";
 
+/**
+ * Un ecran dintr-un grup de meniu, afișat ca tab în bara grupului. Fiecare tab are permisiunea (și, dacă e
+ * opțional, flag-ul) ecranului: bara îl ascunde, iar pagina își verifică singură aceleași condiții.
+ */
+export interface AdminNavTab {
+  /** Cheia din traduceri (`admin.nav.<id>`). */
+  id: AdminNavIcon;
+  href: string;
+  permission: PermissionKey;
+  feature?: FeatureKey;
+  /** Activ doar pe adresa exactă (tabul-listă al grupului), nu și pe adresele de sub ea. */
+  exact?: boolean;
+  /**
+   * Parametrii din adresă pe care ecranul îi înțelege la fel ca alte taburi (ex. căutarea după produs). Se păstrează la
+   * trecerea între două taburi care îi declară amândouă; orice altceva (filtre, pagina) se resetează.
+   */
+  keepParams?: readonly string[];
+}
+
 export interface AdminNavEntry {
   /** Cheia din traduceri (`admin.nav.<id>`). */
   id: AdminNavIcon;
@@ -36,23 +59,56 @@ export interface AdminNavEntry {
   permission?: PermissionKey;
   /** Lipsă = funcționalitate de bază. Prezent = apare doar cu flag-ul pornit. */
   feature?: FeatureKey;
+  /**
+   * Grup cu taburi: o singură intrare de meniu pentru toate ecranele grupului. Apare dacă utilizatorul
+   * poate vedea cel puțin un tab și duce la primul tab permis; `permission`/`feature` ale intrării nu se
+   * folosesc (drepturile sunt ale taburilor).
+   */
+  tabs?: readonly AdminNavTab[];
+}
+
+/** Ecranele grupului «Produse», în ordinea din bara de taburi. */
+export const PRODUCT_TABS: readonly AdminNavTab[] = [
+  {
+    id: "allProducts",
+    href: "/admin/produse",
+    permission: "products.read",
+    exact: true,
+    keepParams: ["q"],
+  },
+  { id: "categories", href: "/admin/produse/categorii", permission: "products.read" },
+  { id: "brands", href: "/admin/produse/branduri", permission: "products.read" },
+  { id: "attributes", href: "/admin/produse/atribute", permission: "products.read" },
+  { id: "measureUnits", href: "/admin/produse/unitati-de-masura", permission: "products.read" },
+  {
+    id: "partsDiagrams",
+    href: "/admin/produse/fise-explodate",
+    permission: "products.read",
+    feature: "partsDiagrams",
+  },
+  { id: "inventory", href: "/admin/produse/stoc", permission: "inventory.read", keepParams: ["q"] },
+];
+
+/** Destinația unui tab, cu parametrii păstrați din ecranul curent (vezi `keepParams`). */
+export function tabHref(
+  tab: Pick<AdminNavTab, "href" | "keepParams">,
+  current: Pick<AdminNavTab, "keepParams"> | undefined,
+  params: { get(name: string): string | null },
+): string {
+  const kept = new URLSearchParams();
+  for (const name of tab.keepParams ?? []) {
+    if (!current?.keepParams?.includes(name)) continue;
+    const value = params.get(name);
+    if (value) kept.set(name, value);
+  }
+  const query = kept.toString();
+  return query ? `${tab.href}?${query}` : tab.href;
 }
 
 export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "dashboard", href: "/admin" },
   { id: "orders", href: "/admin/comenzi", permission: "orders.read" },
-  { id: "products", href: "/admin/produse", permission: "products.read" },
-  { id: "categories", href: "/admin/categorii", permission: "products.read" },
-  { id: "brands", href: "/admin/branduri", permission: "products.read" },
-  { id: "attributes", href: "/admin/atribute", permission: "products.read" },
-  { id: "measureUnits", href: "/admin/unitati-de-masura", permission: "products.read" },
-  {
-    id: "partsDiagrams",
-    href: "/admin/fise-explodate",
-    permission: "products.read",
-    feature: "partsDiagrams",
-  },
-  { id: "inventory", href: "/admin/stoc", permission: "inventory.read" },
+  { id: "products", href: "/admin/produse", tabs: PRODUCT_TABS },
   { id: "customers", href: "/admin/clienti", permission: "customers.read" },
   { id: "discounts", href: "/admin/reduceri", permission: "discounts.read" },
   { id: "reviews", href: "/admin/recenzii", permission: "content.read", feature: "reviews" },
@@ -72,16 +128,58 @@ export interface NavVisibility {
   isEnabled: (feature: FeatureKey) => boolean;
 }
 
-/** Intrările pe care utilizatorul le poate vedea: permisiunea există ȘI flag-ul (dacă are) e pornit. */
+/** Intrarea vizibilă: `href` e destinația clicului (primul tab permis la grupuri), `basePath` prefixul pentru starea activă. */
+export interface VisibleNavEntry extends AdminNavEntry {
+  basePath: string;
+}
+
+/** Taburile pe care utilizatorul le poate vedea: permisiunea există ȘI flag-ul (dacă are) e pornit. */
+export function visibleTabs(
+  tabs: readonly AdminNavTab[],
+  visibility: NavVisibility,
+): AdminNavTab[] {
+  return tabs.filter(
+    (tab) => visibility.can(tab.permission) && (!tab.feature || visibility.isEnabled(tab.feature)),
+  );
+}
+
+/**
+ * Intrările pe care utilizatorul le poate vedea: permisiunea există ȘI flag-ul (dacă are) e pornit. Un grup cu
+ * taburi apare doar dacă are cel puțin un tab vizibil și duce la primul.
+ */
 export function visibleNav(
   entries: readonly AdminNavEntry[],
   visibility: NavVisibility,
-): AdminNavEntry[] {
-  return entries.filter(
-    (entry) =>
+): VisibleNavEntry[] {
+  const result: VisibleNavEntry[] = [];
+  for (const entry of entries) {
+    if (entry.tabs) {
+      const tabs = visibleTabs(entry.tabs, visibility);
+      const first = tabs[0];
+      if (first) result.push({ ...entry, href: first.href, basePath: entry.href, tabs });
+      continue;
+    }
+    if (
       (!entry.permission || visibility.can(entry.permission)) &&
-      (!entry.feature || visibility.isEnabled(entry.feature)),
-  );
+      (!entry.feature || visibility.isEnabled(entry.feature))
+    ) {
+      result.push({ ...entry, basePath: entry.href });
+    }
+  }
+  return result;
+}
+
+const matchesPath = (pathname: string, href: string): boolean =>
+  pathname === href || pathname.startsWith(`${href}/`);
+
+/** Tabul activ pentru o cale (cel cu prefixul cel mai lung), sau `undefined` (ex. editorul de produs). */
+export function activeTabId(
+  pathname: string,
+  tabs: readonly Pick<AdminNavTab, "id" | "href" | "exact">[],
+): AdminNavIcon | undefined {
+  return tabs
+    .filter((tab) => (tab.exact ? pathname === tab.href : matchesPath(pathname, tab.href)))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.id;
 }
 
 /** Intrarea de meniu pentru o cale (`/admin/comenzi/123` → comenzi), sau `undefined`. */
@@ -101,8 +199,9 @@ export interface Crumb {
 }
 
 /**
- * Firimiturile pentru o cale de admin: Panou › secțiune › segmente. Etichetele secțiunilor vin din
- * traduceri (`labelFor`), segmentele necunoscute (ex. un id) se afișează decodate.
+ * Firimiturile pentru o cale de admin: Panou › secțiune › [tab] › segmente. Etichetele secțiunilor vin din
+ * traduceri (`labelFor`), segmentele necunoscute (ex. un id) se afișează decodate. La grupurile cu taburi,
+ * `segmentLabel` primește id-ul tabului (ex. `inventory`) ca secțiune când calea e sub un tab.
  */
 export function breadcrumbsFor(
   pathname: string,
@@ -121,10 +220,20 @@ export function breadcrumbsFor(
   if (segments[0] !== "admin") return [];
   const crumbs: Crumb[] = [{ label: homeLabel, href: "/admin" }];
   const section = navEntryForPath(path, entries);
+  let sectionId: AdminNavIcon | null = section?.id ?? null;
   let consumed = 1;
   if (section && section.href !== "/admin") {
     crumbs.push({ label: labelFor(section.id), href: section.href });
     consumed = section.href.split("/").filter(Boolean).length;
+    // tabul grupului (Produse › Stoc); tabul-listă (adresa grupului) nu dublează intrarea
+    const tab = section.tabs
+      ?.filter((candidate) => candidate.href !== section.href && matchesPath(path, candidate.href))
+      .sort((a, b) => b.href.length - a.href.length)[0];
+    if (tab) {
+      crumbs.push({ label: labelFor(tab.id), href: tab.href });
+      consumed = tab.href.split("/").filter(Boolean).length;
+      sectionId = tab.id;
+    }
   }
   let href = `/${segments.slice(0, consumed).join("/")}`;
   const rest = segments.slice(consumed);
@@ -137,7 +246,7 @@ export function breadcrumbsFor(
       // segment cu % invalid: îl afișăm cum e
     }
     crumbs.push({
-      label: segmentLabel?.(section?.id ?? null, raw, rest[index - 1] ?? null) ?? label,
+      label: segmentLabel?.(sectionId, raw, rest[index - 1] ?? null) ?? label,
       href,
     });
   }

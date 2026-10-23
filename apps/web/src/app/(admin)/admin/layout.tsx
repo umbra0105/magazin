@@ -72,7 +72,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const navItems: SidebarNavItem[] = visibleNav(ADMIN_NAV, {
     can: (permission) => can(subject, permission),
     isEnabled: (feature) => enabled.has(feature),
-  }).map((entry) => ({ id: entry.id, href: entry.href, label: m.nav[entry.id] }));
+  }).map((entry) => ({
+    id: entry.id,
+    href: entry.href,
+    basePath: entry.basePath,
+    label: m.nav[entry.id],
+  }));
 
   return (
     <>

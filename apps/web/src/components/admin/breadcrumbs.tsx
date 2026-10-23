@@ -17,7 +17,7 @@ export function Breadcrumbs() {
     m.home,
     undefined,
     (section, raw, previous) => {
-      // /admin/stoc/<id variantă>: eticheta «Istoric», nu id-ul tehnic
+      // /admin/produse/stoc/<id variantă>: eticheta «Istoric», nu id-ul tehnic (secțiunea e id-ul tabului)
       if (section === "inventory") return m.inventory.history.breadcrumb;
       if (section !== "products") return null;
       // /admin/produse/import/istoric și /admin/produse/import/istoric/<id>

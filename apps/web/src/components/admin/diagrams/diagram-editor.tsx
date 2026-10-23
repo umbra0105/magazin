@@ -13,7 +13,7 @@ import {
   saveDiagramHotspot,
   searchDiagramProducts,
   updateDiagram,
-} from "@/app/(admin)/admin/fise-explodate/actions";
+} from "@/app/(admin)/admin/produse/fise-explodate/actions";
 import { Field } from "@/components/admin/products/editor-ui";
 import { UnsavedChangesProvider, useDirtyFlag } from "@/components/admin/products/unsaved-changes";
 import {
@@ -321,7 +321,7 @@ function Editor({ diagram, canWrite }: { diagram: DiagramEditorData; canWrite: b
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
         <Link
-          href="/admin/fise-explodate"
+          href="/admin/produse/fise-explodate"
           className="text-sm text-primary underline-offset-2 hover:underline"
         >
           {e.back}
@@ -1001,7 +1001,7 @@ function DeleteDialog({
                     id: diagramId,
                     expectedHotspots: hotspotCount,
                   });
-                  if (result.ok) router.push("/admin/fise-explodate");
+                  if (result.ok) router.push("/admin/produse/fise-explodate");
                   else setProblem(failureText(result));
                 } catch {
                   setProblem(m.errors.generic);

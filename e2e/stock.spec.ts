@@ -13,7 +13,7 @@ import { uniqueClientIp } from "./support/client-ip";
 import { expectResponseOk } from "./support/diagnostics";
 
 /**
- * Faza 5, punctul 8, în browser: ecranul `/admin/stoc` (cantități cu zecimale, pași, rest nevandabil, negestionat, digital,
+ * Faza 5, punctul 8, în browser: ecranul `/admin/produse/stoc` (cantități cu zecimale, pași, rest nevandabil, negestionat, digital,
  * «La comandă», banner-ul «stoc verificat la …»), ajustarea cu motiv și oră efectivă (validări proprii în română,
  * avertismente, jurnal de audit), istoricul și drepturile pe roluri. Produsele de probă au adresa `e2e-stoc-…` și se șterg
  * la final (inclusiv mișcările).
@@ -145,7 +145,7 @@ test.describe("ecranul de stoc", () => {
   }) => {
     failOnNativeDialog(page);
     const manager = await createAccount(request, baseURL as string, "manager");
-    await login(page, manager, `/admin/stoc?q=${encodeURIComponent(search)}`);
+    await login(page, manager, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
     await expect(page.getByRole("heading", { level: 1, name: "Stoc" })).toBeVisible();
     await expect(page.locator("[data-result-count]")).toHaveAttribute("data-result-count", "6");
     await expect(page.locator('[data-banner="fresh"]')).toContainText("Stoc verificat la");
@@ -202,7 +202,7 @@ test.describe("ecranul de stoc", () => {
     await expect(row(page, skus[LINER] as string)).toHaveCount(0);
     // «Resetează» readuce lista întreagă
     await page.getByRole("link", { name: "Resetează" }).click();
-    await expect(page).toHaveURL(/\/admin\/stoc$/);
+    await expect(page).toHaveURL(/\/admin\/produse\/stoc$/);
   });
 
   test("banner-ul «stoc verificat la …»: fără poză, veche, proaspătă", async ({
@@ -211,7 +211,7 @@ test.describe("ecranul de stoc", () => {
     baseURL,
   }) => {
     const manager = await createAccount(request, baseURL as string, "manager");
-    await login(page, manager, `/admin/stoc?q=${encodeURIComponent(search)}`);
+    await login(page, manager, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
     await expect(page.locator('[data-banner="fresh"]')).toBeVisible();
 
     await setE2eStockSnapshot(null);
@@ -241,7 +241,7 @@ test.describe("ajustarea stocului", () => {
   }) => {
     failOnNativeDialog(page);
     const manager = await createAccount(request, baseURL as string, "manager");
-    await login(page, manager, `/admin/stoc?q=${encodeURIComponent(search)}`);
+    await login(page, manager, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
     const liner = row(page, skus[LINER] as string);
     await adjustButton(liner).click();
     const dialog = page.getByRole("dialog");
@@ -288,7 +288,7 @@ test.describe("ajustarea stocului", () => {
 
     // istoricul variantei
     await liner.getByRole("link", { name: /^Istoricul stocului:/ }).click();
-    await page.waitForURL(/\/admin\/stoc\/[A-Za-z0-9_-]+$/);
+    await page.waitForURL(/\/admin\/produse\/stoc\/[A-Za-z0-9_-]+$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Istoric stoc: Liner");
     await expect(page.getByRole("navigation", { name: "Poziția în pagină" })).toContainText(
       "Istoric",
@@ -302,7 +302,7 @@ test.describe("ajustarea stocului", () => {
     await expect(movement).toContainText(manager.email);
     await expect(page.getByText("Istoricul nu se poate modifica sau șterge.")).toBeVisible();
     await page.getByRole("link", { name: "Înapoi la stoc" }).click();
-    await page.waitForURL(/\/admin\/stoc$/);
+    await page.waitForURL(/\/admin\/produse\/stoc$/);
   });
 
   test("validări proprii în română, fără widgeturi native; sub zero se refuză de la server", async ({
@@ -312,7 +312,7 @@ test.describe("ajustarea stocului", () => {
   }) => {
     failOnNativeDialog(page);
     const manager = await createAccount(request, baseURL as string, "manager");
-    await login(page, manager, `/admin/stoc?q=${encodeURIComponent(search)}`);
+    await login(page, manager, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
     await adjustButton(row(page, skus[MOZAIC] as string)).click();
     const dialog = page.getByRole("dialog");
     // formularul nu folosește validarea nativă a browserului
@@ -381,7 +381,7 @@ test.describe("ajustarea stocului", () => {
     baseURL,
   }) => {
     const manager = await createAccount(request, baseURL as string, "manager");
-    await login(page, manager, `/admin/stoc?q=${encodeURIComponent(search)}`);
+    await login(page, manager, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
     await adjustButton(row(page, skus[BISULFAT] as string)).click();
     const dialog = page.getByRole("dialog");
     await dialog
@@ -424,7 +424,7 @@ test.describe("drepturi", () => {
     baseURL,
   }) => {
     const warehouse = await createAccount(request, baseURL as string, "warehouse");
-    await login(page, warehouse, `/admin/stoc?q=${encodeURIComponent(search)}`);
+    await login(page, warehouse, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
     await expect(adjustButton(row(page, skus[LINER] as string))).toHaveCount(1);
     await expect(page.getByRole("link", { name: "Stoc", exact: true })).toBeVisible();
 
@@ -433,8 +433,20 @@ test.describe("drepturi", () => {
     const second = await browser.newContext({ baseURL: baseURL as string });
     try {
       const readerPage = await second.newPage();
-      await login(readerPage, reader, `/admin/stoc?q=${encodeURIComponent(search)}`);
+      await login(readerPage, reader, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
       await expect(readerPage.getByRole("heading", { level: 1, name: "Stoc" })).toBeVisible();
+      // doar inventory.read: bara are un singur tab (Stoc), iar «Produse» din meniu duce direct la el
+      const bar = readerPage.getByRole("navigation", { name: "Secțiunile produselor" });
+      await expect(bar.getByRole("link")).toHaveText(["Stoc"]);
+      await readerPage.goto("/admin");
+      await readerPage
+        .getByRole("navigation", { name: "Navigare principală" })
+        .getByRole("link", { name: "Produse", exact: true })
+        .click();
+      await expect(readerPage).toHaveURL(/\/admin\/produse\/stoc$/);
+      await readerPage.goto("/admin/produse");
+      await expect(readerPage).toHaveURL(/\/admin\/acces-interzis/);
+      await readerPage.goto(`/admin/produse/stoc?q=${encodeURIComponent(search)}`);
       await expect(
         readerPage.getByText("Poți vedea stocul, dar nu îl poți modifica."),
       ).toBeVisible();
@@ -456,17 +468,17 @@ test.describe("drepturi", () => {
       baseURL,
     }) => {
       const account = await createAccount(request, baseURL as string, role);
-      await login(page, account, "/admin/stoc");
-      await expect(page).not.toHaveURL(/\/admin\/stoc/);
+      await login(page, account, "/admin/produse/stoc");
+      await expect(page).not.toHaveURL(/\/admin\/produse\/stoc/);
       await expect(page.getByRole("link", { name: "Stoc", exact: true })).toHaveCount(0);
-      await page.goto("/admin/stoc");
-      await expect(page).not.toHaveURL(/\/admin\/stoc/);
+      await page.goto("/admin/produse/stoc");
+      await expect(page).not.toHaveURL(/\/admin\/produse\/stoc/);
       await expect(page.getByRole("heading", { level: 1, name: "Stoc" })).toHaveCount(0);
     });
   }
 
   test("anonim: trimis la autentificare", async ({ page }) => {
-    await page.goto("/admin/stoc");
+    await page.goto("/admin/produse/stoc");
     await expect(page).toHaveURL(/\/autentificare/);
   });
 });

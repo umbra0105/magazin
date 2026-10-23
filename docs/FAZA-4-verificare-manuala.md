@@ -150,7 +150,7 @@ Prisma Studio.
 
 1. Prisma Studio → tabela **FeatureFlag** → rândul cu `key` = `partsDiagrams` → bifează `enabled` = true → Save.
    Dacă rândul lipsește: „Add record”, `key` = `partsDiagrams`, `enabled` = true.
-2. **Atenție:** flag-urile se rețin până la 5 minute. Dacă meniul „Fișe explodate” nu apare imediat, continuă cu alte
+2. **Atenție:** flag-urile se rețin până la 5 minute. Dacă tabul „Fișe explodate” (din Produse) nu apare imediat, continuă cu alte
    secțiuni și revino.
 
 ---
@@ -276,7 +276,7 @@ produselor selectate sau niciunuia”.
 
 ## 5. Categorii
 
-<http://localhost:3000/admin/categorii>.
+<http://localhost:3000/admin/produse/categorii> (în meniu: Produse → tabul „Categorii”).
 
 5.1 **Vezi:** arborele „Demo Piscine” cu subcategorii, fiecare rând cu adresa, „N produse” și „nivel N”.
 
@@ -309,7 +309,7 @@ adresa/calea noului nume se vede și la subcategorii (calea copilului conține n
 
 ## 6. Branduri
 
-<http://localhost:3000/admin/branduri>.
+<http://localhost:3000/admin/produse/branduri> (Produse → tabul „Branduri”).
 
 6.1 **Faci:** „Brand nou”: Nume `Brand Test`, „Salvează”. **Vezi:** brandul în listă, cu 0 produse.
 
@@ -325,7 +325,7 @@ editare. „Scoate logoul” îl elimină.
 
 ## 7. Atribute
 
-<http://localhost:3000/admin/atribute>.
+<http://localhost:3000/admin/produse/atribute> (Produse → tabul „Atribute”).
 
 7.1 **Faci:** „Atribut nou”: Nume `Diametru test`, Cod `diametru_test`, Tip „Număr”, Unitate `mm`, bifează „Filtrabil în
 magazin”, „Creează atributul”. **Vezi:** „Atributul a fost creat.” și rândul cu unitatea și „nefolosit”.
@@ -377,8 +377,8 @@ adăugată.” Deschide produsul asociat: la „Din alte produse către acesta�
 
 ## 9. Fișe explodate (cere pasul 0.6.b)
 
-9.1 **Vezi:** în meniul din stânga „Fișe explodate” (dacă nu apare: aștepți până la 5 minute după pasul 0.6.b).
-Deschide <http://localhost:3000/admin/fise-explodate>.
+9.1 **Vezi:** în meniul din stânga „Produse”, iar în bara de taburi „Fișe explodate” (dacă nu apare: aștepți până la 5 minute după pasul 0.6.b).
+Deschide <http://localhost:3000/admin/produse/fise-explodate>.
 
 9.2 **Faci:** „Fișă nouă”: Titlu `Fișă test`, „Alege imaginea” din bibliotecă, „Creează fișa”. **Vezi:** editorul fișei cu imaginea.
 
@@ -571,8 +571,8 @@ Folosește o **fereastră privată** pentru conturile de test; Owner-ul rămâne
 
 ### 16.2 Suport clienți (`suport.test@example.test`)
 
-1. Autentifică-te. **Vezi:** meniul fără „Produse”, „Categorii”, „Branduri”, „Atribute”.
-2. Tastează `/admin/produse`, `/admin/categorii`, `/admin/produse/import`. **Vezi:** de fiecare dată „Acces interzis”.
+1. Autentifică-te. **Vezi:** meniul fără „Produse” (categoriile, brandurile și atributele sunt taburi în Produse).
+2. Tastează `/admin/produse`, `/admin/produse/categorii`, `/admin/produse/import`. **Vezi:** de fiecare dată „Acces interzis”.
 
 ### 16.3 Manager (`manager.test@example.test`)
 

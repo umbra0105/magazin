@@ -131,7 +131,10 @@ export function AttributesTab({
       <h2 className="text-lg font-semibold">{a.heading}</h2>
       <p className="text-sm text-muted-foreground">
         {a.help}{" "}
-        <Link href="/admin/atribute" className="text-primary underline-offset-2 hover:underline">
+        <Link
+          href="/admin/produse/atribute"
+          className="text-primary underline-offset-2 hover:underline"
+        >
           {a.manage}
         </Link>
       </p>

@@ -23,7 +23,14 @@ export interface SourceFile {
   content: string;
 }
 
-const PAGES_DIR = "apps/web/src/app/(admin)/admin/fise-explodate/";
+const ADMIN_DIR = "apps/web/src/app/(admin)/admin/produse/";
+/** Lista fișelor e tab (în grupul `(tabs)`), editorul fișei e pagină întreagă, în afara grupului. */
+const LIST_PAGE = `${ADMIN_DIR}(tabs)/fise-explodate/page.tsx`;
+const EDITOR_PAGE = `${ADMIN_DIR}fise-explodate/[id]/page.tsx`;
+const isPartsDiagramPage = (path: string): boolean =>
+  /^apps\/web\/src\/app\/\(admin\)\/admin\/produse\/(?:\(tabs\)\/)?fise-explodate\/(?:.+\/)?page\.tsx$/.test(
+    path,
+  );
 const FEATURE_REQUIRED = /requireAdmin\(\s*\{[^}]*feature:\s*["']partsDiagrams["'][^}]*\}\s*\)/;
 const PRISMA_DELEGATE = /\.\s*partsDiagram(?:Hotspot|Product)?\s*\./;
 
@@ -43,7 +50,7 @@ const isTest = (path: string): boolean =>
 export function findFlagViolations(files: readonly SourceFile[]): string[] {
   const problems: string[] = [];
   for (const file of files) {
-    if (file.path.startsWith(PAGES_DIR) && /\/page\.tsx$/.test(file.path)) {
+    if (isPartsDiagramPage(file.path)) {
       if (!FEATURE_REQUIRED.test(file.content)) {
         problems.push(`${file.path}: pagina nu cere flag-ul partsDiagrams în requireAdmin`);
       }
@@ -86,10 +93,8 @@ describe("flag-ul partsDiagrams ascunde meniul, rutele și codul (sursa reală)"
   const files = [...load("apps/web/src"), ...load("packages/core/src")];
 
   it("scanează paginile fișelor (nu trece în gol) și fiecare cere flag-ul", () => {
-    const pages = files.filter((f) => f.path.startsWith(PAGES_DIR) && /\/page\.tsx$/.test(f.path));
-    expect(pages.map((p) => p.path).sort()).toEqual(
-      [`${PAGES_DIR}page.tsx`, `${PAGES_DIR}[id]/page.tsx`].sort(),
-    );
+    const pages = files.filter((f) => isPartsDiagramPage(f.path));
+    expect(pages.map((p) => p.path).sort()).toEqual([LIST_PAGE, EDITOR_PAGE].sort());
     for (const page of pages) expect(FEATURE_REQUIRED.test(page.content), page.path).toBe(true);
   });
 
@@ -151,7 +156,7 @@ describe("findFlagViolations pe fișiere sintetice (testul pică când trebuie)"
   it("prinde o pagină din fise-explodate fără flag în requireAdmin", () => {
     const problems = findFlagViolations([
       {
-        path: `${PAGES_DIR}noua/page.tsx`,
+        path: `${ADMIN_DIR}fise-explodate/noua/page.tsx`,
         content: `export default async function P() { await requireAdmin({ permission: "products.read" }); }`,
       },
     ]);
@@ -177,7 +182,7 @@ describe("findFlagViolations pe fișiere sintetice (testul pică când trebuie)"
     expect(
       findFlagViolations([
         {
-          path: `${PAGES_DIR}page.tsx`,
+          path: LIST_PAGE,
           content: `await requireAdmin({ permission: "products.read", feature: "partsDiagrams" });`,
         },
         {

@@ -167,7 +167,7 @@ describe("fișa explodată pe baza reală", () => {
         {
           kind: "parts_diagram",
           label: "Fișă explodată: Fișa mea",
-          href: `/admin/fise-explodate/${id}`,
+          href: `/admin/produse/fise-explodate/${id}`,
         },
       ]);
     });

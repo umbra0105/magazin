@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
+import { legacyAdminRedirects } from "./src/lib/admin-redirects";
 
 // Next citește .env doar din folderul aplicației; .env-ul proiectului e în rădăcina repo-ului.
 try {
@@ -33,6 +34,10 @@ const nextConfig: NextConfig = {
     "@ecom/jobs",
     "@ecom/emails",
   ],
+  // Ecranele mutate sub «Produse» (blocul 8b): adresele vechi redirecționează permanent (308), cu parametrii păstrați.
+  async redirects() {
+    return legacyAdminRedirects();
+  },
   // Zona de admin: niciodată în cache partajat sau de browser și niciodată indexată.
   async headers() {
     const privateNoIndex = [

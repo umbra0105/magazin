@@ -123,7 +123,7 @@ test.describe("categorii", () => {
     baseURL,
   }) => {
     const owner = await createAccount(request, baseURL as string, "owner");
-    await login(page, owner, "/admin/categorii");
+    await login(page, owner, "/admin/produse/categorii");
     await expect(page.getByRole("heading", { level: 1, name: "Categorii" })).toBeVisible();
 
     const tag = randomBytes(3).toString("hex");
@@ -208,7 +208,7 @@ test.describe("categorii", () => {
     baseURL,
   }) => {
     const owner = await createAccount(request, baseURL as string, "owner");
-    await login(page, owner, "/admin/categorii");
+    await login(page, owner, "/admin/produse/categorii");
     const tag = randomBytes(3).toString("hex");
     const a = `E2E Alfa ${tag}`;
     const b = `E2E Beta ${tag}`;
@@ -231,7 +231,7 @@ test.describe("categorii", () => {
     browser,
   }) => {
     const owner = await createAccount(request, baseURL as string, "owner");
-    await login(page, owner, "/admin/categorii");
+    await login(page, owner, "/admin/produse/categorii");
     const tag = randomBytes(3).toString("hex");
     const name = `E2E Editabilă ${tag}`;
     await createCategory(page, name);
@@ -240,7 +240,7 @@ test.describe("categorii", () => {
       const context = await browser.newContext({ baseURL: baseURL as string });
       const p = await context.newPage();
       const account = await createAccount(p.request, baseURL as string, role);
-      await login(p, account, "/admin/categorii");
+      await login(p, account, "/admin/produse/categorii");
       return { p, context };
     };
 
@@ -308,7 +308,7 @@ test.describe("categorii", () => {
     await uploadReadyImage(page, page.request, baseURL as string, fileName);
 
     // creează categoria cu imaginea aleasă din selector
-    await page.goto("/admin/categorii");
+    await page.goto("/admin/produse/categorii");
     const name = `E2E Cu imagine ${tag}`;
     await page.getByRole("button", { name: "Categorie nouă" }).click();
     const dialog = page.getByRole("dialog", { name: "Categorie nouă" });
@@ -335,7 +335,7 @@ test.describe("categorii", () => {
 
     // linkul duce la categorie, cu editorul deschis
     await link.click();
-    await expect(page).toHaveURL(/\/admin\/categorii\?edit=/);
+    await expect(page).toHaveURL(/\/admin\/produse\/categorii\?edit=/);
     const editor = page.getByRole("dialog", { name: `Editează «${name}»` });
     await expect(editor).toBeVisible();
 
@@ -358,7 +358,7 @@ test.describe("branduri", () => {
     baseURL,
   }) => {
     const owner = await createAccount(request, baseURL as string, "owner");
-    await login(page, owner, "/admin/branduri");
+    await login(page, owner, "/admin/produse/branduri");
     await expect(page.getByRole("heading", { level: 1, name: "Branduri" })).toBeVisible();
     const tag = randomBytes(3).toString("hex");
     const name = `E2E Brand ${tag}`;
@@ -401,7 +401,7 @@ test.describe("validări în română (fără baloane native)", () => {
     baseURL,
   }) => {
     const owner = await createAccount(request, baseURL as string, "owner");
-    await login(page, owner, "/admin/branduri");
+    await login(page, owner, "/admin/produse/branduri");
 
     await page.getByRole("button", { name: "Brand nou" }).click();
     const brand = page.getByRole("dialog", { name: "Brand nou" });
@@ -411,7 +411,7 @@ test.describe("validări în română (fără baloane native)", () => {
     await expect(brand.getByLabel("Nume")).toBeFocused();
     await page.keyboard.press("Escape");
 
-    await page.goto("/admin/categorii");
+    await page.goto("/admin/produse/categorii");
     await page.getByRole("button", { name: "Categorie nouă" }).click();
     const category = page.getByRole("dialog", { name: "Categorie nouă" });
     await expect(category.locator("form")).toHaveAttribute("novalidate", "");

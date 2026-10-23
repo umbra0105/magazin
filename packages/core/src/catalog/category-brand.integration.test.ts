@@ -182,7 +182,7 @@ describe("categorii pe baza reală", () => {
         {
           kind: "category",
           label: "Categorie: Liner",
-          href: `/admin/categorii?edit=${cat.id}`,
+          href: `/admin/produse/categorii?edit=${cat.id}`,
         },
       ]);
       expect(await tx.media.count({ where: { id: m.id } })).toBe(1);

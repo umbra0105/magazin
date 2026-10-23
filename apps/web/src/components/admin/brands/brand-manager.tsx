@@ -4,7 +4,11 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Button, Dialog, Input, Label, Textarea } from "@ecom/ui";
-import { createBrand, deleteBrand, updateBrand } from "@/app/(admin)/admin/branduri/actions";
+import {
+  createBrand,
+  deleteBrand,
+  updateBrand,
+} from "@/app/(admin)/admin/produse/(tabs)/branduri/actions";
 import { getMediaStatuses } from "@/app/(admin)/admin/media/actions";
 import { MediaPicker } from "@/components/admin/media/media-picker";
 import { getMessages } from "@/messages";

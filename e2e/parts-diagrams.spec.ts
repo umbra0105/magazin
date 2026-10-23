@@ -91,7 +91,7 @@ test.describe("fișa explodată", () => {
 
     // flag oprit
     await expect(page.getByRole("link", { name: "Fișe explodate" })).toHaveCount(0);
-    const off = await page.goto("/admin/fise-explodate");
+    const off = await page.goto("/admin/produse/fise-explodate");
     expect(off?.status()).toBe(404);
     await page.goto(`/admin/produse?q=${encodeURIComponent(`E2E ${tag}`)}`);
     await page.getByRole("link", { name: `Deschide produsul ${title}` }).click();
@@ -102,7 +102,7 @@ test.describe("fișa explodată", () => {
     await setE2eFeatureFlag("partsDiagrams", true);
     await page.goto("/admin/produse");
     await expect(page.getByRole("link", { name: "Fișe explodate" })).toBeVisible();
-    const on = await page.goto("/admin/fise-explodate");
+    const on = await page.goto("/admin/produse/fise-explodate");
     expect(on?.status()).toBe(200);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Fișe explodate");
   });
@@ -127,7 +127,7 @@ test.describe("fișa explodată", () => {
     await uploadReadyImage(page, baseURL as string, imageName);
 
     // creare
-    await page.goto("/admin/fise-explodate");
+    await page.goto("/admin/produse/fise-explodate");
     await page.getByRole("button", { name: "Fișă nouă" }).click();
     const dialog = page.getByRole("dialog", { name: "Fișă explodată nouă" });
     await dialog.getByRole("button", { name: "Creează fișa" }).click();
@@ -140,7 +140,7 @@ test.describe("fișa explodată", () => {
     await picker.getByRole("button", { name: new RegExp(`^(Alege )?fisa-${tag}`) }).click();
     await picker.getByRole("button", { name: "Alege 1 imagine" }).click();
     await dialog.getByRole("button", { name: "Creează fișa" }).click();
-    await page.waitForURL(/\/admin\/fise-explodate\/[A-Za-z0-9_-]+$/);
+    await page.waitForURL(/\/admin\/produse\/fise-explodate\/[A-Za-z0-9_-]+$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(diagramTitle);
     await expect(page.locator("[data-diagram-canvas] img")).toBeVisible();
 
@@ -244,13 +244,13 @@ test.describe("fișa explodată", () => {
     await expect(refusal).toBeVisible();
     const link = refusal.getByRole("link", { name: `Fișă explodată: ${diagramTitle}` });
     await expect(link).toBeVisible();
-    await expect(link).toHaveAttribute("href", /^\/admin\/fise-explodate\/.+/);
+    await expect(link).toHaveAttribute("href", /^\/admin\/produse\/fise-explodate\/.+/);
     await expect(refusal.getByRole("button", { name: "Șterge definitiv" })).toHaveCount(0);
     await refusal.getByRole("button", { name: "Anulează" }).click();
 
     // produs legat șters DEFINITIV: hotspot-ul rămâne, fără produs, vizibil ca atare
     await hardDeleteE2eProduct(`e2e-${tag}-02`);
-    await page.goto(`/admin/fise-explodate/${saved?.id}`);
+    await page.goto(`/admin/produse/fise-explodate/${saved?.id}`);
     await expect(row(page, 1)).toContainText("fără produs");
     expect((await readE2eDiagram(diagramTitle))?.hotspots).toHaveLength(3);
 
@@ -265,7 +265,7 @@ test.describe("fișa explodată", () => {
       .getByRole("dialog", { name: `Ștergi fișa «${diagramTitle}»?` })
       .getByRole("button", { name: "Șterge fișa definitiv" })
       .click();
-    await page.waitForURL(/\/admin\/fise-explodate$/);
+    await page.waitForURL(/\/admin\/produse\/fise-explodate$/);
     expect(await readE2eDiagram(diagramTitle)).toBeNull();
 
     // imaginea nu mai e folosită: se șterge
@@ -292,7 +292,7 @@ test.describe("fișa explodată", () => {
     await setE2eFeatureFlag("partsDiagrams", true);
     await login(page, owner, "/admin/media");
     await uploadReadyImage(page, baseURL as string, imageName);
-    await page.goto("/admin/fise-explodate");
+    await page.goto("/admin/produse/fise-explodate");
     await page.getByRole("button", { name: "Fișă nouă" }).click();
     const dialog = page.getByRole("dialog", { name: "Fișă explodată nouă" });
     await dialog.getByLabel("Titlu", { exact: true }).fill(diagramTitle);
@@ -303,12 +303,12 @@ test.describe("fișa explodată", () => {
     await picker.getByRole("button", { name: new RegExp(`^(Alege )?fisa-${tag}`) }).click();
     await picker.getByRole("button", { name: "Alege 1 imagine" }).click();
     await dialog.getByRole("button", { name: "Creează fișa" }).click();
-    await page.waitForURL(/\/admin\/fise-explodate\/[A-Za-z0-9_-]+$/);
+    await page.waitForURL(/\/admin\/produse\/fise-explodate\/[A-Za-z0-9_-]+$/);
     const diagramUrl = page.url();
 
     const context = await browser.newContext({ baseURL: baseURL as string });
     const ePage = await context.newPage();
-    await login(ePage, editor, "/admin/fise-explodate");
+    await login(ePage, editor, "/admin/produse/fise-explodate");
     await expect(ePage.getByRole("button", { name: "Fișă nouă" })).toHaveCount(0);
     await expect(ePage.getByText("Poți vedea fișele, dar nu le poți modifica")).toBeVisible();
     await ePage.goto(diagramUrl);
@@ -319,7 +319,7 @@ test.describe("fișa explodată", () => {
     const sPage = await context.newPage();
     await context.clearCookies();
     await login(sPage, support, "/admin");
-    await sPage.goto("/admin/fise-explodate");
+    await sPage.goto("/admin/produse/fise-explodate");
     await expect(sPage).toHaveURL(/\/admin\/acces-interzis/);
     await context.close();
   });

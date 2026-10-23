@@ -12,7 +12,7 @@ import {
   renameAttributeOption,
   reorderAttributeOptions,
   updateAttribute,
-} from "@/app/(admin)/admin/atribute/actions";
+} from "@/app/(admin)/admin/produse/(tabs)/atribute/actions";
 import { CheckField, Field } from "@/components/admin/products/editor-ui";
 import type { ProductActionFailure } from "@/lib/product-action-support";
 import { getMessages } from "@/messages";

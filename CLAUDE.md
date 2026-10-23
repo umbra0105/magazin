@@ -226,6 +226,21 @@ există `tenantId`. În schimb:
 - Datorie cunoscută, de tratat înainte de lansare (Faza 17/18): `datetime-local`/`date`, `type="number"`,
   `type="search"` și `<select>` nativ (vezi PROGRESS).
 
+### Navigarea în administrare — regulă permanentă
+
+- **O singură intrare de meniu pe grup, ecranele grupului ca taburi** (bară de legături de navigare deasupra paginii, nu
+  taburi ARIA care ascund conținut). Primul grup e **Produse** (Toate produsele, Categorii, Branduri, Atribute, Unități de
+  măsură, Fișe explodate, Stoc, sub `/admin/produse/…`; **Media** rămâne separat). Același model pentru **Comenzi, Clienți,
+  Marketing, Conținut, Setări** când apar. Un ecran nou al unui grup se adaugă ca tab în `apps/web/src/lib/admin-nav.ts`
+  (nu ca intrare nouă de meniu), într-un grup de rute `(tabs)` cu `layout.tsx` care desenează `AdminTabBar`.
+- Un tab apare doar dacă utilizatorul are permisiunea (și flag-ul) ecranului; intrarea de meniu apare dacă vede cel puțin un
+  tab și duce la primul tab permis. Meniul și bara nu sunt securitate: fiecare pagină își păstrează `requireAdmin`, iar
+  rutele `api/admin` verifică permisiunea. Editorul unei entități, formularele «nou» și importurile sunt pagini întregi,
+  în afara grupului `(tabs)`.
+- Când un ecran își schimbă adresa, adresa veche redirecționează permanent (308) la cea nouă, prin `admin-redirects.ts`,
+  iar legăturile interne, testele și ghidurile de verificare se actualizează în același commit (testul de arhitectură
+  `admin-navigation` pică la orice legătură spre o adresă veche).
+
 ### Teste E2E — aserțiuni de succes — regulă permanentă
 
 - O aserțiune care dovedește că o acțiune s-a terminat trebuie să verifice o stare care apare DOAR după

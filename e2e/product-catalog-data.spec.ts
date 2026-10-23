@@ -15,7 +15,7 @@ import { uniqueClientIp } from "./support/client-ip";
 import { expectResponseOk } from "./support/diagnostics";
 
 /**
- * Blocul 11b în browser: atribute (pagina `/admin/atribute` și tabul Atribute), relații (tabul
+ * Blocul 11b în browser: atribute (pagina `/admin/produse/atribute` și tabul Atribute), relații (tabul
  * Asociate, din ambele părți) și variante (generator cu plan, editare în rând, ștergere explicită).
  */
 
@@ -79,7 +79,7 @@ test.describe("atribute, relații și variante", () => {
     const material = { code: `e2e_material_${tag}`, name: `Material ${tag}` };
     for (const a of [diam, debit, material]) trackE2eAttribute(a.code);
 
-    await login(page, owner, "/admin/atribute");
+    await login(page, owner, "/admin/produse/atribute");
     const dialog = page.getByRole("dialog");
 
     // „Diametru”: numeric, unitate mm, filtrabil
@@ -145,7 +145,7 @@ test.describe("atribute, relații și variante", () => {
     await expect(page.getByLabel(`${debit.name} (m³/h)`)).toHaveValue("0,1");
 
     // tipul blocat și ștergerile refuzate, cu numărul de produse
-    await page.goto("/admin/atribute");
+    await page.goto("/admin/produse/atribute");
     await page.getByRole("button", { name: `Editează atributul ${diam.name}` }).click();
     const lockedDialog = page.getByRole("dialog", { name: `Atribut: ${diam.name}` });
     await expect(lockedDialog.getByLabel("Tip", { exact: true })).toBeDisabled();
@@ -324,7 +324,7 @@ test.describe("atribute, relații și variante", () => {
     const editor = await createAccount(request, baseURL as string, "editor");
     const tag = randomBytes(3).toString("hex");
     const [title] = (await seedE2eProducts(tag, 1)) as [string];
-    await login(page, editor, "/admin/atribute");
+    await login(page, editor, "/admin/produse/atribute");
     await expect(page.getByRole("button", { name: "Atribut nou" })).toHaveCount(0);
     await expect(page.getByText("Poți vedea atributele, dar nu le poți modifica")).toBeVisible();
 
@@ -344,7 +344,7 @@ test.describe("atribute, relații și variante", () => {
       .newContext({ baseURL: baseURL as string });
     const supportPage = await context.newPage();
     await login(supportPage, support, "/admin");
-    await supportPage.goto("/admin/atribute");
+    await supportPage.goto("/admin/produse/atribute");
     await expect(supportPage).toHaveURL(/\/admin\/acces-interzis/);
     await context.close();
   });

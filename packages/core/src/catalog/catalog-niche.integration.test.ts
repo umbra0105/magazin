@@ -249,7 +249,7 @@ describe("fișa explodată", () => {
         {
           kind: "parts_diagram",
           label: "Fișă explodată: Fișa pompei",
-          href: `/admin/fise-explodate/${diagram.id}`,
+          href: `/admin/produse/fise-explodate/${diagram.id}`,
         },
       ]);
     });

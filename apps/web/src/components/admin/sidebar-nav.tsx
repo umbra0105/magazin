@@ -33,6 +33,7 @@ const ICONS: Record<AdminNavIcon, LucideIcon> = {
   dashboard: LayoutDashboard,
   orders: ShoppingCart,
   products: Package,
+  allProducts: Package,
   categories: FolderTree,
   brands: Tag,
   attributes: SlidersHorizontal,
@@ -55,7 +56,10 @@ const ICONS: Record<AdminNavIcon, LucideIcon> = {
 
 export interface SidebarNavItem {
   id: AdminNavIcon;
+  /** Destinația clicului: la grupuri cu taburi, primul tab permis. */
   href: string;
+  /** Prefixul pentru starea activă (grupul rămâne activ pe toate taburile lui). */
+  basePath: string;
   label: string;
 }
 
@@ -67,9 +71,9 @@ export function SidebarNav({ items, label }: { items: SidebarNavItem[]; label: s
         {items.map((item) => {
           const Icon = ICONS[item.id];
           const active =
-            item.href === "/admin"
+            item.basePath === "/admin"
               ? pathname === "/admin"
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              : pathname === item.basePath || pathname.startsWith(`${item.basePath}/`);
           return (
             <li key={item.id}>
               <Link

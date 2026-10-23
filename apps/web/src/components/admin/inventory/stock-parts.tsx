@@ -53,7 +53,7 @@ export function stockHref(query: StockOverviewQuery, overrides: { page?: number 
   const page = overrides.page ?? query.page;
   if (page && page > 1) params.set("pagina", String(page));
   const text = params.toString();
-  return text ? `/admin/stoc?${text}` : "/admin/stoc";
+  return text ? `/admin/produse/stoc?${text}` : "/admin/produse/stoc";
 }
 
 /** Filtrele listei: formular GET (funcționează fără JavaScript), fără validare nativă. */
@@ -62,7 +62,7 @@ export function StockFilters({ query }: { query: StockOverviewQuery }) {
   return (
     <form
       method="get"
-      action="/admin/stoc"
+      action="/admin/produse/stoc"
       noValidate
       role="search"
       aria-label={f.label}
@@ -107,7 +107,7 @@ export function StockFilters({ query }: { query: StockOverviewQuery }) {
       </label>
       <div className="flex gap-2">
         <Button type="submit">{f.apply}</Button>
-        <Link href="/admin/stoc" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/admin/produse/stoc" className={buttonVariants({ variant: "outline" })}>
           {f.reset}
         </Link>
       </div>

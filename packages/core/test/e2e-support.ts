@@ -1239,7 +1239,7 @@ export async function seedE2eVariants(slug: string, skus: readonly string[]): Pr
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Stoc (Faza 5, punctul 8): produse, poze și roluri pentru testele ecranului `/admin/stoc`
+// Stoc (Faza 5, punctul 8): produse, poze și roluri pentru testele ecranului `/admin/produse/stoc`
 // ---------------------------------------------------------------------------------------------------------------------
 
 export interface E2eStockVariant {
