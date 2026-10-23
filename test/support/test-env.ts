@@ -3,7 +3,16 @@
  * `pnpm test:integration` să nu atingă datele locale (seed, setări, flag-uri, branding).
  */
 
-const TEST_NAME = /test/i;
+/**
+ * «test» trebuie să fie un SEGMENT al numelui (`ecom_test`, `test`, `ecom-test-2`), nu un subșir: `contest`, `latest_orders` sau
+ * `attestation` nu sunt baze de test.
+ */
+const TEST_NAME = /(^|[_-])test($|[_-])/i;
+
+/** Numele bazei e al unei baze de test? Aceeași regulă pentru gărzile pe URL și pentru cele care interoghează `current_database()`. */
+export function isTestDatabaseName(name: string): boolean {
+  return TEST_NAME.test(name);
+}
 
 /** `postgresql://u:p@host:5432/ecom` → `postgresql://u:p@host:5432/ecom_test`. */
 export function deriveTestDatabaseUrl(databaseUrl: string, override?: string): string {
@@ -11,7 +20,7 @@ export function deriveTestDatabaseUrl(databaseUrl: string, override?: string): s
   const url = new URL(databaseUrl);
   const name = url.pathname.replace(/^\//, "");
   if (!name) throw new Error("DATABASE_URL nu conține numele bazei de date");
-  url.pathname = TEST_NAME.test(name) ? `/${name}` : `/${name}_test`;
+  url.pathname = isTestDatabaseName(name) ? `/${name}` : `/${name}_test`;
   return url.toString();
 }
 
@@ -38,9 +47,9 @@ export function assertTestDatabase(databaseUrl: string | undefined): asserts dat
     throw new Error("Testele de integrare cer DATABASE_URL (sau TEST_DATABASE_URL) setat.");
   }
   const name = databaseName(databaseUrl);
-  if (!TEST_NAME.test(name)) {
+  if (!isTestDatabaseName(name)) {
     throw new Error(
-      `REFUZ să rulez testele de integrare pe baza „${name}”: numele ei nu conține „test”. ` +
+      `REFUZ să rulez testele de integrare pe baza „${name}”: numele ei nu conține „test” ca segment (ecom_test). ` +
         "Testele șterg date. Folosește o bază de test (implicit <nume>_test) sau setează " +
         "TEST_DATABASE_URL către una.",
     );

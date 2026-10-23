@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient } from "@ecom/db";
 import { parseQuantity, saleStepToInt } from "@ecom/shared";
+import { isTestDatabaseName } from "../../../../test/support/test-env";
 
 /**
  * Date de probă pentru testele de stoc. În testele cu tranzacție anulată merg direct pe clientul tranzacției; în cele de
@@ -125,12 +126,11 @@ interface PurgeTargets {
  * Garda curățării: refuză orice bază al cărei nume nu conține cuvântul «test» ca segment (`ecom_test`, `test`, `ecom-test-2`),
  * nu ca subșir (`contest`, `latest_orders`). Curățarea oprește un trigger de imuabilitate și șterge mișcări de stoc.
  */
-const TEST_DATABASE_NAME = /(^|[_-])test($|[_-])/i;
 
 export async function assertStockTestDatabase(db: PrismaClient): Promise<void> {
   const database = await db.$queryRaw<Array<{ name: string }>>`select current_database() as name`;
   const name = database[0]?.name ?? "";
-  if (!TEST_DATABASE_NAME.test(name)) {
+  if (!isTestDatabaseName(name)) {
     throw new Error(
       `REFUZ să șterg date de stoc pe baza «${name}»: numele ei nu conține «test» ca segment`,
     );

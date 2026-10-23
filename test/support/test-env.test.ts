@@ -7,6 +7,7 @@ import {
   deriveTestDatabaseUrl,
   deriveTestRedisUrl,
   integrationEnv,
+  isTestDatabaseName,
 } from "./test-env";
 
 const dev = "postgresql://ecom:parola@localhost:5432/ecom";
@@ -45,6 +46,44 @@ describe("gărzile", () => {
   it("acceptă o bază de test", () => {
     expect(() => assertTestDatabase("postgresql://u:p@h:5432/ecom_test")).not.toThrow();
     expect(() => assertTestDatabase("postgresql://u:p@h:5432/test_ecom")).not.toThrow();
+  });
+
+  it("«test» trebuie să fie un segment al numelui, nu un subșir: contest, latest_orders, attestation se refuză", () => {
+    for (const name of [
+      "contest",
+      "latest_orders",
+      "attestation",
+      "ecom_contests",
+      "protest",
+      "ecom",
+      "ecom_dev",
+    ]) {
+      expect(() => assertTestDatabase(`postgresql://u:p@h:5432/${name}`), name).toThrowError(
+        /REFUZ/,
+      );
+    }
+    for (const name of [
+      "test",
+      "ecom_test",
+      "ecom-test-2",
+      "TEST_ecom",
+      "ecom_test_ci",
+      "ecom_ci_test",
+    ]) {
+      expect(() => assertTestDatabase(`postgresql://u:p@h:5432/${name}`), name).not.toThrow();
+    }
+  });
+
+  it("isTestDatabaseName e aceeași regulă, pe nume (o folosesc și curățările care interoghează current_database())", () => {
+    expect(isTestDatabaseName("ecom_test")).toBe(true);
+    expect(isTestDatabaseName("contest")).toBe(false);
+    expect(isTestDatabaseName("")).toBe(false);
+  });
+
+  it("derivarea nu consideră «contest» o bază de test: primește sufixul", () => {
+    expect(deriveTestDatabaseUrl("postgresql://u:p@h:5432/contest")).toBe(
+      "postgresql://u:p@h:5432/contest_test",
+    );
   });
 
   it("refuză Redis DB 0 și acceptă un alt index", () => {

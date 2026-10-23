@@ -46,6 +46,32 @@ export function findTestUtilsLeaks(files: readonly SourceFile[]): string[] {
   return problems;
 }
 
+/**
+ * `packages/core/test/e2e-support.ts` oprește TEMPORAR triggerul de imuabilitate al registrului de mișcări (excepția
+ * aprobată din `append-only.test.ts`): nu intră în pachet sau build. Îl pot importa doar testele, `e2e/`, `test/` și
+ * directoarele `packages/<pachet>/test/` (unde stă el).
+ */
+const E2E_SUPPORT_IMPORT =
+  /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)["'][^"']*\be2e-support\b[^"']*["']/;
+const isPackageTestDir = (path: string): boolean => /^packages\/[\w-]+\/test\//.test(path);
+
+export function findE2eSupportLeaks(files: readonly SourceFile[]): string[] {
+  const problems: string[] = [];
+  for (const file of files) {
+    const path = file.path;
+    if (isTestFile(path) || isTestTree(path) || isPackageTestDir(path)) continue;
+    file.content.split("\n").forEach((line, index) => {
+      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return;
+      if (E2E_SUPPORT_IMPORT.test(line)) {
+        problems.push(
+          `${path}:${index + 1}: importă e2e-support din cod care poate ajunge în pachet (permis doar în teste, e2e/, test/ și packages/*/test/)`,
+        );
+      }
+    });
+  }
+  return problems;
+}
+
 const SKIP_DIRS = new Set([
   "node_modules",
   ".git",
@@ -118,5 +144,39 @@ describe("test-utils nu ajunge în aplicație, pachet sau build", () => {
     // un comentariu sau un text care doar numește test-utils nu e import
     expect(leak("packages/core/src/a.ts", `// vezi test-utils/stock-fixtures`)).toEqual([]);
     expect(leak("packages/core/src/a.ts", `const nume = "test-utils";`)).toEqual([]);
+  });
+
+  it("nicio sursă în afara testelor nu importă e2e-support (el oprește triggerul registrului: nu intră în pachet sau build)", () => {
+    expect(findE2eSupportLeaks(sourceFiles())).toEqual([]);
+  });
+
+  it("detectorul pentru e2e-support: prinde importurile din aplicație și pachete, lasă testele, e2e/ și test/", () => {
+    const line = `import { removeE2eStock } from "../../test/e2e-support";`;
+    const leak = (path: string, content = line) => findE2eSupportLeaks([{ path, content }]);
+    for (const path of [
+      "apps/web/src/lib/x.ts",
+      "packages/core/src/inventory/index.ts",
+      "packages/jobs/scripts/stock-jobs.ts",
+      "packages/core/scripts/seed.ts",
+    ]) {
+      expect(leak(path), path).toHaveLength(1);
+    }
+    expect(leak("packages/core/src/index.ts", `export * from "../test/e2e-support";`)).toHaveLength(
+      1,
+    );
+    expect(
+      leak("packages/core/src/a.ts", `const m = await import("../test/e2e-support");`),
+    ).toHaveLength(1);
+    for (const path of [
+      "e2e/stock.spec.ts",
+      "test/support/x.ts",
+      "packages/core/test/e2e-support-stock.integration.test.ts",
+      "packages/core/src/a.test.ts",
+      "packages/core/test/alt-ajutor.ts",
+    ]) {
+      expect(leak(path), path).toEqual([]);
+    }
+    expect(leak("packages/core/src/a.ts", `// vezi test/e2e-support`)).toEqual([]);
+    expect(leak("packages/core/src/a.ts", `const nume = "e2e-support";`)).toEqual([]);
   });
 });
