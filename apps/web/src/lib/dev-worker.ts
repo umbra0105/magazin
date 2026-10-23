@@ -3,6 +3,7 @@ import {
   startImageImportWorkerFromEnv,
   startImportWorkerFromEnv,
   startMediaWorkerFromEnv,
+  startStockJobsFromEnv,
 } from "@ecom/jobs";
 import { getLogger } from "@ecom/shared";
 
@@ -21,8 +22,12 @@ export function startDevEmailWorker(): void {
     startMediaWorkerFromEnv();
     startImportWorkerFromEnv();
     startImageImportWorkerFromEnv();
+    startStockJobsFromEnv();
     getLogger().info(
-      { queues: ["emails", "media", "product-import", "product-import-images"] },
+      {
+        queues: ["emails", "media", "product-import", "product-import-images"],
+        jobs: ["stock-expire-reservations", "stock-snapshot-freshness", "stock-alerts-cleanup"],
+      },
       "workeri porniți în procesul de dezvoltare",
     );
   } catch (error) {

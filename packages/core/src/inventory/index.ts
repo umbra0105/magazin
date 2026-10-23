@@ -9,3 +9,5 @@ export * from "./stock-errors";
 export * from "./stock-service";
 export * from "./adjustment-rules";
 export * from "./stock-adjustments";
+export * from "./workdays";
+export * from "./stock-maintenance";
