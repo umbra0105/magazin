@@ -11,9 +11,18 @@ import {
 } from "@/app/(admin)/admin/produse/(tabs)/branduri/actions";
 import { getMediaStatuses } from "@/app/(admin)/admin/media/actions";
 import { MediaPicker } from "@/components/admin/media/media-picker";
+import { parseLeadTimeInput, type StockTexts } from "@/components/admin/products/stock-form";
+import { daysText } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 
 const m = getMessages().admin.brands;
+const stockErrors = getMessages().admin.products.editor.stock.errors;
+
+const LEAD_TEXTS: StockTexts = {
+  leadTimeInvalid: stockErrors.leadTimeInvalid,
+  leadTimeTooLong: stockErrors.leadTimeTooLong,
+  labelTooLong: "",
+};
 
 export interface BrandRow {
   id: string;
@@ -24,6 +33,8 @@ export interface BrandRow {
   seoTitle: string | null;
   seoDescription: string | null;
   logoMediaId: string | null;
+  /** Termenul implicit «La comandă» (zile) al produselor brandului; `null` = setarea magazinului. */
+  defaultLeadTimeDays: number | null;
   legacyId: string | null;
   legacyUrl: string | null;
 }
@@ -122,6 +133,9 @@ export function BrandManager({ rows, capabilities, thumbs, editId }: Props) {
                 <th scope="col" className="p-3 font-medium">
                   {m.columns.products}
                 </th>
+                <th scope="col" className="p-3 font-medium">
+                  {m.columns.leadTime}
+                </th>
                 <th scope="col" className="p-3 text-right font-medium">
                   {m.columns.actions}
                 </th>
@@ -137,6 +151,11 @@ export function BrandManager({ rows, capabilities, thumbs, editId }: Props) {
                   <td className="p-3 font-medium">{row.name}</td>
                   <td className="p-3 text-muted-foreground">{row.slug}</td>
                   <td className="p-3">{m.products(row.productCount)}</td>
+                  <td className="p-3 text-muted-foreground" data-cell="lead-time">
+                    {row.defaultLeadTimeDays === null
+                      ? m.leadTimeCell.none
+                      : daysText(row.defaultLeadTimeDays)}
+                  </td>
                   <td className="p-3">
                     <div className="flex justify-end gap-1">
                       {canEdit && (
@@ -232,6 +251,8 @@ function BrandFormDialog({
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [legacyId, setLegacyId] = useState("");
   const [legacyUrl, setLegacyUrl] = useState("");
+  const [leadTime, setLeadTime] = useState("");
+  const [leadTimeError, setLeadTimeError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -248,6 +269,8 @@ function BrandFormDialog({
     setLogoUrl(row?.logoMediaId ? (thumbs[row.logoMediaId] ?? null) : null);
     setLegacyId(row?.legacyId ?? "");
     setLegacyUrl(row?.legacyUrl ?? "");
+    setLeadTime(row?.defaultLeadTimeDays == null ? "" : String(row.defaultLeadTimeDays));
+    setLeadTimeError(null);
     setError(null);
   }, [target]);
 
@@ -283,6 +306,14 @@ function BrandFormDialog({
       document.getElementById("brand-name")?.focus();
       return;
     }
+    // termenul (doar cine poate gestiona produsele îl vede editabil): validat înainte de trimitere, cu mesaj în română
+    const lead = parseLeadTimeInput(leadTime, LEAD_TEXTS);
+    if (capabilities.structure && !lead.ok) {
+      setLeadTimeError(lead.message);
+      document.getElementById("brand-lead-time")?.focus();
+      return;
+    }
+    setLeadTimeError(null);
     startTransition(async () => {
       setError(null);
       const nullable = (value: string) => (value.trim() === "" ? null : value.trim());
@@ -295,6 +326,9 @@ function BrandFormDialog({
             ...(seoTitle.trim() && { seoTitle: seoTitle.trim() }),
             ...(seoDescription.trim() && { seoDescription: seoDescription.trim() }),
             ...(logoMediaId && { logoMediaId }),
+            ...(capabilities.structure &&
+              lead.ok &&
+              lead.value !== null && { defaultLeadTimeDays: lead.value }),
             ...(capabilities.legacy && legacyId.trim() && { legacyId: legacyId.trim() }),
             ...(capabilities.legacy && legacyUrl.trim() && { legacyUrl: legacyUrl.trim() }),
           });
@@ -313,6 +347,11 @@ function BrandFormDialog({
             logoMediaId,
           }),
           ...(capabilities.structure && { slug: slug.trim() }),
+          ...(capabilities.structure &&
+            lead.ok &&
+            lead.value !== (editing.defaultLeadTimeDays ?? null) && {
+              defaultLeadTimeDays: lead.value,
+            }),
           ...(capabilities.legacy && {
             legacyId: nullable(legacyId),
             legacyUrl: nullable(legacyUrl),
@@ -379,6 +418,27 @@ function BrandFormDialog({
               rows={4}
               disabled={!canEditContent}
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="brand-lead-time">{m.form.leadTime}</Label>
+            <Input
+              id="brand-lead-time"
+              value={leadTime}
+              onChange={(e) => setLeadTime(e.target.value)}
+              inputMode="numeric"
+              autoComplete="off"
+              aria-describedby="brand-lead-time-help"
+              aria-invalid={leadTimeError ? true : undefined}
+              disabled={!capabilities.structure}
+            />
+            <p id="brand-lead-time-help" className="text-xs text-muted-foreground">
+              {m.form.leadTimeHelp}
+            </p>
+            {leadTimeError && (
+              <p data-problem className="text-sm text-danger">
+                {leadTimeError}
+              </p>
+            )}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">

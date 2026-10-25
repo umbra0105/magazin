@@ -299,6 +299,28 @@ describe("unitate, pas și bază de preț pe produs și variantă", () => {
       );
     }
   });
+
+  it("denumirea pasului pe produs: nulă sau 1–30 de caractere, fără spații la capete", async () => {
+    const name = "product_saleStepLabel_check";
+    const set =
+      (saleStepLabel: string | null) => (tx: TestTx, b: Awaited<ReturnType<typeof base>>) =>
+        tx.product.update({ where: { id: b.product.id }, data: { saleStepLabel } });
+    // nulă (implicit) și valori valide
+    await accepts(base, set(null));
+    await accepts(base, set("sac"));
+    await accepts(base, set("rolă de plasă"));
+    await accepts(base, set("x".repeat(30)));
+    // „una setată, una nulă”: o valoare setată dar goală sau cu spații la capete nu trece (un CHECK cu NULL ar trece)
+    for (const bad of ["", " ", "   ", " sac", "sac ", "x".repeat(31)]) {
+      await rejects(base, set(bad), name);
+    }
+    // produsul nou fără denumire rămâne valid
+    const created = await attempt(
+      async () => null,
+      (tx) => tx.product.create({ data: { slug: `p-${uid()}`, title: "Fără denumire" } }),
+    );
+    expect(created).toBeNull();
+  });
 });
 
 describe("depozite", () => {

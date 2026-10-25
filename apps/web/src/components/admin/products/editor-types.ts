@@ -24,6 +24,14 @@ export interface EditorProduct {
   saleStep: number | null;
   minSteps: number | null;
   showStepPrice: boolean;
+  /** Denumirea pasului («sac», «rolă») pentru afișarea prețului pe pas; `null` = fără denumire. */
+  saleStepLabel: string | null;
+  /** «physical» | «digital»: produsul digital nu are stoc. */
+  type: string;
+  /** Hibrid: produsul gestionat epuizat devine «La comandă». */
+  allowBackorder: boolean;
+  /** Termenul «La comandă» propriu, în zile; `null` = implicitul brandului, apoi setarea globală. */
+  leadTimeDays: number | null;
   seoTitle: string | null;
   seoDescription: string | null;
   energyClass: string | null;
@@ -66,6 +74,9 @@ export interface EditorVariant {
   smartbillMode: string | null;
   smartbillUnitName: string | null;
   smartbillRatio: number | null;
+  /** Suprascrierile de stoc ale variantei (`null` = moștenește de la produs). */
+  manageStock: boolean | null;
+  stockStatus: string | null;
   /** Alegerile de opțiuni, ca text („Culoare: Alb”); gol la o variantă fără opțiuni. */
   label: string;
 }

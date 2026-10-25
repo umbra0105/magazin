@@ -14,3 +14,4 @@ export * from "./stock-maintenance";
 export * from "./stock-overview";
 export * from "./stock-overview-store";
 export * from "./stock-overview-service";
+export * from "./product-stock";

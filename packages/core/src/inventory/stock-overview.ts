@@ -45,7 +45,12 @@ export interface StockOverviewSource {
     safetyBuffer: Quantity;
     lowStockSteps: number | null;
   };
-  leadTime: { productDays: number | null; brandDays: number | null };
+  leadTime: {
+    productDays: number | null;
+    brandDays: number | null;
+    /** Numele brandului, pentru a arăta de unde vine termenul implicit */
+    brandName?: string | null;
+  };
 }
 
 export interface StockOverviewSettings {
@@ -111,7 +116,11 @@ export function buildStockOverviewRow(
         }
       : null,
     defaultLowStockSteps: settings.defaultLowStockSteps,
-    leadTime: { ...source.leadTime, globalDays: settings.defaultLeadTimeDays },
+    leadTime: {
+      productDays: source.leadTime.productDays,
+      brandDays: source.leadTime.brandDays,
+      globalDays: settings.defaultLeadTimeDays,
+    },
   });
   const zero = 0n as Quantity;
   const managed = kind === "managed";

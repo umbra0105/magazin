@@ -27,6 +27,7 @@ export function StockTable({
   warehouseId,
   timeZone,
   noteMax,
+  rowAttribute = "data-variant-row",
 }: {
   groups: readonly StockProductGroup[];
   canWrite: boolean;
@@ -34,6 +35,8 @@ export function StockTable({
   warehouseId: string;
   timeZone: string;
   noteMax: number;
+  /** Atributul `data-…` care marchează rândul unei variante (după SKU); implicit `data-variant-row` */
+  rowAttribute?: string;
 }) {
   const c = m.columns;
   return (
@@ -78,6 +81,7 @@ export function StockTable({
                 warehouseId={warehouseId}
                 timeZone={timeZone}
                 noteMax={noteMax}
+                rowAttribute={rowAttribute}
               />
             ))}
             <GroupTotal group={group} />
@@ -96,6 +100,7 @@ function StockRow({
   warehouseId,
   timeZone,
   noteMax,
+  rowAttribute,
 }: {
   row: StockOverviewRow;
   first: boolean;
@@ -104,13 +109,14 @@ function StockRow({
   warehouseId: string;
   timeZone: string;
   noteMax: number;
+  rowAttribute: string;
 }) {
   const state = stateView(row);
   const availability = availabilityView(row);
   const name = displayName(row);
   return (
     <tr
-      data-variant-row={row.sku}
+      {...{ [rowAttribute]: row.sku }}
       data-kind={row.kind}
       data-state={row.state}
       className={first ? "" : "border-t border-border/60"}

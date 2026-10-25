@@ -219,6 +219,41 @@ describe("branduri pe baza reală", () => {
     });
   });
 
+  it("termenul implicit «La comandă» pe brand: Managerul îl setează (0–365), Editorul nu, golirea îl scoate; apare în listă", async () => {
+    await withServices(async ({ brands, as }) => {
+      const manager = await as("manager");
+      const editor = await as("editor");
+      const created = await brands.create(manager, { name: "Termen", defaultLeadTimeDays: 10 });
+      expect(created.defaultLeadTimeDays).toBe(10);
+      const plain = await brands.create(manager, { name: "Fără termen" });
+      expect(plain.defaultLeadTimeDays).toBeNull();
+
+      const updated = await brands.update(manager, created.id, { defaultLeadTimeDays: 0 });
+      expect(updated.defaultLeadTimeDays).toBe(0);
+      const listed = (await brands.list(manager)).find((b) => b.id === created.id);
+      expect(listed?.defaultLeadTimeDays).toBe(0);
+
+      // Editorul (doar conținut) nu poate; refuzul numește câmpul
+      await expect(
+        brands.update(editor, created.id, { defaultLeadTimeDays: 5 }),
+      ).rejects.toMatchObject({ code: "AUTH_FORBIDDEN" });
+      expect(
+        (await brands.list(manager)).find((b) => b.id === created.id)?.defaultLeadTimeDays,
+      ).toBe(0);
+
+      // validare
+      for (const bad of [-1, 366, 1.5, "7"]) {
+        await expect(
+          brands.update(manager, created.id, { defaultLeadTimeDays: bad }),
+          String(bad),
+        ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+      }
+      // golirea: se aplică din nou setarea globală
+      const cleared = await brands.update(manager, created.id, { defaultLeadTimeDays: null });
+      expect(cleared.defaultLeadTimeDays).toBeNull();
+    });
+  });
+
   it("brandul cu produse nu se șterge (mesaj cu numărul); fără produse da", async () => {
     await withServices(async ({ tx, brands, as }) => {
       const owner = await as("owner");

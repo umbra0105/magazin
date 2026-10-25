@@ -1260,6 +1260,12 @@ export interface E2eStockProduct {
   stockStatus?: "instock" | "outofstock" | "onbackorder";
   allowBackorder?: boolean;
   type?: "physical" | "digital";
+  /** Termenul «La comandă» propriu (zile) */
+  leadTimeDays?: number;
+  /** Denumirea pasului («sac», «rolă») */
+  saleStepLabel?: string;
+  /** Un brand de test (adresa `e2e-stoc-…`, se șterge odată cu produsele), cu termenul lui implicit */
+  brand?: { name: string; defaultLeadTimeDays: number | null };
   variants: E2eStockVariant[];
 }
 
@@ -1308,10 +1314,19 @@ export async function seedE2eStock(
         );
         unitId = unit.rows[0]?.id as string;
       }
+      let brandId: string | null = null;
+      if (product.brand) {
+        const brand = await db.query(
+          `insert into brand (id, slug, name, "defaultLeadTimeDays", "updatedAt")
+           values (gen_random_uuid()::text, $1, $2, $3, now()) returning id`,
+          [`e2e-stoc-${tag}-b${index}`, product.brand.name, product.brand.defaultLeadTimeDays],
+        );
+        brandId = brand.rows[0]?.id as string;
+      }
       const created = await db.query(
         `insert into product (id, slug, title, type, "manageStock", "stockStatus", "allowBackorder",
-                              "measureUnitId", "saleStep", "updatedAt")
-         values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, now()) returning id`,
+                              "measureUnitId", "saleStep", "leadTimeDays", "saleStepLabel", "brandId", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now()) returning id`,
         [
           `e2e-stoc-${tag}-${index}`,
           product.title,
@@ -1321,6 +1336,9 @@ export async function seedE2eStock(
           product.allowBackorder ?? false,
           unitId,
           product.step ? Number.parseInt(e2eTicks(product.step), 10) : null,
+          product.leadTimeDays ?? null,
+          product.saleStepLabel ?? null,
+          brandId,
         ],
       );
       const productId = created.rows[0]?.id as string;
@@ -1459,6 +1477,7 @@ export async function removeE2eStock(): Promise<number> {
       );
       await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_STOCK_SNAPSHOT]);
       const products = await db.query(`delete from product where slug like 'e2e-stoc-%'`);
+      await db.query(`delete from brand where slug like 'e2e-stoc-%'`);
       await db.query(
         `delete from measure_unit where code like 'e2e%' and "isSystem" = false
            and not exists (select 1 from product p where p."measureUnitId" = measure_unit.id)`,

@@ -154,6 +154,22 @@ const productFields = {
   saleStep,
   minSteps,
   showStepPrice: z.boolean().optional(),
+  /** Termenul «La comandă» în zile (gol = implicitul brandului, apoi setarea globală). */
+  leadTimeDays: z
+    .number({ error: "Termenul de livrare trebuie să fie un număr de zile" })
+    .int("Termenul de livrare trebuie să fie un număr întreg de zile")
+    .min(0, "Termenul de livrare nu poate fi negativ")
+    .max(365, "Termenul de livrare are cel mult 365 de zile")
+    .nullable()
+    .optional(),
+  /** Denumirea pasului pentru afișarea prețului pe pas («sac», «rolă»). */
+  saleStepLabel: z
+    .string({ error: "Denumirea pasului trebuie să fie un text" })
+    .trim()
+    .min(1, "Denumirea pasului nu poate fi goală")
+    .max(30, "Denumirea pasului are cel mult 30 de caractere")
+    .nullable()
+    .optional(),
   allowBackorder: z.boolean().optional(),
   expectedRestockDate: z.coerce.date().nullable().optional(),
   excludeFromGroupDiscount: z.boolean().optional(),

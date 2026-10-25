@@ -357,6 +357,14 @@ Listă cu LTV, nr. comenzi, ultima comandă, etichete · fișă client cu istori
 ### 5.5 Stoc
 Vizualizare per depozit · ajustări cu motiv · istoric mișcări · transfer între depozite · alerte stoc mic · import stoc CSV · inventariere (stock take) · rapoarte de rotație.
 
+**Stocul în produs, brand și listă (Faza 5, punctul 9a):**
+
+- **Tabul «Stoc» din editorul de produs:** bifa «Gestionează stocul» (suprascrie setarea magazinului); la negestionat, eticheta «Negestionat până la inventar» și dropdown-ul de disponibilitate (zero rânduri de stoc); la gestionat, hibridul «Vinde La comandă când stocul se epuizează» (`allowBackorder`, implicit oprit); termenul de livrare propriu (`leadTimeDays`, 0–365, gol = brandul, apoi setarea globală) cu textul «Se aplică acum»; tabelul gestiunii pe variante (Moștenește / Gestionat / Negestionat, plus disponibilitatea la negestionate); sub ele, cantitățile pe variante (același tabel ca în «Stoc», cu «Ajustează», «Istoric» și «Deschide în Stoc»). Produsul digital nu are stoc: doar nota.
+- **Drepturi:** starea cu `products.read`; cantitățile, «Istoric» și «Deschide în Stoc» cu `inventory.read` (cantitățile se REDACTEAZĂ pe server, nu se ascund în interfață); modificările (gestiune, disponibilitate, hibrid, termen, suprascrieri pe variantă, denumirea pasului) cu `products.write`; «Ajustează» cu `inventory.write`.
+- **«Denumirea pasului»** (`Product.saleStepLabel`, 1–30 de caractere, CHECK în bază) în tabul «Unitate și pas»: «sac», «rolă», «cutie». Folosită de afișarea prețului pe pas (9b).
+- **Brand:** «Termen implicit La comandă (zile)» în dialogul brandului (`products.write`) și coloană în listă.
+- **Lista «Toate produsele»:** coloana «Stoc» arată starea cea mai bună dintre variante (În stoc / Stoc limitat / La comandă · termen / Indisponibil) și, dedesubt, cantitatea (doar cu `inventory.read`): «Disponibil 100 mp», «2 variante · Disponibil 20 ml», «Negestionat», «Digital».
+
 ### 5.6 Categorii, colecții, branduri
 Arbore drag & drop · imagine și banner · descriere SEO · reguli automate pentru colecții · ordonare produse în categorie (manual + reguli).
 
@@ -553,7 +561,7 @@ Vezi `09-preturi-si-parteneri.md` §5.
 | General: titlu, subtitlu, adresă, descriere | – | citire | **editabil** | editabil |
 | General: stare, brand, livrare, montaj, discount de grup | – | citire | citire | editabil |
 | Prețuri: preț, redus, fereastră, SKU, EAN, garanție | – | citire | citire (prețul e public) | editabil |
-| Stoc, Categorii | – | citire | citire | editabil |
+| Stoc (gestiune, hibrid, termen, variante), Categorii | – | citire (cantitățile și «Ajustează» cu `inventory.read` / `inventory.write`) | citire (doar starea, fără cantități) | editabil |
 | Media, SEO | – | citire | **editabil** | editabil |
 | Preț de achiziție (NIR) | **absent din HTML** | **absent din HTML** | **absent din HTML** | vizibil doar cu `products.cost.view` (Manager, Owner, Admin, Contabil), editabil doar cu `products.cost.edit` (Admin, Owner) |
 

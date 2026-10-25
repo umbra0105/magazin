@@ -28,6 +28,7 @@ import { SeoTab } from "./seo-tab";
 import { SparePartsTab, type SparePartsDiagram } from "./spare-parts-tab";
 import { SaleTab } from "./sale-tab";
 import type { SaleUnit } from "./sale-form";
+import type { LeadTimeContext } from "./stock-form";
 import { StockTab } from "./stock-tab";
 import { UnsavedChangesProvider, useDirtyKeys } from "./unsaved-changes";
 import { VariantsTab } from "./variants-tab";
@@ -65,6 +66,10 @@ export interface ProductEditorProps {
     defaultWarrantyMonths: number;
   };
   storeManagesStock: boolean;
+  /** Termenul «La comandă» al brandului și cel global, pentru textul «Se aplică acum». */
+  stockLeadTime: LeadTimeContext;
+  /** Cantitățile pe variante (componentă de server, cu «Ajustează» și «Istoric»). */
+  stockSlot: ReactNode;
   defaultTab: string;
   /** Panoul prețului de achiziție, randat pe server; `null` fără permisiunea de vizualizare. */
   purchaseSlot: ReactNode;
@@ -100,6 +105,8 @@ function EditorBody({
   caps,
   pricing,
   storeManagesStock,
+  stockLeadTime,
+  stockSlot,
   defaultTab,
   purchaseSlot,
 }: ProductEditorProps) {
@@ -157,8 +164,17 @@ function EditorBody({
     {
       id: "stoc",
       label: e.tabs.stock,
-      badge: badge("stock"),
-      panel: <StockTab product={product} caps={caps} storeManagesStock={storeManagesStock} />,
+      badge: badge("stock") ?? badge("stock-variants"),
+      panel: (
+        <StockTab
+          product={product}
+          variants={variants}
+          caps={caps}
+          storeManagesStock={storeManagesStock}
+          leadTime={stockLeadTime}
+          quantitiesSlot={stockSlot}
+        />
+      ),
     },
     {
       id: "categorii",

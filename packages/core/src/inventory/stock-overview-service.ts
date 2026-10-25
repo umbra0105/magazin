@@ -1,6 +1,13 @@
-import { assertCan, type PermissionSubject } from "../rbac/can";
+import { assertCan, can, type PermissionSubject } from "../rbac/can";
 import type { VisibleStockState } from "./availability";
 import type { StockMaintenance, WarehouseFreshness } from "./stock-maintenance";
+import {
+  redactRowQuantities,
+  resolveLeadTime,
+  summarizeProductRows,
+  type LeadTimeOrigin,
+  type ProductStockSummary,
+} from "./product-stock";
 import { StockError } from "./stock-errors";
 import {
   buildStockOverviewRow,
@@ -75,6 +82,23 @@ export interface StockVariantDetail {
   warehouse: StockWarehouseRef;
   freshness: WarehouseFreshness | null;
   settings: StockOverviewServiceSettings;
+}
+
+/** Stocul unui produs: variantele cu valorile efective, termenul de livrare cu proveniența lui și rezumatul. */
+export interface ProductStockView {
+  warehouse: StockWarehouseRef;
+  /** Fără cantități când subiectul nu are `inventory.read` (starea rămâne) */
+  rows: StockOverviewRow[];
+  canSeeQuantities: boolean;
+  summary: ProductStockSummary;
+  leadTime: {
+    productDays: number | null;
+    brandDays: number | null;
+    brandName: string | null;
+    globalDays: number;
+    effectiveDays: number;
+    origin: LeadTimeOrigin;
+  };
 }
 
 export interface StockMovementsPage {
@@ -227,6 +251,86 @@ export class StockOverviewService {
       freshness: await this.freshnessOf(warehouse.id, settings),
       settings,
     };
+  }
+
+  /**
+   * Stocul unui produs pentru tabul Stoc din editor. Cere `products.read`; cantitățile apar doar cu `inventory.read`
+   * (redactate pe server, nu ascunse în interfață). `null` dacă produsul nu există sau e în coșul de gunoi.
+   */
+  async forProduct(
+    subject: PermissionSubject | null,
+    productId: string,
+    options: { warehouseId?: string } = {},
+  ): Promise<ProductStockView | null> {
+    assertCan(subject, "products.read");
+    const settings = await this.deps.readSettings();
+    const warehouse = await this.resolveWarehouse(options.warehouseId);
+    const sources = await this.deps.store.loadSources({
+      warehouseId: warehouse.id,
+      productIds: [productId],
+      limit: this.maxRows,
+    });
+    const first = sources[0];
+    if (!first) return null;
+    const withQuantities = can(subject, "inventory.read");
+    const rowSettings = {
+      defaultLowStockSteps: settings.lowStockSteps,
+      defaultLeadTimeDays: settings.defaultLeadTimeDays,
+    };
+    const built = sources.map((source) => buildStockOverviewRow(source, rowSettings));
+    const rows = withQuantities ? built : built.map(redactRowQuantities);
+    const lead = resolveLeadTime(first.leadTime, settings.defaultLeadTimeDays);
+    return {
+      warehouse,
+      rows,
+      canSeeQuantities: withQuantities,
+      summary: summarizeProductRows(built, { withQuantities }),
+      leadTime: {
+        productDays: first.leadTime.productDays,
+        brandDays: first.leadTime.brandDays,
+        brandName: first.leadTime.brandName ?? null,
+        globalDays: settings.defaultLeadTimeDays,
+        effectiveDays: lead.days,
+        origin: lead.origin,
+      },
+    };
+  }
+
+  /**
+   * Rezumatele pentru coloana «Stoc» din lista de produse (o singură interogare pentru toate produsele paginii). Cere
+   * `products.read`; cantitățile cer în plus `inventory.read`. Produsele inexistente sau șterse lipsesc din rezultat.
+   */
+  async summaries(
+    subject: PermissionSubject | null,
+    productIds: readonly string[],
+    options: { warehouseId?: string } = {},
+  ): Promise<Map<string, ProductStockSummary>> {
+    assertCan(subject, "products.read");
+    const result = new Map<string, ProductStockSummary>();
+    if (productIds.length === 0) return result;
+    const settings = await this.deps.readSettings();
+    const warehouse = await this.resolveWarehouse(options.warehouseId);
+    const sources = await this.deps.store.loadSources({
+      warehouseId: warehouse.id,
+      productIds,
+      limit: this.maxRows,
+    });
+    const withQuantities = can(subject, "inventory.read");
+    const rowSettings = {
+      defaultLowStockSteps: settings.lowStockSteps,
+      defaultLeadTimeDays: settings.defaultLeadTimeDays,
+    };
+    const byProduct = new Map<string, StockOverviewRow[]>();
+    for (const source of sources) {
+      const row = buildStockOverviewRow(source, rowSettings);
+      const list = byProduct.get(row.productId);
+      if (list) list.push(row);
+      else byProduct.set(row.productId, [row]);
+    }
+    for (const [productId, rows] of byProduct) {
+      result.set(productId, summarizeProductRows(rows, { withQuantities }));
+    }
+    return result;
   }
 
   /** Istoricul mișcărilor unei variante într-un depozit, cele mai noi primele. Cere `inventory.read`. */

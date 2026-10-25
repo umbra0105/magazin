@@ -38,6 +38,14 @@ const fields = {
   seoTitle: text(255),
   seoDescription: text(500),
   logoMediaId: z.string().min(1).max(40).nullable().optional(),
+  /** Termenul implicit «La comandă» (zile) al produselor brandului fără termen propriu; gol = setarea globală. */
+  defaultLeadTimeDays: z
+    .number({ error: "Termenul de livrare trebuie să fie un număr de zile" })
+    .int("Termenul de livrare trebuie să fie un număr întreg de zile")
+    .min(0, "Termenul de livrare nu poate fi negativ")
+    .max(365, "Termenul de livrare are cel mult 365 de zile")
+    .nullable()
+    .optional(),
   legacyId: text(100),
   legacyUrl: z
     .string()
@@ -63,6 +71,7 @@ export interface BrandRecord {
   seoTitle: string | null;
   seoDescription: string | null;
   logoMediaId: string | null;
+  defaultLeadTimeDays: number | null;
   legacyId: string | null;
   legacyUrl: string | null;
 }
@@ -91,6 +100,7 @@ const select = {
   seoTitle: true,
   seoDescription: true,
   logoMediaId: true,
+  defaultLeadTimeDays: true,
   legacyId: true,
   legacyUrl: true,
 } satisfies Prisma.BrandSelect;
@@ -158,6 +168,7 @@ export class BrandService {
         legacyFields: BRAND_LEGACY_FIELDS,
         labels: {
           slug: "adresa",
+          defaultLeadTimeDays: "termenul implicit de livrare",
           legacyId: "identificatorul din magazinul vechi",
           legacyUrl: "adresa din magazinul vechi",
         },

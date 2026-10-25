@@ -7,6 +7,7 @@
  *   npm.cmd run dev:seed-stock                  # creează (idempotent: dacă există, nu face nimic); poza e de acum 3 ore
  *   npm.cmd run dev:seed-stock -- --poza=veche  # poza e de acum 30 de ore (banner roșu)
  *   npm.cmd run dev:seed-stock -- --poza=nicio  # fără nicio poză (banner roșu)
+ *   npm.cmd run dev:seed-stock -- --completeaza # adaugă la produsele existente denumirea pasului, baza prețului, prețurile și un brand cu termen
  *   npm.cmd run dev:seed-stock -- --remove      # șterge ce a creat (doar produsele fără mișcări de stoc)
  *
  * Tot ce creează are adresa (slug) cu prefixul `demo-stoc-`, SKU-ul `DEMO-STOC-…` și poza `fileName = demo-stoc`, deci
@@ -29,6 +30,65 @@ const SLUG_PREFIX = "demo-stoc-";
 const SKU_PREFIX = "DEMO-STOC-";
 const SNAPSHOT_MARK = "demo-stoc";
 const q = (text: string): Quantity => parseQuantity(text);
+const BRAND_SLUG = "demo-stoc-brand";
+
+/** Ce se adaugă peste produsele demo (Faza 5, 9a/9b): denumirea pasului, baza prețului, prețul variantelor, brandul cu termen. */
+const CONFIG: Record<
+  string,
+  {
+    stepLabel?: string;
+    priceBasis?: "unit" | "step";
+    price?: number;
+    showStepPrice?: boolean;
+    brand?: boolean;
+    leadTimeDays?: number;
+  }
+> = {
+  "teava-pvc-u": { price: 3600 },
+  "liner-placare": { stepLabel: "rolă", price: 8735, showStepPrice: true },
+  "bisulfat-sodiu": { stepLabel: "sac", priceBasis: "step", price: 12000, showStepPrice: true },
+  "furtun-dozare": { price: 590 },
+  "mozaic-placare": { stepLabel: "cutie", price: 14990, showStepPrice: true },
+  "lemn-abachi": { stepLabel: "bucată", price: 4500, showStepPrice: true },
+  "pompa-caldura": { brand: true },
+  "cartus-filtru": { brand: true, leadTimeDays: 3 },
+};
+
+async function complete(): Promise<void> {
+  const brand = await db.brand.upsert({
+    where: { slug: BRAND_SLUG },
+    update: { defaultLeadTimeDays: 10 },
+    create: { slug: BRAND_SLUG, name: "Brand demo stoc", defaultLeadTimeDays: 10 },
+  });
+  let touched = 0;
+  for (const [slug, config] of Object.entries(CONFIG)) {
+    const product = await db.product.findFirst({
+      where: { slug: `${SLUG_PREFIX}${slug}` },
+      select: { id: true },
+    });
+    if (!product) continue;
+    await db.product.update({
+      where: { id: product.id },
+      data: {
+        ...(config.stepLabel && { saleStepLabel: config.stepLabel }),
+        ...(config.priceBasis && { priceBasis: config.priceBasis }),
+        ...(config.showStepPrice !== undefined && { showStepPrice: config.showStepPrice }),
+        ...(config.brand && { brandId: brand.id }),
+        ...(config.leadTimeDays !== undefined && { leadTimeDays: config.leadTimeDays }),
+      },
+    });
+    if (config.price !== undefined) {
+      await db.productVariant.updateMany({
+        where: { productId: product.id },
+        data: { price: config.price },
+      });
+    }
+    touched++;
+  }
+  console.log(
+    `Completate: ${touched} produse demo (denumirea pasului, baza prețului, prețuri) și brandul «${brand.name}» cu termen de 10 zile.`,
+  );
+}
 
 interface UnitSpec {
   code: string;
@@ -159,6 +219,11 @@ async function remove(): Promise<void> {
   const snapshots = await db.stockSnapshot.deleteMany({
     where: { fileName: SNAPSHOT_MARK, movements: { none: {} } },
   });
+  const brand = await db.brand.findUnique({
+    where: { slug: BRAND_SLUG },
+    select: { id: true, _count: { select: { products: true } } },
+  });
+  if (brand && brand._count.products === 0) await db.brand.delete({ where: { id: brand.id } });
   console.log(`Șterse: ${removed} produse, ${snapshots.count} poze.`);
   if (kept.length > 0) {
     console.log(
@@ -256,6 +321,7 @@ async function seed(): Promise<void> {
     }
   }
 
+  await complete();
   console.log(`Au fost create ${PRODUCTS.length} produse de stoc fictive (adresa demo-stoc-…).`);
   console.log(
     takenAt
@@ -269,6 +335,7 @@ async function seed(): Promise<void> {
 
 try {
   if (process.argv.includes("--remove")) await remove();
+  else if (process.argv.includes("--completeaza")) await complete();
   else await seed();
 } finally {
   await db.$disconnect();

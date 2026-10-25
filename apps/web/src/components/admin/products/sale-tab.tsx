@@ -16,6 +16,7 @@ import {
   previewQuantities,
   type SaleUnit,
 } from "./sale-form";
+import { parseStepLabelInput } from "./stock-form";
 import { useTabForm } from "./use-tab-form";
 
 const m = getMessages().admin.products;
@@ -50,6 +51,7 @@ export function SaleTab({
       saleStep: formatStepInput(product.saleStep),
       minSteps: product.minSteps === null ? "" : String(product.minSteps),
       showStepPrice: product.showStepPrice,
+      saleStepLabel: product.saleStepLabel ?? "",
     },
     "sale",
   );
@@ -88,6 +90,14 @@ export function SaleTab({
       const min = parseMinInput(form.values.minSteps, t.errors);
       if (!min.ok) found["minSteps"] = min.message;
     }
+    if (form.changed.includes("saleStepLabel")) {
+      const label = parseStepLabelInput(form.values.saleStepLabel, {
+        leadTimeInvalid: "",
+        leadTimeTooLong: "",
+        labelTooLong: t.errors.labelTooLong,
+      });
+      if (!label.ok) found["saleStepLabel"] = label.message;
+    }
     setErrors(found);
     if (Object.keys(found).length > 0) {
       setProblem(e.common.formError);
@@ -100,6 +110,7 @@ export function SaleTab({
       if (key === "measureUnitId") patch[key] = form.values.measureUnitId || null;
       else if (key === "saleStep") patch[key] = stepValue;
       else if (key === "minSteps") patch[key] = minNow.ok ? minNow.value : null;
+      else if (key === "saleStepLabel") patch[key] = form.values.saleStepLabel.trim() || null;
       else patch[key] = form.values[key];
     }
     // schimbarea unității cere re-validarea pasului pe server: îl trimitem și pe el, ca eroarea să apară la câmpul lui
@@ -204,6 +215,23 @@ export function SaleTab({
           )}
         </Field>
       </div>
+
+      <Field
+        id="sale-step-label"
+        label={t.stepLabel}
+        help={t.stepLabelHelp}
+        error={errors["saleStepLabel"]}
+      >
+        {(control) => (
+          <Input
+            {...control}
+            value={form.values.saleStepLabel}
+            onChange={(event) => form.set("saleStepLabel", event.target.value)}
+            autoComplete="off"
+            disabled={!editable}
+          />
+        )}
+      </Field>
 
       <CheckField
         id="sale-show-step-price"

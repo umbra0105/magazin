@@ -33,6 +33,10 @@ export interface ProductRecord {
   /** Minimul comandat, în pași; nul = 1. */
   minSteps: number | null;
   showStepPrice: boolean;
+  /** Termenul «La comandă» în zile; nul = implicitul brandului, apoi setarea globală. */
+  leadTimeDays: number | null;
+  /** Denumirea pasului («sac», «rolă»), pentru afișarea prețului pe pas; nul = fără denumire. */
+  saleStepLabel: string | null;
   excludeFromGroupDiscount: boolean;
   energyClass: string | null;
   eprelUrl: string | null;
@@ -243,6 +247,8 @@ const productSelect = {
   saleStep: true,
   minSteps: true,
   showStepPrice: true,
+  leadTimeDays: true,
+  saleStepLabel: true,
   excludeFromGroupDiscount: true,
   energyClass: true,
   eprelUrl: true,

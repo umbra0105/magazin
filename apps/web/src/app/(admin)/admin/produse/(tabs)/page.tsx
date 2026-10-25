@@ -15,7 +15,9 @@ import { Button, Input, Label, Select, buttonVariants } from "@ecom/ui";
 import { ProductTable, type ProductTableRow } from "@/components/admin/products/product-table";
 import { requireAdmin } from "@/lib/admin-page";
 import { getBrandService, getCategoryService, getProductListService } from "@/lib/catalog";
+import { getStockOverviewService } from "@/lib/inventory";
 import { getSettings } from "@/lib/services";
+import { summaryView, type SummaryView } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 
 const m = getMessages().admin.products;
@@ -68,6 +70,20 @@ export default async function ProductsPage({
   const canWrite = can(subject, "products.write");
   const canEditContent = can(subject, "products.content.write");
   const canExport = can(subject, "products.export");
+
+  // Coloana «Stoc»: starea cea mai bună dintre variante și cantitatea (doar cu `inventory.read`); o singură interogare pentru pagină.
+  const stock: Record<string, SummaryView> = {};
+  if (!trash && page.rows.length > 0) {
+    try {
+      const summaries = await getStockOverviewService().summaries(
+        subject,
+        page.rows.map((r) => r.id),
+      );
+      for (const [productId, summary] of summaries) stock[productId] = summaryView(summary);
+    } catch (error) {
+      if ((error as { code?: string } | null)?.code !== "STOCK_NO_WAREHOUSE") throw error;
+    }
+  }
 
   const rows: ProductTableRow[] = page.rows.map((r) => ({
     id: r.id,
@@ -307,6 +323,7 @@ export default async function ProductsPage({
           categories={categories}
           brands={brands.map((b) => ({ id: b.id, name: b.name }))}
           view={trash ? "deleted" : "active"}
+          stock={stock}
           {...(canExport && {
             exportTools: { filters: exportFilters, filteredTotal: page.total },
           })}

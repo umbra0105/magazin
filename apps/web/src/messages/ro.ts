@@ -464,7 +464,16 @@ export const ro = {
       create: "Brand nou",
       empty: "Nu există niciun brand încă.",
       listLabel: "Lista brandurilor",
-      columns: { name: "Nume", slug: "Adresă", products: "Produse", actions: "Acțiuni" },
+      columns: {
+        name: "Nume",
+        slug: "Adresă",
+        products: "Produse",
+        leadTime: "Termen «La comandă»",
+        actions: "Acțiuni",
+      },
+      leadTimeCell: {
+        none: "Setarea magazinului",
+      },
       products: (n: number) => (n === 1 ? "1 produs" : `${n} produse`),
       actions: {
         edit: (name: string) => `Editează brandul ${name}`,
@@ -481,6 +490,9 @@ export const ro = {
         description: "Descriere",
         seoTitle: "Titlu SEO",
         seoDescription: "Descriere SEO",
+        leadTime: "Termen implicit «La comandă» (zile)",
+        leadTimeHelp:
+          "Se aplică produselor brandului care nu au termen propriu. Gol = setarea magazinului. Îl modifică cine poate gestiona produsele.",
         logo: "Logo",
         logoNone: "Niciun logo ales.",
         logoPick: "Alege logoul",
@@ -651,6 +663,14 @@ export const ro = {
         unavailable: "Indisponibil",
       },
       stockStatus: { instock: "În stoc", outofstock: "Stoc epuizat", onbackorder: "La comandă" },
+      listCell: {
+        available: (quantity: string) => `Disponibil ${quantity}`,
+        variants: (n: number, quantity: string) => `${n} variante · ${quantity}`,
+        differentUnits: (n: number) => `${n} variante, unități diferite`,
+        unmanaged: "Negestionat",
+        digital: "Digital",
+        notInventoried: "Neinventariat",
+      },
       kind: {
         managed: "Gestionat",
         notInventoried: "Neinventariat",
@@ -1086,6 +1106,9 @@ export const ro = {
             `În ${symbol}, cu cel mult ${decimals} ${decimals === 1 ? "zecimală" : "zecimale"} (ex. 2,03). Gol = o unitate.`,
           minSteps: "Cantitate minimă (în pași)",
           minHelp: "Gol = un pas.",
+          stepLabel: "Denumirea pasului",
+          stepLabelHelp:
+            "Cum se numește un pas întreg: sac, rolă, cutie. Apare în preț (ex. «120,00 lei / sac de 25 kg»). Gol = fără denumire.",
           showStepPrice:
             "Arată și prețul unui pas pe pagina produsului (ex. «Rola de 41,25 mp ≈ …»)",
           preview: "Se poate comanda",
@@ -1100,6 +1123,7 @@ export const ro = {
             stepPositive: "Pasul trebuie să fie mai mare decât zero.",
             stepTooBig: "Pasul este prea mare (cel mult 214.748 de unități).",
             minInvalid: "Introdu un număr întreg de pași, cel puțin 1.",
+            labelTooLong: "Denumirea poate avea cel mult 30 de caractere.",
             ratioInvalid: "Introdu raportul ca număr pozitiv, cu cel mult 4 zecimale (ex. 41,25).",
             ratioMissing: "Introdu raportul: câte unități ale magazinului are o unitate SmartBill.",
           },
@@ -1180,12 +1204,59 @@ export const ro = {
           heading: "Stoc",
           manageStock: "Gestionează stocul acestui produs",
           manageHelp: (on: boolean) =>
-            `Implicit în magazin: ${on ? "activat" : "dezactivat"}. Cantitățile reale se gestionează în modulul Stoc (etapa următoare).`,
+            `Implicit în magazin: ${on ? "activat" : "dezactivat"}. Cu gestiunea oprită nu se țin cantități, doar disponibilitatea de mai jos.`,
+          unmanagedNote:
+            "Negestionat până la inventar: nu există cantități, doar starea aleasă mai jos. Pornește gestiunea ca să ții stocul pe cantități.",
           stockStatus: "Disponibilitate",
-          stockStatusHelp:
-            "Se folosește când gestiunea stocului e oprită: starea afișată clienților.",
+          stockStatusHelp: "Starea afișată clienților cât timp gestiunea e oprită.",
           statusManagedNote:
-            "Cu gestiunea activă, disponibilitatea o dă stocul real. Starea de mai sus se aplică doar când gestiunea e oprită.",
+            "Cu gestiunea activă, disponibilitatea o dă stocul real (cantitățile sunt mai jos, pe variante).",
+          allowBackorder: "Vinde «La comandă» când stocul se epuizează",
+          allowBackorderHelp:
+            "Implicit oprit: fără stoc, produsul e «Indisponibil». Pornit, devine «La comandă», cu termenul de mai jos, fără rezervare și fără limită de cantitate.",
+          leadTime: "Termen de livrare «La comandă» (zile)",
+          leadTimeHelp:
+            "Gol = se folosește termenul brandului, apoi setarea magazinului. 0 = livrare imediată.",
+          leadTimeNow: (
+            days: string,
+            origin: "product" | "brand" | "global",
+            brand: string | null,
+          ) =>
+            origin === "product"
+              ? `Se aplică: ${days} (setat pe produs).`
+              : origin === "brand"
+                ? `Se aplică: ${days} (implicit din brandul ${brand ?? ""}).`
+                : `Se aplică: ${days} (setarea magazinului).`,
+          errors: {
+            leadTimeInvalid: "Introdu un număr întreg de zile, între 0 și 365.",
+            leadTimeTooLong: "Termenul poate avea cel mult 365 de zile.",
+          },
+          digital: "Produs digital: nu are stoc. Se livrează mereu și nu primește rezervări.",
+          variants: {
+            heading: "Gestiunea pe variante",
+            help: "Fiecare variantă poate coborî gestiunea: «Moștenește» urmează produsul. Disponibilitatea se aplică variantelor negestionate.",
+            variant: "Variantă",
+            manage: "Gestiune",
+            status: "Disponibilitate",
+            inherit: (managed: boolean) => `Moștenește (${managed ? "gestionat" : "negestionat"})`,
+            managed: "Gestionat",
+            unmanaged: "Negestionat",
+            inheritStatus: (label: string) => `Moștenește (${label})`,
+            aria: (name: string, field: string) => `${field}: ${name}`,
+            save: "Salvează variantele",
+            saved: "Variantele au fost salvate.",
+            partial: (done: number, total: number) =>
+              `Au fost salvate ${done} din ${total} variante; verifică rândurile rămase.`,
+          },
+          quantities: {
+            heading: "Cantități pe variante",
+            noAccess:
+              "Poți vedea starea fiecărei variante, dar nu și cantitățile (cer permisiunea de citire a stocului).",
+            openInStock: "Deschide în Stoc",
+            warehouse: (name: string) => `Depozit: ${name}`,
+            noWarehouse: "Nu există niciun depozit configurat.",
+            stateLabel: "Stare",
+          },
         },
         categories: {
           heading: "Categorii",

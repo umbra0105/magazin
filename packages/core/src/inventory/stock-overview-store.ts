@@ -41,6 +41,8 @@ export interface StockOverviewStore {
   loadSources(input: {
     warehouseId: string;
     search?: string;
+    /** Doar variantele acestor produse (tabul Stoc din produs, coloana din listă) */
+    productIds?: readonly string[];
     limit: number;
   }): Promise<StockOverviewSource[]>;
   getSource(variantId: string, warehouseId: string): Promise<StockOverviewSource | null>;
@@ -99,7 +101,7 @@ function sourceSelect(warehouseId: string) {
         saleStep: true,
         minSteps: true,
         measureUnit: { select: UNIT_SELECT },
-        brand: { select: { defaultLeadTimeDays: true } },
+        brand: { select: { name: true, defaultLeadTimeDays: true } },
       },
     },
   } satisfies Prisma.ProductVariantSelect;
@@ -140,6 +142,7 @@ function toSource(row: VariantRow): StockOverviewSource {
     leadTime: {
       productDays: row.product.leadTimeDays,
       brandDays: row.product.brand?.defaultLeadTimeDays ?? null,
+      brandName: row.product.brand?.name ?? null,
     },
   };
 }
@@ -157,11 +160,14 @@ export function createPrismaStockOverviewStore(db: Db): StockOverviewStore {
       return db.warehouse.findUnique({ where: { id }, select: { id: true, name: true } });
     },
 
-    async loadSources({ warehouseId, search, limit }) {
+    async loadSources({ warehouseId, search, productIds, limit }) {
       const term = search?.trim();
       const rows = await db.productVariant.findMany({
         where: {
-          product: { deletedAt: null },
+          product: {
+            deletedAt: null,
+            ...(productIds && { id: { in: [...productIds] } }),
+          },
           ...(term && {
             OR: [
               { sku: { contains: term, mode: "insensitive" } },

@@ -1,7 +1,19 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { can, childrenOf, hasCopySkuMarker, type CategoryNode } from "@ecom/core";
+import {
+  ADJUSTMENT_NOTE_MAX,
+  ADJUSTMENT_REASONS,
+  ADJUSTMENT_REASON_LABELS,
+  ADJUSTMENT_SIGN_RULES,
+  can,
+  childrenOf,
+  hasCopySkuMarker,
+  type CategoryNode,
+  type ProductStockView,
+} from "@ecom/core";
 import { percentToBasisPoints } from "@ecom/shared/vat";
+import type { ReasonOption } from "@/components/admin/inventory/adjust-stock-dialog";
+import { ProductStockPanel } from "@/components/admin/products/product-stock-panel";
 import { PurchasePanel } from "@/components/admin/products/purchase-panel";
 import { ProductEditor } from "@/components/admin/products/product-editor";
 import type { EditorVariant } from "@/components/admin/products/editor-types";
@@ -15,7 +27,7 @@ import {
   getPartsDiagramService,
   getProductService,
 } from "@/lib/catalog";
-import { getMeasureUnitService } from "@/lib/inventory";
+import { getMeasureUnitService, getStockOverviewService } from "@/lib/inventory";
 import { getProductDocumentsService } from "@/lib/product-documents";
 import { getFeatureFlags, getSettings } from "@/lib/services";
 import { formatZonedLocal } from "@/lib/zoned-time";
@@ -143,6 +155,19 @@ export default async function ProductEditorPage({
     getMeasureUnitService().list(subject),
   ]);
 
+  // Stocul produsului: starea cu `products.read`, cantitățile (redactate pe server) cu `inventory.read`; fără depozit, `null`
+  let stockView: ProductStockView | null = null;
+  try {
+    stockView = await getStockOverviewService().forProduct(subject, id);
+  } catch (error) {
+    if ((error as { code?: string } | null)?.code !== "STOCK_NO_WAREHOUSE") throw error;
+  }
+  const reasons: ReasonOption[] = ADJUSTMENT_REASONS.map((value) => ({
+    value,
+    label: ADJUSTMENT_REASON_LABELS[value],
+    rule: ADJUSTMENT_SIGN_RULES[value],
+  }));
+
   const nodes: CategoryNode[] = categoryRows.map((c) => ({
     id: c.id,
     parentId: c.parentId,
@@ -180,6 +205,8 @@ export default async function ProductEditorPage({
     smartbillMode: v.smartbillMode,
     smartbillUnitName: v.smartbillUnitName,
     smartbillRatio: v.smartbillRatio,
+    manageStock: v.manageStock,
+    stockStatus: v.stockStatus,
     label: v.selections.map((s) => `${s.option}: ${s.value}`).join(", "),
   }));
 
@@ -226,6 +253,10 @@ export default async function ProductEditorPage({
           saleStep: product.saleStep,
           minSteps: product.minSteps,
           showStepPrice: product.showStepPrice,
+          saleStepLabel: product.saleStepLabel,
+          type: product.type,
+          allowBackorder: product.allowBackorder,
+          leadTimeDays: product.leadTimeDays,
           seoTitle: product.seoTitle,
           seoDescription: product.seoDescription,
           energyClass: product.energyClass,
@@ -299,6 +330,20 @@ export default async function ProductEditorPage({
           defaultWarrantyMonths: catalog.defaultWarrantyMonths,
         }}
         storeManagesStock={inventory.manageStock}
+        stockLeadTime={{
+          brandDays: brands.find((b) => b.id === product.brandId)?.defaultLeadTimeDays ?? null,
+          brandName: brands.find((b) => b.id === product.brandId)?.name ?? null,
+          globalDays: inventory.defaultLeadTimeDays,
+        }}
+        stockSlot={
+          <ProductStockPanel
+            view={stockView}
+            canWrite={can(subject, "inventory.write")}
+            reasons={reasons}
+            timeZone={zone}
+            noteMax={ADJUSTMENT_NOTE_MAX}
+          />
+        }
         defaultTab={defaultTab}
         purchaseSlot={
           <PurchasePanel

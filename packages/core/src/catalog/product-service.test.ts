@@ -70,6 +70,8 @@ class MemoryStore implements ProductStore {
       saleStep: null,
       minSteps: null,
       showStepPrice: false,
+      leadTimeDays: null,
+      saleStepLabel: null,
       excludeFromGroupDiscount: false,
       energyClass: null,
       eprelUrl: null,
@@ -509,6 +511,80 @@ describe("modificare produs", () => {
     });
     expect(JSON.stringify(auditRows)).not.toContain("x".repeat(100));
     expect(invalidated).toHaveLength(1);
+  });
+
+  it("Managerul schimbă termenul de livrare, hibridul și denumirea pasului: audit cu diferențe, valori în store", async () => {
+    const { store, service, auditRows } = setup();
+    const p = store.seedProduct({ slug: "bisulfat", title: "Bisulfat" });
+    const after = await service.update(roleSubject("manager"), p.id, {
+      leadTimeDays: 10,
+      allowBackorder: true,
+      saleStepLabel: "  sac  ",
+    });
+    expect(after).toMatchObject({ leadTimeDays: 10, allowBackorder: true, saleStepLabel: "sac" });
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0]).toMatchObject({
+      action: "product.update",
+      before: { leadTimeDays: null, allowBackorder: false, saleStepLabel: null },
+      after: { leadTimeDays: 10, allowBackorder: true, saleStepLabel: "sac" },
+    });
+    // golirea explicită (null) șterge valorile: implicitul brandului/setării se aplică din nou
+    const cleared = await service.update(roleSubject("manager"), p.id, {
+      leadTimeDays: null,
+      saleStepLabel: null,
+    });
+    expect(cleared).toMatchObject({ leadTimeDays: null, saleStepLabel: null });
+    // aceeași valoare: nimic scris
+    const writes = store.calls.updateProduct;
+    await service.update(roleSubject("manager"), p.id, { leadTimeDays: null });
+    expect(store.calls.updateProduct).toBe(writes);
+  });
+
+  it("termenul de livrare și denumirea pasului se validează: 0–365 zile întregi; denumire 1–30 de caractere după tăierea spațiilor", async () => {
+    const { store, service } = setup();
+    const p = store.seedProduct({ slug: "liner", title: "Liner" });
+    const manager = roleSubject("manager");
+    for (const leadTimeDays of [-1, 366, 1.5, "7", Number.NaN]) {
+      await expect(
+        service.update(manager, p.id, { leadTimeDays }),
+        String(leadTimeDays),
+      ).rejects.toBeInstanceOf(ValidationError);
+    }
+    for (const saleStepLabel of ["", "   ", "x".repeat(31), 5]) {
+      await expect(
+        service.update(manager, p.id, { saleStepLabel }),
+        String(saleStepLabel),
+      ).rejects.toBeInstanceOf(ValidationError);
+    }
+    expect(store.calls.updateProduct).toBe(0);
+    for (const leadTimeDays of [0, 365]) {
+      expect((await service.update(manager, p.id, { leadTimeDays })).leadTimeDays).toBe(
+        leadTimeDays,
+      );
+    }
+    expect(
+      (await service.update(manager, p.id, { saleStepLabel: "x".repeat(30) })).saleStepLabel,
+    ).toHaveLength(30);
+  });
+
+  it("Editorul (doar products.content.write) nu poate schimba gestiunea, termenul, hibridul sau denumirea pasului; nimic aplicat, audit denied fără valori", async () => {
+    const { store, service, auditRows } = setup();
+    const p = store.seedProduct({ slug: "pompa", title: "Pompă" });
+    for (const forbidden of [
+      { leadTimeDays: 7 },
+      { allowBackorder: true },
+      { saleStepLabel: "rolă" },
+      { manageStock: false },
+      { stockStatus: "outofstock" },
+    ]) {
+      await expect(
+        service.update(roleSubject("editor"), p.id, { title: "Titlu nou", ...forbidden }),
+      ).rejects.toBeInstanceOf(ProductFieldsForbiddenError);
+    }
+    expect(store.calls.updateProduct).toBe(0);
+    expect(auditRows.length).toBe(5);
+    expect(auditRows.every((r) => r.outcome === "denied")).toBe(true);
+    expect(JSON.stringify(auditRows)).not.toContain("rolă");
   });
 
   it("Editorul nu poate schimba starea, clasa de livrare sau brandul; cererea mixtă nu aplică nimic", async () => {

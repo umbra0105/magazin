@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseQuantity, parseSignedDelta, saleStepToInt, type Quantity } from "@ecom/shared";
 import {
   buildStockOverviewRow,
+  summarizeProductRows,
   type StockOverviewSource,
   type WarehouseFreshness,
 } from "@ecom/core";
@@ -14,6 +15,7 @@ import {
   snapshotView,
   stateView,
   stepsText,
+  summaryView,
   warningText,
 } from "./stock-view";
 
@@ -264,5 +266,71 @@ describe("avertismentele ajustării", () => {
     expect(warningText("below_commitments", { asOf: null, timeZone: TZ })).toBe(
       "Stocul fizic a coborât sub cantitatea angajată și rezervată: disponibilul este acum 0.",
     );
+  });
+});
+
+describe("summaryView: coloana «Stoc» din lista de produse", () => {
+  const summary = (rows: ReturnType<typeof row>[], withQuantities = true) =>
+    summaryView(summarizeProductRows(rows, { withQuantities }));
+
+  it("gestionat, o variantă: starea și cantitatea disponibilă cu unitate", () => {
+    const view = summary([row({ physical: "100" })]);
+    expect(view).toMatchObject({ label: "În stoc", tone: "ok", quantity: "Disponibil 100 mp" });
+  });
+
+  it("gestionat, mai multe variante: numărul de variante și suma, în aceeași unitate", () => {
+    const view = summary([
+      row({ variantId: "a", physical: "40" }),
+      row({ variantId: "b", physical: "60" }),
+    ]);
+    expect(view.quantity).toBe("2 variante · Disponibil 100 mp");
+  });
+
+  it("unități diferite: fără sumă, cu mențiune", () => {
+    const view = summary([
+      row({ variantId: "a", physical: "40" }),
+      row({ variantId: "b", physical: "6", unit: { code: "ml", symbol: "ml", decimals: 1 } }),
+    ]);
+    expect(view.quantity).toBe("2 variante, unități diferite");
+  });
+
+  it("Stoc limitat: ton de avertizare; La comandă: termenul; Indisponibil: ton de pericol", () => {
+    expect(summary([row({ physical: "2" })])).toMatchObject({
+      label: "Stoc limitat",
+      tone: "warn",
+    });
+    const onOrder = summary([
+      row({
+        manageStock: false,
+        stockStatus: "onbackorder",
+        leadTime: { productDays: 9, brandDays: null },
+      }),
+    ]);
+    expect(onOrder).toMatchObject({ label: "La comandă", tone: "info", detail: "termen 9 zile" });
+    expect(summary([row({ physical: "0" })])).toMatchObject({
+      label: "Indisponibil",
+      tone: "danger",
+    });
+  });
+
+  it("negestionat și digital: fără cantitate, cu mențiune scurtă", () => {
+    expect(summary([row({ manageStock: false, stockStatus: "outofstock" })])).toMatchObject({
+      label: "Indisponibil",
+      quantity: "Negestionat",
+    });
+    expect(summary([row({ productType: "digital" })])).toMatchObject({
+      label: "În stoc",
+      quantity: "Digital",
+    });
+  });
+
+  it("fără drept de cantități: doar starea, fără nicio cantitate", () => {
+    const view = summary([row({ physical: "100" })], false);
+    expect(view.label).toBe("În stoc");
+    expect(view.quantity).toBeNull();
+  });
+
+  it("gestionat neinventariat: semnalat", () => {
+    expect(summary([row({ physical: null })]).quantity).toBe("Neinventariat");
   });
 });

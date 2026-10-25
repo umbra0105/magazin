@@ -7,7 +7,9 @@ import { useMemo, useState, useTransition } from "react";
 import { Badge, Button, Dialog, Input, Label, Select } from "@ecom/ui";
 import { bulkUpdateProducts, updateProductInline } from "@/app/(admin)/admin/produse/actions";
 import { duplicateProduct } from "@/app/(admin)/admin/produse/lifecycle-actions";
+import { badgeVariant } from "@/components/admin/inventory/stock-parts";
 import { formatMoney, formatMoneyInput, parseMoneyInput } from "@/lib/money-input";
+import type { SummaryView } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 import { ProductExportDialog } from "./product-export-dialog";
 import {
@@ -58,6 +60,8 @@ export interface ProductTableProps {
   view: "active" | "deleted";
   /** Prezent doar cu `products.export`: filtrele listei și câte produse respectă filtrele. */
   exportTools?: { filters: Record<string, string>; filteredTotal: number };
+  /** Starea de stoc a fiecărui produs (după id), calculată pe server; lipsește la produsele din coșul de gunoi. */
+  stock?: Record<string, SummaryView>;
 }
 
 type InlineField = "title" | "status" | "stockStatus" | "price";
@@ -84,6 +88,7 @@ export function ProductTable({
   brands,
   view,
   exportTools,
+  stock = {},
 }: ProductTableProps) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -734,15 +739,36 @@ export function ProductTable({
                   {isEditing(row, "stockStatus") ? (
                     cellEditor(row, "stockStatus")
                   ) : (
-                    <span className="flex flex-col">
-                      <span className="flex items-center">
-                        {label(m.stock, row.stockStatus)}
-                        {!trash && canWrite && editButton(row, "stockStatus", m.inline.stock)}
+                    <span className="flex flex-col gap-0.5" data-cell="stock">
+                      <span className="flex flex-wrap items-center gap-1">
+                        {stock[row.id] ? (
+                          <Badge variant={badgeVariant(stock[row.id]!.tone)}>
+                            {stock[row.id]!.label}
+                          </Badge>
+                        ) : (
+                          label(m.stock, row.stockStatus)
+                        )}
+                        {stock[row.id]?.detail && (
+                          <span className="text-xs text-muted-foreground">
+                            {stock[row.id]!.detail}
+                          </span>
+                        )}
+                        {!trash &&
+                          canWrite &&
+                          !row.manageStock &&
+                          editButton(row, "stockStatus", m.inline.stock)}
                       </span>
-                      {row.manageStock && (
-                        <span className="text-xs text-muted-foreground">
-                          {m.table.managedStock}
+                      {stock[row.id]?.quantity ? (
+                        <span className="text-xs text-muted-foreground" data-stock-quantity>
+                          {stock[row.id]!.quantity}
                         </span>
+                      ) : (
+                        !stock[row.id] &&
+                        row.manageStock && (
+                          <span className="text-xs text-muted-foreground">
+                            {m.table.managedStock}
+                          </span>
+                        )
                       )}
                     </span>
                   )}

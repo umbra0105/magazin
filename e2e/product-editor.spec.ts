@@ -205,7 +205,7 @@ test.describe("editorul de produs", () => {
 
     // stoc, categorii: doar citire
     await tab(page, "Stoc").click();
-    await expect(page.getByLabel("Disponibilitate")).toBeDisabled();
+    await expect(page.getByLabel("Gestionează stocul acestui produs")).toBeDisabled();
     await tab(page, "Categorii").click();
     await expect(save(page)).toHaveCount(0);
 

@@ -1,4 +1,9 @@
-import type { AdjustmentWarning, StockOverviewRow, WarehouseFreshness } from "@ecom/core";
+import type {
+  AdjustmentWarning,
+  ProductStockSummary,
+  StockOverviewRow,
+  WarehouseFreshness,
+} from "@ecom/core";
 import {
   formatQuantity,
   formatSignedDelta,
@@ -109,6 +114,48 @@ export function stateView(row: StockOverviewRow): StateView {
     label,
     tone: "danger",
     ...(row.remainderOnly ? { detail: text.details.remainderOnly } : {}),
+  };
+}
+
+export interface SummaryView {
+  label: string;
+  tone: Tone;
+  /** «termen 9 zile» la «La comandă» */
+  detail?: string;
+  /** A doua linie din coloană: cantitatea disponibilă, «Negestionat», «Digital»; `null` fără drept de cantități */
+  quantity: string | null;
+}
+
+const SUMMARY_TONE: Record<ProductStockSummary["state"], Tone> = {
+  in_stock: "ok",
+  limited: "warn",
+  on_order: "info",
+  unavailable: "danger",
+};
+
+/** Coloana «Stoc» din lista de produse: starea cea mai bună dintre variante și, dedesubt, cantitatea (doar cu drept de cantități). */
+export function summaryView(summary: ProductStockSummary): SummaryView {
+  const text = m();
+  const cell = text.listCell;
+  let quantity: string | null = null;
+  if (summary.kind === "digital") quantity = cell.digital;
+  else if (summary.kind === "unmanaged") quantity = cell.unmanaged;
+  else if (summary.quantity) {
+    const amount = cell.available(quantityText(summary.quantity.available, summary.quantity.unit));
+    quantity =
+      summary.notInventoried && summary.quantity.available === 0n
+        ? cell.notInventoried
+        : summary.variantCount > 1
+          ? cell.variants(summary.variantCount, amount)
+          : amount;
+  } else if (summary.differentUnits) quantity = cell.differentUnits(summary.variantCount);
+  return {
+    label: text.states[summary.state],
+    tone: SUMMARY_TONE[summary.state],
+    ...(summary.state === "on_order" && summary.leadTimeDays !== null
+      ? { detail: text.details.leadTime(daysText(summary.leadTimeDays)) }
+      : {}),
+    quantity,
   };
 }
 

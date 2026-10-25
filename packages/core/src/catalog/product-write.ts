@@ -62,6 +62,8 @@ const FIELD_LABELS: Readonly<Record<string, string>> = {
   saleStep: "pasul de vânzare",
   minSteps: "minimul comandat",
   showStepPrice: "afișarea prețului pasului",
+  leadTimeDays: "termenul de livrare",
+  saleStepLabel: "denumirea pasului",
 };
 
 export type ProductUpdatePayload = Readonly<Record<string, unknown>>;

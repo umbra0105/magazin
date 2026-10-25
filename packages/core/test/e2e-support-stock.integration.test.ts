@@ -91,12 +91,26 @@ describe("gărzile: refuz pe orice bază fără «test» ca segment, înainte de
 describe("curățarea E2E de stoc: restricția pe variantele E2ESTOC…", () => {
   it("șterge mișcările și produsele E2E, lasă neatinse mișcările altor variante, iar triggerul rămâne activ", async () => {
     const [sku] = await seedE2eStock(tag(), [
-      { title: "Produs E2E de curățat", variants: [{ sku: "A", physical: "5" }] },
+      {
+        title: "Produs E2E de curățat",
+        brand: { name: "Brand E2E de curățat", defaultLeadTimeDays: 5 },
+        leadTimeDays: 2,
+        saleStepLabel: "sac",
+        variants: [{ sku: "A", physical: "5" }],
+      },
     ]);
     expect(sku?.startsWith("E2ESTOC")).toBe(true);
     const e2e = await readE2eStock(sku as string);
     const e2eVariantId = e2e?.variantId as string;
     await movement(e2eVariantId, defaultWarehouseId, "mișcare E2E");
+
+    // un brand care NU e al testelor E2E (adresa fără prefixul `e2e-stoc-`): curățarea nu-l atinge
+    const foreignBrand = await db.brand.create({
+      data: { slug: `strain-${tag()}`, name: "Brand străin", defaultLeadTimeDays: 7 },
+    });
+    expect(
+      await db.brand.count({ where: { slug: { startsWith: "e2e-stoc-" } } }),
+    ).toBeGreaterThanOrEqual(1);
 
     // o variantă care NU e a testelor E2E, cu propria mișcare
     const ctx = await createStockContext(db);
@@ -112,6 +126,9 @@ describe("curățarea E2E de stoc: restricția pe variantele E2ESTOC…", () => 
       expect(await db.stockMovement.count({ where: { variantId: e2eVariantId } })).toBe(0);
       expect(await db.productVariant.count({ where: { id: e2eVariantId } })).toBe(0);
       expect(await readE2eStock(sku as string)).toBeNull();
+      // brandul E2E a dispărut, cel străin a rămas
+      expect(await db.brand.count({ where: { slug: { startsWith: "e2e-stoc-" } } })).toBe(0);
+      expect(await db.brand.count({ where: { id: foreignBrand.id } })).toBe(1);
       // ce nu era E2E a rămas întreg
       expect(await db.stockMovement.count({ where: { variantId: otherVariantId } })).toBe(1);
       expect(await db.productVariant.count({ where: { id: otherVariantId } })).toBe(1);
@@ -119,6 +136,7 @@ describe("curățarea E2E de stoc: restricția pe variantele E2ESTOC…", () => 
       await expectTriggerActive(otherVariantId);
     } finally {
       await purgeStockContext(db, ctx);
+      await db.brand.deleteMany({ where: { id: foreignBrand.id } });
     }
   });
 

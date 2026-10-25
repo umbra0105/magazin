@@ -372,6 +372,8 @@ model Product {
   priceBasis               String                @default("unit")
   /// Pasul de vânzare în zecimi de miime de unitate (25000 = 2,5 ml); gol = o unitate. Cantitatea comandată e multiplu exact.
   saleStep                 Int?
+  /// Denumirea pasului pentru afișarea prețului pe pas («sac», «rolă»); gol = fără denumire. 1–30 de caractere (CHECK)
+  saleStepLabel            String?
   /// Minimul comandat, în pași (gol = 1)
   minSteps                 Int?
   /// Arată și prețul unui pas (ex. „Rola de 41,25 mp ≈ …”)
