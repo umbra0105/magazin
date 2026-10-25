@@ -91,7 +91,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await removeE2eStock();
+  await removeE2eStock({ tag });
 });
 
 const tab = (page: Page, name: string) => page.getByRole("tab", { name, exact: true });

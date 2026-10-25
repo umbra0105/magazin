@@ -266,7 +266,7 @@ Fiecare punct: 🟢 ÎNCEP, teste care pică întâi, commit separat, ✅ GATA c
 | 13 | **Multi-depozit în spatele comutatorului:** CRUD depozite, selector, transfer; oprit = invizibil | Pregătire pentru creștere | Browser: oprit → nu apare; pornit (Prisma Studio) → apare și transferul funcționează |
 | 14 | **Închiderea fazei:** E2E, testul de concurență final în suită, acoperirea față de cerințe, `docs/FAZA-5-verificare-manuala.md` (cu **cele 6 produse ale tale ca scenarii**), **lista „înainte de lansare”** în TODO, PROGRESS, TODO, `docs/04`/`docs/15` | 🏁 | Ghidul tău de ~1–1,5 ore |
 
-**Etapele punctului 9 (decis de utilizator):** 9a = migrația `Product.saleStepLabel`, tabul «Stoc» din editor, «Denumirea pasului», termenul implicit pe brand și coloana «Stoc» din listă; 9b = afișarea prețului pe unitate și pe pas, coloana «Preț» din listă, previzualizarea din tabul Prețuri și coloanele noi de import/export.
+**Etapele punctului 9 (decis de utilizator):** (9b adaugă și: importurile creează produse negestionate, explicit; un fișier exportat cu un simbol de unitate ambiguu folosește codul unității) 9a = migrația `Product.saleStepLabel`, tabul «Stoc» din editor, «Denumirea pasului», termenul implicit pe brand și coloana «Stoc» din listă; 9b = afișarea prețului pe unitate și pe pas, coloana «Preț» din listă, previzualizarea din tabul Prețuri și coloanele noi de import/export.
 
 **Navigarea (blocul 8b, decis de utilizator):** punctele 9–13 construiesc ecranele noi direct în structura cu taburi: meniul are o singură intrare «Produse», iar ecranele (inclusiv cele noi, ex. «Stoc mic» de la punctul 10 sau «Depozite» de la 13) sunt taburi sub `/admin/produse/…`, cu drepturile fiecărui ecran; convenția e în `CLAUDE.md` și `docs/04-backend-admin.md`.
 

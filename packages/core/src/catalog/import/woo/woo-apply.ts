@@ -234,6 +234,8 @@ export class WooApplier {
       description: op.product.description,
       // produsul se creează ciornă; o stare «activ» se aplică după, ca regulile de activare să ruleze
       status: "draft",
+      // importurile creează produse NEGESTIONATE, explicit (inventarul îl face utilizatorul, nu valoarea implicită a magazinului)
+      manageStock: false,
       shippingClass: op.product.shippingClass,
       ...(brandId ? { brandId } : {}),
       categoryIds,

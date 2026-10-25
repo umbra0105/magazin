@@ -21,6 +21,7 @@
     "./vat": "./src/vat.ts",
     "./decimal": "./src/decimal.ts",
     "./quantity": "./src/quantity.ts",
+    "./price-display": "./src/price-display.ts",
     "./zoned-time": "./src/zoned-time.ts"
   }
 }

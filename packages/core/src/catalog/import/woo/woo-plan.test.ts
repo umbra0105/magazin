@@ -15,6 +15,7 @@ import {
   type ImportPlan,
   type PlannedRow,
 } from "../import-plan";
+import { emptyExistingSale } from "../import-sale";
 import { detectWooColumns, looksLikeWooExport } from "./woo-columns";
 import { DEFAULT_WOO_OPTIONS, collectWooLookups, planWoo, type WooSnapshot } from "./woo-plan";
 import type {
@@ -71,6 +72,7 @@ function snapshot(
     slugOwners: new Map(),
     categoryIndex: buildCategoryIndex(categories),
     brandIndex: buildBrandIndex(brands),
+    units: [],
     woo: emptyExtras({ categories, brands, ...over.extras }),
   };
 }
@@ -492,6 +494,7 @@ describe("reimport: produs existent", () => {
       lengthMm: null,
       widthMm: null,
       heightMm: null,
+      sale: emptyExistingSale([`v-${sku}`]),
       product: {
         title: "Titlu vechi",
         slug: `slug-${sku.toLowerCase()}`,

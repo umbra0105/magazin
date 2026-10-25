@@ -99,6 +99,7 @@ export default async function ProductsPage({
     sku: r.sku,
     singleVariantId: r.singleVariantId,
     categoryNames: r.categoryNames,
+    sale: r.sale,
     thumb: r.thumb,
     updatedAt: r.updatedAt.toISOString(),
     deletedAt: r.deletedAt ? r.deletedAt.toISOString() : null,

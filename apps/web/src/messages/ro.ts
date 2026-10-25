@@ -622,6 +622,32 @@ export const ro = {
           "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",
       },
     },
+    /** Afișarea prețului pe unitate și pe pas (9b). PROVIZORIE: informativă, până la motorul de prețuri (Faza 8). */
+    priceDisplay: {
+      heading: "Cum se afișează prețul",
+      provisional:
+        "Afișare provizorie, doar informativă: totalul comenzii îl calculează coșul. «≈» înseamnă că suma nu iese exactă în bani.",
+      defaultUnit: "buc",
+      /** Ce urmează după «/»: simbolul unității, sau pasul întreg cu denumirea lui */
+      perUnit: (symbol: string) => symbol,
+      perStep: (step: string, symbol: string, label: string | null) =>
+        label ? `${label} de ${step} ${symbol}` : `${step} ${symbol}`,
+      reference: (amount: string, per: string) => `${amount} / ${per}`,
+      unitInfo: (amount: string, symbol: string, approx: boolean) =>
+        `(${approx ? "≈ " : ""}${amount}/${symbol})`,
+      stepPrice: (
+        label: string | null,
+        step: string,
+        symbol: string,
+        amount: string,
+        exact: boolean,
+      ) => {
+        const name = label ? label.charAt(0).toUpperCase() + label.slice(1) : "Pas";
+        return `${name} de ${step} ${symbol} ${exact ? "=" : "≈"} ${amount}`;
+      },
+      forVariant: (sku: string) => `Varianta ${sku}`,
+      saleLabel: "Preț redus",
+    },
     inventory: {
       title: "Stoc",
       description:

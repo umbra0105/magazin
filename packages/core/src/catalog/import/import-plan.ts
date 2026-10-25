@@ -19,6 +19,17 @@ import {
   type ImportFieldKey,
 } from "./import-fields";
 import { restoreCell, restoredText } from "./cell-safety";
+import {
+  SALE_FIELD_KEYS,
+  parseSaleValues,
+  planExistingSale,
+  planNewSale,
+  type ExistingSale,
+  type ImportUnit,
+  type SaleDecision,
+  type SaleRow,
+  type SaleValues,
+} from "./import-sale";
 import type { ParsedTable } from "./import-file";
 import type { WooOperation, WooPlanExtras } from "./woo/woo-types";
 
@@ -53,6 +64,8 @@ export interface ExistingVariant {
   lengthMm: number | null;
   widthMm: number | null;
   heightMm: number | null;
+  /** Configurarea de vânzare actuală (unitate, bază, pas, minim, conversie SmartBill, stare, termen). */
+  sale: ExistingSale;
   product: {
     title: string;
     slug: string;
@@ -76,6 +89,8 @@ export interface ImportSnapshot {
   categoryIndex: ReadonlyMap<string, string | null>;
   /** Numele normalizat → id; `null` = ambiguu. */
   brandIndex: ReadonlyMap<string, string | null>;
+  /** Unitățile de măsură (pentru coloana «Unitate de măsură» și zecimalele pasului). */
+  units: readonly ImportUnit[];
 }
 
 export type RowOutcome = "new" | "updated" | "unchanged" | "skipped" | "error";
@@ -447,9 +462,26 @@ function parseFields(
   return out;
 }
 
+/** Coloana din baza de date → câmpul de import, pentru coloanele de vânzare (mesajele schemei numesc coloana). */
+const SALE_COLUMN_FIELD: Record<string, ImportFieldKey> = {
+  measureUnitId: "unit",
+  priceBasis: "priceBasis",
+  saleStep: "saleStep",
+  minSteps: "minSteps",
+  saleStepLabel: "saleStepLabel",
+  smartbillMode: "smartbillMode",
+  smartbillUnitName: "smartbillUnitName",
+  smartbillRatio: "smartbillRatio",
+  stockStatus: "stockStatus",
+  leadTimeDays: "leadTimeDays",
+};
+
 const issueText = (issue: { path: PropertyKey[]; message: string }): string => {
   const head = issue.path[0] === "variants" ? issue.path[2] : issue.path[0];
-  const field = IMPORT_FIELDS.find((f) => f.key === head || VARIANT_COLUMN[f.key] === head);
+  const saleField = typeof head === "string" ? SALE_COLUMN_FIELD[head] : undefined;
+  const field = saleField
+    ? IMPORT_FIELDS.find((f) => f.key === saleField)
+    : IMPORT_FIELDS.find((f) => f.key === head || VARIANT_COLUMN[f.key] === head);
   return field ? `${field.label}: ${issue.message}` : issue.message;
 };
 
@@ -461,6 +493,7 @@ function planNew(
   snapshot: ImportSnapshot,
   claimedSlugs: Map<string, number>,
   row: number,
+  sale: SaleValues,
 ): { op: ImportOperation | null; changed: string[] } {
   const reported = (label: string) => errors.some((e) => e.text.startsWith(label));
   if (fields.title === undefined && !reported("Titlu")) {
@@ -489,9 +522,17 @@ function planNew(
       });
     } else claimedSlugs.set(key, row);
   }
+  // vânzarea (unitate, pas, stare...): produsele noi se creează negestionate; verificările pe configurația finală
+  const newSale = planNewSale(sale, snapshot.units);
+  for (const text of newSale.errors) errors.push({ level: "error", text });
   if (errors.some((e) => e.level === "error")) return { op: null, changed: [] };
 
-  const variant: Record<string, unknown> = { sku, price: fields.price, isDefault: true };
+  const variant: Record<string, unknown> = {
+    sku,
+    price: fields.price,
+    isDefault: true,
+    ...newSale.variant,
+  };
   for (const [field, column] of Object.entries(VARIANT_COLUMN)) {
     if (field === "price") continue;
     const value = fields[field as keyof ParsedFields];
@@ -506,6 +547,7 @@ function planNew(
     ...(fields.brandId !== undefined && { brandId: fields.brandId }),
     ...(fields.shippingClass !== undefined && { shippingClass: fields.shippingClass }),
     ...(fields.categoryIds !== undefined && { categoryIds: fields.categoryIds }),
+    ...newSale.product,
     variants: [variant],
   };
   const checked = productCreateSchema.safeParse(input);
@@ -529,6 +571,7 @@ function planUpdate(
   snapshot: ImportSnapshot,
   productClaims: Map<string, Map<string, { value: unknown; row: number }>>,
   row: number,
+  sale: SaleDecision | undefined,
 ): { op: ImportOperation | null; changed: string[] } {
   const product = existing.product;
   const productPatch: Record<string, unknown> = {};
@@ -574,6 +617,14 @@ function planUpdate(
       variantPatch[column as string] = next;
       changed.push(labelOf(field as ImportFieldKey));
     }
+  }
+  // coloanele de vânzare: pe produs sau pe variantă, după regula uniform/diferit (vezi `planExistingSale`)
+  if (sale) {
+    Object.assign(productPatch, sale.productPatch);
+    Object.assign(variantPatch, sale.variantPatch);
+    for (const label of sale.changed) if (!changed.includes(label)) changed.push(label);
+    for (const text of sale.warnings) errors.push({ level: "warning", text });
+    for (const text of sale.errors) errors.push({ level: "error", text });
   }
   // promoția față de prețul rezultat (cel din fișier sau cel curent)
   const priceAfter = (variantPatch["price"] as number | undefined) ?? existing.price;
@@ -713,6 +764,55 @@ export function assertMappingValid(table: ParsedTable, mapping: ImportMapping): 
   }
 }
 
+/** Doar valorile coloanelor de vânzare dintr-un rând citit. */
+function pickSale(values: RowValues): Partial<Record<ImportFieldKey, string | null>> {
+  const out: Partial<Record<ImportFieldKey, string | null>> = {};
+  for (const key of SALE_FIELD_KEYS) if (key in values) out[key] = values[key] ?? null;
+  return out;
+}
+
+/**
+ * Pre-pasul coloanelor de vânzare: grupează rândurile pe produsul existent (doar primul rând al unui SKU, fără produse
+ * arhivate sau șterse) și decide pentru fiecare grup «pe produs sau pe variantă» (vezi `planExistingSale`).
+ */
+function decideSale(
+  table: ParsedTable,
+  mapping: ImportMapping,
+  snapshot: ImportSnapshot,
+  skuColumn: number,
+): Map<number, SaleDecision> {
+  const groups = new Map<string, SaleRow[]>();
+  const seen = new Set<string>();
+  table.rows.forEach((cells, index) => {
+    const sku = restoredText((cells[skuColumn] ?? "").trim());
+    if (sku === "" || sku.length > 64) return;
+    const key = sku.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    const existing = snapshot.variantsBySku.get(key);
+    if (!existing || existing.product.deleted || existing.product.status === "archived") return;
+    const readErrors: ImportMessage[] = [];
+    const values = readRowValues(cells, mapping, readErrors);
+    const parsed = parseSaleValues(pickSale(values), snapshot.units);
+    const list = groups.get(existing.productId) ?? [];
+    list.push({
+      index,
+      variantId: existing.variantId,
+      sale: existing.sale,
+      values: parsed.sale,
+      failed: readErrors.length > 0 || parsed.errors.length > 0,
+    });
+    groups.set(existing.productId, list);
+  });
+  const decisions = new Map<number, SaleDecision>();
+  for (const rows of groups.values()) {
+    for (const [index, decision] of planExistingSale(rows, snapshot.units)) {
+      decisions.set(index, decision);
+    }
+  }
+  return decisions;
+}
+
 export function planImport(
   table: ParsedTable,
   mapping: ImportMapping,
@@ -724,6 +824,7 @@ export function planImport(
   const claimedSlugs = new Map<string, number>();
   const productClaims = new Map<string, Map<string, { value: unknown; row: number }>>();
   const rows: PlannedRow[] = [];
+  const saleDecisions = decideSale(table, mapping, snapshot, skuColumn);
 
   table.rows.forEach((cells, index) => {
     const row = table.rowNumbers[index] as number;
@@ -757,6 +858,10 @@ export function planImport(
     const errors: ImportMessage[] = [];
     const values = readRowValues(cells, mapping, errors);
     const fields = parseFields(values, snapshot, errors);
+    const saleParse = parseSaleValues(pickSale(values), snapshot.units);
+    for (const issue of saleParse.errors) {
+      errors.push({ level: "error", text: `${labelOf(issue.field)}: ${issue.text}` });
+    }
     const existing = snapshot.variantsBySku.get(skuKey);
 
     if (existing && (existing.product.deleted || existing.product.status === "archived")) {
@@ -770,8 +875,8 @@ export function planImport(
     }
 
     const result = existing
-      ? planUpdate(fields, existing, errors, snapshot, productClaims, row)
-      : planNew(fields, values, sku, errors, snapshot, claimedSlugs, row);
+      ? planUpdate(fields, existing, errors, snapshot, productClaims, row, saleDecisions.get(index))
+      : planNew(fields, values, sku, errors, snapshot, claimedSlugs, row, saleParse.sale);
 
     messages.push(...errors);
     if (errors.some((e) => e.level === "error")) return rows.push(planned("error"));

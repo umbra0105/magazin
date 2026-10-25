@@ -200,6 +200,8 @@ export default async function ProductEditorPage({
     isDefault: v.isDefault,
     weightGrams: v.weightGrams,
     manufacturerPartNumber: v.manufacturerPartNumber,
+    measureUnitId: v.measureUnitId,
+    priceBasis: v.priceBasis,
     saleStep: v.saleStep,
     minSteps: v.minSteps,
     smartbillMode: v.smartbillMode,

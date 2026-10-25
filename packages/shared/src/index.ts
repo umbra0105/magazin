@@ -11,4 +11,5 @@ export {
 export { REDACTED, SENSITIVE_FIELDS, isSensitiveKey, redactSensitive } from "./redact";
 export { netFromGross, percentToBasisPoints, vatFromGross } from "./vat";
 export * from "./quantity";
+export * from "./price-display";
 export * from "./zoned-time";

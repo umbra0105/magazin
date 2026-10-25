@@ -283,6 +283,16 @@ describe("exportul de produse pe baza reală", () => {
         "Înălțime (mm)",
         "Clasă de livrare",
         "Stare",
+        "Unitate de măsură",
+        "Baza prețului",
+        "Pas de vânzare",
+        "Minim (pași)",
+        "Denumire pas",
+        "Mod conversie SmartBill",
+        "Unitate SmartBill",
+        "Raport SmartBill",
+        "Stare stoc",
+        "Termen livrare (zile)",
       ]);
       expect(prepared.headers.slice(IMPORT_FIELD_KEYS.length)).toEqual([
         "ID produs",
@@ -491,7 +501,7 @@ describe("exportul de produse pe baza reală", () => {
         delimiter: ";",
         delimiterSource: "sep-line",
       });
-      // maparea propusă: toate cele 17 câmpuri, apoi cele două coloane doar pentru citire, ignorate
+      // maparea propusă: toate câmpurile importului, apoi cele două coloane doar pentru citire, ignorate
       expect(analysis.columns.map((c) => c.field)).toEqual([...IMPORT_FIELD_KEYS, null, null]);
       expect(analysis.columns.slice(-2).map((c) => c.blocked)).toEqual(["readonly", "readonly"]);
 
@@ -508,6 +518,105 @@ describe("exportul de produse pe baza reală", () => {
         errors: 0,
         warnings: 2,
       });
+    });
+  });
+
+  it("dus-întors cu configurare de vânzare reală: unitate, pas, suprascrieri pe variantă, conversie SmartBill, negestionat, digital → tot «neschimbat», iar celulele exportate sunt cele efective", async () => {
+    await withExport(async ({ tx, exporter, importer, as, tag }) => {
+      const manager = await as("manager");
+      const mp = await tx.measureUnit.create({
+        data: { code: `mp_${tag}`, name: `Metru pătrat ${tag}`, symbol: `mp${tag}`, decimals: 2 },
+      });
+      // o a doua unitate cu ACELAȘI simbol: simbolul e ambiguu, deci exportul scrie codul unității (altfel nu s-ar reimporta)
+      await tx.measureUnit.create({
+        data: {
+          code: `mp2_${tag}`,
+          name: `Alt metru pătrat ${tag}`,
+          symbol: `mp${tag}`,
+          decimals: 2,
+        },
+      });
+      const product = (key: string, data: Record<string, unknown> = {}) =>
+        tx.product.create({
+          data: {
+            slug: `exp-s-${key.toLowerCase()}-${tag}`,
+            title: `Vânzare ${key} ${tag}`,
+            status: "active",
+            ...data,
+          },
+        });
+      const variant = (
+        productId: string,
+        sku: string,
+        position: number,
+        data: Record<string, unknown> = {},
+      ) =>
+        tx.productVariant.create({
+          data: { productId, sku, price: 8_735, position, isDefault: position === 0, ...data },
+        });
+      // P1: liner (unitate și pas pe produs, denumire), a doua variantă cu pasul ei; conversie SmartBill pe prima
+      const p1 = await product("P1", {
+        measureUnitId: mp.id,
+        saleStep: 412_500,
+        saleStepLabel: "rolă",
+        minSteps: 2,
+        leadTimeDays: 9,
+      });
+      await variant(p1.id, `P1A-${tag}`, 0, {
+        smartbillMode: "ratio",
+        smartbillRatio: 412_500,
+        smartbillUnitName: "rola",
+      });
+      await variant(p1.id, `P1B-${tag}`, 1, { saleStep: 825_000 });
+      // P2: negestionat «La comandă», pe pas
+      const p2 = await product("P2", {
+        manageStock: false,
+        stockStatus: "onbackorder",
+        priceBasis: "step",
+      });
+      await variant(p2.id, `P2A-${tag}`, 0);
+      // P3: digital negestionat (starea nu se exportă)
+      const p3 = await product("P3", {
+        type: "digital",
+        manageStock: false,
+        stockStatus: "outofstock",
+      });
+      await variant(p3.id, `P3A-${tag}`, 0);
+      // P4: la bucată, nimic setat
+      const p4 = await product("P4");
+      await variant(p4.id, `P4A-${tag}`, 0);
+
+      const prepared = await exporter.prepare(manager, { format: "csv", scope: "all" });
+      const rows = await drain(prepared);
+      const at = (sku: string, label: string): string | undefined => {
+        const row = rows.find((r) => r[prepared.headers.indexOf("SKU")] === sku);
+        return row?.[prepared.headers.indexOf(label)];
+      };
+      // valorile EFECTIVE ale fiecărei variante
+      expect(at(`P1A-${tag}`, "Unitate de măsură")).toBe(`mp_${tag}`);
+      expect(at(`P1A-${tag}`, "Pas de vânzare")).toBe("41,25");
+      expect(at(`P1B-${tag}`, "Pas de vânzare")).toBe("82,5");
+      expect(at(`P1B-${tag}`, "Minim (pași)")).toBe("2");
+      expect(at(`P1A-${tag}`, "Denumire pas")).toBe("rolă");
+      expect(at(`P1A-${tag}`, "Mod conversie SmartBill")).toBe("Raport");
+      expect(at(`P1A-${tag}`, "Raport SmartBill")).toBe("41,25");
+      expect(at(`P1B-${tag}`, "Mod conversie SmartBill")).toBe("");
+      expect(at(`P1A-${tag}`, "Termen livrare (zile)")).toBe("9");
+      expect(at(`P1A-${tag}`, "Stare stoc")).toBe("");
+      expect(at(`P2A-${tag}`, "Baza prețului")).toBe("Pe pas");
+      expect(at(`P2A-${tag}`, "Stare stoc")).toBe("La comandă");
+      expect(at(`P3A-${tag}`, "Stare stoc")).toBe("");
+      expect(at(`P4A-${tag}`, "Unitate de măsură")).toBe("buc");
+      expect(at(`P4A-${tag}`, "Pas de vânzare")).toBe("1");
+
+      const file = { bytes: csvBytes(prepared, rows), fileName: "export.csv" };
+      const analysis = await importer.register(manager, file);
+      const validation = await importer.validate(manager, {
+        importId: analysis.importId,
+        columns: analysis.columns.map((c) => c.field),
+      });
+      expect(validation.report.counts).toMatchObject({ new: 0, updated: 0, errors: 0 });
+      expect(validation.report.counts.unchanged).toBe(5);
     });
   });
 

@@ -7,6 +7,7 @@ import {
   type ImportCounts,
   type ImportSnapshot,
 } from "./import-plan";
+import type { ExistingSale } from "./import-sale";
 import type { ImportFormat } from "./import-file";
 import type { WooPlanExtras, WooOptions, WooReportSection } from "./woo/woo-types";
 import { createImageTaskStore, type ImageTaskStore } from "./woo/image-store";
@@ -402,13 +403,24 @@ export function createPrismaProductImportStore(db: Db): ProductImportStore {
         lengthMm: number | null;
         widthMm: number | null;
         heightMm: number | null;
+        measureUnitId: string | null;
+        priceBasis: string | null;
+        saleStep: number | null;
+        minSteps: number | null;
+        manageStock: boolean | null;
+        stockStatus: string | null;
+        smartbillMode: string | null;
+        smartbillUnitName: string | null;
+        smartbillRatio: number | null;
       }[] = [];
       for (const part of chunks(lowerSkus, LOOKUP_CHUNK)) {
         // fără coloanele prețului de achiziție: lista e explicită
         variantRows.push(
           ...(await db.$queryRaw<(typeof variantRows)[number][]>(Prisma.sql`
             SELECT id, "productId", sku, ean, price, "salePrice", "warrantyMonths",
-                   "weightGrams", "lengthMm", "widthMm", "heightMm"
+                   "weightGrams", "lengthMm", "widthMm", "heightMm",
+                   "measureUnitId", "priceBasis", "saleStep", "minSteps", "manageStock", "stockStatus",
+                   "smartbillMode", "smartbillUnitName", "smartbillRatio"
             FROM product_variant
             WHERE lower(sku) = ANY(${part}::text[])
           `)),
@@ -417,6 +429,7 @@ export function createPrismaProductImportStore(db: Db): ProductImportStore {
 
       const productIds = [...new Set(variantRows.map((v) => v.productId))];
       const products = new Map<string, ExistingVariant["product"]>();
+      const productSale = new Map<string, ExistingSale["product"]>();
       for (const part of chunks(productIds, LOOKUP_CHUNK)) {
         const rows = await db.product.findMany({
           where: { id: { in: part } },
@@ -430,10 +443,32 @@ export function createPrismaProductImportStore(db: Db): ProductImportStore {
             deletedAt: true,
             brandId: true,
             shippingClass: true,
+            type: true,
+            manageStock: true,
+            stockStatus: true,
+            measureUnitId: true,
+            priceBasis: true,
+            saleStep: true,
+            minSteps: true,
+            saleStepLabel: true,
+            leadTimeDays: true,
+            variants: { select: { id: true } },
             categories: { select: { categoryId: true, isPrimary: true } },
           },
         });
         for (const p of rows) {
+          productSale.set(p.id, {
+            measureUnitId: p.measureUnitId,
+            priceBasis: p.priceBasis,
+            saleStep: p.saleStep,
+            minSteps: p.minSteps,
+            saleStepLabel: p.saleStepLabel,
+            leadTimeDays: p.leadTimeDays,
+            manageStock: p.manageStock,
+            stockStatus: p.stockStatus,
+            type: p.type,
+            variantIds: p.variants.map((v) => v.id),
+          });
           products.set(p.id, {
             title: p.title,
             slug: p.slug,
@@ -466,6 +501,20 @@ export function createPrismaProductImportStore(db: Db): ProductImportStore {
           lengthMm: v.lengthMm,
           widthMm: v.widthMm,
           heightMm: v.heightMm,
+          sale: {
+            variant: {
+              measureUnitId: v.measureUnitId,
+              priceBasis: v.priceBasis,
+              saleStep: v.saleStep,
+              minSteps: v.minSteps,
+              manageStock: v.manageStock,
+              stockStatus: v.stockStatus,
+              smartbillMode: v.smartbillMode,
+              smartbillUnitName: v.smartbillUnitName,
+              smartbillRatio: v.smartbillRatio,
+            },
+            product: productSale.get(v.productId) as ExistingSale["product"],
+          },
           product,
         });
       }
@@ -478,15 +527,26 @@ export function createPrismaProductImportStore(db: Db): ProductImportStore {
         for (const r of rows) slugOwners.set(r.slug.toLowerCase(), r.id);
       }
 
-      const [categories, brands] = await Promise.all([
+      const [categories, brands, units] = await Promise.all([
         db.category.findMany({ select: { id: true, name: true, parentId: true } }),
         db.brand.findMany({ select: { id: true, name: true } }),
+        db.measureUnit.findMany({
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            symbol: true,
+            decimals: true,
+            isActive: true,
+          },
+        }),
       ]);
       return {
         variantsBySku,
         slugOwners,
         categoryIndex: buildCategoryIndex(categories),
         brandIndex: buildBrandIndex(brands),
+        units,
       };
     },
   };

@@ -19,6 +19,7 @@ import {
   type ImportMapping,
   type ImportSnapshot,
 } from "./import-plan";
+import { emptyExistingSale } from "./import-sale";
 import { instructionRows, templateRows } from "./import-template";
 
 function table(headers: string[], rows: string[][]): ParsedTable {
@@ -48,6 +49,7 @@ function existing(over: Partial<ExistingVariant> & { sku: string }): ExistingVar
     lengthMm: null,
     widthMm: null,
     heightMm: null,
+    sale: emptyExistingSale([`v-${over.sku}`]),
     ...over,
     product: {
       title: `Produs ${over.sku}`,
@@ -84,6 +86,7 @@ function snapshot(
       { id: "b-x1", name: "Dublu" },
       { id: "b-x2", name: "dublu" },
     ]),
+    units: [],
     ...extra,
   };
 }
@@ -114,6 +117,17 @@ describe("definiția câmpurilor, maparea automată și șablonul", () => {
           { id: "c-acc", name: "Accesorii", parentId: null },
         ]),
         brandIndex: buildBrandIndex([{ id: "b-hayward", name: "Hayward" }]),
+        units: [
+          {
+            id: "u-mp",
+            code: "mp",
+            name: "Metru pătrat",
+            symbol: "mp",
+            decimals: 2,
+            isActive: true,
+          },
+          { id: "u-kg", code: "kg", name: "Kilogram", symbol: "kg", decimals: 3, isActive: true },
+        ],
       }),
     );
     expect(plan.rows.map((r) => [r.outcome, messagesOf(plan, plan.rows.indexOf(r))])).toEqual([

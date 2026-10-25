@@ -14,6 +14,7 @@ import {
   divideByFactor,
   exactLineValue,
   exactStepsValue,
+  exactUnitPrice,
   floorSteps,
   formatQuantity,
   formatQuantityWithUnit,
@@ -563,6 +564,53 @@ describe("factori de conversie (SmartBill ↔ unitatea noastră): în jos, cu se
       expect(canonical(formatQuantity(div.quantity, { minDecimals: 4 }))).toBe(
         new Fraction(A.n * F.d, A.d * F.n).truncated(4),
       );
+    }
+  });
+});
+
+describe("preț pe pas ÷ pas = preț pe unitate: exact, în jos, cu semnal de pierdere", () => {
+  it("bisulfat: 120,00 lei pe sac de 25 kg = 4,80 lei/kg, exact", () => {
+    // 12.000 bani ÷ 25 = 480 bani/kg = 4.800.000 în bani × 10⁻⁴
+    expect(exactUnitPrice(12_000, q("25"))).toEqual({ scaledMinor: 4_800_000n, lossy: false });
+  });
+
+  it("împărțire neexactă: se taie în jos la 10⁻⁴ de ban și se semnalează", () => {
+    // 100,00 lei / 3 kg = 33,3333… lei/kg = 3333,33… bani → 33.333.333 în bani × 10⁻⁴ (în jos)
+    expect(exactUnitPrice(10_000, q("3"))).toEqual({ scaledMinor: 33_333_333n, lossy: true });
+    // 1 ban / 3 = 0,3333 bani
+    expect(exactUnitPrice(1, q("3"))).toEqual({ scaledMinor: 3_333n, lossy: true });
+    // pas fracționar: 100 lei / 41,25 mp
+    expect(exactUnitPrice(10_000, q("41,25"))).toEqual({ scaledMinor: 2_424_242n, lossy: true });
+  });
+
+  it("preț zero, pas de o unitate, sume mari (fără depășire)", () => {
+    expect(exactUnitPrice(0, q("25"))).toEqual({ scaledMinor: 0n, lossy: false });
+    expect(exactUnitPrice(19_900, q("1"))).toEqual({ scaledMinor: 199_000_000n, lossy: false });
+    expect(exactUnitPrice(1_000_000_000, q("0,0001"))).toEqual({
+      scaledMinor: 1_000_000_000n * 100_000_000n * 1n,
+      lossy: false,
+    });
+  });
+
+  it("refuză pasul zero sau negativ și prețul invalid", () => {
+    expect(code(() => exactUnitPrice(100, q("0")))).toBe("QUANTITY_INVALID_ARGUMENT");
+    expect(code(() => exactUnitPrice(-1, q("2")))).toBe("QUANTITY_INVALID_PRICE");
+    expect(code(() => exactUnitPrice(1.5, q("2")))).toBe("QUANTITY_INVALID_PRICE");
+  });
+
+  it("coerent cu preț × cantitate: pe un pas întreg, înapoi la prețul introdus (grilă, față de un oracol cu fracții)", () => {
+    for (const price of [1, 7, 99, 12_000, 14_990, 8_735, 123_456]) {
+      for (const step of ["0,0001", "0,3", "1", "2,03", "2,5", "25", "41,25"]) {
+        const stepQ = q(step);
+        const { scaledMinor, lossy } = exactUnitPrice(price, stepQ);
+        const ticks = BigInt(stepQ);
+        // oracol: preț × 10⁸ ÷ ticks, în jos; pierdere ⇔ rest ≠ 0
+        const numerator = BigInt(price) * 100_000_000n;
+        expect(scaledMinor, `${price}/${step}`).toBe(numerator / ticks);
+        expect(lossy, `${price}/${step}`).toBe(numerator % ticks !== 0n);
+        // dacă e exact, unitar × pas dă înapoi prețul pe pas
+        if (!lossy) expect(scaledMinor * ticks, `${price}/${step}`).toBe(numerator);
+      }
     }
   });
 });

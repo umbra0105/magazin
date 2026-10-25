@@ -4,11 +4,14 @@ import { Check, Pencil, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { describePrice } from "@ecom/shared/price-display";
+import { QUANTITY_FACTOR, quantityFromTicks } from "@ecom/shared/quantity";
 import { Badge, Button, Dialog, Input, Label, Select } from "@ecom/ui";
 import { bulkUpdateProducts, updateProductInline } from "@/app/(admin)/admin/produse/actions";
 import { duplicateProduct } from "@/app/(admin)/admin/produse/lifecycle-actions";
 import { badgeVariant } from "@/components/admin/inventory/stock-parts";
 import { formatMoney, formatMoneyInput, parseMoneyInput } from "@/lib/money-input";
+import { priceLines, type PriceLines } from "@/lib/price-view";
 import type { SummaryView } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 import { ProductExportDialog } from "./product-export-dialog";
@@ -39,6 +42,14 @@ export interface ProductTableRow {
   sku: string | null;
   singleVariantId: string | null;
   categoryNames: string[];
+  /** Configurarea de vânzare pentru afișarea prețului (vezi `ProductListRow.sale`). */
+  sale: {
+    unitSymbol: string | null;
+    priceBasis: "unit" | "step";
+    saleStep: number | null;
+    saleStepLabel: string | null;
+    showStepPrice: boolean;
+  };
   thumb: string | null;
   updatedAt: string;
   /** Data mutării în coșul de gunoi (doar în vederea „deleted”). */
@@ -279,6 +290,25 @@ export function ProductTable({
     return row.priceMax !== null && row.priceMax !== row.priceMin
       ? `${min} – ${formatMoney(row.priceMax, currency, locale)}`
       : min;
+  };
+
+  /** Prețul pe unitate/pas, doar la produsele cu unitate sau pas propriu (la bucată rămâne afișarea de azi). */
+  const priceView = (row: ProductTableRow): PriceLines | null => {
+    const sale = row.sale;
+    if (row.priceMin === null) return null;
+    if (sale.unitSymbol === null && sale.saleStep === null && sale.priceBasis === "unit")
+      return null;
+    return priceLines(
+      describePrice({
+        priceMinor: row.priceMin,
+        basis: sale.priceBasis,
+        step: quantityFromTicks(sale.saleStep ?? QUANTITY_FACTOR),
+        unitSymbol: sale.unitSymbol ?? getMessages().admin.priceDisplay.defaultUnit,
+        stepLabel: sale.saleStepLabel,
+        showStepPrice: sale.showStepPrice,
+      }),
+      { currency, locale },
+    );
   };
 
   const cellEditor = (row: ProductTableRow, field: InlineField) => {
@@ -714,12 +744,32 @@ export function ProductTable({
                   {isEditing(row, "price") ? (
                     cellEditor(row, "price")
                   ) : (
-                    <span className="flex items-center">
-                      {priceText(row)}
-                      {!trash &&
-                        canWrite &&
-                        row.singleVariantId &&
-                        editButton(row, "price", m.inline.price)}
+                    <span className="flex flex-col gap-0.5" data-cell="price">
+                      <span className="flex flex-wrap items-center">
+                        {priceText(row)}
+                        {priceView(row) && (
+                          <span
+                            className="ml-1 whitespace-nowrap text-muted-foreground"
+                            data-price-per
+                          >
+                            / {priceView(row)!.per}
+                          </span>
+                        )}
+                        {!trash &&
+                          canWrite &&
+                          row.singleVariantId &&
+                          editButton(row, "price", m.inline.price)}
+                      </span>
+                      {row.priceMin === row.priceMax && priceView(row)?.perUnit && (
+                        <span className="text-xs text-muted-foreground" data-price-unit>
+                          {priceView(row)!.perUnit}
+                        </span>
+                      )}
+                      {row.priceMin === row.priceMax && priceView(row)?.stepPrice && (
+                        <span className="text-xs text-muted-foreground" data-price-step>
+                          {priceView(row)!.stepPrice}
+                        </span>
+                      )}
                     </span>
                   )}
                 </td>

@@ -6,6 +6,7 @@ import {
   readE2eStock,
   readE2eStockAudit,
   removeE2eStock,
+  removeE2eStockShared,
   seedE2eStock,
   setE2eStockSnapshot,
 } from "../packages/core/test/e2e-support";
@@ -123,7 +124,8 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await removeE2eStock();
+  await removeE2eStock({ tag });
+  await removeE2eStockShared();
 });
 
 const row = (page: Page, sku: string): Locator => page.locator(`[data-variant-row="${sku}"]`);

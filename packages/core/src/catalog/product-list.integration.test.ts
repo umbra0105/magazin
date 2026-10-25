@@ -178,6 +178,93 @@ describe("lista de produse pe baza reală", () => {
     });
   });
 
+  it("configurarea de vânzare din rând: unitatea, baza, pasul și denumirea lui (efective la o variantă, ale produsului la mai multe)", async () => {
+    await withList(async ({ tx, service, owner, tag }) => {
+      const mp = await tx.measureUnit.create({
+        data: { code: `mp_${tag}`, name: "Metru pătrat", symbol: "mp", decimals: 2 },
+      });
+      const kg = await tx.measureUnit.create({
+        data: { code: `kg_${tag}`, name: "Kilogram", symbol: "kg", decimals: 3 },
+      });
+      // 1) produs la bucată, fără nimic setat
+      const plain = await product(tx, tag, "Simplu");
+      await tx.productVariant.create({
+        data: { productId: plain.id, sku: `P1-${tag}`, price: 1000 },
+      });
+      // 2) liner: unitate și pas pe produs, cu denumire și «arată prețul pasului»
+      const liner = await product(tx, tag, "Liner", {
+        measureUnitId: mp.id,
+        saleStep: 412_500,
+        saleStepLabel: "rolă",
+        showStepPrice: true,
+      });
+      await tx.productVariant.create({
+        data: { productId: liner.id, sku: `P2-${tag}`, price: 8735 },
+      });
+      // 3) o singură variantă cu suprascriere proprie (kg, pe pas): rândul arată valorile EFECTIVE ale variantei
+      const sac = await product(tx, tag, "Sac", { measureUnitId: mp.id, saleStep: 20_000 });
+      await tx.productVariant.create({
+        data: {
+          productId: sac.id,
+          sku: `P3-${tag}`,
+          price: 12000,
+          measureUnitId: kg.id,
+          priceBasis: "step",
+          saleStep: 250_000,
+        },
+      });
+      // 4) mai multe variante: valorile produsului (variantele pot diferi între ele)
+      const multi = await product(tx, tag, "Multi", {
+        measureUnitId: kg.id,
+        priceBasis: "step",
+        saleStep: 250_000,
+      });
+      await tx.productVariant.create({
+        data: { productId: multi.id, sku: `P4a-${tag}`, price: 12000 },
+      });
+      await tx.productVariant.create({
+        data: {
+          productId: multi.id,
+          sku: `P4b-${tag}`,
+          price: 13000,
+          position: 1,
+          saleStep: 500_000,
+        },
+      });
+
+      const rows = (await service.list(owner, { q: tag, size: "25", sort: "title_asc" })).page.rows;
+      const byTitle = (name: string) => rows.find((r) => r.title === `${tag} ${name}`);
+      expect(byTitle("Simplu")?.sale).toEqual({
+        unitSymbol: null,
+        priceBasis: "unit",
+        saleStep: null,
+        saleStepLabel: null,
+        showStepPrice: false,
+      });
+      expect(byTitle("Liner")?.sale).toEqual({
+        unitSymbol: "mp",
+        priceBasis: "unit",
+        saleStep: 412_500,
+        saleStepLabel: "rolă",
+        showStepPrice: true,
+      });
+      expect(byTitle("Sac")?.sale).toEqual({
+        unitSymbol: "kg",
+        priceBasis: "step",
+        saleStep: 250_000,
+        saleStepLabel: null,
+        showStepPrice: false,
+      });
+      expect(byTitle("Multi")?.sale).toEqual({
+        unitSymbol: "kg",
+        priceBasis: "step",
+        saleStep: 250_000,
+        saleStepLabel: null,
+        showStepPrice: false,
+      });
+    });
+  });
+
   it("doar thumb (nu originalul) și doar pentru fișierele gata; fără imagine: null", async () => {
     await withList(async ({ tx, service, owner, tag }) => {
       const variants = [

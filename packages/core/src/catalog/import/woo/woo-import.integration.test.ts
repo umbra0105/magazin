@@ -247,6 +247,13 @@ describe("import WooCommerce pe baza reală", () => {
         legacyId: "101",
         subtitle: "Silențioasă, clasa A",
       });
+      // regula importurilor: produsele create sunt NEGESTIONATE, explicit (magazinul are gestiunea pornită implicit)
+      expect(v101.product.manageStock).toBe(false);
+      expect(
+        await tx.product.count({
+          where: { manageStock: true, variants: { some: { sku: { startsWith: "FIX-" } } } },
+        }),
+      ).toBe(0);
       expect(v101.product.brand?.name).toBe("Marca Fixture A");
       expect(v101.product.categories).toHaveLength(2);
       expect(v101.product.categories.find((c) => c.isPrimary)?.categoryId).toBe(circulatie.id);

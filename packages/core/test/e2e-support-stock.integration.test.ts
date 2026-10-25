@@ -5,7 +5,15 @@ import {
   createStockContext,
   purgeStockContext,
 } from "../src/test-utils/stock-fixtures";
-import { readE2eStock, removeE2eStock, seedE2eStock, setE2eStockSnapshot } from "./e2e-support";
+import {
+  createE2eRole,
+  readE2eStock,
+  removeE2eStock,
+  removeE2eStockShared,
+  seedE2eStock,
+  seedE2eUnit,
+  setE2eStockSnapshot,
+} from "./e2e-support";
 
 /**
  * Curățarea E2E de stoc (`removeE2eStock`) oprește TEMPORAR triggerul de imuabilitate al registrului de mișcări. Excepția din
@@ -165,5 +173,80 @@ describe("curățarea E2E de stoc: restricția pe variantele E2ESTOC…", () => 
     await seedE2eStock(tag(), [{ title: "Produs E2E", variants: [{ sku: "B", physical: "1" }] }]);
     expect(await removeE2eStock()).toBeGreaterThanOrEqual(1);
     expect(await removeE2eStock()).toBe(0);
+  });
+});
+
+describe("curățarea pe tag: fișierele de teste rulate în paralel nu își șterg produsele între ele", () => {
+  it("șterge doar ce are tag-ul dat (produse, mișcări, branduri, unități); ale altui tag rămân cu mișcările lor; rolurile și poza nu se ating", async () => {
+    const mine = tag();
+    const other = tag();
+    const spec = (title: string) => ({
+      title,
+      unit: { symbol: `u${tag()}`, decimals: 1 },
+      brand: { name: `Brand ${title}`, defaultLeadTimeDays: 3 },
+      variants: [{ sku: "A", physical: "5" }],
+    });
+    const [mineSku] = await seedE2eStock(mine, [spec("Produsul meu")]);
+    const [otherSku] = await seedE2eStock(other, [spec("Produsul altuia")]);
+    const mineVariant = (await readE2eStock(mineSku as string))?.variantId as string;
+    const otherVariant = (await readE2eStock(otherSku as string))?.variantId as string;
+    await movement(mineVariant, defaultWarehouseId, "mișcare a mea");
+    await movement(otherVariant, defaultWarehouseId, "mișcare a altuia");
+    // unități fără niciun produs: gărzii «nu e folosită» nu-i mai rămâne de lucru, deci doar tag-ul le separă
+    const mineUnit = `e2e${mine}solo`;
+    const otherUnit = `e2e${other}solo`;
+    await seedE2eUnit({
+      code: mineUnit,
+      name: `Unitate ${mineUnit}`,
+      symbol: `s${mine}`,
+      decimals: 0,
+    });
+    await seedE2eUnit({
+      code: otherUnit,
+      name: `Unitate ${otherUnit}`,
+      symbol: `s${other}`,
+      decimals: 0,
+    });
+    await createE2eRole("e2e-stoc-tag-test", []);
+    await setE2eStockSnapshot(2);
+    try {
+      expect(await removeE2eStock({ tag: mine })).toBe(1);
+      expect(await db.measureUnit.count({ where: { code: mineUnit } })).toBe(0);
+      expect(await db.measureUnit.count({ where: { code: otherUnit } })).toBe(1);
+
+      // ce era al meu a dispărut, cu mișcări și brand
+      expect(await readE2eStock(mineSku as string)).toBeNull();
+      expect(await db.stockMovement.count({ where: { variantId: mineVariant } })).toBe(0);
+      expect(await db.brand.count({ where: { slug: { startsWith: `e2e-stoc-${mine}-` } } })).toBe(
+        0,
+      );
+      expect(await db.measureUnit.count({ where: { code: { startsWith: `e2e${mine}` } } })).toBe(0);
+      // ce era al altuia a rămas întreg, inclusiv mișcarea (și triggerul rămâne activ)
+      expect(await readE2eStock(otherSku as string)).not.toBeNull();
+      expect(await db.stockMovement.count({ where: { variantId: otherVariant } })).toBe(1);
+      expect(await db.brand.count({ where: { slug: { startsWith: `e2e-stoc-${other}-` } } })).toBe(
+        1,
+      );
+      expect(await db.measureUnit.count({ where: { code: { startsWith: `e2e${other}` } } })).toBe(
+        2,
+      );
+      await expectTriggerActive(otherVariant);
+      // rolurile și poza sunt comune: curățarea pe tag nu le atinge
+      expect(await db.role.count({ where: { key: "e2e-stoc-tag-test" } })).toBe(1);
+      expect(
+        await db.stockSnapshot.count({ where: { fileName: "e2e-stoc" } }),
+      ).toBeGreaterThanOrEqual(1);
+    } finally {
+      await removeE2eStock({ tag: other });
+      await removeE2eStockShared();
+    }
+    expect(await db.role.count({ where: { key: "e2e-stoc-tag-test" } })).toBe(0);
+    expect(await db.stockSnapshot.count({ where: { fileName: "e2e-stoc" } })).toBe(0);
+  });
+
+  it("un tag care nu e hexazecimal se refuză înainte de orice interogare (nu devine un tipar de ștergere)", async () => {
+    for (const bad of ["", "%", "ab%", "a_b", "ZZZ", "x".repeat(40), "a b"]) {
+      await expect(removeE2eStock({ tag: bad }), bad).rejects.toThrow(/tag/i);
+    }
   });
 });

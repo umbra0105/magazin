@@ -133,7 +133,13 @@ function EditorBody({
       label: e.tabs.pricing,
       badge: badge("pricing"),
       panel: (
-        <PricingTab variants={variants} caps={caps} context={pricing} purchaseSlot={purchaseSlot} />
+        <PricingTab
+          variants={variants}
+          caps={caps}
+          context={pricing}
+          sale={{ product, units }}
+          purchaseSlot={purchaseSlot}
+        />
       ),
     },
     {

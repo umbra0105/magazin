@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from "@ecom/db";
 import { buildProductListWhere, type ProductListQuery } from "../product-list";
-import type { ExportProductData } from "./export-rows";
+import { unitLabels, type ExportProductData } from "./export-rows";
 
 /**
  * Citirea datelor pentru exportul de produse. Toate interogările au `select` EXPLICIT, fără coloanele
@@ -34,7 +34,7 @@ export interface ProductExportStore {
   filterLabels(filters: ListFilters): Promise<{ category: string | null; brand: string | null }>;
 }
 
-type Db = Pick<PrismaClient, "product" | "productVariant" | "category" | "brand">;
+type Db = Pick<PrismaClient, "product" | "productVariant" | "category" | "brand" | "measureUnit">;
 
 const EMPTY_FILTERS: ListFilters = {
   q: "",
@@ -89,6 +89,9 @@ export function createPrismaProductExportStore(db: Db): ProductExportStore {
     async *batches(scope, batchSize) {
       const where = await whereOf(scope);
       const paths = await categoryPaths();
+      const unitLabel = unitLabels(
+        await db.measureUnit.findMany({ select: { id: true, code: true, symbol: true } }),
+      );
       const fetchBatch = (cursor: string | null) =>
         db.product.findMany({
           where: cursor ? { AND: [where, { id: { gt: cursor } }] } : where,
@@ -102,6 +105,15 @@ export function createPrismaProductExportStore(db: Db): ProductExportStore {
             slug: true,
             status: true,
             shippingClass: true,
+            type: true,
+            manageStock: true,
+            stockStatus: true,
+            measureUnitId: true,
+            priceBasis: true,
+            saleStep: true,
+            minSteps: true,
+            saleStepLabel: true,
+            leadTimeDays: true,
             updatedAt: true,
             brand: { select: { name: true } },
             categories: { select: { categoryId: true, isPrimary: true } },
@@ -117,6 +129,15 @@ export function createPrismaProductExportStore(db: Db): ProductExportStore {
                 lengthMm: true,
                 widthMm: true,
                 heightMm: true,
+                manageStock: true,
+                stockStatus: true,
+                priceBasis: true,
+                saleStep: true,
+                minSteps: true,
+                smartbillMode: true,
+                smartbillUnitName: true,
+                smartbillRatio: true,
+                measureUnitId: true,
               },
             },
           },
@@ -138,8 +159,35 @@ export function createPrismaProductExportStore(db: Db): ProductExportStore {
             .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
             .map((c) => paths.get(c.categoryId))
             .filter((path): path is string => path !== undefined),
+          saleStepLabel: p.saleStepLabel,
+          leadTimeDays: p.leadTimeDays,
           updatedAt: p.updatedAt,
-          variants: p.variants,
+          variants: p.variants.map((v) => {
+            const { measureUnitId, manageStock, stockStatus, ...rest } = v;
+            // valorile EFECTIVE: varianta peste produs
+            const unmanaged = !(manageStock ?? p.manageStock) && p.type !== "digital";
+            return {
+              sku: rest.sku,
+              ean: rest.ean,
+              price: rest.price,
+              salePrice: rest.salePrice,
+              warrantyMonths: rest.warrantyMonths,
+              weightGrams: rest.weightGrams,
+              lengthMm: rest.lengthMm,
+              widthMm: rest.widthMm,
+              heightMm: rest.heightMm,
+              sale: {
+                unitSymbol: unitLabel.get(measureUnitId ?? p.measureUnitId ?? "") ?? null,
+                priceBasis: (rest.priceBasis ?? p.priceBasis) === "step" ? "step" : "unit",
+                saleStep: rest.saleStep ?? p.saleStep,
+                minSteps: rest.minSteps ?? p.minSteps,
+                smartbillMode: rest.smartbillMode,
+                smartbillUnitName: rest.smartbillUnitName,
+                smartbillRatio: rest.smartbillRatio,
+                stockStatus: unmanaged ? (stockStatus ?? p.stockStatus) : null,
+              },
+            };
+          }),
         }));
         after = rows[rows.length - 1]?.id ?? null;
         if (rows.length < batchSize) return;

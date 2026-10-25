@@ -25,8 +25,34 @@ export const IMPORT_FIELD_KEYS = [
   "heightMm",
   "shippingClass",
   "status",
+  "unit",
+  "priceBasis",
+  "saleStep",
+  "minSteps",
+  "saleStepLabel",
+  "smartbillMode",
+  "smartbillUnitName",
+  "smartbillRatio",
+  "stockStatus",
+  "leadTimeDays",
 ] as const;
 export type ImportFieldKey = (typeof IMPORT_FIELD_KEYS)[number];
+
+/** Etichetele valorilor coloanelor de vânzare, folosite la export și (cu foldText) recunoscute la import. */
+export const PRICE_BASIS_LABELS: Readonly<Record<string, string>> = {
+  unit: "Pe unitate",
+  step: "Pe pas",
+};
+export const SMARTBILL_MODE_LABELS: Readonly<Record<string, string>> = {
+  same_unit: "Aceeași unitate",
+  steps: "Pași",
+  ratio: "Raport",
+};
+export const STOCK_STATUS_LABELS: Readonly<Record<string, string>> = {
+  instock: "În stoc",
+  outofstock: "Stoc epuizat",
+  onbackorder: "La comandă",
+};
 
 /** Marcajul de ștergere explicită a valorii unui câmp care poate fi gol: o liniuță singură în celulă. */
 export const CLEAR_MARKER = "-";
@@ -36,7 +62,16 @@ export const CATEGORY_SEPARATOR = "|";
 export const CATEGORY_PATH_SEPARATOR = ">";
 
 export type ImportFieldKind =
-  "text" | "longText" | "money" | "int" | "enum" | "categories" | "brand" | "ean";
+  | "text"
+  | "longText"
+  | "money"
+  | "int"
+  | "enum"
+  | "categories"
+  | "brand"
+  | "ean"
+  | "unit"
+  | "quantity";
 
 export interface ImportFieldDef {
   key: ImportFieldKey;
@@ -241,6 +276,106 @@ export const IMPORT_FIELDS: readonly ImportFieldDef[] = [
     clearable: false,
     examples: ["Ciornă", "Activ"],
     help: "Ciornă, Activ sau Arhivat. Lipsă la produs nou = Ciornă.",
+  },
+  {
+    key: "unit",
+    label: "Unitate de măsură",
+    aliases: ["unitate de masura", "unitate", "um", "u m", "unit of measure", "unit"],
+    kind: "unit",
+    required: "no",
+    clearable: true,
+    examples: ["mp", "kg"],
+    help: "Simbolul, numele sau codul unei unități din «Unități de măsură» (ex. mp, kg, ml). «buc» sau „-” = la bucată. Aceeași valoare pe toate rândurile unui produs = se aplică produsului; valori diferite = pe variantă.",
+  },
+  {
+    key: "priceBasis",
+    label: "Baza prețului",
+    aliases: ["baza pretului", "baza de pret", "pret pe", "price basis"],
+    kind: "enum",
+    required: "no",
+    clearable: false,
+    examples: ["Pe unitate", "Pe pas"],
+    help: "La ce se referă prețul din fișier: «Pe unitate» (ex. lei/mp) sau «Pe pas» (prețul unui ambalaj întreg, ex. un sac).",
+  },
+  {
+    key: "saleStep",
+    label: "Pas de vânzare",
+    aliases: ["pas de vanzare", "pas vanzare", "pas", "sale step", "step"],
+    kind: "quantity",
+    required: "no",
+    clearable: true,
+    examples: ["41,25", "25"],
+    help: "Cantitatea minimă vândută și unitatea de creștere, în unitatea aleasă, cu virgulă (ex. 2,03). Comanda e mereu un multiplu exact. „-” = o unitate.",
+  },
+  {
+    key: "minSteps",
+    label: "Minim (pași)",
+    aliases: ["minim pasi", "minim", "cantitate minima pasi", "min steps"],
+    kind: "int",
+    required: "no",
+    clearable: true,
+    examples: ["2", ""],
+    help: "Numărul minim de pași comandați (număr întreg, cel puțin 1). „-” = un pas.",
+  },
+  {
+    key: "saleStepLabel",
+    label: "Denumire pas",
+    aliases: ["denumire pas", "denumirea pasului", "nume pas", "step label"],
+    kind: "text",
+    required: "no",
+    clearable: true,
+    examples: ["rolă", "sac"],
+    help: "Cum se numește un pas întreg (sac, rolă, cutie), cel mult 30 de caractere. Apare în preț. Se aplică produsului. „-” șterge valoarea.",
+  },
+  {
+    key: "smartbillMode",
+    label: "Mod conversie SmartBill",
+    aliases: ["mod conversie smartbill", "conversie smartbill", "mod smartbill", "smartbill mode"],
+    kind: "enum",
+    required: "no",
+    clearable: true,
+    examples: ["Aceeași unitate", "Raport"],
+    help: "Cum ține SmartBill stocul variantei: «Aceeași unitate», «Pași» (o bucată SmartBill = un pas) sau «Raport» (cere «Raport SmartBill»). Se aplică variantei. „-” șterge conversia.",
+  },
+  {
+    key: "smartbillUnitName",
+    label: "Unitate SmartBill",
+    aliases: ["unitate smartbill", "um smartbill", "smartbill unit"],
+    kind: "text",
+    required: "no",
+    clearable: true,
+    examples: ["mp", "sac"],
+    help: "Numele unității în SmartBill (cel mult 40 de caractere). Se aplică variantei. „-” șterge valoarea.",
+  },
+  {
+    key: "smartbillRatio",
+    label: "Raport SmartBill",
+    aliases: ["raport smartbill", "raport conversie", "smartbill ratio"],
+    kind: "quantity",
+    required: "no",
+    clearable: true,
+    examples: ["", "25"],
+    help: "Doar la «Raport»: câte unități ale magazinului are o unitate SmartBill (cel mult 4 zecimale, cu virgulă). Trebuie să împartă exact pasul. „-” șterge valoarea.",
+  },
+  {
+    key: "stockStatus",
+    label: "Stare stoc",
+    aliases: ["stare stoc", "disponibilitate", "stock status", "stare disponibilitate"],
+    kind: "enum",
+    required: "no",
+    clearable: false,
+    examples: ["În stoc", "La comandă"],
+    help: "«În stoc», «Stoc epuizat» sau «La comandă». Se aplică doar produselor NEGESTIONATE; la cele cu stoc gestionat sau digitale e ignorată, cu avertisment.",
+  },
+  {
+    key: "leadTimeDays",
+    label: "Termen livrare (zile)",
+    aliases: ["termen livrare", "termen livrare zile", "termen de livrare", "lead time"],
+    kind: "int",
+    required: "no",
+    clearable: true,
+    examples: ["14", ""],
+    help: "Termenul «La comandă», în zile (0–365). Se aplică produsului. Gol = neschimbat; „-” = se folosește termenul brandului, apoi cel al magazinului.",
   },
 ];
 

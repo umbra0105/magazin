@@ -68,7 +68,9 @@ export interface EditorVariant {
   isDefault: boolean;
   weightGrams: number | null;
   manufacturerPartNumber: string | null;
-  /** Pas și minim proprii (`null` = moștenește de la produs) și conversia SmartBill. */
+  /** Unitate, bază de preț, pas și minim proprii (`null` = moștenește de la produs) și conversia SmartBill. */
+  measureUnitId: string | null;
+  priceBasis: string | null;
   saleStep: number | null;
   minSteps: number | null;
   smartbillMode: string | null;

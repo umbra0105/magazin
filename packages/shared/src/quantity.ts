@@ -488,6 +488,26 @@ export function exactStepsValue(
   return result;
 }
 
+export interface ScaledMoney {
+  /** Valoare în bani × 10⁻⁴ (10⁴ înseamnă 1 ban), în jos */
+  scaledMinor: bigint;
+  /** Rezultatul exact avea mai mult de 4 zecimale de ban și s-a tăiat în jos */
+  lossy: boolean;
+}
+
+/**
+ * Prețul pe UNITATE dintr-un preț pe PAS: `preț pe pas ÷ pas`, EXACT până la 10⁻⁴ de ban (ex. 120,00 lei pe sacul de 25 kg
+ * → 4,80 lei/kg). Doar în jos și cu semnal de pierdere, ca `divideByFactor`; NU alege rotunjirea (aceea e a motorului de
+ * prețuri sau, la afișare, a celui care formatează).
+ */
+export function exactUnitPrice(stepPriceMinor: number | bigint, step: Quantity): ScaledMoney {
+  const price = priceToBigInt(stepPriceMinor);
+  const ticks = quantityFromTicks(step);
+  if (ticks <= 0n) fail("invalid_argument", "Pasul trebuie să fie pozitiv.");
+  const numerator = price * QUANTITY_FACTOR * QUANTITY_FACTOR;
+  return { scaledMinor: numerator / ticks, lossy: numerator % ticks !== 0n };
+}
+
 /**
  * Descompune exact o valoare în bani × 10⁻⁴: bani întregi (partea întreagă) și restul, în aceeași scală. Nu alege
  * rotunjirea (în sus, în jos, la jumătate): doar oferă motorului de prețuri cele două părți fără pierdere.

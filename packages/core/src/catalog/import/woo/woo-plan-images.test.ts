@@ -8,6 +8,7 @@ import {
 import { parseImportFile, type ParsedTable } from "../import-file";
 import { buildBrandIndex, buildCategoryIndex, type ImportPlan } from "../import-plan";
 import { DEFAULT_IMPORT_LIMITS } from "../import-file";
+import { emptyExistingSale } from "../import-sale";
 import { DEFAULT_WOO_OPTIONS, collectWooLookups, planWoo, type WooSnapshot } from "./woo-plan";
 import type { WooContext, WooOptions, WooSnapshotExtras } from "./woo-types";
 
@@ -54,6 +55,7 @@ const snapshot = (over: Partial<WooSnapshotExtras> = {}): WooSnapshot => ({
   slugOwners: new Map(),
   categoryIndex: buildCategoryIndex([]),
   brandIndex: buildBrandIndex([]),
+  units: [],
   woo: extras(over),
 });
 
@@ -276,6 +278,7 @@ describe("planul de imagini (fără rețea)", () => {
           lengthMm: null,
           widthMm: null,
           heightMm: null,
+          sale: emptyExistingSale(["v1"]),
           product: {
             title: "Produs A-1",
             slug: "produs-a-1",

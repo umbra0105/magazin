@@ -58,6 +58,7 @@ class MemoryStore implements ProductImportStore {
     slugOwners: new Map(),
     categoryIndex: buildCategoryIndex([]),
     brandIndex: buildBrandIndex([]),
+    units: [],
   };
   private n = 0;
   /** Imaginile nu sunt acoperite de aceste teste (au testele lor). */

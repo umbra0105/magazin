@@ -102,6 +102,17 @@ export interface ProductListRow {
   /** Dacă are o singură variantă: id-ul ei (pentru editarea prețului inline). */
   singleVariantId: string | null;
   categoryNames: string[];
+  /**
+   * Configurarea de vânzare pentru afișarea prețului (9b): la o singură variantă, valorile EFECTIVE ale ei (varianta peste
+   * produs); la mai multe, cele ale produsului. `unitSymbol` nul = «buc» (unitatea implicită).
+   */
+  sale: {
+    unitSymbol: string | null;
+    priceBasis: "unit" | "step";
+    saleStep: number | null;
+    saleStepLabel: string | null;
+    showStepPrice: boolean;
+  };
   thumb: string | null;
   updatedAt: Date;
   /** Data mutării în coșul de gunoi (doar în vederea „deleted”). */
@@ -225,12 +236,24 @@ export function createPrismaProductListStore(db: Db): ProductListStore {
             shippingClass: true,
             manageStock: true,
             stockStatus: true,
+            priceBasis: true,
+            saleStep: true,
+            saleStepLabel: true,
+            showStepPrice: true,
+            measureUnit: { select: { symbol: true } },
             updatedAt: true,
             deletedAt: true,
             brand: { select: { name: true } },
             variants: {
               orderBy: [{ isDefault: "desc" }, { position: "asc" }],
-              select: { id: true, sku: true, price: true },
+              select: {
+                id: true,
+                sku: true,
+                price: true,
+                priceBasis: true,
+                saleStep: true,
+                measureUnit: { select: { symbol: true } },
+              },
             },
             categories: {
               select: { category: { select: { name: true } } },
@@ -277,6 +300,18 @@ export function createPrismaProductListStore(db: Db): ProductListStore {
             sku: p.variants[0]?.sku ?? null,
             singleVariantId: p.variants.length === 1 ? (p.variants[0]?.id ?? null) : null,
             categoryNames: p.categories.map((c) => c.category.name),
+            sale: (() => {
+              // o singură variantă: valorile ei efective; mai multe: ale produsului
+              const only = p.variants.length === 1 ? p.variants[0] : undefined;
+              return {
+                unitSymbol: only?.measureUnit?.symbol ?? p.measureUnit?.symbol ?? null,
+                priceBasis: ((only?.priceBasis ?? p.priceBasis) === "step" ? "step" : "unit") as
+                  "unit" | "step",
+                saleStep: only?.saleStep ?? p.saleStep,
+                saleStepLabel: p.saleStepLabel,
+                showStepPrice: p.showStepPrice,
+              };
+            })(),
             thumbSource: media && media.status === "ready" ? media : null,
             updatedAt: p.updatedAt,
             deletedAt: p.deletedAt,

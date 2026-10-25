@@ -267,6 +267,6 @@ describe("POST /api/admin/product-exports", () => {
   });
 
   it("antetele reale ale exportului se pot trimite (nu depinde de lista fixă din test)", () => {
-    expect(exportHeaders().length).toBe(19);
+    expect(exportHeaders().length).toBe(29);
   });
 });

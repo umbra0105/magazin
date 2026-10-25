@@ -130,7 +130,8 @@ test.describe("export de produse", () => {
     expect(lines[1]).toBe(
       "SKU;Titlu;Subtitlu;Descriere;Adresă (slug);Preț (lei, cu TVA);Preț promoțional (lei, cu TVA);" +
         "Categorii;Brand;EAN;Garanție (luni);Greutate (g);Lungime (mm);Lățime (mm);Înălțime (mm);" +
-        "Clasă de livrare;Stare;ID produs;Modificat la",
+        "Clasă de livrare;Stare;Unitate de măsură;Baza prețului;Pas de vânzare;Minim (pași);Denumire pas;" +
+        "Mod conversie SmartBill;Unitate SmartBill;Raport SmartBill;Stare stoc;Termen livrare (zile);ID produs;Modificat la",
     );
     expect(lines).toHaveLength(2 + 4);
     // ordinea rândurilor e cea de creare (id), nu alfabetică: rândul se caută după SKU

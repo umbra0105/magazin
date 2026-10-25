@@ -1249,6 +1249,8 @@ export interface E2eStockVariant {
   physical: string | null;
   /** Pasul variantei (suprascrie produsul) */
   step?: string;
+  /** Prețul variantei, în bani (implicit prețul produsului, apoi 1000) */
+  price?: number;
 }
 
 export interface E2eStockProduct {
@@ -1264,6 +1266,12 @@ export interface E2eStockProduct {
   leadTimeDays?: number;
   /** Denumirea pasului («sac», «rolă») */
   saleStepLabel?: string;
+  /** Prețul variantelor, în bani (implicit 1000) */
+  price?: number;
+  /** La ce se referă prețul: pe unitate (implicit) sau pe pas */
+  priceBasis?: "unit" | "step";
+  /** «Arată prețul pasului» */
+  showStepPrice?: boolean;
   /** Un brand de test (adresa `e2e-stoc-…`, se șterge odată cu produsele), cu termenul lui implicit */
   brand?: { name: string; defaultLeadTimeDays: number | null };
   variants: E2eStockVariant[];
@@ -1325,8 +1333,9 @@ export async function seedE2eStock(
       }
       const created = await db.query(
         `insert into product (id, slug, title, type, "manageStock", "stockStatus", "allowBackorder",
-                              "measureUnitId", "saleStep", "leadTimeDays", "saleStepLabel", "brandId", "updatedAt")
-         values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now()) returning id`,
+                              "measureUnitId", "saleStep", "leadTimeDays", "saleStepLabel", "brandId",
+                              "priceBasis", "showStepPrice", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now()) returning id`,
         [
           `e2e-stoc-${tag}-${index}`,
           product.title,
@@ -1339,6 +1348,8 @@ export async function seedE2eStock(
           product.leadTimeDays ?? null,
           product.saleStepLabel ?? null,
           brandId,
+          product.priceBasis ?? "unit",
+          product.showStepPrice ?? false,
         ],
       );
       const productId = created.rows[0]?.id as string;
@@ -1347,10 +1358,11 @@ export async function seedE2eStock(
         skus.push(sku);
         const row = await db.query(
           `insert into product_variant (id, "productId", sku, price, position, "isDefault", "saleStep", "updatedAt")
-           values (gen_random_uuid()::text, $1, $2, 1000, $3, $4, $5, now()) returning id`,
+           values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, now()) returning id`,
           [
             productId,
             sku,
+            variant.price ?? product.price ?? 1000,
             position,
             position === 0,
             variant.step ? Number.parseInt(e2eTicks(variant.step), 10) : null,
@@ -1429,6 +1441,49 @@ export async function readE2eStock(sku: string): Promise<{
   });
 }
 
+/** Configurarea de vânzare a unui SKU (a produsului și a variantei), citită din bază, pentru verificarea importurilor. */
+export async function readE2eSale(sku: string): Promise<{
+  product: Record<string, unknown>;
+  variant: Record<string, unknown>;
+} | null> {
+  return withClient(async (db) => {
+    const row = await db.query(
+      `select v."productId" as pid, v."measureUnitId" as v_unit, v."priceBasis" as v_basis, v."saleStep" as v_step,
+              v."minSteps" as v_min, v."stockStatus" as v_status, v."smartbillMode" as v_mode,
+              v."smartbillRatio" as v_ratio, v."smartbillUnitName" as v_sbname,
+              p."measureUnitId" as p_unit, p."priceBasis" as p_basis, p."saleStep" as p_step, p."minSteps" as p_min,
+              p."saleStepLabel" as p_label, p."leadTimeDays" as p_lead, p."manageStock" as p_manage,
+              p."stockStatus" as p_status
+       from product_variant v join product p on p.id = v."productId" where v.sku = $1`,
+      [sku],
+    );
+    const r = row.rows[0] as Record<string, unknown> | undefined;
+    if (!r) return null;
+    return {
+      product: {
+        unit: r["p_unit"],
+        priceBasis: r["p_basis"],
+        saleStep: r["p_step"],
+        minSteps: r["p_min"],
+        saleStepLabel: r["p_label"],
+        leadTimeDays: r["p_lead"],
+        manageStock: r["p_manage"],
+        stockStatus: r["p_status"],
+      },
+      variant: {
+        unit: r["v_unit"],
+        priceBasis: r["v_basis"],
+        saleStep: r["v_step"],
+        minSteps: r["v_min"],
+        stockStatus: r["v_status"],
+        smartbillMode: r["v_mode"],
+        smartbillRatio: r["v_ratio"],
+        smartbillUnitName: r["v_sbname"],
+      },
+    };
+  });
+}
+
 /** Creează un rol de test (cheia începe cu `e2e-`) cu permisiunile date, existente în baza de test. */
 export async function createE2eRole(key: string, permissionKeys: readonly string[]): Promise<void> {
   if (!key.startsWith("e2e-")) throw new Error("Rolurile de test au cheia care începe cu «e2e-»");
@@ -1457,7 +1512,17 @@ export async function createE2eRole(key: string, permissionKeys: readonly string
  * tranzacție, doar pentru variantele `E2ESTOC…` ale bazei de test), rândurile de stoc, produsele, unitățile, pozele și
  * rolurile `e2e-…`. Întoarce câte produse s-au șters.
  */
-export async function removeE2eStock(): Promise<number> {
+export async function removeE2eStock(options: { tag?: string } = {}): Promise<number> {
+  const { tag } = options;
+  if (tag !== undefined && !/^[0-9a-f]{3,12}$/.test(tag)) {
+    throw new Error("Tag-ul curățării trebuie să fie hexazecimal (3–12 caractere), nu un tipar");
+  }
+  // fără tag: tot ce are prefixul testelor de stoc; cu tag: DOAR produsele acelui fișier de teste (rulate în paralel,
+  // fișierele nu își șterg produsele între ele)
+  const skuLike =
+    tag === undefined ? `${E2E_STOCK_SKU_PREFIX}%` : `${E2E_STOCK_SKU_PREFIX}${tag.toUpperCase()}%`;
+  const slugLike = tag === undefined ? "e2e-stoc-%" : `e2e-stoc-${tag}-%`;
+  const unitLike = tag === undefined ? "e2e%" : `e2e${tag}%`;
   return withClient(async (db) => {
     await db.query("BEGIN");
     try {
@@ -1466,32 +1531,47 @@ export async function removeE2eStock(): Promise<number> {
       );
       await db.query(
         `delete from stock_movement where "variantId" in (select id from product_variant where sku like $1)`,
-        [`${E2E_STOCK_SKU_PREFIX}%`],
+        [skuLike],
       );
       await db.query(
         'ALTER TABLE "stock_movement" ENABLE TRIGGER "stock_movement_no_update_delete"',
       );
       await db.query(
         `delete from inventory_item where "variantId" in (select id from product_variant where sku like $1)`,
-        [`${E2E_STOCK_SKU_PREFIX}%`],
+        [skuLike],
       );
-      await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_STOCK_SNAPSHOT]);
-      const products = await db.query(`delete from product where slug like 'e2e-stoc-%'`);
-      await db.query(`delete from brand where slug like 'e2e-stoc-%'`);
+      const products = await db.query(`delete from product where slug like $1`, [slugLike]);
+      await db.query(`delete from brand where slug like $1`, [slugLike]);
       await db.query(
-        `delete from measure_unit where code like 'e2e%' and "isSystem" = false
+        `delete from measure_unit where code like $1 and "isSystem" = false
            and not exists (select 1 from product p where p."measureUnitId" = measure_unit.id)`,
+        [unitLike],
       );
-      await db.query(
-        `delete from user_role where "roleId" in (select id from role where key like 'e2e-%')`,
-      );
-      await db.query(`delete from role where key like 'e2e-%' and "isSystem" = false`);
+      if (tag === undefined) await removeSharedStockRows(db);
       await db.query("COMMIT");
       return products.rowCount ?? 0;
     } catch (error) {
       await db.query("ROLLBACK");
       throw error;
     }
+  });
+}
+
+/** Rolurile `e2e-…` și poza SmartBill de test: comune tuturor fișierelor, deci se șterg separat de produsele unui tag. */
+async function removeSharedStockRows(db: {
+  query: (sql: string, values?: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_STOCK_SNAPSHOT]);
+  await db.query(
+    `delete from user_role where "roleId" in (select id from role where key like 'e2e-%')`,
+  );
+  await db.query(`delete from role where key like 'e2e-%' and "isSystem" = false`);
+}
+
+/** Șterge rolurile `e2e-…` și poza de test (comune); folosită de fișierul care le creează, după curățarea pe tag. */
+export async function removeE2eStockShared(): Promise<void> {
+  await withClient(async (db) => {
+    await removeSharedStockRows(db);
   });
 }
 
