@@ -88,7 +88,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
             {m.lowStock.heading}
           </h2>
           <p className="text-sm text-muted-foreground">{m.lowStock.hint}</p>
-          <LowStockSummary counts={page.lowStock} />
+          <LowStockSummary counts={page.lowStock} query={query} />
         </section>
       )}
       <StockFilters query={query} />

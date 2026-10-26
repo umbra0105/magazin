@@ -167,12 +167,15 @@ export function ViewSwitch({
 }) {
   const v = m.lowStock;
   const active = query.lowStockOnly === true ? "low" : "all";
+  // comutatorul scoate motivul: «Stoc mic» le arată pe toate, «Toate variantele» iese din vedere
+  const base: StockOverviewQuery = { ...query };
+  delete base.reason;
   const items = [
-    { id: "all", label: v.all, href: stockHref({ ...query, lowStockOnly: false, page: 1 }) },
+    { id: "all", label: v.all, href: stockHref({ ...base, lowStockOnly: false, page: 1 }) },
     {
       id: "low",
       label: v.low(lowStockTotal),
-      href: stockHref({ ...query, lowStockOnly: true, page: 1 }),
+      href: stockHref({ ...base, lowStockOnly: true, page: 1 }),
     },
   ] as const;
   return (
@@ -194,30 +197,62 @@ export function ViewSwitch({
   );
 }
 
-/** Câte variante sunt la «Stoc mic», pe motiv (din tot ce a găsit căutarea, nu doar de pe pagină). */
-export function LowStockSummary({ counts }: { counts: LowStockCounts }) {
+/**
+ * Câte variante sunt la «Stoc mic», pe motiv (din tot ce a găsit căutarea, nu doar de pe pagină). Fiecare card e o LEGĂTURĂ care
+ * filtrează vederea pe acel motiv (`?motiv=…`); cardul activ poartă `aria-current`, iar un clic în plus pe el le arată din nou pe
+ * toate. Aceleași legături sunt folosite și de cardurile din Panou.
+ */
+export function LowStockSummary({
+  counts,
+  query,
+}: {
+  counts: LowStockCounts;
+  query: StockOverviewQuery;
+}) {
   const v = m.lowStock;
+  const { reason: active, ...base } = query;
   const items = [
     { reason: "out_of_stock", count: counts.outOfStock },
     { reason: "remainder_only", count: counts.remainderOnly },
     { reason: "below_threshold", count: counts.belowThreshold },
   ] as const;
   return (
-    <dl
-      aria-label={v.summaryLabel}
-      data-low-stock-summary
-      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
-    >
-      {items.map((item) => (
-        <div
-          key={item.reason}
-          data-count={item.reason}
-          className="rounded-md border border-border p-3"
-        >
-          <dt className="text-sm text-muted-foreground">{v.summary[item.reason]}</dt>
-          <dd className="text-2xl font-semibold">{item.count}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="flex flex-col gap-2">
+      <dl
+        aria-label={v.summaryLabel}
+        data-low-stock-summary
+        className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+      >
+        {items.map((item) => {
+          const selected = active === item.reason;
+          const href = selected
+            ? stockHref({ ...base, lowStockOnly: true, page: 1 })
+            : stockHref({ ...base, lowStockOnly: true, reason: item.reason, page: 1 });
+          return (
+            <div
+              key={item.reason}
+              data-count={item.reason}
+              className={cn(
+                "relative rounded-md border p-3 hover:bg-border/30",
+                selected ? "border-primary bg-border/30" : "border-border",
+              )}
+            >
+              <dt className="text-sm text-muted-foreground">
+                <Link
+                  href={href}
+                  aria-current={selected ? "page" : undefined}
+                  data-reason-filter={item.reason}
+                  className="after:absolute after:inset-0 after:rounded-md focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary"
+                >
+                  {v.summary[item.reason]}
+                </Link>
+              </dt>
+              <dd className="text-2xl font-semibold">{item.count}</dd>
+            </div>
+          );
+        })}
+      </dl>
+      <p className="text-xs text-muted-foreground">{v.filterHint}</p>
+    </div>
   );
 }

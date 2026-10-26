@@ -216,6 +216,126 @@ test.describe("vederea «Stoc mic» în pagina Stoc", () => {
   });
 });
 
+const alertsRegion = (page: Page) => page.locator("[data-stock-alerts]");
+const alertValue = async (page: Page, alert: string): Promise<number> =>
+  Number.parseInt(
+    (await page.locator(`[data-alert="${alert}"] [data-value]`).innerText()).trim(),
+    10,
+  );
+
+test.describe("Panoul: cardurile de stoc (punctul 10b)", () => {
+  test("Owner vede cele trei carduri, cu numere și legături spre vederea «Stoc mic»; meniul nu are element nou", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    await login(page, owner, "/admin");
+    await expect(page.getByRole("heading", { level: 1, name: "Panou de control" })).toBeVisible();
+    await expect(alertsRegion(page).getByRole("heading", { name: "Alerte de stoc" })).toBeVisible();
+
+    // numărătorile sunt pe tot depozitul (și produsele altor teste): cel puțin ce a pus acest fișier (Alge, Liner, Bec, Pompă)
+    expect(await alertValue(page, "low-stock")).toBeGreaterThanOrEqual(4);
+    expect(await alertValue(page, "remainder")).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('[data-alert="low-stock"]')).toHaveAttribute(
+      "href",
+      "/admin/produse/stoc?filtru=stoc-mic",
+    );
+    await expect(page.locator('[data-alert="remainder"]')).toHaveAttribute(
+      "href",
+      "/admin/produse/stoc?filtru=stoc-mic&motiv=rest-nevandabil",
+    );
+    await expect(page.locator('[data-alert="snapshot"]')).toHaveAttribute(
+      "href",
+      "/admin/produse/stoc",
+    );
+    await expect(page.locator('[data-alert="snapshot"]')).toContainText("Poza SmartBill");
+
+    // meniul rămâne neschimbat: niciun «Stoc mic» în el
+    await expect(sidebar(page).getByRole("link", { name: /Stoc mic/ })).toHaveCount(0);
+  });
+
+  test("cardul «Stoc mic» duce în vederea «Stoc mic»; «Doar rest nevandabil» o filtrează pe motiv; cardurile vederii comută motivul", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    await login(page, owner, "/admin");
+
+    await page.locator('[data-alert="low-stock"]').click();
+    await expect(page).toHaveURL(/\/admin\/produse\/stoc\?filtru=stoc-mic$/);
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Variante la stoc mic" }),
+    ).toBeVisible();
+    await expect(viewSwitch(page).getByRole("link", { name: /^Stoc mic/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(page.locator('[data-count="out_of_stock"] a')).not.toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    // din Panou: doar restul nevandabil (același filtru, plus motivul)
+    await page.goto("/admin");
+    await page.locator('[data-alert="remainder"]').click();
+    await expect(page).toHaveURL(/filtru=stoc-mic&motiv=rest-nevandabil$/);
+    await expect(lowRow(page, sku(LINER))).toBeVisible();
+    const reasons = await page
+      .locator("[data-low-row]")
+      .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-reason")));
+    expect(reasons.length).toBeGreaterThan(0);
+    expect(new Set(reasons)).toEqual(new Set(["remainder_only"]));
+    await expect(page.locator('[data-count="remainder_only"] a')).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    // comutatorul păstrează numărul total (numărătorile nu depind de motivul ales)
+    await expect(viewSwitch(page).getByRole("link", { name: /^Stoc mic/ })).toHaveText(
+      new RegExp("^Stoc mic \\(\\d+\\)$"),
+    );
+
+    // alt motiv: epuizate (Alge); al doilea clic pe cel activ le arată din nou pe toate
+    await page.locator('[data-count="out_of_stock"] a').click();
+    await expect(page).toHaveURL(/motiv=epuizat$/);
+    await expect(lowRow(page, sku(ALGE))).toBeVisible();
+    await expect(lowRow(page, sku(LINER))).toHaveCount(0);
+    await page.locator('[data-count="out_of_stock"] a').click();
+    await expect(page).toHaveURL(/\/admin\/produse\/stoc\?filtru=stoc-mic$/);
+    await expect(lowRow(page, sku(LINER))).toBeVisible();
+    await expect(lowRow(page, sku(ALGE))).toBeVisible();
+
+    // comutatorul scoate motivul: din «rest nevandabil» înapoi în toată vederea, apoi în toate variantele
+    await page.locator('[data-count="remainder_only"] a').click();
+    await expect(page).toHaveURL(/motiv=rest-nevandabil$/);
+    await viewSwitch(page).getByRole("link", { name: "Toate variantele" }).click();
+    await expect(page).toHaveURL(/\/admin\/produse\/stoc$/);
+  });
+
+  test("fără inventory.read nu există carduri (Editor, Suport, Contabil); Depozit le vede", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    for (const role of ["editor", "support", "accountant"]) {
+      const account = await createAccount(request, baseURL as string, role);
+      await login(page, account, "/admin");
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Panou de control" }),
+        role,
+      ).toBeVisible();
+      await expect(alertsRegion(page), role).toHaveCount(0);
+      await expect(page.locator("[data-alert]"), role).toHaveCount(0);
+      await page.context().clearCookies();
+    }
+    const warehouse = await createAccount(request, baseURL as string, "warehouse");
+    await login(page, warehouse, "/admin");
+    await expect(alertsRegion(page)).toBeVisible();
+    await expect(page.locator("[data-alert]")).toHaveCount(3);
+  });
+});
+
 test.describe("dialogul «Prag stoc mic»", () => {
   test("setează pragul propriu și apoi îl șterge (setarea globală): rândul apare/iese din vedere, cu audit înainte/după", async ({
     page,
@@ -450,5 +570,28 @@ test.describe("telefon", () => {
     expect(metrics.tableOverflow).toBeGreaterThan(0);
     // pe telefon textul butonului se ascunde, dar eticheta pentru cititoarele de ecran rămâne
     await expect(thresholdButton(lowRow(page, sku(ALGE)))).toBeVisible();
+  });
+
+  test("Panoul: cardurile de stoc se așază unul sub altul și pagina nu iese din ecran", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    await login(page, owner, "/admin");
+    await expect(alertsRegion(page)).toBeVisible();
+    const metrics = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll("[data-alert]")].map((card) =>
+        card.getBoundingClientRect(),
+      );
+      return {
+        pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        sameColumn: cards.every((box) => Math.abs(box.left - (cards[0]?.left ?? 0)) < 1),
+        count: cards.length,
+      };
+    });
+    expect(metrics.count).toBe(3);
+    expect(metrics.pageOverflow).toBeLessThanOrEqual(0);
+    expect(metrics.sameColumn).toBe(true);
   });
 });

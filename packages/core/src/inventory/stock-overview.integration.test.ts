@@ -710,3 +710,173 @@ describe("vederea «Stoc mic» = filtrul existent «Doar stoc mic», ordonat dup
     expect(parseStockOverviewQuery({ mic: "0" })).toEqual({});
   });
 });
+
+/** Variante la stoc mic de toate felurile, plus câteva care NU trebuie să apară; întoarce ce a adăugat. */
+async function addLowStockSet(h: Harness) {
+  await h.add("Alge", { variants: [{ physical: "0" }] });
+  await h.add("Zeolit", { variants: [{ physical: "0" }] });
+  await h.add("Neinventariat", { variants: [{ physical: null }] });
+  await h.add("Liner", { step: "41,25", variants: [{ physical: "17,5" }] });
+  await h.add("Bec", { variants: [{ physical: "1" }] });
+  await h.add("Pompă", { variants: [{ physical: "2" }] });
+  // nu apar: peste prag, negestionat, digital, în coș
+  await h.add("Capac", { variants: [{ physical: "50" }] });
+  await h.add("Negestionat", { manageStock: false, variants: [{ physical: "0" }] });
+  await h.add("Digital", { type: "digital", variants: [{ physical: "0" }] });
+  const trashed = await h.add("Din coș", { variants: [{ physical: "0" }] });
+  await h.tx.product.update({ where: { id: trashed.productId }, data: { deletedAt: T0 } });
+}
+
+describe("filtrul pe motiv în vederea «Stoc mic» (punctul 10b)", () => {
+  const LOW = { lowStockOnly: true } as const;
+
+  it("fiecare motiv arată doar variantele lui, în ordinea de urgență; numărătorile rămân pe tot", async () => {
+    await withStock(async (h) => {
+      await addLowStockSet(h);
+      const rest = await h.service.list(h.manager, { ...LOW, reason: "remainder_only" });
+      expect(rest.rows.map((r) => r.productTitle)).toEqual(["Liner"]);
+      expect(rest.total).toBe(1);
+      const out = await h.service.list(h.manager, { ...LOW, reason: "out_of_stock" });
+      expect(out.rows.map((r) => r.productTitle)).toEqual(["Alge", "Neinventariat", "Zeolit"]);
+      const below = await h.service.list(h.manager, { ...LOW, reason: "below_threshold" });
+      expect(below.rows.map((r) => r.productTitle)).toEqual(["Bec", "Pompă"]);
+      // numărătorile nu depind de motivul ales (cardurile arată mereu tot)
+      for (const page of [rest, out, below]) {
+        expect(page.lowStock).toEqual({
+          total: 6,
+          outOfStock: 3,
+          remainderOnly: 1,
+          belowThreshold: 2,
+        });
+      }
+    });
+  });
+
+  it("motivul filtrează și fără steagul lowStockOnly (e doar în listă), se combină cu căutarea și cu paginarea", async () => {
+    await withStock(async (h) => {
+      await addLowStockSet(h);
+      const noFlag = await h.service.list(h.manager, { reason: "below_threshold" });
+      expect(noFlag.rows.map((r) => r.productTitle)).toEqual(["Bec", "Pompă"]);
+      const searched = await h.service.list(h.manager, {
+        ...LOW,
+        reason: "out_of_stock",
+        search: "Zeo",
+      });
+      expect(searched.rows.map((r) => r.productTitle)).toEqual(["Zeolit"]);
+      expect(searched.lowStock.total).toBe(1);
+      const paged = await h.service.list(h.manager, {
+        ...LOW,
+        reason: "out_of_stock",
+        pageSize: 2,
+      });
+      expect(paged).toMatchObject({ total: 3, pageCount: 2 });
+      expect(paged.rows).toHaveLength(2);
+    });
+  });
+
+  it("un motiv fără variante dă lista goală, nu eroare", async () => {
+    await withStock(async (h) => {
+      await h.add("Capac", { variants: [{ physical: "50" }] });
+      const page = await h.service.list(h.manager, { ...LOW, reason: "remainder_only" });
+      expect(page).toMatchObject({ rows: [], total: 0, page: 1, pageCount: 1 });
+    });
+  });
+});
+
+describe("alertele din Panou: StockOverviewService.alerts (punctul 10b)", () => {
+  it("cer inventory.read: Owner, Admin, Manager și Depozit pot; Editor, Suport, Contabil și anonimul nu", async () => {
+    await withStock(async (h) => {
+      for (const role of ["owner", "admin", "manager", "warehouse"]) {
+        const alerts = await h.service.alerts(roleSubject(role));
+        expect(alerts.warehouse.id, role).toBe(h.warehouseId);
+      }
+      for (const role of ["editor", "support", "accountant"]) {
+        await expect(h.service.alerts(roleSubject(role)), role).rejects.toBeInstanceOf(
+          ForbiddenError,
+        );
+      }
+      await expect(h.service.alerts(null)).rejects.toBeInstanceOf(UnauthenticatedError);
+    });
+  });
+
+  it("numărătorile cresc cu exact ce se adaugă (comparate înainte/după, nu cu valori fixe) și sunt cele din vederea «Stoc mic»", async () => {
+    await withStock(async (h) => {
+      const before = await h.service.alerts(h.manager);
+      await addLowStockSet(h);
+      const after = await h.service.alerts(h.manager);
+      expect(after.lowStock.total - before.lowStock.total).toBe(6);
+      expect(after.lowStock.outOfStock - before.lowStock.outOfStock).toBe(3);
+      expect(after.lowStock.remainderOnly - before.lowStock.remainderOnly).toBe(1);
+      expect(after.lowStock.belowThreshold - before.lowStock.belowThreshold).toBe(2);
+      // aceleași numere ca în vederea paginii Stoc: Panoul și pagina nu pot ajunge să arate cifre diferite
+      const view = await h.service.list(h.manager, { lowStockOnly: true });
+      expect(after.lowStock).toEqual(view.lowStock);
+    });
+  });
+
+  it("un prag propriu mută o variantă în/din numărătoare", async () => {
+    await withStock(async (h) => {
+      const filtru = await h.add("Filtru", { variants: [{ physical: "3" }] });
+      const before = await h.service.alerts(h.manager);
+      await h.stock.setLowStockSteps({ variantId: filtru.variants[0]!.id, steps: 3 });
+      const after = await h.service.alerts(h.manager);
+      expect(after.lowStock.total - before.lowStock.total).toBe(1);
+      expect(after.lowStock.belowThreshold - before.lowStock.belowThreshold).toBe(1);
+    });
+  });
+
+  it("prospețimea pozei SmartBill pe un depozit propriu: fără poză, veche, apoi proaspătă (cea mai nouă poză contează)", async () => {
+    await withStock(async (h) => {
+      const warehouse = await h.tx.warehouse.create({
+        data: { code: "w_alert_" + Math.random().toString(16).slice(2, 8), name: "Depozit alerte" },
+      });
+      const alertsOf = () => h.service.alerts(h.manager, { warehouseId: warehouse.id });
+      const hoursAgo = (n: number) => new Date(T0.getTime() - n * 3_600_000);
+
+      // un depozit fără stoc gestionat nu are prospețime (banner-ul spune «nu există încă stoc»)
+      const empty = await alertsOf();
+      expect(empty.warehouse).toMatchObject({ id: warehouse.id });
+      expect(empty.freshness).toBeNull();
+      expect(empty.settings.snapshotStaleHours).toBe(24);
+
+      // cu stoc în depozit, dar fără nicio poză: «lipsește»
+      const product = await h.add("Cu stoc în depozitul de alerte", {
+        variants: [{ physical: "5" }],
+      });
+      await h.tx.inventoryItem.create({
+        data: {
+          variantId: product.variants[0]!.id,
+          warehouseId: warehouse.id,
+          physical: q("5"),
+        },
+      });
+      const never = await alertsOf();
+      expect(never.freshness).toMatchObject({ status: "never", takenAt: null });
+
+      await h.tx.stockSnapshot.create({
+        data: { warehouseId: warehouse.id, takenAt: hoursAgo(48), source: "import" },
+      });
+      const stale = await alertsOf();
+      expect(stale.freshness).toMatchObject({ status: "stale", ageHours: 48 });
+
+      await h.tx.stockSnapshot.create({
+        data: { warehouseId: warehouse.id, takenAt: hoursAgo(3), source: "import" },
+      });
+      const fresh = await alertsOf();
+      expect(fresh.freshness).toMatchObject({ status: "fresh", ageHours: 3 });
+    });
+  });
+
+  it("peste plafonul de variante citite rezultatul e marcat «truncated»; un depozit inexistent dă STOCK_NO_WAREHOUSE", async () => {
+    await withStock(
+      async (h) => {
+        await addLowStockSet(h);
+        expect((await h.service.alerts(h.manager)).truncated).toBe(true);
+        await expect(
+          h.service.alerts(h.manager, { warehouseId: "nu-exista" }),
+        ).rejects.toMatchObject({ code: "STOCK_NO_WAREHOUSE" });
+      },
+      { maxRows: 3 },
+    );
+  });
+});

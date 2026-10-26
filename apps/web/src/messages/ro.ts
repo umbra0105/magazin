@@ -122,6 +122,35 @@ export const ro = {
       description: "Prezentare generală a magazinului.",
       placeholder:
         "Aici vor apărea indicatorii magazinului, pe măsură ce sunt construite secțiunile.",
+      /** Cardurile de stoc (doar cu `inventory.read`), cu legături spre vederea «Stoc mic» a paginii Stoc. */
+      stock: {
+        heading: "Alerte de stoc",
+        lowStock: {
+          title: "Stoc mic",
+          detail: (outOfStock: number) =>
+            outOfStock === 0
+              ? "Nicio variantă epuizată"
+              : outOfStock === 1
+                ? "din care 1 epuizată"
+                : `din care ${outOfStock} epuizate`,
+          aria: (total: number) => `Stoc mic: ${total}. Vezi variantele`,
+        },
+        remainder: {
+          title: "Doar rest nevandabil",
+          detail: "Au rămas doar cantități sub un pas de vânzare",
+          aria: (count: number) => `Doar rest nevandabil: ${count}. Vezi variantele`,
+        },
+        snapshot: {
+          title: "Poza SmartBill",
+          status: {
+            fresh: "La zi",
+            stale: "Veche",
+            never: "Lipsește",
+            none: "Fără stoc",
+          },
+          aria: "Poza SmartBill: vezi starea în pagina Stoc",
+        },
+      },
     },
     nav: {
       dashboard: "Panou",
@@ -764,6 +793,9 @@ export const ro = {
         },
         listLabel: "Variantele la stoc mic",
         empty: "Nicio variantă nu e la stoc mic.",
+        /** Cardurile de numărători sunt legături: filtrează pe motiv; al doilea clic pe cel activ le arată din nou pe toate. */
+        filterHint:
+          "Alege un motiv ca să vezi doar acele variante; același clic o dată în plus le arată din nou pe toate.",
       },
       threshold: {
         button: "Prag",

@@ -235,6 +235,52 @@ test.describe("ecranul de stoc", () => {
   });
 });
 
+test.describe("Panoul: cardul «Poza SmartBill»", () => {
+  test("urmează starea pozei: la zi, lipsă, veche, apoi la zi; cardul duce în pagina Stoc, unde e banner-ul", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin");
+    const card = page.locator('[data-alert="snapshot"]');
+    try {
+      // la zi (3 h)
+      await expect(card).toHaveAttribute("data-status", "fresh");
+      await expect(card).toHaveAttribute("data-tone", "ok");
+      await expect(card).toContainText("La zi");
+      await expect(card).toContainText("acum 3 h");
+
+      // fără poză
+      await setE2eStockSnapshot(null);
+      await page.reload();
+      await expect(card).toHaveAttribute("data-status", "never");
+      await expect(card).toHaveAttribute("data-tone", "danger");
+      await expect(card).toContainText("Lipsește");
+      await expect(card).toContainText("Nu există nicio poză SmartBill");
+
+      // ora pozei mutată înapoi (30 h, pragul e 24 h): avertisment
+      await setE2eStockSnapshot(30);
+      await page.reload();
+      await expect(card).toHaveAttribute("data-status", "stale");
+      await expect(card).toHaveAttribute("data-tone", "danger");
+      await expect(card).toContainText("Veche");
+      await expect(card).toContainText("Poza SmartBill e veche");
+      await expect(card).toContainText("Pragul este de 24 h");
+
+      // cardul duce în pagina Stoc, unde banner-ul spune același lucru
+      await card.click();
+      await expect(page).toHaveURL(/\/admin\/produse\/stoc$/);
+      await expect(page.locator('[data-banner="stale"]')).toBeVisible();
+    } finally {
+      await setE2eStockSnapshot(3);
+    }
+    await page.goto("/admin");
+    await expect(card).toHaveAttribute("data-status", "fresh");
+    await expect(card).toContainText("acum 3 h");
+  });
+});
+
 test.describe("ajustarea stocului", () => {
   test("Manager: «Vânzare în magazin» scade stocul, scrie mișcarea și auditul; istoricul o arată", async ({
     page,

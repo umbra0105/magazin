@@ -9,6 +9,7 @@ import {
   type StockOverviewSource,
   type StockOverviewSettings,
 } from "./stock-overview";
+import { LOW_STOCK_REASON_PARAMS, parseStockOverviewQuery } from "./stock-overview-service";
 
 /**
  * Faza 5, punctul 8: modelul de afișare al ecranului de stoc (funcții PURE). Cele 6 produse-model din plan sunt cazurile
@@ -480,6 +481,45 @@ describe("pragul «stoc mic»: efectiv, propriu și motivul din lista «Stoc mic
       outOfStock: 0,
       remainderOnly: 0,
       belowThreshold: 0,
+    });
+  });
+});
+
+describe("adresa vederii «Stoc mic»: filtrul pe motiv (?motiv=…)", () => {
+  it("cele trei motive au valoare proprie în adresă", () => {
+    expect(LOW_STOCK_REASON_PARAMS).toEqual({
+      out_of_stock: "epuizat",
+      remainder_only: "rest-nevandabil",
+      below_threshold: "sub-prag",
+    });
+  });
+
+  it("un motiv valid se citește și pornește singur vederea «Stoc mic» (un motiv există doar în listă)", () => {
+    expect(parseStockOverviewQuery({ motiv: "rest-nevandabil" })).toEqual({
+      lowStockOnly: true,
+      reason: "remainder_only",
+    });
+    expect(parseStockOverviewQuery({ filtru: "stoc-mic", motiv: "epuizat" })).toEqual({
+      lowStockOnly: true,
+      reason: "out_of_stock",
+    });
+    expect(parseStockOverviewQuery({ mic: "1", motiv: "sub-prag", q: "x" })).toEqual({
+      lowStockOnly: true,
+      reason: "below_threshold",
+      search: "x",
+    });
+    expect(parseStockOverviewQuery({ motiv: ["epuizat", "sub-prag"] })).toEqual({
+      lowStockOnly: true,
+      reason: "out_of_stock",
+    });
+  });
+
+  it("un motiv necunoscut sau gol se ignoră (adresa veche sau greșită nu dă eroare, nici nu pornește vederea)", () => {
+    expect(parseStockOverviewQuery({ motiv: "altceva" })).toEqual({});
+    expect(parseStockOverviewQuery({ motiv: "" })).toEqual({});
+    expect(parseStockOverviewQuery({ motiv: "out_of_stock" })).toEqual({});
+    expect(parseStockOverviewQuery({ filtru: "stoc-mic", motiv: "x" })).toEqual({
+      lowStockOnly: true,
     });
   });
 });

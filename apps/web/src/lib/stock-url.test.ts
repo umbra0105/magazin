@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { LOW_STOCK_FILTER as CORE_LOW_STOCK_FILTER, parseStockOverviewQuery } from "@ecom/core";
-import { LOW_STOCK_FILTER, stockHref } from "./stock-url";
+import {
+  LOW_STOCK_FILTER as CORE_LOW_STOCK_FILTER,
+  LOW_STOCK_REASON_PARAMS as CORE_REASON_PARAMS,
+  parseStockOverviewQuery,
+} from "@ecom/core";
+import { LOW_STOCK_FILTER, LOW_STOCK_REASON_PARAMS, stockHref } from "./stock-url";
 
 /** Adresa paginii Stoc: filtrele în adresă (`?q=&tip=&stare=&filtru=stoc-mic&pagina=`), identice cu ce citește nucleul. */
 
@@ -46,6 +50,52 @@ describe("stockHref", () => {
       const url = new URL(stockHref(query), "http://x");
       const raw = Object.fromEntries(url.searchParams);
       expect(parseStockOverviewQuery(raw), JSON.stringify(query)).toEqual(query);
+    }
+  });
+});
+
+describe("stockHref: filtrul pe motiv (?motiv=…)", () => {
+  it("motivul vine după filtru și înainte de pagină; fiecare motiv are valoarea lui", () => {
+    expect(stockHref({ lowStockOnly: true, reason: "remainder_only" })).toBe(
+      "/admin/produse/stoc?filtru=stoc-mic&motiv=rest-nevandabil",
+    );
+    expect(
+      stockHref({
+        search: "liner",
+        kind: "managed",
+        state: "unavailable",
+        lowStockOnly: true,
+        reason: "out_of_stock",
+        page: 2,
+      }),
+    ).toBe(
+      "/admin/produse/stoc?q=liner&tip=managed&stare=unavailable&filtru=stoc-mic&motiv=epuizat&pagina=2",
+    );
+    expect(stockHref({ lowStockOnly: true, reason: "below_threshold" })).toContain(
+      "motiv=sub-prag",
+    );
+  });
+
+  it("un motiv fără steag pornește oricum vederea (un motiv există doar în «Stoc mic»)", () => {
+    expect(stockHref({ reason: "out_of_stock" })).toBe(
+      "/admin/produse/stoc?filtru=stoc-mic&motiv=epuizat",
+    );
+  });
+
+  it("valorile din adresă sunt aceleași cu cele din nucleu", () => {
+    expect(LOW_STOCK_REASON_PARAMS).toEqual(CORE_REASON_PARAMS);
+  });
+
+  it("adresa construită aici o citește nucleul înapoi, neschimbată", () => {
+    for (const reason of ["out_of_stock", "remainder_only", "below_threshold"] as const) {
+      const href = stockHref({ lowStockOnly: true, reason, search: "pompă", page: 3 });
+      const raw = Object.fromEntries(new URL(href, "http://x").searchParams);
+      expect(parseStockOverviewQuery(raw), reason).toEqual({
+        lowStockOnly: true,
+        reason,
+        search: "pompă",
+        page: 3,
+      });
     }
   });
 });

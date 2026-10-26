@@ -15,6 +15,7 @@ import {
   groupStockRows,
   sortLowStock,
   type LowStockCounts,
+  type LowStockReason,
   type StockOverviewRow,
   type StockProductGroup,
   type StockRowKind,
@@ -58,6 +59,16 @@ export interface StockOverviewServiceDeps {
 /** Valoarea din adresă (`?filtru=stoc-mic`) care pornește vederea «Stoc mic» a paginii Stoc. */
 export const LOW_STOCK_FILTER = "stoc-mic";
 
+/**
+ * Valoarea din adresa vederii «Stoc mic» (`?motiv=…`) pentru fiecare motiv. Pe ea se leagă cardurile din Panou și cardurile de
+ * numărători ale vederii; aplicația oglindește aceste valori în `lib/stock-url.ts` (un test le ține la fel).
+ */
+export const LOW_STOCK_REASON_PARAMS: Readonly<Record<LowStockReason, string>> = {
+  out_of_stock: "epuizat",
+  remainder_only: "rest-nevandabil",
+  below_threshold: "sub-prag",
+};
+
 export interface StockOverviewQuery {
   search?: string;
   kind?: StockRowKind;
@@ -67,6 +78,8 @@ export interface StockOverviewQuery {
    * apoi cele sub prag cu cei mai puțini pași), nu în ordinea titlului. Același filtru «Doar stoc mic» de până acum.
    */
   lowStockOnly?: boolean;
+  /** Doar variantele la stoc mic dintr-un anumit motiv (în vederea «Stoc mic»); un motiv există doar în listă */
+  reason?: LowStockReason;
   page?: number;
   pageSize?: number;
   warehouseId?: string;
@@ -87,6 +100,17 @@ export interface StockOverviewPage {
   settings: StockOverviewServiceSettings;
   /** Câte variante sunt la «Stoc mic», pe motiv, din TOT ce a găsit căutarea (independent de filtre și de pagină) */
   lowStock: LowStockCounts;
+}
+
+/** Ce arată Panoul despre stoc: câte variante sunt la stoc mic, pe motiv, și cât de proaspătă e poza SmartBill. */
+export interface StockAlerts {
+  warehouse: StockWarehouseRef;
+  freshness: WarehouseFreshness | null;
+  /** Aceleași numere ca în vederea «Stoc mic» a paginii Stoc */
+  lowStock: LowStockCounts;
+  /** Depozitul are mai multe variante decât plafonul; numărătorile sunt pe primele */
+  truncated: boolean;
+  settings: StockOverviewServiceSettings;
 }
 
 export interface StockVariantDetail {
@@ -157,6 +181,15 @@ export function parseStockOverviewQuery(
   if (firstOf(raw["filtru"]) === LOW_STOCK_FILTER || firstOf(raw["mic"]) === "1") {
     query.lowStockOnly = true;
   }
+  // un motiv valid pornește singur vederea «Stoc mic» (un motiv există doar în listă)
+  const reasonParam = firstOf(raw["motiv"]);
+  const reason = (Object.keys(LOW_STOCK_REASON_PARAMS) as LowStockReason[]).find(
+    (candidate) => LOW_STOCK_REASON_PARAMS[candidate] === reasonParam,
+  );
+  if (reason) {
+    query.reason = reason;
+    query.lowStockOnly = true;
+  }
   const page = firstOf(raw["pagina"]);
   if (page && /^[1-9][0-9]{0,6}$/.test(page)) query.page = Number.parseInt(page, 10);
   return query;
@@ -216,7 +249,8 @@ export class StockOverviewService {
       (row) =>
         (!query.kind || row.kind === query.kind) &&
         (!query.state || row.state === query.state) &&
-        (!query.lowStockOnly || row.lowStock),
+        (!query.lowStockOnly || row.lowStock) &&
+        (!query.reason || row.lowStockReason === query.reason),
     );
     // vederea «Stoc mic» e ordonată după urgență; fără ea rămâne ordinea titlului din citire
     const filtered = query.lowStockOnly ? sortLowStock(matching) : matching;
@@ -245,6 +279,37 @@ export class StockOverviewService {
       truncated,
       settings,
       lowStock: countLowStock(all),
+    };
+  }
+
+  /**
+   * Alertele din Panou: numărătorile «Stoc mic» pe motiv (aceleași ca în vederea paginii Stoc, calculate pe același depozit și cu
+   * aceeași regulă) și prospețimea pozei SmartBill. Cere `inventory.read`. Citește variantele ca lista (până la `maxRows`).
+   */
+  async alerts(
+    subject: PermissionSubject | null,
+    options: { warehouseId?: string } = {},
+  ): Promise<StockAlerts> {
+    assertCan(subject, "inventory.read");
+    const settings = await this.deps.readSettings();
+    const warehouse = await this.resolveWarehouse(options.warehouseId);
+    const sources = await this.deps.store.loadSources({
+      warehouseId: warehouse.id,
+      limit: this.maxRows + 1,
+    });
+    const rowSettings = {
+      defaultLowStockSteps: settings.lowStockSteps,
+      defaultLeadTimeDays: settings.defaultLeadTimeDays,
+    };
+    const rows = sources
+      .slice(0, this.maxRows)
+      .map((source) => buildStockOverviewRow(source, rowSettings));
+    return {
+      warehouse,
+      freshness: await this.freshnessOf(warehouse.id, settings),
+      lowStock: countLowStock(rows),
+      truncated: sources.length > this.maxRows,
+      settings,
     };
   }
 
