@@ -10,6 +10,7 @@ import { DomainError } from "@ecom/shared";
  * - `STOCK_COMMITMENT_RELEASED`: comanda a fost anulată (angajare eliberată); aceeași comandă nu se mai angajează.
  * - `STOCK_VARIANT_NOT_FOUND`, `STOCK_NO_WAREHOUSE`: date lipsă.
  * - `STOCK_NOT_MANAGED`: varianta nu are stoc de ajustat (produs digital sau cu gestionarea stocului oprită).
+ * - `STOCK_THRESHOLD_INVALID`: pragul «stoc mic» nu e un număr întreg de pași între 0 și `LOW_STOCK_STEPS_MAX` (sau gol).
  *
  * Ajustările manuale de stoc fizic (`adjustPhysical`), toate fără nicio modificare la refuz:
  * - `STOCK_ADJUSTMENT_INVALID_REASON`, `STOCK_ADJUSTMENT_NOTE_REQUIRED`, `STOCK_ADJUSTMENT_NOTE_TOO_LONG`,

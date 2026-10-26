@@ -534,3 +534,179 @@ describe("interogarea din adresă (parametri de URL)", () => {
     expect(parseStockOverviewQuery({ q: "x".repeat(300) }).search).toHaveLength(100);
   });
 });
+
+describe("vederea «Stoc mic» = filtrul existent «Doar stoc mic», ordonat după urgență (punctul 10a)", () => {
+  const LOW = { lowStockOnly: true } as const;
+
+  /** Setul de produse folosit în teste: câte un caz din fiecare categorie. */
+  async function seed(h: Harness) {
+    const out1 = await h.add("Alge", { variants: [{ physical: "0" }] });
+    const out2 = await h.add("Zeolit", { variants: [{ physical: "0" }] });
+    const never = await h.add("Neinventariat", { variants: [{ physical: null }] });
+    const rest = await h.add("Liner", { step: "41,25", variants: [{ physical: "17,5" }] });
+    const one = await h.add("Bec", { variants: [{ physical: "1" }] });
+    const two = await h.add("Pompă", { variants: [{ physical: "2" }] });
+    const three = await h.add("Filtru", { variants: [{ physical: "3" }] });
+    const plenty = await h.add("Capac", { variants: [{ physical: "50" }] });
+    const unmanaged = await h.add("Negestionat", {
+      manageStock: false,
+      variants: [{ physical: "0" }],
+    });
+    const digital = await h.add("Digital", { type: "digital", variants: [{ physical: "0" }] });
+    const trashed = await h.add("Din coș", { variants: [{ physical: "0" }] });
+    await h.tx.product.update({ where: { id: trashed.productId }, data: { deletedAt: T0 } });
+    const id = (p: { variants: Array<{ id: string }> }) => p.variants[0]!.id;
+    return { out1, out2, never, rest, one, two, three, plenty, unmanaged, digital, trashed, id };
+  }
+
+  it("aceleași drepturi ca lista de stoc: inventory.read; Editor, Suport, Contabil și anonimul nu", async () => {
+    await withStock(async (h) => {
+      await seed(h);
+      for (const role of ["owner", "admin", "manager", "warehouse"]) {
+        const page = await h.service.list(roleSubject(role), LOW);
+        expect(page.rows.length, role).toBeGreaterThan(0);
+      }
+      for (const role of ["editor", "support", "accountant"]) {
+        await expect(h.service.list(roleSubject(role), LOW), role).rejects.toBeInstanceOf(
+          ForbiddenError,
+        );
+      }
+      await expect(h.service.list(null, LOW)).rejects.toBeInstanceOf(UnauthenticatedError);
+    });
+  });
+
+  it("conține doar variantele gestionate la sau sub prag, cele mai urgente primele; negestionate, digitale și din coș lipsesc", async () => {
+    await withStock(async (h) => {
+      const s = await seed(h);
+      const page = await h.service.list(h.manager, LOW);
+      expect(page.rows.map((r) => r.productTitle)).toEqual([
+        "Alge",
+        "Neinventariat",
+        "Zeolit",
+        "Liner",
+        "Bec",
+        "Pompă",
+      ]);
+      expect(page.total).toBe(6);
+      expect(page.lowStock).toEqual({
+        total: 6,
+        outOfStock: 3,
+        remainderOnly: 1,
+        belowThreshold: 2,
+      });
+      const ids = new Set(page.rows.map((r) => r.variantId));
+      for (const absent of [s.three, s.plenty, s.unmanaged, s.digital, s.trashed]) {
+        expect(ids.has(s.id(absent)), absent.productId).toBe(false);
+      }
+      // pragul efectiv și cel propriu se văd pe rând
+      const bec = page.rows.find((r) => r.productTitle === "Bec");
+      expect([bec?.thresholdSteps, bec?.ownThresholdSteps]).toEqual([2, null]);
+      expect(page.warehouse.id).toBe(h.warehouseId);
+      expect(page.settings.lowStockSteps).toBe(2);
+    });
+  });
+
+  it("fără filtru lista rămâne cea obișnuită (în ordinea titlului), dar numărătorile «Stoc mic» sunt mereu prezente", async () => {
+    await withStock(async (h) => {
+      await seed(h);
+      const all = await h.service.list(h.manager, {});
+      expect(all.rows.length).toBeGreaterThan(6);
+      expect(all.rows.map((r) => r.productTitle)).not.toEqual(
+        (await h.service.list(h.manager, LOW)).rows.map((r) => r.productTitle),
+      );
+      expect(all.lowStock).toEqual({
+        total: 6,
+        outOfStock: 3,
+        remainderOnly: 1,
+        belowThreshold: 2,
+      });
+    });
+  });
+
+  it("pragul propriu mută granița în ambele sensuri; ștergerea lui revine la setarea globală", async () => {
+    await withStock(async (h) => {
+      const s = await seed(h);
+      const titles = async () =>
+        (await h.service.list(h.manager, LOW)).rows.map((r) => r.productTitle);
+      expect(await titles()).not.toContain("Filtru");
+      // 3 pași cu prag propriu 3: intră
+      await h.stock.setLowStockSteps({ variantId: s.id(s.three), steps: 3 });
+      expect(await titles()).toContain("Filtru");
+      const page = await h.service.list(h.manager, LOW);
+      const filtru = page.rows.find((r) => r.productTitle === "Filtru");
+      expect([filtru?.thresholdSteps, filtru?.ownThresholdSteps]).toEqual([3, 3]);
+      expect(page.lowStock.belowThreshold).toBe(3);
+      // 1 pas cu prag propriu 0: iese (doar epuizarea contează)
+      await h.stock.setLowStockSteps({ variantId: s.id(s.one), steps: 0 });
+      expect(await titles()).not.toContain("Bec");
+      // fără prag propriu: revin ambele la regula globală
+      await h.stock.setLowStockSteps({ variantId: s.id(s.three), steps: null });
+      await h.stock.setLowStockSteps({ variantId: s.id(s.one), steps: null });
+      expect(await titles()).toContain("Bec");
+      expect(await titles()).not.toContain("Filtru");
+    });
+  });
+
+  it("căutarea filtrează rândurile și numărătorile; paginarea taie lista, dar numărătorile rămân pe tot ce s-a găsit", async () => {
+    await withStock(async (h) => {
+      await seed(h);
+      const found = await h.service.list(h.manager, { ...LOW, search: "Line" });
+      expect(found.rows.map((r) => r.productTitle)).toEqual(["Liner"]);
+      expect(found.lowStock).toEqual({
+        total: 1,
+        outOfStock: 0,
+        remainderOnly: 1,
+        belowThreshold: 0,
+      });
+
+      const first = await h.service.list(h.manager, { ...LOW, pageSize: 4 });
+      expect(first.rows).toHaveLength(4);
+      expect(first).toMatchObject({ page: 1, pageSize: 4, pageCount: 2, total: 6 });
+      expect(first.lowStock.total).toBe(6);
+      const second = await h.service.list(h.manager, { ...LOW, pageSize: 4, page: 2 });
+      expect(second.rows.map((r) => r.productTitle)).toEqual(["Bec", "Pompă"]);
+      // nicio potrivire: listă goală, o singură pagină
+      const none = await h.service.list(h.manager, { ...LOW, search: "nu-există-așa-ceva" });
+      expect(none).toMatchObject({ rows: [], total: 0, page: 1, pageCount: 1 });
+      expect(none.lowStock.total).toBe(0);
+    });
+  });
+
+  it("combinat cu celelalte filtre (stare, tip), ordinea de urgență se păstrează", async () => {
+    await withStock(async (h) => {
+      await seed(h);
+      const page = await h.service.list(h.manager, { ...LOW, state: "unavailable" });
+      expect(page.rows.map((r) => r.productTitle)).toEqual([
+        "Alge",
+        "Neinventariat",
+        "Zeolit",
+        "Liner",
+      ]);
+      expect(page.lowStock.total).toBe(6);
+    });
+  });
+
+  it("peste plafonul de variante citite, rezultatul e marcat «truncated» (se cere o căutare mai precisă)", async () => {
+    await withStock(
+      async (h) => {
+        await seed(h);
+        const page = await h.service.list(h.manager, LOW);
+        expect(page.truncated).toBe(true);
+        const precise = await h.service.list(h.manager, { ...LOW, search: "Liner" });
+        expect(precise.truncated).toBe(false);
+      },
+      { maxRows: 3 },
+    );
+  });
+
+  it("adresa: ?filtru=stoc-mic e forma curentă, ?mic=1 rămâne un alias vechi; valorile necunoscute se ignoră", () => {
+    expect(parseStockOverviewQuery({ filtru: "stoc-mic" })).toEqual({ lowStockOnly: true });
+    expect(parseStockOverviewQuery({ mic: "1" })).toEqual({ lowStockOnly: true });
+    expect(
+      parseStockOverviewQuery({ filtru: ["stoc-mic", "x"], q: " pompă ", pagina: "2" }),
+    ).toEqual({ lowStockOnly: true, search: "pompă", page: 2 });
+    expect(parseStockOverviewQuery({ filtru: "altceva" })).toEqual({});
+    expect(parseStockOverviewQuery({ filtru: "" })).toEqual({});
+    expect(parseStockOverviewQuery({ mic: "0" })).toEqual({});
+  });
+});

@@ -4,12 +4,25 @@ import { formatQuantity } from "@ecom/shared/quantity";
 import { Badge, buttonVariants } from "@ecom/ui";
 import { History } from "lucide-react";
 import { formatLocalDateTime } from "@/lib/stock-time";
-import { availabilityView, kindLabel, quantityText, stateView } from "@/lib/stock-view";
+import {
+  availabilityView,
+  kindLabel,
+  quantityText,
+  stateView,
+  thresholdTarget,
+} from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 import { AdjustStockButton, type ReasonOption } from "./adjust-stock-dialog";
 import { badgeVariant } from "./stock-parts";
+import { SetThresholdButton } from "./threshold-dialog";
 
 const m = getMessages().admin.inventory;
+
+/** Setările dialogului «Prag»: limita de sus și pragul global (în pași), de pe server. */
+export interface ThresholdSettings {
+  max: number;
+  globalSteps: number;
+}
 
 function displayName(row: StockOverviewRow): string {
   return row.variantLabel ? `${row.productTitle} (${row.variantLabel})` : row.productTitle;
@@ -27,6 +40,7 @@ export function StockTable({
   warehouseId,
   timeZone,
   noteMax,
+  threshold,
   rowAttribute = "data-variant-row",
 }: {
   groups: readonly StockProductGroup[];
@@ -35,6 +49,8 @@ export function StockTable({
   warehouseId: string;
   timeZone: string;
   noteMax: number;
+  /** Dacă e dat (și există `inventory.write`), rândurile gestionate au butonul «Prag»; lipsă = fără buton (alte ecrane) */
+  threshold?: ThresholdSettings;
   /** Atributul `data-…` care marchează rândul unei variante (după SKU); implicit `data-variant-row` */
   rowAttribute?: string;
 }) {
@@ -81,6 +97,7 @@ export function StockTable({
                 warehouseId={warehouseId}
                 timeZone={timeZone}
                 noteMax={noteMax}
+                {...(threshold && { threshold })}
                 rowAttribute={rowAttribute}
               />
             ))}
@@ -100,6 +117,7 @@ function StockRow({
   warehouseId,
   timeZone,
   noteMax,
+  threshold,
   rowAttribute,
 }: {
   row: StockOverviewRow;
@@ -109,9 +127,18 @@ function StockRow({
   warehouseId: string;
   timeZone: string;
   noteMax: number;
+  threshold?: ThresholdSettings;
   rowAttribute: string;
 }) {
   const state = stateView(row);
+  const thresholdData =
+    canWrite && threshold
+      ? thresholdTarget(row, {
+          warehouseId,
+          name: displayName(row),
+          globalSteps: threshold.globalSteps,
+        })
+      : null;
   const availability = availabilityView(row);
   const name = displayName(row);
   return (
@@ -189,6 +216,9 @@ function StockRow({
       </td>
       <td className="p-3 align-top">
         <div className="flex justify-end gap-1">
+          {thresholdData && threshold && (
+            <SetThresholdButton target={thresholdData} max={threshold.max} />
+          )}
           {canWrite && row.kind === "managed" && (
             <AdjustStockButton
               target={{

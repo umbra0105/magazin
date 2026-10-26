@@ -463,6 +463,19 @@ test.describe("drepturi", () => {
       await expect(
         row(readerPage, skus[LINER] as string).getByRole("link", { name: /^Istoricul stocului:/ }),
       ).toBeVisible();
+      // vederea «Stoc mic» (?filtru=stoc-mic) se vede cu citire, dar fără «Prag» și fără «Ajustează»
+      await readerPage.goto(`/admin/produse/stoc?q=${encodeURIComponent(search)}&filtru=stoc-mic`);
+      await expect(readerPage.locator("[data-low-row]").first()).toBeVisible();
+      await expect(
+        readerPage.getByRole("button", { name: /^Setează pragul de stoc mic:/ }),
+      ).toHaveCount(0);
+      await expect(adjustButton(readerPage.locator("body"))).toHaveCount(0);
+      await expect(
+        readerPage
+          .locator("[data-low-row]")
+          .first()
+          .getByRole("link", { name: /^Istoricul stocului:/ }),
+      ).toBeVisible();
     } finally {
       await second.close();
     }

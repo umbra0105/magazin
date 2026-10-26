@@ -70,6 +70,71 @@ export function availabilityView(row: StockOverviewRow): AvailabilityView | null
   };
 }
 
+export interface ThresholdView {
+  /** «2 pași», «1 pas», «20 de pași» */
+  steps: string;
+  origin: "own" | "global";
+  /** «propriu» sau «setarea globală» */
+  originLabel: string;
+}
+
+/** Pragul «stoc mic» efectiv al unei variante și de unde vine. `null` la negestionat și digital (nu au prag). */
+export function thresholdView(row: StockOverviewRow): ThresholdView | null {
+  if (row.thresholdSteps === null) return null;
+  const origin = row.ownThresholdSteps === null ? "global" : "own";
+  return {
+    steps: stepsText(BigInt(row.thresholdSteps)),
+    origin,
+    originLabel: m().lowStock.threshold[origin],
+  };
+}
+
+export interface ThresholdTargetData {
+  variantId: string;
+  warehouseId: string;
+  name: string;
+  /** Pragul propriu de acum; `null` = setarea globală */
+  ownSteps: number | null;
+  effectiveText: string;
+  originLabel: string;
+  globalText: string;
+}
+
+/** Ce primește dialogul «Prag» pentru un rând (formatat aici, ca dialogul să nu știe de pluraluri). `null` la negestionat și digital. */
+export function thresholdTarget(
+  row: StockOverviewRow,
+  context: { warehouseId: string; name: string; globalSteps: number },
+): ThresholdTargetData | null {
+  const view = thresholdView(row);
+  if (!view) return null;
+  return {
+    variantId: row.variantId,
+    warehouseId: context.warehouseId,
+    name: context.name,
+    ownSteps: row.ownThresholdSteps,
+    effectiveText: view.steps,
+    originLabel: view.originLabel,
+    globalText: stepsText(BigInt(context.globalSteps)),
+  };
+}
+
+export interface LowStockReasonView {
+  reason: NonNullable<StockOverviewRow["lowStockReason"]>;
+  label: string;
+  tone: Tone;
+}
+
+/** Motivul din lista «Stoc mic» (epuizat / doar rest nevandabil / sub prag), cu tonul insignei. `null` = nu e în listă. */
+export function lowStockReasonView(row: StockOverviewRow): LowStockReasonView | null {
+  const reason = row.lowStockReason;
+  if (!reason) return null;
+  return {
+    reason,
+    label: m().lowStock.reasons[reason],
+    tone: reason === "out_of_stock" ? "danger" : "warn",
+  };
+}
+
 export interface StateView {
   label: string;
   tone: Tone;

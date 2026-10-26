@@ -52,11 +52,14 @@ export function AdjustStockButton({
   reasons,
   timeZone,
   noteMax,
+  refreshOnClose = false,
 }: {
   target: AdjustTarget;
   reasons: readonly ReasonOption[];
   timeZone: string;
   noteMax: number;
+  /** Reîmprospătează lista abia la închiderea dialogului (vederea «Stoc mic»: rândul poate ieși din listă și ar lua dialogul cu el) */
+  refreshOnClose?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -76,6 +79,7 @@ export function AdjustStockButton({
           reasons={reasons}
           timeZone={timeZone}
           noteMax={noteMax}
+          refreshOnClose={refreshOnClose}
           onClose={() => setOpen(false)}
         />
       )}
@@ -93,12 +97,14 @@ function AdjustForm({
   reasons,
   timeZone,
   noteMax,
+  refreshOnClose,
   onClose,
 }: {
   target: AdjustTarget;
   reasons: readonly ReasonOption[];
   timeZone: string;
   noteMax: number;
+  refreshOnClose: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -114,6 +120,11 @@ function AdjustForm({
   const [problem, setProblem] = useState<string | null>(null);
   const [saved, setSaved] = useState<Saved | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const close = () => {
+    onClose();
+    if (saved && refreshOnClose) router.refresh();
+  };
 
   const rule: SignRule = reasons.find((r) => r.value === reason)?.rule ?? "either";
   const directions = allowedDirections(rule);
@@ -189,7 +200,7 @@ function AdjustForm({
             ),
             warnings: result.warnings.map((code) => warningText(code, { asOf, timeZone })),
           });
-          router.refresh();
+          if (!refreshOnClose) router.refresh();
         } else {
           setProblem(errorText(result));
         }
@@ -215,7 +226,7 @@ function AdjustForm({
   return (
     <Dialog
       open
-      onClose={onClose}
+      onClose={close}
       title={text.title(target.name)}
       closeLabel={text.close}
       className="max-w-lg"
@@ -240,7 +251,7 @@ function AdjustForm({
             </div>
           )}
           <div className="flex justify-end">
-            <Button type="button" onClick={onClose}>
+            <Button type="button" onClick={close}>
               {text.close}
             </Button>
           </div>
@@ -370,7 +381,7 @@ function AdjustForm({
             </p>
           )}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={close}>
               {text.cancel}
             </Button>
             <Button type="submit" disabled={pending}>

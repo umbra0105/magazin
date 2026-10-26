@@ -11,7 +11,10 @@ import {
 import { StockError } from "./stock-errors";
 import {
   buildStockOverviewRow,
+  countLowStock,
   groupStockRows,
+  sortLowStock,
+  type LowStockCounts,
   type StockOverviewRow,
   type StockProductGroup,
   type StockRowKind,
@@ -52,10 +55,17 @@ export interface StockOverviewServiceDeps {
   maxRows?: number;
 }
 
+/** Valoarea din adresă (`?filtru=stoc-mic`) care pornește vederea «Stoc mic» a paginii Stoc. */
+export const LOW_STOCK_FILTER = "stoc-mic";
+
 export interface StockOverviewQuery {
   search?: string;
   kind?: StockRowKind;
   state?: VisibleStockState;
+  /**
+   * Vederea «Stoc mic»: doar variantele gestionate la sau sub prag, în ordinea urgenței (epuizate, apoi doar rest nevandabil,
+   * apoi cele sub prag cu cei mai puțini pași), nu în ordinea titlului. Același filtru «Doar stoc mic» de până acum.
+   */
   lowStockOnly?: boolean;
   page?: number;
   pageSize?: number;
@@ -75,6 +85,8 @@ export interface StockOverviewPage {
   /** Căutarea a găsit mai multe variante decât plafonul; s-au luat primele */
   truncated: boolean;
   settings: StockOverviewServiceSettings;
+  /** Câte variante sunt la «Stoc mic», pe motiv, din TOT ce a găsit căutarea (independent de filtre și de pagină) */
+  lowStock: LowStockCounts;
 }
 
 export interface StockVariantDetail {
@@ -128,8 +140,8 @@ function firstOf(value: string | string[] | undefined): string | undefined {
 }
 
 /**
- * Interogarea din adresa paginii (`?q=&tip=&stare=&mic=1&pagina=`): valorile valide se păstrează, cele invalide se ignoră
- * (o adresă veche sau greșită nu trebuie să dea eroare).
+ * Interogarea din adresa paginii (`?q=&tip=&stare=&filtru=stoc-mic&pagina=`): valorile valide se păstrează, cele invalide se
+ * ignoră (o adresă veche sau greșită nu trebuie să dea eroare). `?mic=1` rămâne un alias vechi al lui `?filtru=stoc-mic`.
  */
 export function parseStockOverviewQuery(
   raw: Record<string, string | string[] | undefined>,
@@ -142,7 +154,9 @@ export function parseStockOverviewQuery(
   const state = firstOf(raw["stare"]);
   if (state && (STATES as readonly string[]).includes(state))
     query.state = state as VisibleStockState;
-  if (firstOf(raw["mic"]) === "1") query.lowStockOnly = true;
+  if (firstOf(raw["filtru"]) === LOW_STOCK_FILTER || firstOf(raw["mic"]) === "1") {
+    query.lowStockOnly = true;
+  }
   const page = firstOf(raw["pagina"]);
   if (page && /^[1-9][0-9]{0,6}$/.test(page)) query.page = Number.parseInt(page, 10);
   return query;
@@ -198,12 +212,14 @@ export class StockOverviewService {
     const all = sources
       .slice(0, this.maxRows)
       .map((source) => buildStockOverviewRow(source, rowSettings));
-    const filtered = all.filter(
+    const matching = all.filter(
       (row) =>
         (!query.kind || row.kind === query.kind) &&
         (!query.state || row.state === query.state) &&
         (!query.lowStockOnly || row.lowStock),
     );
+    // vederea «Stoc mic» e ordonată după urgență; fără ea rămâne ordinea titlului din citire
+    const filtered = query.lowStockOnly ? sortLowStock(matching) : matching;
 
     const pageSize = clamp(query.pageSize ?? STOCK_LIST_PAGE_SIZE, 1, MAX_PAGE_SIZE);
     const pageCount = Math.max(1, ceilDiv(filtered.length, pageSize));
@@ -228,6 +244,7 @@ export class StockOverviewService {
       pageCount,
       truncated,
       settings,
+      lowStock: countLowStock(all),
     };
   }
 

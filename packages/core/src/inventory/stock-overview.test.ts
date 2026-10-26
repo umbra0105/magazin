@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { formatQuantity, parseQuantity, saleStepToInt, type Quantity } from "@ecom/shared";
 import {
   buildStockOverviewRow,
+  countLowStock,
   groupStockRows,
+  lowStockReason,
+  sortLowStock,
   type StockOverviewSource,
   type StockOverviewSettings,
 } from "./stock-overview";
@@ -365,5 +368,118 @@ describe("suma pe produs (D9): doar dacă variantele gestionate au aceeași unit
   it("o variantă neinventariată intră în sumă ca zero", () => {
     const groups = groupStockRows([variant("a", "10"), variant("b", null)]);
     expect(show(groups[0]?.total?.physical ?? null)).toBe("10");
+  });
+});
+
+describe("pragul «stoc mic»: efectiv, propriu și motivul din lista «Stoc mic»", () => {
+  const unit = { code: "buc", symbol: "buc", decimals: 0 };
+  const withOwn = (physical: string, own: number | null) => {
+    const base = source({ unit, physical });
+    return { ...base, item: { ...base.item!, lowStockSteps: own } };
+  };
+
+  it("gestionat fără prag propriu: efectiv = cel global, propriu = nul; cu prag propriu, efectiv = propriu", () => {
+    const inherits = buildStockOverviewRow(withOwn("10", null), settings);
+    expect([inherits.thresholdSteps, inherits.ownThresholdSteps]).toEqual([2, null]);
+    const own = buildStockOverviewRow(withOwn("10", 5), settings);
+    expect([own.thresholdSteps, own.ownThresholdSteps]).toEqual([5, 5]);
+    // pragul 0 e o valoare reală (alertă doar la epuizare), nu «lipsă»
+    const zero = buildStockOverviewRow(withOwn("10", 0), settings);
+    expect([zero.thresholdSteps, zero.ownThresholdSteps]).toEqual([0, 0]);
+  });
+
+  it("neinventariat (fără rând de stoc) folosește pragul global; negestionat și digital nu au prag", () => {
+    const none = buildStockOverviewRow(source({ unit, physical: null }), settings);
+    expect([none.thresholdSteps, none.ownThresholdSteps]).toEqual([2, null]);
+    const unmanaged = buildStockOverviewRow(source({ unit, manageStock: false }), settings);
+    expect([unmanaged.thresholdSteps, unmanaged.ownThresholdSteps]).toEqual([null, null]);
+    const digital = buildStockOverviewRow(source({ unit, productType: "digital" }), settings);
+    expect([digital.thresholdSteps, digital.ownThresholdSteps]).toEqual([null, null]);
+    // un rând de stoc rămas la un produs negestionat se ignoră și la prag
+    const stale = buildStockOverviewRow({ ...withOwn("10", 7), manageStock: false }, settings);
+    expect([stale.thresholdSteps, stale.ownThresholdSteps]).toEqual([null, null]);
+  });
+
+  it("motivul: epuizat (0 pași), doar rest nevandabil (0 pași, dar mai e un rest) sau sub prag (1…prag pași)", () => {
+    const out = buildStockOverviewRow(withOwn("0", null), settings);
+    expect(lowStockReason(out)).toBe("out_of_stock");
+    const restOnly = buildStockOverviewRow(source({ step: "41,25", physical: "17,5" }), settings);
+    expect(lowStockReason(restOnly)).toBe("remainder_only");
+    const below = buildStockOverviewRow(withOwn("2", null), settings);
+    expect(lowStockReason(below)).toBe("below_threshold");
+    // pragul propriu mută granița: 5 pași cu prag 5 e «sub prag», cu prag 4 nu mai e în listă
+    expect(lowStockReason(buildStockOverviewRow(withOwn("5", 5), settings))).toBe(
+      "below_threshold",
+    );
+    expect(lowStockReason(buildStockOverviewRow(withOwn("5", 4), settings))).toBeNull();
+    expect(lowStockReason(buildStockOverviewRow(withOwn("3", null), settings))).toBeNull();
+  });
+
+  it("nu apar în listă: negestionat, digital, indiferent de cantități", () => {
+    const unmanaged = buildStockOverviewRow(
+      source({ unit, manageStock: false, physical: "0" }),
+      settings,
+    );
+    expect(lowStockReason(unmanaged)).toBeNull();
+    const digital = buildStockOverviewRow(
+      source({ unit, productType: "digital", physical: "0" }),
+      settings,
+    );
+    expect(lowStockReason(digital)).toBeNull();
+  });
+
+  it("ordinea: epuizate, apoi doar rest, apoi sub prag cu cei mai puțini pași întâi; la egalitate după produs și SKU", () => {
+    const row = (
+      variantId: string,
+      productTitle: string,
+      sku: string,
+      physical: string,
+      extra = {},
+    ) =>
+      buildStockOverviewRow(
+        { ...source({ unit, physical, ...extra }), variantId, productTitle, sku },
+        settings,
+      );
+    const rest = (variantId: string, productTitle: string, sku: string) =>
+      buildStockOverviewRow(
+        { ...source({ step: "41,25", physical: "17,5" }), variantId, productTitle, sku },
+        settings,
+      );
+    const sorted = sortLowStock([
+      row("a", "Pompă", "P-2", "2"),
+      row("b", "Liner", "L-1", "1"),
+      rest("c", "Bisulfat", "B-1"),
+      row("d", "Pompă", "P-1", "2"),
+      row("e", "Zeolit", "Z-1", "0"),
+      row("f", "Alge", "A-1", "0"),
+    ]);
+    expect(sorted.map((r) => r.variantId)).toEqual(["f", "e", "c", "b", "d", "a"]);
+    // nu modifică lista primită
+    const input = [row("x", "B", "B", "1"), row("y", "A", "A", "0")];
+    sortLowStock(input);
+    expect(input.map((r) => r.variantId)).toEqual(["x", "y"]);
+  });
+
+  it("numărătorile pe motiv acoperă doar rândurile din listă", () => {
+    const rows = [
+      buildStockOverviewRow(withOwn("0", null), settings),
+      buildStockOverviewRow(withOwn("0", null), settings),
+      buildStockOverviewRow(source({ step: "41,25", physical: "17,5" }), settings),
+      buildStockOverviewRow(withOwn("1", null), settings),
+      buildStockOverviewRow(withOwn("9", null), settings),
+      buildStockOverviewRow(source({ unit, manageStock: false }), settings),
+    ];
+    expect(countLowStock(rows)).toEqual({
+      total: 4,
+      outOfStock: 2,
+      remainderOnly: 1,
+      belowThreshold: 1,
+    });
+    expect(countLowStock([])).toEqual({
+      total: 0,
+      outOfStock: 0,
+      remainderOnly: 0,
+      belowThreshold: 0,
+    });
   });
 });

@@ -14,8 +14,11 @@ import {
   quantityText,
   snapshotView,
   stateView,
+  lowStockReasonView,
   stepsText,
   summaryView,
+  thresholdTarget,
+  thresholdView,
   warningText,
 } from "./stock-view";
 
@@ -332,5 +335,101 @@ describe("summaryView: coloana «Stoc» din lista de produse", () => {
 
   it("gestionat neinventariat: semnalat", () => {
     expect(summary([row({ physical: null })]).quantity).toBe("Neinventariat");
+  });
+});
+
+describe("lista «Stoc mic»: prag și motiv", () => {
+  const unit = { code: "buc", symbol: "buc", decimals: 0 };
+  const own = (physical: string, lowStockSteps: number | null) => {
+    const r = row({ unit, physical });
+    return {
+      ...r,
+      thresholdSteps: lowStockSteps ?? 2,
+      ownThresholdSteps: lowStockSteps,
+    } as typeof r;
+  };
+
+  it("pragul: valoarea efectivă în pași și de unde vine (propriu sau setarea globală)", () => {
+    expect(thresholdView(own("10", null))).toEqual({
+      steps: "2 pași",
+      origin: "global",
+      originLabel: "setarea globală",
+    });
+    expect(thresholdView(own("10", 5))).toEqual({
+      steps: "5 pași",
+      origin: "own",
+      originLabel: "propriu",
+    });
+    expect(thresholdView(own("10", 0))?.steps).toBe("0 pași");
+    expect(thresholdView(own("10", 1))?.steps).toBe("1 pas");
+    expect(thresholdView(own("10", 20))?.steps).toBe("20 de pași");
+  });
+
+  it("negestionat și digital nu au prag", () => {
+    expect(thresholdView(row({ manageStock: false }))).toBeNull();
+    expect(thresholdView(row({ productType: "digital" }))).toBeNull();
+  });
+
+  it("motivul: etichetă și ton; nimic pentru ce nu e în listă", () => {
+    expect(lowStockReasonView(row({ unit, physical: "0" }))).toEqual({
+      label: "Epuizat",
+      tone: "danger",
+      reason: "out_of_stock",
+    });
+    expect(lowStockReasonView(row({ step: "41,25", physical: "17,5" }))).toEqual({
+      label: "Doar rest nevandabil",
+      tone: "warn",
+      reason: "remainder_only",
+    });
+    expect(lowStockReasonView(row({ unit, physical: "2" }))).toEqual({
+      label: "Sub prag",
+      tone: "warn",
+      reason: "below_threshold",
+    });
+    expect(lowStockReasonView(row({ unit, physical: "50" }))).toBeNull();
+    expect(lowStockReasonView(row({ manageStock: false, physical: "0" }))).toBeNull();
+  });
+});
+
+describe("ținta dialogului «Prag»", () => {
+  const unit = { code: "buc", symbol: "buc", decimals: 0 };
+  const withOwn = (own: number | null) => {
+    const r = row({ unit, physical: "10" });
+    return { ...r, thresholdSteps: own ?? 2, ownThresholdSteps: own } as typeof r;
+  };
+
+  it("cu prag propriu: valoarea propriu-zisă, efectivul formatat, originea și setarea globală formatată", () => {
+    expect(
+      thresholdTarget(withOwn(5), { warehouseId: "w1", name: "Pompă (L)", globalSteps: 2 }),
+    ).toEqual({
+      variantId: "v",
+      warehouseId: "w1",
+      name: "Pompă (L)",
+      ownSteps: 5,
+      effectiveText: "5 pași",
+      originLabel: "propriu",
+      globalText: "2 pași",
+    });
+  });
+
+  it("fără prag propriu: ownSteps nul, efectiv = setarea globală; globala de 1 e «1 pas»", () => {
+    expect(
+      thresholdTarget(withOwn(null), { warehouseId: "w1", name: "P", globalSteps: 1 }),
+    ).toMatchObject({
+      ownSteps: null,
+      effectiveText: "2 pași",
+      originLabel: "setarea globală",
+      globalText: "1 pas",
+    });
+  });
+
+  it("negestionat: nu are țintă (nu se poate seta prag)", () => {
+    expect(
+      thresholdTarget(row({ manageStock: false }), {
+        warehouseId: "w1",
+        name: "P",
+        globalSteps: 2,
+      }),
+    ).toBeNull();
   });
 });

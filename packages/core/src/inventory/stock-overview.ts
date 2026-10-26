@@ -89,6 +89,12 @@ export interface StockOverviewRow {
   leadTimeDays: number | null;
   lowStock: boolean;
   remainderOnly: boolean;
+  /** Pragul «stoc mic» efectiv, în pași (propriu sau global); doar la gestionat, altfel `null` */
+  thresholdSteps: number | null;
+  /** Pragul propriu al variantei; `null` = folosește setarea globală (sau nu e gestionat) */
+  ownThresholdSteps: number | null;
+  /** De ce apare în lista «Stoc mic»; `null` = nu apare (vezi `lowStockReason`) */
+  lowStockReason: LowStockReason | null;
 }
 
 export function buildStockOverviewRow(
@@ -124,6 +130,8 @@ export function buildStockOverviewRow(
   });
   const zero = 0n as Quantity;
   const managed = kind === "managed";
+  const lowStock = availability.lowStock;
+  const remainderOnly = availability.remainderOnly;
   return {
     variantId: source.variantId,
     sku: source.sku,
@@ -148,9 +156,86 @@ export function buildStockOverviewRow(
     state: availability.state,
     stockStatus: kind === "unmanaged" ? source.stockStatus : null,
     leadTimeDays: availability.leadTimeDays,
-    lowStock: availability.lowStock,
-    remainderOnly: availability.remainderOnly,
+    lowStock,
+    remainderOnly,
+    lowStockReason: lowStockReasonOf({
+      kind,
+      lowStock,
+      remainderOnly,
+      availableSteps: availability.availableSteps,
+    }),
+    thresholdSteps: managed ? (item?.lowStockSteps ?? settings.defaultLowStockSteps) : null,
+    ownThresholdSteps: managed ? (item?.lowStockSteps ?? null) : null,
   };
+}
+
+/** De ce apare o variantă în lista «Stoc mic»: epuizat (0 pași, nimic de vândut), doar un rest nevandabil, sau sub prag. */
+export type LowStockReason = "out_of_stock" | "remainder_only" | "below_threshold";
+
+/**
+ * Motivul din lista «Stoc mic», sau `null` dacă varianta nu apare în ea: doar variantele gestionate la sau sub prag (cele
+ * negestionate și digitale nu au stoc). «Epuizat» include și variantele gestionate încă neinventariate (fizic 0).
+ */
+export function lowStockReason(row: StockOverviewRow): LowStockReason | null {
+  return row.lowStockReason;
+}
+
+function lowStockReasonOf(
+  row: Pick<StockOverviewRow, "kind" | "lowStock" | "remainderOnly" | "availableSteps">,
+): LowStockReason | null {
+  if (row.kind !== "managed" || !row.lowStock) return null;
+  if (row.availableSteps === 0n) return row.remainderOnly ? "remainder_only" : "out_of_stock";
+  return "below_threshold";
+}
+
+const LOW_STOCK_RANK: Record<LowStockReason, number> = {
+  out_of_stock: 0,
+  remainder_only: 1,
+  below_threshold: 2,
+};
+
+const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+const compareSteps = (a: bigint, b: bigint): number => (a < b ? -1 : a > b ? 1 : 0);
+
+/**
+ * Cele mai urgente primele: epuizate, apoi doar rest nevandabil, apoi cele sub prag cu cei mai puțini pași; la egalitate,
+ * după produs și SKU (ordine fixă, fără dependență de limbă). Nu modifică lista primită; ignoră rândurile care nu sunt în listă.
+ */
+export function sortLowStock(rows: readonly StockOverviewRow[]): StockOverviewRow[] {
+  return rows
+    .flatMap((row) => {
+      const reason = lowStockReason(row);
+      return reason ? [{ row, reason }] : [];
+    })
+    .sort(
+      (a, b) =>
+        LOW_STOCK_RANK[a.reason] - LOW_STOCK_RANK[b.reason] ||
+        compareSteps(a.row.availableSteps ?? 0n, b.row.availableSteps ?? 0n) ||
+        compareText(a.row.productTitle, b.row.productTitle) ||
+        compareText(a.row.sku, b.row.sku),
+    )
+    .map((entry) => entry.row);
+}
+
+export interface LowStockCounts {
+  total: number;
+  outOfStock: number;
+  remainderOnly: number;
+  belowThreshold: number;
+}
+
+/** Câte variante sunt în lista «Stoc mic», pe motiv; rândurile care nu sunt în listă nu se numără. */
+export function countLowStock(rows: readonly StockOverviewRow[]): LowStockCounts {
+  const counts: LowStockCounts = { total: 0, outOfStock: 0, remainderOnly: 0, belowThreshold: 0 };
+  for (const row of rows) {
+    const reason = lowStockReason(row);
+    if (!reason) continue;
+    counts.total += 1;
+    if (reason === "out_of_stock") counts.outOfStock += 1;
+    else if (reason === "remainder_only") counts.remainderOnly += 1;
+    else counts.belowThreshold += 1;
+  }
+  return counts;
 }
 
 export interface StockProductTotal {

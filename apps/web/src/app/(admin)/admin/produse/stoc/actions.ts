@@ -30,3 +30,21 @@ export const adjustStock = withPermission(
   },
   { action: "stock.adjust", entity: "inventory_item" },
 );
+
+/**
+ * Pragul «stoc mic» propriu al unei variante (în pași; gol = setarea globală). Cere `inventory.write` (verificat aici și din
+ * nou în serviciu); validarea, regulile (doar variante gestionate) și auditul cu valoarea dinainte și de după sunt în
+ * `StockAdjustmentService`. Rezultatul conține doar numere (serializabil).
+ */
+export const setLowStockThreshold = withPermission(
+  "inventory.write",
+  async (input: unknown, subject) => {
+    try {
+      const result = await getStockAdjustmentService().setLowStockThreshold(subject, input);
+      return { ok: true as const, before: result.before, after: result.after };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "stock.threshold.update", entity: "inventory_item" },
+);

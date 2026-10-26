@@ -1,10 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { ForbiddenError, UnauthenticatedError, parseQuantity, type Quantity } from "@ecom/shared";
+import {
+  ForbiddenError,
+  UnauthenticatedError,
+  ValidationError,
+  parseQuantity,
+  type Quantity,
+} from "@ecom/shared";
 import { AuditService, type AuditRow, type AuditStore } from "../audit/audit-service";
 import type { PermissionSubject } from "../rbac/can";
 import { DEFAULT_ROLES } from "../rbac/catalog";
 import { StockAdjustmentService } from "./stock-adjustments";
-import type { AdjustPhysicalInput, AdjustPhysicalResult } from "./stock-service";
+import type {
+  AdjustPhysicalInput,
+  AdjustPhysicalResult,
+  SetLowStockStepsInput,
+  SetLowStockStepsResult,
+} from "./stock-service";
 
 function roleSubject(roleKey: string): PermissionSubject {
   const role = DEFAULT_ROLES.find((r) => r.key === roleKey);
@@ -22,6 +33,9 @@ const q = (text: string): Quantity => parseQuantity(text);
 function setup(result: Partial<AdjustPhysicalResult> = {}) {
   const calls: AdjustPhysicalInput[] = [];
   const stock = {
+    async setLowStockSteps(): Promise<SetLowStockStepsResult> {
+      throw new Error("nefolosit în testele de ajustare");
+    },
     async adjustPhysical(input: AdjustPhysicalInput): Promise<AdjustPhysicalResult> {
       calls.push(input);
       return {
@@ -204,6 +218,9 @@ describe("ajustarea de stoc din admin: audit și rezultat", () => {
     const { rows, calls } = setup();
     const refusing = new StockAdjustmentService({
       stock: {
+        async setLowStockSteps(): Promise<SetLowStockStepsResult> {
+          throw new Error("nefolosit în acest test");
+        },
         async adjustPhysical() {
           calls.push({} as AdjustPhysicalInput);
           throw Object.assign(new Error("Stocul nu poate deveni negativ"), {
@@ -223,5 +240,170 @@ describe("ajustarea de stoc din admin: audit și rezultat", () => {
     const error = await failure(() => refusing.adjust(roleSubject("manager"), valid));
     expect(error?.code).toBe("STOCK_ADJUSTMENT_BELOW_ZERO");
     expect(rows).toHaveLength(0);
+  });
+});
+
+function setupThreshold(result: Partial<SetLowStockStepsResult> = {}, fail?: Error) {
+  const calls: SetLowStockStepsInput[] = [];
+  const stock = {
+    async adjustPhysical(): Promise<AdjustPhysicalResult> {
+      throw new Error("nefolosit în testele de prag");
+    },
+    async setLowStockSteps(input: SetLowStockStepsInput): Promise<SetLowStockStepsResult> {
+      calls.push(input);
+      if (fail) throw fail;
+      return {
+        variantId: input.variantId,
+        warehouseId: input.warehouseId ?? "w-main",
+        before: null,
+        after: input.steps,
+        ...result,
+      };
+    },
+  };
+  const rows: AuditRow[] = [];
+  const store: AuditStore = {
+    async append(row) {
+      rows.push({ ...row, id: "a" + rows.length, createdAt: new Date() });
+    },
+    async list() {
+      return rows;
+    },
+  };
+  const service = new StockAdjustmentService({ stock, audit: new AuditService(store) });
+  return { service, calls, rows };
+}
+
+describe("pragul «stoc mic» pe variantă: permisiuni", () => {
+  const writers = DEFAULT_ROLES.filter((r) => r.permissions.includes("inventory.write")).map(
+    (r) => r.key,
+  );
+
+  it("rolurile cu inventory.write pot (cel puțin Owner și Manager), celelalte nu, iar la refuz nu se atinge nimic", async () => {
+    expect(writers).toEqual(expect.arrayContaining(["owner", "manager"]));
+    for (const role of writers) {
+      const allowed = setupThreshold();
+      await allowed.service.setLowStockThreshold(roleSubject(role), { variantId: "v1", steps: 3 });
+      expect(allowed.calls, role).toHaveLength(1);
+    }
+    for (const role of DEFAULT_ROLES.map((r) => r.key).filter((k) => !writers.includes(k))) {
+      const denied = setupThreshold();
+      const error = await failure(() =>
+        denied.service.setLowStockThreshold(roleSubject(role), { variantId: "v1", steps: 3 }),
+      );
+      expect(error, role).toBeInstanceOf(ForbiddenError);
+      expect(denied.calls, role).toHaveLength(0);
+      expect(denied.rows, role).toHaveLength(0);
+    }
+    const anonymous = setupThreshold();
+    expect(
+      await failure(() =>
+        anonymous.service.setLowStockThreshold(null, { variantId: "v1", steps: 3 }),
+      ),
+    ).toBeInstanceOf(UnauthenticatedError);
+    expect(anonymous.calls).toHaveLength(0);
+  });
+
+  it("doar citirea (inventory.read) nu ajunge: un rol cu doar inventory.read e refuzat", async () => {
+    const reader: PermissionSubject = {
+      userId: "u-reader",
+      email: "reader@magazin.test",
+      roles: ["e2e-reader"],
+      permissions: new Set<string>(["admin.access", "inventory.read"]),
+    };
+    const { service, calls } = setupThreshold();
+    expect(
+      await failure(() => service.setLowStockThreshold(reader, { variantId: "v1", steps: 3 })),
+    ).toBeInstanceOf(ForbiddenError);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("pragul «stoc mic» pe variantă: intrarea", () => {
+  const manager = roleSubject("manager");
+
+  it("pragul e un număr întreg de pași între 0 și 1000, sau nul (= setarea globală); ajunge în serviciu neschimbat", async () => {
+    for (const steps of [0, 1, 2, 17, 1000, null]) {
+      const { service, calls } = setupThreshold();
+      await service.setLowStockThreshold(manager, { variantId: "v1", steps });
+      expect(calls[0]?.steps, String(steps)).toBe(steps);
+    }
+  });
+
+  it("refuză ce nu e prag valid: negativ, peste 1000, zecimal, text, NaN, lipsă; nu atinge serviciul", async () => {
+    for (const steps of [-1, 1001, 2.5, "3", Number.NaN, Number.POSITIVE_INFINITY, undefined]) {
+      const { service, calls, rows } = setupThreshold();
+      const error = await failure(() =>
+        service.setLowStockThreshold(manager, { variantId: "v1", steps }),
+      );
+      expect(error, String(steps)).toBeInstanceOf(ValidationError);
+      expect(calls, String(steps)).toHaveLength(0);
+      expect(rows, String(steps)).toHaveLength(0);
+    }
+  });
+
+  it("varianta e obligatorie, câmpurile necunoscute se refuză, depozitul opțional ajunge în serviciu", async () => {
+    for (const bad of [
+      { steps: 2 },
+      { variantId: "  ", steps: 2 },
+      { variantId: "v1", steps: 2, x: 1 },
+    ]) {
+      const { service, calls } = setupThreshold();
+      expect(await failure(() => service.setLowStockThreshold(manager, bad))).toBeInstanceOf(
+        ValidationError,
+      );
+      expect(calls).toHaveLength(0);
+    }
+    const { service, calls } = setupThreshold();
+    await service.setLowStockThreshold(manager, { variantId: "v1", warehouseId: "w2", steps: 4 });
+    expect(calls[0]).toMatchObject({ variantId: "v1", warehouseId: "w2", steps: 4 });
+  });
+});
+
+describe("pragul «stoc mic» pe variantă: audit", () => {
+  const manager = roleSubject("manager");
+
+  it("o schimbare scrie un eveniment cu valoarea dinainte și de după, pe rândul de stoc", async () => {
+    const { service, rows } = setupThreshold({ before: 2, after: 5 });
+    const result = await service.setLowStockThreshold(manager, { variantId: "v1", steps: 5 });
+    expect(result).toMatchObject({ before: 2, after: 5 });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      action: "stock.threshold.update",
+      entity: "inventory_item",
+      entityId: "v1:w-main",
+      actorId: "u-manager",
+      actorLabel: "manager@magazin.test",
+      before: { lowStockSteps: 2 },
+      after: { lowStockSteps: 5 },
+    });
+  });
+
+  it("trecerea la «setarea globală» (nul) și înapoi se înregistrează cu null, nu cu 0", async () => {
+    const cleared = setupThreshold({ before: 5, after: null });
+    await cleared.service.setLowStockThreshold(manager, { variantId: "v1", steps: null });
+    expect(cleared.rows[0]).toMatchObject({
+      before: { lowStockSteps: 5 },
+      after: { lowStockSteps: null },
+    });
+    const zero = setupThreshold({ before: null, after: 0 });
+    await zero.service.setLowStockThreshold(manager, { variantId: "v1", steps: 0 });
+    expect(zero.rows[0]).toMatchObject({
+      before: { lowStockSteps: null },
+      after: { lowStockSteps: 0 },
+    });
+  });
+
+  it("aceeași valoare nu scrie audit (nimic nu s-a schimbat); o eroare a serviciului nu scrie nici ea", async () => {
+    const same = setupThreshold({ before: 3, after: 3 });
+    await same.service.setLowStockThreshold(manager, { variantId: "v1", steps: 3 });
+    expect(same.rows).toHaveLength(0);
+    const failed = setupThreshold({}, new Error("nu e gestionată"));
+    expect(
+      await failure(() =>
+        failed.service.setLowStockThreshold(manager, { variantId: "v1", steps: 3 }),
+      ),
+    ).toBeTruthy();
+    expect(failed.rows).toHaveLength(0);
   });
 });

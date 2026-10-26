@@ -458,12 +458,14 @@ describe("prospețimea pozei SmartBill", () => {
         db: tx,
         audit: new AuditService(createPrismaAuditStore(tx)),
       });
+      // depozitul implicit poate avea deja rânduri de audit scrise de joburile unei aplicații care rulează pe aceeași bază
+      // (rămase din E2E): se numără ce adaugă testul, nu un total fix
+      const where = { entity: "warehouse", entityId: ctx.warehouseId };
+      const before = await tx.auditLog.count({ where });
       await maintenance.checkSnapshotFreshness({ staleHours: 24 });
       await maintenance.checkSnapshotFreshness({ staleHours: 24 });
-      const rows = await tx.auditLog.findMany({
-        where: { entity: "warehouse", entityId: ctx.warehouseId },
-      });
-      expect(rows).toHaveLength(1);
+      const rows = await tx.auditLog.findMany({ where, orderBy: { createdAt: "desc" } });
+      expect(rows.length - before).toBe(1);
       expect(rows[0]).toMatchObject({ action: "stock.snapshot.stale", outcome: "success" });
     });
   });

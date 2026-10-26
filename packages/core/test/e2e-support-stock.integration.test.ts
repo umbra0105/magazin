@@ -176,6 +176,30 @@ describe("curățarea E2E de stoc: restricția pe variantele E2ESTOC…", () => 
   });
 });
 
+describe("ajutoarele pentru pragul «stoc mic» (punctul 10a)", () => {
+  it("seed cu prag propriu pe o variantă, citirea pragului (nul când nu există) și variantele fără rând de stoc", async () => {
+    const t = tag();
+    try {
+      const [own, inherits, neverStocked] = await seedE2eStock(t, [
+        {
+          title: `Prag ${t}`,
+          variants: [
+            { sku: "A", physical: "5", lowStockSteps: 4 },
+            { sku: "B", physical: "5" },
+            { sku: "C", physical: null },
+          ],
+        },
+      ]);
+      expect((await readE2eStock(own as string))?.lowStockSteps).toBe(4);
+      expect((await readE2eStock(inherits as string))?.lowStockSteps).toBeNull();
+      expect((await readE2eStock(neverStocked as string))?.lowStockSteps).toBeNull();
+      expect(await readE2eStock("nu-exista")).toBeNull();
+    } finally {
+      await removeE2eStock({ tag: t });
+    }
+  });
+});
+
 describe("curățarea pe tag: fișierele de teste rulate în paralel nu își șterg produsele între ele", () => {
   it("șterge doar ce are tag-ul dat (produse, mișcări, branduri, unități); ale altui tag rămân cu mișcările lor; rolurile și poza nu se ating", async () => {
     const mine = tag();

@@ -44,3 +44,30 @@ export function validateAmount(text: string, decimals: number): AmountResult {
 export function composeQuantity(direction: AdjustDirection, amount: string): string {
   return `${direction === "add" ? "+" : "-"}${amount}`;
 }
+
+export type ThresholdResult =
+  { ok: true; steps: number | null } | { ok: false; error: "invalid" | "decimal" | "range" };
+
+/** Oglindește `LOW_STOCK_STEPS_MAX` din nucleu; dialogul primește valoarea reală de pe server. */
+const DEFAULT_THRESHOLD_MAX = 1000;
+const DIGITS = /^[0-9]+$/;
+const DECIMAL = /^[0-9]+[.,][0-9]+$/;
+/** Peste atâtea cifre numărul depășește oricum intervalul; evită numerele uriașe în virgulă mobilă. */
+const MAX_THRESHOLD_DIGITS = 7;
+
+/**
+ * Pragul «stoc mic» tastat, în pași întregi: gol = fără prag propriu (setarea globală, `null`); 0 e o valoare reală (alertă doar
+ * la epuizare). Serverul validează din nou; aici doar dăm un mesaj în română înainte de trimitere.
+ */
+export function validateThreshold(
+  text: string,
+  max: number = DEFAULT_THRESHOLD_MAX,
+): ThresholdResult {
+  const trimmed = text.trim();
+  if (trimmed === "") return { ok: true, steps: null };
+  if (DECIMAL.test(trimmed)) return { ok: false, error: "decimal" };
+  if (!DIGITS.test(trimmed)) return { ok: false, error: "invalid" };
+  if (trimmed.length > MAX_THRESHOLD_DIGITS) return { ok: false, error: "range" };
+  const steps = Number.parseInt(trimmed, 10);
+  return steps > max ? { ok: false, error: "range" } : { ok: true, steps };
+}

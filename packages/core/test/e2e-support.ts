@@ -1247,6 +1247,8 @@ export interface E2eStockVariant {
   sku: string;
   /** Stocul fizic, ca text cu virgulă («100», «17,5»); `null` = fără rând de stoc */
   physical: string | null;
+  /** Pragul «stoc mic» propriu al variantei, în pași (lipsă = setarea globală); doar dacă are rând de stoc */
+  lowStockSteps?: number;
   /** Pasul variantei (suprascrie produsul) */
   step?: string;
   /** Prețul variantei, în bani (implicit prețul produsului, apoi 1000) */
@@ -1370,13 +1372,14 @@ export async function seedE2eStock(
         );
         if (variant.physical !== null) {
           await db.query(
-            `insert into inventory_item (id, "variantId", "warehouseId", physical, "physicalAsOf", "updatedAt")
-             values (gen_random_uuid()::text, $1, $2, $3::bigint, $4, now())`,
+            `insert into inventory_item (id, "variantId", "warehouseId", physical, "physicalAsOf", "lowStockSteps", "updatedAt")
+             values (gen_random_uuid()::text, $1, $2, $3::bigint, $4, $5, now())`,
             [
               row.rows[0]?.id as string,
               warehouseId,
               e2eTicks(variant.physical),
               asOf?.toISOString() ?? null,
+              variant.lowStockSteps ?? null,
             ],
           );
         }
@@ -1409,6 +1412,8 @@ export async function setE2eStockSnapshot(hoursAgo: number | null): Promise<void
 export async function readE2eStock(sku: string): Promise<{
   variantId: string;
   physical: string | null;
+  /** Pragul «stoc mic» propriu (în pași); nul = setarea globală sau fără rând de stoc */
+  lowStockSteps: number | null;
   movements: Array<{
     kind: string;
     reason: string | null;
@@ -1424,7 +1429,7 @@ export async function readE2eStock(sku: string): Promise<{
     const variantId = variant.rows[0]?.id as string | undefined;
     if (!variantId) return null;
     const item = await db.query(
-      `select physical::text as physical from inventory_item where "variantId" = $1`,
+      `select physical::text as physical, "lowStockSteps" from inventory_item where "variantId" = $1`,
       [variantId],
     );
     const movements = await db.query(
@@ -1436,6 +1441,7 @@ export async function readE2eStock(sku: string): Promise<{
     return {
       variantId,
       physical: (item.rows[0]?.physical as string | undefined) ?? null,
+      lowStockSteps: (item.rows[0]?.lowStockSteps as number | null | undefined) ?? null,
       movements: movements.rows as never,
     };
   });
@@ -1578,14 +1584,20 @@ export async function removeE2eStockShared(): Promise<void> {
 /** Rândurile de audit `stock.adjust` ale unei variante (entityId = `<varianta>:<depozitul>`). */
 export async function readE2eStockAudit(
   variantId: string,
+  action = "stock.adjust",
 ): Promise<
-  { outcome: string; actorLabel: string | null; after: Record<string, unknown> | null }[]
+  {
+    outcome: string;
+    actorLabel: string | null;
+    before: Record<string, unknown> | null;
+    after: Record<string, unknown> | null;
+  }[]
 > {
   return withClient(async (db) => {
     const result = await db.query(
-      `select outcome, "actorLabel", after from audit_log
-       where action = 'stock.adjust' and "entityId" like $1 order by "createdAt" asc`,
-      [`${variantId}:%`],
+      `select outcome, "actorLabel", before, after from audit_log
+       where action = $2 and "entityId" like $1 order by "createdAt" asc`,
+      [`${variantId}:%`, action],
     );
     return result.rows as never;
   });

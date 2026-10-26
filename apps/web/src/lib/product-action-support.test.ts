@@ -88,6 +88,7 @@ describe("productFailure: erorile de stoc sunt erori de domeniu (se arată admin
     "STOCK_ADJUSTMENT_OVERFLOW",
     "STOCK_ADJUSTMENT_AMBIGUOUS_QUANTITY",
     "STOCK_NOT_MANAGED",
+    "STOCK_THRESHOLD_INVALID",
     "STOCK_VARIANT_NOT_FOUND",
     "STOCK_NO_WAREHOUSE",
     "QUANTITY_INVALID_FORMAT",

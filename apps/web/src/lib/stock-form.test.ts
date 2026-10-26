@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { allowedDirections, composeQuantity, directionFor, validateAmount } from "./stock-form";
+import {
+  allowedDirections,
+  composeQuantity,
+  directionFor,
+  validateAmount,
+  validateThreshold,
+} from "./stock-form";
 
 /** Logica pură a formularului «Ajustează» (fără componente): sensul după motiv, validarea cantității, textul trimis. */
 
@@ -56,5 +62,33 @@ describe("cantitatea trimisă la server", () => {
     expect(composeQuantity("add", "2,5")).toBe("+2,5");
     expect(composeQuantity("subtract", "2,5")).toBe("-2,5");
     expect(composeQuantity("subtract", "3")).toBe("-3");
+  });
+});
+
+describe("pragul «stoc mic» introdus (în pași; gol = setarea globală)", () => {
+  it("gol sau doar spații = fără prag propriu (null)", () => {
+    expect(validateThreshold("")).toEqual({ ok: true, steps: null });
+    expect(validateThreshold("   ")).toEqual({ ok: true, steps: null });
+  });
+
+  it("numere întregi de la 0 la 1000, cu spații în jur; zero e o valoare reală, nu «gol»", () => {
+    expect(validateThreshold("0")).toEqual({ ok: true, steps: 0 });
+    expect(validateThreshold("2")).toEqual({ ok: true, steps: 2 });
+    expect(validateThreshold(" 17 ")).toEqual({ ok: true, steps: 17 });
+    expect(validateThreshold("1000")).toEqual({ ok: true, steps: 1000 });
+    expect(validateThreshold("007")).toEqual({ ok: true, steps: 7 });
+  });
+
+  it("peste 1000 (și numere uriașe) = în afara intervalului", () => {
+    expect(validateThreshold("1001")).toEqual({ ok: false, error: "range" });
+    expect(validateThreshold("99999999999999999999")).toEqual({ ok: false, error: "range" });
+  });
+
+  it("zecimalele se numesc zecimale (pragul e în pași întregi), restul e invalid", () => {
+    expect(validateThreshold("2,5")).toEqual({ ok: false, error: "decimal" });
+    expect(validateThreshold("2.5")).toEqual({ ok: false, error: "decimal" });
+    for (const bad of ["-1", "abc", "1 000", "1e3", "+3", "٣", "2 pași", "--"]) {
+      expect(validateThreshold(bad), bad).toEqual({ ok: false, error: "invalid" });
+    }
   });
 });

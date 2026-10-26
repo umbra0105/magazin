@@ -1,7 +1,9 @@
 import Link from "next/link";
-import type { StockOverviewQuery, WarehouseFreshness } from "@ecom/core";
+import type { LowStockCounts, StockOverviewQuery, WarehouseFreshness } from "@ecom/core";
 import { Button, Input, Label, Select, buttonVariants, cn } from "@ecom/ui";
 import { snapshotView, type Tone } from "@/lib/stock-view";
+import { LOW_STOCK_FILTER, stockHref } from "@/lib/stock-url";
+
 import { getMessages } from "@/messages";
 
 const m = getMessages().admin.inventory;
@@ -43,24 +45,14 @@ export function FreshnessBanner({
   );
 }
 
-/** Adresa listei cu interogarea curentă și, eventual, alte valori (pagina). */
-export function stockHref(query: StockOverviewQuery, overrides: { page?: number } = {}): string {
-  const params = new URLSearchParams();
-  if (query.search) params.set("q", query.search);
-  if (query.kind) params.set("tip", query.kind);
-  if (query.state) params.set("stare", query.state);
-  if (query.lowStockOnly) params.set("mic", "1");
-  const page = overrides.page ?? query.page;
-  if (page && page > 1) params.set("pagina", String(page));
-  const text = params.toString();
-  return text ? `/admin/produse/stoc?${text}` : "/admin/produse/stoc";
-}
-
 /** Filtrele listei: formular GET (funcționează fără JavaScript), fără validare nativă. */
 export function StockFilters({ query }: { query: StockOverviewQuery }) {
   const f = m.filters;
   return (
     <form
+      // se remontează când se schimbă adresa (comutatorul de vedere, pagina): câmpurile sunt necontrolate (`default…`) și altfel
+      // ar păstra valorile vechi, de exemplu bifa «Doar stoc mic» nebifată după trecerea în vederea «Stoc mic»
+      key={stockHref(query)}
       method="get"
       action="/admin/produse/stoc"
       noValidate
@@ -102,7 +94,12 @@ export function StockFilters({ query }: { query: StockOverviewQuery }) {
         </Select>
       </div>
       <label className="flex h-10 items-center gap-2 text-sm">
-        <input type="checkbox" name="mic" value="1" defaultChecked={query.lowStockOnly === true} />
+        <input
+          type="checkbox"
+          name="filtru"
+          value={LOW_STOCK_FILTER}
+          defaultChecked={query.lowStockOnly === true}
+        />
         {f.lowOnly}
       </label>
       <div className="flex gap-2">
@@ -153,5 +150,74 @@ export function Pager({
         <span />
       )}
     </nav>
+  );
+}
+
+/**
+ * Comutatorul de vedere al paginii Stoc: «Toate variantele» / «Stoc mic (N)». Sunt legături (nu taburi ARIA), cu `aria-current`
+ * pe cea activă; păstrează căutarea și filtrele de tip și stare, dar nu pagina. «Stoc mic» e filtrul existent «Doar stoc mic»,
+ * pornit din adresă (`?filtru=stoc-mic`), nu o pagină separată.
+ */
+export function ViewSwitch({
+  query,
+  lowStockTotal,
+}: {
+  query: StockOverviewQuery;
+  lowStockTotal: number;
+}) {
+  const v = m.lowStock;
+  const active = query.lowStockOnly === true ? "low" : "all";
+  const items = [
+    { id: "all", label: v.all, href: stockHref({ ...query, lowStockOnly: false, page: 1 }) },
+    {
+      id: "low",
+      label: v.low(lowStockTotal),
+      href: stockHref({ ...query, lowStockOnly: true, page: 1 }),
+    },
+  ] as const;
+  return (
+    <nav aria-label={v.switchLabel} className="flex gap-2" data-view-switch>
+      {items.map((item) => (
+        <Link
+          key={item.id}
+          href={item.href}
+          data-view={item.id}
+          aria-current={active === item.id ? "page" : undefined}
+          className={cn(
+            buttonVariants({ variant: active === item.id ? "default" : "outline", size: "sm" }),
+          )}
+        >
+          {item.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+/** Câte variante sunt la «Stoc mic», pe motiv (din tot ce a găsit căutarea, nu doar de pe pagină). */
+export function LowStockSummary({ counts }: { counts: LowStockCounts }) {
+  const v = m.lowStock;
+  const items = [
+    { reason: "out_of_stock", count: counts.outOfStock },
+    { reason: "remainder_only", count: counts.remainderOnly },
+    { reason: "below_threshold", count: counts.belowThreshold },
+  ] as const;
+  return (
+    <dl
+      aria-label={v.summaryLabel}
+      data-low-stock-summary
+      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+    >
+      {items.map((item) => (
+        <div
+          key={item.reason}
+          data-count={item.reason}
+          className="rounded-md border border-border p-3"
+        >
+          <dt className="text-sm text-muted-foreground">{v.summary[item.reason]}</dt>
+          <dd className="text-2xl font-semibold">{item.count}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

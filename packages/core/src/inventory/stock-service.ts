@@ -18,7 +18,7 @@ import {
   fitsUnitPrecision,
 } from "./adjustment-rules";
 import { computeAvailability, type ManagedInventory } from "./availability";
-import { ADJUSTMENT_REASONS, type AdjustmentReason } from "./constants";
+import { ADJUSTMENT_REASONS, LOW_STOCK_STEPS_MAX, type AdjustmentReason } from "./constants";
 import { reconcileSnapshot } from "./reconcile";
 import { effectiveSaleStep } from "./sale-config";
 import { StockError } from "./stock-errors";
@@ -120,6 +120,21 @@ export interface AdjustPhysicalInput {
  *   SmartBill la acea poză, e scăzut de două ori până la poza următoare (subvânzare temporară, nu supravânzare).
  * - `below_commitments`: stocul fizic a coborât sub ce e angajat + rezervat (disponibilul devine 0).
  */
+export interface SetLowStockStepsInput {
+  variantId: string;
+  /** Lipsă = depozitul implicit */
+  warehouseId?: string;
+  /** Pragul propriu în pași (0–1000); `null` = fără prag propriu, se folosește setarea globală */
+  steps: number | null;
+}
+
+export interface SetLowStockStepsResult {
+  variantId: string;
+  warehouseId: string;
+  before: number | null;
+  after: number | null;
+}
+
 export type AdjustmentWarning = "effective_before_snapshot" | "below_commitments";
 
 export interface AdjustPhysicalResult {
@@ -192,6 +207,14 @@ function isRetryable(error: unknown): boolean {
     e?.code === "40001" ||
     /deadlock detected/i.test(message)
   );
+}
+
+/** Varianta are stoc gestionat: nu e digitală, iar bifa de pe variantă (dacă există) bate pe cea de pe produs. */
+function isManagedVariant(variant: {
+  manageStock: boolean | null;
+  product: { type: string; manageStock: boolean };
+}): boolean {
+  return variant.product.type !== "digital" && (variant.manageStock ?? variant.product.manageStock);
 }
 
 /** Blochează rândurile de stoc cerute, într-o singură comandă, în ordinea fixă; întoarce rândurile existente. */
@@ -1061,9 +1084,7 @@ export class StockService {
           variantId: key.variantId,
         });
       }
-      const managed =
-        variant.product.type !== "digital" && (variant.manageStock ?? variant.product.manageStock);
-      if (!managed) {
+      if (!isManagedVariant(variant)) {
         throw new StockError(
           "STOCK_NOT_MANAGED",
           "Produsul nu are stoc gestionat: pornește gestionarea stocului înainte să ajustezi cantitatea",
@@ -1142,6 +1163,63 @@ export class StockService {
         effectiveAt,
         warnings,
       };
+    });
+  }
+
+  /**
+   * Pragul «stoc mic» propriu al unei variante, în PAȘI (D7), pe rândul de stoc al unui depozit. Nu mută nicio cantitate și
+   * nu scrie în registrul de mișcări (nu e o mișcare de stoc). Doar variante gestionate; rândul de stoc se creează dacă lipsește
+   * (varianta e încă neinventariată), ca pragul să se poată seta înainte de prima ajustare. `steps: null` șterge pragul propriu
+   * (revine la setarea globală). Rândul se blochează ca la orice altă operație, deci nu se pierde nicio ajustare simultană.
+   */
+  async setLowStockSteps(input: SetLowStockStepsInput): Promise<SetLowStockStepsResult> {
+    const { steps } = input;
+    if (steps !== null && (!Number.isInteger(steps) || steps < 0 || steps > LOW_STOCK_STEPS_MAX)) {
+      throw new StockError(
+        "STOCK_THRESHOLD_INVALID",
+        `Pragul «stoc mic» trebuie să fie un număr întreg de pași între 0 și ${LOW_STOCK_STEPS_MAX}, sau gol`,
+        { steps },
+      );
+    }
+    const now = this.now();
+    return this.atomic(async (tx) => {
+      const warehouseId = input.warehouseId ?? (await this.defaultWarehouseId(tx));
+      const key: ItemKey = { variantId: input.variantId, warehouseId };
+      const variant = await tx.productVariant.findUnique({
+        where: { id: key.variantId },
+        select: { manageStock: true, product: { select: { type: true, manageStock: true } } },
+      });
+      if (!variant) {
+        throw new StockError("STOCK_VARIANT_NOT_FOUND", "Varianta nu există", {
+          variantId: key.variantId,
+        });
+      }
+      if (!isManagedVariant(variant)) {
+        throw new StockError(
+          "STOCK_NOT_MANAGED",
+          "Produsul nu are stoc gestionat: pornește gestionarea stocului înainte să setezi pragul",
+          { variantId: key.variantId },
+        );
+      }
+      if (!(await tx.warehouse.findUnique({ where: { id: warehouseId }, select: { id: true } }))) {
+        throw new StockError("STOCK_NO_WAREHOUSE", "Depozitul nu există", { warehouseId });
+      }
+      // un prag nou are nevoie de rând; ștergerea unui prag care nu există nu creează nimic
+      if (steps !== null) {
+        await tx.$executeRaw(Prisma.sql`
+          INSERT INTO inventory_item (id, "variantId", "warehouseId", "updatedAt")
+          VALUES (${randomUUID()}, ${key.variantId}, ${key.warehouseId}, ${now})
+          ON CONFLICT ("variantId", "warehouseId") DO NOTHING`);
+      }
+      const row = (await lockItems(tx, [key])).get(keyId(key));
+      if (!row) return { variantId: key.variantId, warehouseId, before: null, after: null };
+      if (row.lowStockSteps !== steps) {
+        await tx.$executeRaw(Prisma.sql`
+          UPDATE inventory_item
+          SET "lowStockSteps" = ${steps}, "updatedAt" = ${now}
+          WHERE "variantId" = ${key.variantId} AND "warehouseId" = ${key.warehouseId}`);
+      }
+      return { variantId: key.variantId, warehouseId, before: row.lowStockSteps, after: steps };
     });
   }
 

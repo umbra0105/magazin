@@ -357,6 +357,13 @@ Listă cu LTV, nr. comenzi, ultima comandă, etichete · fișă client cu istori
 ### 5.5 Stoc
 Vizualizare per depozit · ajustări cu motiv · istoric mișcări · transfer între depozite · alerte stoc mic · import stoc CSV · inventariere (stock take) · rapoarte de rotație.
 
+**Alerte de stoc mic (Faza 5, punctul 10a):**
+
+- **«Stoc mic» e o VEDERE a paginii Stoc** (`/admin/produse/stoc?filtru=stoc-mic`; `?mic=1` rămâne alias vechi), nu un element nou în meniul Catalog (decizia utilizatorului): același filtru «Doar stoc mic», dar ordonat după urgență (epuizate, apoi doar rest nevandabil, apoi cele sub prag cu cei mai puțini pași întâi), cu motiv, pragul efectiv (și dacă e propriu sau din setarea globală) și numărătorile pe motiv. Comutatorul «Toate variantele» / «Stoc mic (N)» e deasupra filtrelor; numărătorile se calculează pe tot ce găsește căutarea, nu doar pe pagină. Intră doar variantele gestionate la sau sub prag (`pași ≤ prag`; «epuizat» include și variantele gestionate încă neinventariate); negestionatele, digitalele și produsele din coș nu apar.
+- **Pragul pe variantă** (`InventoryItem.lowStockSteps`, în PAȘI, 0–1000; gol = setarea globală `inventory.lowStockSteps`, 2): dialogul «Prag» pe lista Stoc și pe vederea «Stoc mic», doar cu `inventory.write`. `StockService.setLowStockSteps` (blochează rândul, creează rândul de stoc dacă lipsește, nu atinge cantitățile și nu scrie în registrul de mișcări), `StockAdjustmentService.setLowStockThreshold` (permisiune, validare, audit `stock.threshold.update` cu înainte/după doar când valoarea se schimbă). Validare în română și în formular (`noValidate`), și pe server.
+- **Reîmprospătare:** dialogurile «Prag» și, în vederea «Stoc mic», «Ajustează» reîmprospătează lista la ÎNCHIDERE: rândul poate ieși din listă după salvare, iar dialogul, fiind copilul rândului, ar dispărea înainte să se vadă confirmarea.
+- **Bannerul «poza SmartBill e veche»** rămâne cel din pagina Stoc (punctul 7/8); contoarele din Panou vin la 10b.
+
 **Stocul în produs, brand și listă (Faza 5, punctul 9a):**
 
 - **Tabul «Stoc» din editorul de produs:** bifa «Gestionează stocul» (suprascrie setarea magazinului); la negestionat, eticheta «Negestionat până la inventar» și dropdown-ul de disponibilitate (zero rânduri de stoc); la gestionat, hibridul «Vinde La comandă când stocul se epuizează» (`allowBackorder`, implicit oprit); termenul de livrare propriu (`leadTimeDays`, 0–365, gol = brandul, apoi setarea globală) cu textul «Se aplică acum»; tabelul gestiunii pe variante (Moștenește / Gestionat / Negestionat, plus disponibilitatea la negestionate); sub ele, cantitățile pe variante (același tabel ca în «Stoc», cu «Ajustează», «Istoric» și «Deschide în Stoc»). Produsul digital nu are stoc: doar nota.

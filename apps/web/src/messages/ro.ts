@@ -736,6 +736,62 @@ export const ro = {
         different_units: "Variantele au unități diferite: nu se însumează.",
         no_managed: "Nicio variantă nu are stoc gestionat.",
       },
+      /** Vederea «Stoc mic» a paginii Stoc (`?filtru=stoc-mic`): aceeași pagină, același filtru «Doar stoc mic», ordonat după urgență. */
+      lowStock: {
+        switchLabel: "Vedere",
+        all: "Toate variantele",
+        low: (n: number) => `Stoc mic (${n})`,
+        heading: "Variante la stoc mic",
+        hint: "Cele mai urgente sunt primele: epuizate, apoi cele cu doar un rest nevandabil, apoi cele sub prag.",
+        summaryLabel: "Variante la stoc mic, pe motiv",
+        summary: {
+          out_of_stock: "Epuizate",
+          remainder_only: "Doar rest nevandabil",
+          below_threshold: "Sub prag",
+        },
+        reasons: {
+          out_of_stock: "Epuizat",
+          remainder_only: "Doar rest nevandabil",
+          below_threshold: "Sub prag",
+        },
+        threshold: { own: "propriu", global: "setarea globală" },
+        columns: {
+          product: "Produs",
+          available: "Disponibil",
+          threshold: "Prag",
+          reason: "Motiv",
+          actions: "Acțiuni",
+        },
+        listLabel: "Variantele la stoc mic",
+        empty: "Nicio variantă nu e la stoc mic.",
+      },
+      threshold: {
+        button: "Prag",
+        aria: (name: string) => `Setează pragul de stoc mic: ${name}`,
+        title: (name: string) => `Prag stoc mic: ${name}`,
+        current: (steps: string, origin: string) => `Acum: ${steps} (${origin}).`,
+        label: "Prag de stoc mic (în pași)",
+        help: (globalSteps: string) =>
+          `Lasă gol ca să folosești setarea globală (acum ${globalSteps}). Varianta apare la «Stoc mic» când disponibilul coboară la acest număr de pași sau sub el; 0 înseamnă doar la epuizare.`,
+        save: "Salvează",
+        saving: "Se salvează…",
+        cancel: "Renunță",
+        close: "Închide",
+        saved: (name: string, steps: string) => `Pragul pentru ${name} este acum ${steps}.`,
+        savedGlobal: (name: string, globalSteps: string) =>
+          `${name} folosește acum setarea globală (${globalSteps}).`,
+        unchanged: "Pragul era deja acesta; nimic nu s-a schimbat.",
+        errors: {
+          invalid: "Scrie un număr întreg de pași (de exemplu 2), sau lasă gol.",
+          decimal: "Pragul e în pași întregi: nu poate avea zecimale.",
+          range: (max: number) => `Pragul poate fi între 0 și ${max} de pași.`,
+          STOCK_NOT_MANAGED:
+            "Produsul nu are stoc gestionat: pornește gestionarea stocului înainte să setezi pragul.",
+          STOCK_VARIANT_NOT_FOUND: "Varianta nu mai există.",
+          STOCK_NO_WAREHOUSE: "Depozitul nu există.",
+          generic: "Pragul nu a putut fi salvat. Încearcă din nou.",
+        },
+      },
       actions: {
         adjust: "Ajustează",
         adjustAria: (name: string) => `Ajustează stocul: ${name}`,

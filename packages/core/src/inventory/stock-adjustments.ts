@@ -9,9 +9,14 @@ import type { AuditService } from "../audit/audit-service";
 import { parseInput } from "../catalog/product-schemas";
 import { assertCan, type PermissionSubject } from "../rbac/can";
 import { ADJUSTMENT_NOTE_MAX } from "./adjustment-rules";
-import { ADJUSTMENT_REASONS } from "./constants";
+import { ADJUSTMENT_REASONS, LOW_STOCK_STEPS_MAX } from "./constants";
 import { StockError } from "./stock-errors";
-import type { AdjustPhysicalInput, AdjustPhysicalResult } from "./stock-service";
+import type {
+  AdjustPhysicalInput,
+  AdjustPhysicalResult,
+  SetLowStockStepsInput,
+  SetLowStockStepsResult,
+} from "./stock-service";
 
 /**
  * Ajustările manuale de stoc din admin (Faza 5, punctul 6): stratul cu permisiune, validarea intrării și audit,
@@ -33,9 +38,22 @@ const adjustmentInputSchema = z.strictObject({
   effectiveAt: z.coerce.date({ error: "Ora efectivă nu este o dată validă" }).optional(),
 });
 
+const thresholdInputSchema = z.strictObject({
+  variantId: z.string().trim().min(1, "Alege varianta"),
+  warehouseId: z.string().trim().min(1).optional(),
+  /** Pragul propriu în pași, sau `null` = fără prag propriu (setarea globală). Lipsa lui e o eroare, nu «șterge». */
+  steps: z
+    .number({ error: "Pragul trebuie să fie un număr întreg de pași" })
+    .int("Pragul trebuie să fie un număr întreg de pași")
+    .min(0, "Pragul nu poate fi negativ")
+    .max(LOW_STOCK_STEPS_MAX, `Pragul poate fi cel mult ${LOW_STOCK_STEPS_MAX} de pași`)
+    .nullable(),
+});
+
 /** Ce îi trebuie adminului de la serviciul de stoc (și ce se înlocuiește în teste). */
 export interface StockAdjusterPort {
   adjustPhysical(input: AdjustPhysicalInput): Promise<AdjustPhysicalResult>;
+  setLowStockSteps(input: SetLowStockStepsInput): Promise<SetLowStockStepsResult>;
 }
 
 export interface StockAdjustmentServiceDeps {
@@ -84,6 +102,35 @@ export class StockAdjustmentService {
         warnings: result.warnings,
       },
     });
+    return result;
+  }
+
+  /**
+   * Pragul «stoc mic» propriu al unei variante (în pași; `null` = setarea globală). Cere `inventory.write`. Se scrie audit
+   * doar când valoarea s-a schimbat; nu e o mișcare de stoc (nu intră în registrul imuabil).
+   */
+  async setLowStockThreshold(
+    subject: PermissionSubject | null,
+    input: unknown,
+  ): Promise<SetLowStockStepsResult> {
+    assertCan(subject, "inventory.write");
+    const data = parseInput(thresholdInputSchema, input);
+    const result = await this.deps.stock.setLowStockSteps({
+      variantId: data.variantId,
+      ...(data.warehouseId && { warehouseId: data.warehouseId }),
+      steps: data.steps,
+    });
+    if (result.before !== result.after) {
+      await this.deps.audit.record({
+        actorId: subject.userId,
+        actorLabel: subject.email,
+        action: "stock.threshold.update",
+        entity: "inventory_item",
+        entityId: `${result.variantId}:${result.warehouseId}`,
+        before: { lowStockSteps: result.before },
+        after: { lowStockSteps: result.after },
+      });
+    }
     return result;
   }
 }

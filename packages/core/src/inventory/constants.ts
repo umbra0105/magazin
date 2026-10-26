@@ -3,6 +3,9 @@
  * un test de integrare verifică, pe baza reală, că fiecare valoare e acceptată (și una străină, respinsă).
  */
 
+/** Pragul «stoc mic» (în pași) e un număr întreg între 0 și această valoare, sau gol (= setarea globală). Oglindește `inventory.lowStockSteps`. */
+export const LOW_STOCK_STEPS_MAX = 1000;
+
 /** Codul depozitului implicit creat de seed; numele se poate schimba din admin, codul nu. */
 export const DEFAULT_WAREHOUSE_CODE = "main";
 export const DEFAULT_WAREHOUSE_NAME = "Depozit principal";
