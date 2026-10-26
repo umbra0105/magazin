@@ -366,13 +366,13 @@ describe("CSV salvat din Excel (separator «,», Windows-1250)", () => {
     });
   });
 
-  it("șablonul CSV al aplicației (cu linia sep=) se încarcă înapoi: delimitatorul vine din fișier", async () => {
+  it("șablonul CSV al aplicației (UTF-16LE, TAB, fără sep=) se încarcă înapoi: delimitatorul se detectează", async () => {
     const ctx = setup();
     const analysis = await ctx.service.register(manager, {
       bytes: await buildTemplate("csv"),
       fileName: "sablon.csv",
     });
-    expect(analysis).toMatchObject({ delimiter: ";", delimiterSource: "sep-line", warnings: [] });
+    expect(analysis).toMatchObject({ delimiter: "\t", delimiterSource: "detected", warnings: [] });
     expect(analysis.headers[0]).toBe("SKU");
     expect(analysis.rowCount).toBe(2);
   });

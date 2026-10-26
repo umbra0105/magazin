@@ -83,7 +83,7 @@ Golurile găsite la această trecere sunt marcate **GOL → umplut** și au test
 | --- | --- |
 | Încărcare: Origin, sesiune, `products.write`, rate limit, limită pe flux, format din octeți | U `import-handler`; E `product-import` |
 | CSV: delimitator, `sep=`, Windows-1250 din Excel, BOM; XLSX: prima foaie, fără macro-uri, bombe zip | U `import-file`, `import-service`; E `product-import` |
-| CSV generat doar prin funcția comună (BOM + `sep=;`) | A `csv-generation`; U `import-file` (toCsv) |
+| CSV generat doar prin funcția comună (UTF-16LE + BOM + TAB, fără `sep=`) | A `csv-generation`; U `import-file` (toCsv) |
 | Injecție de formule: neutralizare la export, restaurare la import, dus-întors | U `cell-safety`, `import-plan` |
 | Planificare: câmpuri, mapare automată, upsert pe SKU, `-` șterge, arhivate/șterse ignorate, preț în lei → bani exact | U `import-plan`, `import-service` |
 | Dry-run fără scrieri; aplicare legată de amprentă; un singur eveniment de audit; idempotență; job în fundal | I `import-service`; E `product-import` |

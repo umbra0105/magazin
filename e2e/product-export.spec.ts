@@ -11,12 +11,13 @@ import {
   seedE2eProducts,
   trackE2eImportFile,
 } from "../packages/core/test/e2e-support";
+import { decodeUtf16le } from "../packages/core/test/utf-16le";
 import { uniqueClientIp } from "./support/client-ip";
 import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Exportul de produse (CSV/XLSX), în browser (punctul 14b): domeniile (filtre curente, selecție), cele
- * două formate, fișierul CSV pentru Excel (BOM + «sep=;»), fără prețul de achiziție, dus-întors prin
+ * două formate, fișierul CSV pentru Excel (BOM UTF-16LE + TAB), fără prețul de achiziție, dus-întors prin
  * importul din aplicație (tot «neschimbat»), drepturi pe roluri, erori afișate în română, audit cu numere.
  */
 
@@ -93,7 +94,7 @@ test.afterEach(async () => {
 });
 
 test.describe("export de produse", () => {
-  test("CSV cu filtrele curente: BOM + «sep=;», fără cost, audit cu numere, reimport = tot «neschimbat»", async ({
+  test("CSV cu filtrele curente: BOM UTF-16LE + TAB, fără cost, audit cu numere, reimport = tot «neschimbat»", async ({
     page,
     request,
     baseURL,
@@ -122,23 +123,53 @@ test.describe("export de produse", () => {
     expect(download.suggestedFilename()).toMatch(/^export-produse-\d{4}-\d{2}-\d{2}\.csv$/);
     const bytes = await readDownload(download);
 
-    // octeții: BOM UTF-8, apoi «sep=;», apoi antetul (aceleași antete ca importul), apoi 4 rânduri
-    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    const text = new TextDecoder().decode(bytes);
+    // octeții: BOM UTF-16LE (FF FE), apoi DIRECT antetul cu TAB (fără linia «sep=»: ea face Excel să ignore BOM-ul),
+    // apoi 4 rânduri; diacriticele sunt unități UTF-16LE întregi (ă = 03 01), nu UTF-8 citit greșit
+    expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+    const decoded = decodeUtf16le(bytes);
+    expect(decoded.charCodeAt(0)).toBe(0xfeff);
+    const text = decoded.slice(1);
+    expect(text).not.toMatch(/^sep=/i);
     const lines = text.split(String.fromCharCode(13, 10)).filter((l) => l !== "");
-    expect(lines[0]).toBe("sep=;");
-    expect(lines[1]).toBe(
-      "SKU;Titlu;Subtitlu;Descriere;Adresă (slug);Preț (lei, cu TVA);Preț promoțional (lei, cu TVA);" +
-        "Categorii;Brand;EAN;Garanție (luni);Greutate (g);Lungime (mm);Lățime (mm);Înălțime (mm);" +
-        "Clasă de livrare;Stare;Unitate de măsură;Baza prețului;Pas de vânzare;Minim (pași);Denumire pas;" +
-        "Mod conversie SmartBill;Unitate SmartBill;Raport SmartBill;Stare stoc;Termen livrare (zile);ID produs;Modificat la",
+    expect(lines[0]).toBe(
+      [
+        "SKU",
+        "Titlu",
+        "Subtitlu",
+        "Descriere",
+        "Adresă (slug)",
+        "Preț (lei, cu TVA)",
+        "Preț promoțional (lei, cu TVA)",
+        "Categorii",
+        "Brand",
+        "EAN",
+        "Garanție (luni)",
+        "Greutate (g)",
+        "Lungime (mm)",
+        "Lățime (mm)",
+        "Înălțime (mm)",
+        "Clasă de livrare",
+        "Stare",
+        "Unitate de măsură",
+        "Baza prețului",
+        "Pas de vânzare",
+        "Minim (pași)",
+        "Denumire pas",
+        "Mod conversie SmartBill",
+        "Unitate SmartBill",
+        "Raport SmartBill",
+        "Stare stoc",
+        "Termen livrare (zile)",
+        "ID produs",
+        "Modificat la",
+      ].join("\t"),
     );
-    expect(lines).toHaveLength(2 + 4);
+    expect(lines).toHaveLength(1 + 4);
     // ordinea rândurilor e cea de creare (id), nu alfabetică: rândul se caută după SKU
-    const first = lines.find((l) => l.startsWith(`E2E-${tag.toUpperCase()}-01;`));
-    expect(first?.startsWith(`E2E-${tag.toUpperCase()}-01;E2E ${tag} Produs 01;`)).toBe(true);
-    expect(first).toContain(";101,00;");
-    expect(first).toContain(";Ciornă;");
+    const first = lines.find((l) => l.startsWith(`E2E-${tag.toUpperCase()}-01\t`));
+    expect(first?.startsWith(`E2E-${tag.toUpperCase()}-01\tE2E ${tag} Produs 01\t`)).toBe(true);
+    expect(first).toContain("\t101,00\t");
+    expect(first).toContain("\tCiornă\t");
     // prețul de achiziție nu există în fișier, în nicio formă
     for (const form of COST_FORMS) expect(text, form).not.toContain(form);
     expect(text).not.toMatch(/achizi|cost/i);

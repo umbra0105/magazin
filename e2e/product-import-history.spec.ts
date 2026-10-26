@@ -9,12 +9,13 @@ import {
   trackE2eImportFile,
   trackE2eProduct,
 } from "../packages/core/test/e2e-support";
+import { decodeUtf16le } from "../packages/core/test/utf-16le";
 import { uniqueClientIp } from "./support/client-ip";
 import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Istoricul importurilor, în browser (punctul 15a+): un import aplicat apare în istoric cu contoarele lui,
- * detaliile arată raportul pe rânduri cu filtru pe rezultat, CSV-ul descărcat începe cu BOM și «sep=;»,
+ * detaliile arată raportul pe rânduri cu filtru pe rezultat, CSV-ul descărcat începe cu BOM UTF-16LE (FF FE) și TAB,
  * importul WooCommerce arată și entitățile create, unul întrerupt e vizibil, rolurile fără products.write nu
  * văd pagina, costul din fișier nu apare nicăieri.
  */
@@ -66,7 +67,7 @@ test.afterEach(async () => {
 });
 
 test.describe("istoric de importuri", () => {
-  test("import generic aplicat: apare în istoric, detaliile au filtru pe rezultat, CSV cu BOM și «sep=;»", async ({
+  test("import generic aplicat: apare în istoric, detaliile au filtru pe rezultat, CSV UTF-16LE cu BOM și TAB", async ({
     page,
     request,
     baseURL,
@@ -125,11 +126,12 @@ test.describe("istoric de importuri", () => {
     const csvResponse = await page.request.get(href as string);
     expect(csvResponse.status()).toBe(200);
     const bytes = new Uint8Array(await csvResponse.body());
-    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    const text = new TextDecoder().decode(bytes);
+    // BOM UTF-16LE (FF FE), apoi direct antetul cu TAB; nicio linie «sep=»
+    expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+    const text = decodeUtf16le(bytes).slice(1);
     const lines = text.split(String.fromCharCode(13, 10));
-    expect(lines[0]).toBe("sep=;");
-    expect(lines[1]).toBe("Rând;SKU;Rezultat;Motiv;Câmpuri schimbate");
+    expect(lines[0]).toBe("Rând\tSKU\tRezultat\tMotiv\tCâmpuri schimbate");
+    expect(text).not.toMatch(/^sep=/i);
     expect(text).toContain("eroare");
     expect(csvResponse.headers()["content-disposition"]).toContain("raport-import-produse.csv");
 

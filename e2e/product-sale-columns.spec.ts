@@ -9,12 +9,13 @@ import {
   seedE2eStock,
   trackE2eImportFile,
 } from "../packages/core/test/e2e-support";
+import { decodeUtf16le } from "../packages/core/test/utf-16le";
 import { uniqueClientIp } from "./support/client-ip";
 import { expectResponseOk } from "./support/diagnostics";
 
 /**
  * Faza 5, punctul 9b, în browser: coloanele noi la import și export (unitate, bază, pas, minim, denumire, conversie SmartBill,
- * stare stoc, termen). Exportul: CSV pentru Excel (BOM + «sep=;», antete în română, virgulă zecimală, fără cost); fișierul
+ * stare stoc, termen). Exportul: CSV pentru Excel (BOM UTF-16LE + TAB, antete în română, virgulă zecimală, fără cost); fișierul
  * exportat și reimportat = «neschimbat». Importul: regula «aceeași valoare la toate rândurile → pe produs; diferite → pe
  * variantă», «Stare stoc» doar la negestionate, produsele noi create NEGESTIONATE. Produsele de probă au adresa `e2e-stoc-…`.
  */
@@ -104,6 +105,10 @@ const NEW_COLUMNS =
   "Unitate de măsură;Baza prețului;Pas de vânzare;Minim (pași);Denumire pas;Mod conversie SmartBill;" +
   "Unitate SmartBill;Raport SmartBill;Stare stoc;Termen livrare (zile)";
 
+/** Aceleași coloane, cu TAB: așa le scrie exportul (UTF-16LE + TAB). */
+const TAB_COLUMNS = NEW_COLUMNS.split(";").join("\t");
+
+/** CSV-ul de import al testelor: UTF-8 cu «;» (un fișier străin, care rămâne acceptat). */
 const csvFile = (rows: string[][]): Buffer =>
   Buffer.from(
     rows.map((r) => r.join(";")).join(String.fromCharCode(13, 10)) + String.fromCharCode(13, 10),
@@ -134,7 +139,7 @@ async function check(page: Page) {
 }
 
 test.describe("export cu coloanele de vânzare", () => {
-  test("CSV pentru Excel: BOM + «sep=;», antetele noi în română, valorile EFECTIVE cu virgulă zecimală, fără cost; reimportat = «neschimbat»", async ({
+  test("CSV pentru Excel: BOM UTF-16LE + TAB, antetele noi în română, valorile EFECTIVE cu virgulă zecimală, fără cost; reimportat = «neschimbat»", async ({
     page,
     request,
     baseURL,
@@ -151,16 +156,15 @@ test.describe("export cu coloanele de vânzare", () => {
     ]);
     const bytes = await readDownload(download);
 
-    // fișierul pentru Excel: BOM UTF-8, apoi «sep=;», apoi antetul
-    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    const text = new TextDecoder().decode(bytes);
+    // fișierul pentru Excel: BOM UTF-16LE (FF FE), apoi direct antetul cu TAB (fără «sep=»)
+    expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+    const text = decodeUtf16le(bytes).slice(1);
     const lines = text.split(String.fromCharCode(13, 10)).filter((l) => l !== "");
-    expect(lines[0]).toBe("sep=;");
-    expect(lines[1]).toContain(`;Stare;${NEW_COLUMNS};ID produs;Modificat la`);
-    const header = (lines[1] as string).split(";");
+    expect(lines[0]).toContain(`\tStare\t${TAB_COLUMNS}\tID produs\tModificat la`);
+    const header = (lines[0] as string).split("\t");
     const cell = (skuValue: string, label: string): string | undefined => {
-      const row = lines.find((l) => l.startsWith(`${skuValue};`));
-      return row?.split(";")[header.indexOf(label)];
+      const row = lines.find((l) => l.startsWith(`${skuValue}\t`));
+      return row?.split("\t")[header.indexOf(label)];
     };
 
     // simbolul «mp» se ciocnește cu unitatea de sistem: exportul scrie CODUL unității (altfel fișierul nu s-ar reimporta)
@@ -195,8 +199,9 @@ test.describe("export cu coloanele de vânzare", () => {
     const owner = await createAccount(request, baseURL as string, "owner");
     await login(page, owner, "/admin/produse/import");
     const template = await page.request.get("/api/admin/product-imports/template?format=csv");
-    const text = new TextDecoder().decode(new Uint8Array(await template.body()));
-    expect(text).toContain(NEW_COLUMNS);
+    const bytes = new Uint8Array(await template.body());
+    expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+    expect(decodeUtf16le(bytes)).toContain(TAB_COLUMNS);
   });
 });
 

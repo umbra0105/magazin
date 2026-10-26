@@ -4,10 +4,14 @@
  * din afara acestui modul își construiește singur un CSV (tip MIME `text/csv`, nume `.csv` într-un antet
  * de descărcare sau `csvCell`).
  *
- * REGULA (Excel pe calculatoarele cu separatorul de listă «,» lipește coloanele unui CSV cu «;»): orice
- * CSV destinat deschiderii în Excel începe cu BOM UTF-8 (diacriticele) și cu prima linie «sep=;»
- * (delimitatorul, citit de Excel la dublu-click), apoi antetul în română. Delimitatorul e mereu «;»;
- * nu există opțiune de a omite BOM-ul sau linia «sep=». Importul recunoaște același prefix.
+ * FORMATUL (verificat în Excel 16.0 pe Windows, `scripts/excel-csv-probe.ps1`): UTF-16LE cu BOM (octeții FF FE),
+ * delimitator TAB, antetul în română de la prima linie, CRLF după fiecare rând, FĂRĂ linia «sep=».
+ * De ce nu UTF-8 + «sep=;»: la dublu-click, Excel ignoră BOM-ul UTF-8 dacă prima linie e «sep=…» și citește
+ * diacriticele ca Windows-1252 («Adresă» devine «AdresÄƒ»). Fără «sep=», un CSV UTF-8 cu «;» are coloanele
+ * lipite pe un PC cu separatorul de listă «,», iar UTF-8 + TAB nu e recunoscut ca TAB. UTF-16LE + BOM + TAB e
+ * singura combinație care dă diacritice corecte ȘI coloane separate, indiferent de separatorul de listă
+ * (Excel o tratează ca «Unicode Text»). Nu există opțiune de a omite BOM-ul sau de a schimba delimitatorul.
+ * Importul acceptă în continuare UTF-8 (cu sau fără BOM), Windows-1250 și linia «sep=» a fișierelor străine.
  *
  * Celulele care încep cu `=`, `+`, `-`, `@`, tab sau CR sunt neutralizate cu un apostrof în față
  * (injecție de formule când fișierul se deschide în Excel); se pun ghilimele când celula conține
@@ -16,8 +20,8 @@
 
 import { neutralizeCell } from "./cell-safety";
 
-export const CSV_MIME = "text/csv; charset=utf-8";
-const DELIMITER = ";";
+export const CSV_MIME = "text/csv; charset=utf-16le";
+const DELIMITER = "\t";
 
 function csvCell(value: string): string {
   const safe = neutralizeCell(value);
@@ -33,9 +37,19 @@ function csvCell(value: string): string {
 /** Sfârșitul de rând al fișierelor CSV pentru Excel (CRLF). */
 const EOL = String.fromCharCode(13, 10);
 
-const PREFIX = `${String.fromCharCode(0xfeff)}sep=${DELIMITER}${EOL}`;
+/** BOM (U+FEFF): scris în UTF-16LE devine octeții FF FE, prin care Excel recunoaște codarea. */
+const PREFIX = String.fromCharCode(0xfeff);
 
 const csvLine = (row: readonly string[]): string => `${row.map(csvCell).join(DELIMITER)}${EOL}`;
+
+/** Text → octeți UTF-16LE: fiecare unitate UTF-16 pe 2 octeți, cel mai puțin semnificativ primul. */
+function utf16le(text: string): Uint8Array<ArrayBuffer> {
+  const buffer = new ArrayBuffer(text.length * 2);
+  const bytes = new Uint8Array(buffer);
+  const view = new DataView(buffer);
+  for (let i = 0; i < text.length; i++) view.setUint16(i * 2, text.charCodeAt(i), true);
+  return bytes;
+}
 
 const DOWNLOAD_HEADERS = {
   "Cache-Control": "no-store",
@@ -43,9 +57,9 @@ const DOWNLOAD_HEADERS = {
   "Content-Type": CSV_MIME,
 };
 
-/** Rândurile ca text CSV pentru Excel: BOM, «sep=;», apoi rândurile (antetul primul), cu CRLF după fiecare. */
-export function toCsv(rows: readonly (readonly string[])[]): string {
-  return `${PREFIX}${rows.map(csvLine).join("")}`;
+/** Fișierul CSV pentru Excel, ca octeți: BOM FF FE, apoi rândurile (antetul primul), cu CRLF după fiecare. */
+export function toCsv(rows: readonly (readonly string[])[]): Uint8Array<ArrayBuffer> {
+  return utf16le(`${PREFIX}${rows.map(csvLine).join("")}`);
 }
 
 /** Descărcarea unui CSV: corpul vine din `toCsv`, ca atașament, fără cache și fără ghicirea tipului. */
@@ -60,8 +74,9 @@ export function csvResponse(rows: readonly (readonly string[])[], fileName: stri
 }
 
 /**
- * Descărcarea unui CSV mare, în flux: același prefix (BOM + «sep=;») și aceeași scriere a celulelor ca
- * `toCsv`, dar rândurile se scriu pe măsură ce vin (nu se ține tot fișierul în memorie). Primul rând
+ * Descărcarea unui CSV mare, în flux: același format (BOM FF FE, TAB, UTF-16LE) și aceeași scriere a celulelor
+ * ca `toCsv`, dar rândurile se scriu pe măsură ce vin (nu se ține tot fișierul în memorie); fiecare rând e
+ * codat întreg, deci nicio pereche surogat nu se rupe între bucăți. Primul rând
  * produs e antetul. Dacă sursa aruncă în timpul fluxului, fluxul se închide cu eroare (descărcarea
  * eșuează în browser, nu rămâne un fișier trunchiat care pare complet); verificările care pot refuza
  * exportul se fac ÎNAINTE de a chema această funcție.
@@ -71,19 +86,18 @@ export function csvStreamResponse(
   fileName: string,
 ): Response {
   const iterator = rows[Symbol.asyncIterator]();
-  const encoder = new TextEncoder();
   let first = true;
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
         const next = await iterator.next();
         if (next.done) {
-          if (first) controller.enqueue(encoder.encode(PREFIX));
+          if (first) controller.enqueue(utf16le(PREFIX));
           controller.close();
           return;
         }
         const line = csvLine(next.value);
-        controller.enqueue(encoder.encode(first ? `${PREFIX}${line}` : line));
+        controller.enqueue(utf16le(first ? `${PREFIX}${line}` : line));
         first = false;
       } catch (error) {
         controller.error(error);

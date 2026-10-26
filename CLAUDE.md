@@ -197,15 +197,23 @@ există `tenantId`. În schimb:
 ### Fișiere CSV pentru Excel — regulă permanentă
 
 - Orice fișier CSV destinat deschiderii în Excel (șablon, raport, export de produse, comenzi, clienți,
-  facturi etc.) se generează cu **BOM UTF-8 + prima linie `sep=;`**, EXCLUSIV prin funcția comună
-  (`toCsv` / `csvResponse` din `packages/core/src/catalog/import/import-csv.ts`), cu antet în română.
-  Nu se scrie CSV de mână în altă parte; testul de arhitectură `csv-generation` pică la orice ocolire.
-- Orice import de CSV acceptă acel prefix (`extractSepLine`) și un CSV salvat din Excel (Windows-1250,
-  separator «,», câmpuri în ghilimele).
-- Motiv: Excel-ul utilizatorului are separatorul de listă «,», deci fără linia `sep=;` coloanele unui CSV
-  cu «;» apar lipite. Regula nu se mai reamintește: se aplică la 14b, 15 și oriunde apare un CSV descărcabil.
+  facturi etc.) se generează în **UTF-16LE cu BOM (octeții `FF FE`), cu delimitator TAB și FĂRĂ linia
+  `sep=`**, EXCLUSIV prin funcția comună (`toCsv` / `csvResponse` / `csvStreamResponse` din
+  `packages/core/src/catalog/import/import-csv.ts`), cu antet în română. Nu se scrie CSV de mână în altă
+  parte; testul de arhitectură `csv-generation` pică la orice ocolire și la orice linie `sep=` scrisă de aplicație.
+- Orice import de CSV acceptă: UTF-16LE cu BOM (formatul de mai sus și «Unicode Text» din Excel), UTF-8 cu
+  sau fără BOM, un CSV salvat din Excel (Windows-1250, separator «,», câmpuri în ghilimele) și linia `sep=` a
+  fișierelor străine (`extractSepLine`); delimitatorul `;` `,` sau TAB se detectează.
+- Motiv (dovedit în Excel 16.0 pe Windows, cu `scripts/excel-csv-probe.ps1`): o linie `sep=` face Excel să
+  ignore BOM-ul UTF-8 și să citească diacriticele ca Windows-1252 («Adresă» → «AdresÄƒ»), deși octeții sunt
+  corecți; fără ea, un CSV UTF-8 cu «;» are coloanele lipite pe un PC cu separatorul de listă «,», iar un CSV
+  UTF-8 cu TAB nu are TAB-ul recunoscut. UTF-16LE cu BOM și TAB (Excel îl tratează ca «Unicode Text») dă
+  diacritice corecte ȘI coloane separate. Nu se revine la UTF-8 cu `sep=` fără o nouă probă în Excel. Regula
+  nu se mai reamintește: se aplică oriunde apare un CSV descărcabil.
 - La fiecare punct cu un CSV descărcabil, în **👉 VERIFICĂ TU** intră pasul: «deschide CSV-ul cu
-  dublu-click în Excel și vezi coloanele separate».
+  dublu-click în Excel și vezi coloanele separate ȘI diacriticele corecte (de exemplu „Adresă”, „Preț”,
+  „Șurub”, nu „AdresÄƒ”)». Pentru o verificare automată pe PC-ul cu Excel există `scripts/excel-csv-probe.ps1`
+  (manual, în afara CI; nu schimbă setări și nu atinge un Excel deschis).
 
 ### Câmpuri de fișier — regulă permanentă
 

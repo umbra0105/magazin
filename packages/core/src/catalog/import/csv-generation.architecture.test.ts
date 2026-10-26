@@ -5,11 +5,13 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Test de arhitectură: orice CSV generat de aplicație (șablon, raport, export) trece prin funcția comună
- * din `import-csv.ts` (`toCsv` / `csvResponse`), care pune BOM UTF-8 și prima linie «sep=;» (altfel Excel
- * pe un calculator cu separatorul de listă «,» lipește coloanele). Pică dacă un alt fișier de producție:
+ * din `import-csv.ts` (`toCsv` / `csvResponse`), care scrie UTF-16LE cu BOM (FF FE) și TAB, FĂRĂ linia «sep=»
+ * (o linie «sep=» face Excel să ignore BOM-ul și să citească UTF-8 ca Windows-1252; UTF-8 + TAB nu e recunoscut
+ * ca TAB; singura combinație cu diacritice corecte ȘI coloane separate, indiferent de separatorul de listă, e
+ * UTF-16LE + BOM + TAB, vezi `scripts/excel-csv-probe.ps1`). Pică dacă un alt fișier de producție:
  *  - declară tipul MIME `text/csv` ca valoare (singurul loc e `import-csv.ts`);
  *  - folosește `csvCell` (funcția internă de scriere a unei celule);
- *  - scrie «sep=» (prefixul se pune doar în funcția comună; importul îl CITEȘTE în `import-file.ts`);
+ *  - scrie «sep=» (aplicația nu mai scrie niciodată linia; importul o CITEȘTE în `import-file.ts`, din fișiere străine);
  *  - trimite un fișier `.csv` ca atașament (`Content-Disposition` + un nume `.csv` între ghilimele)
  *    fără funcția comună.
  *
@@ -25,7 +27,7 @@ export interface SourceFile {
 
 const COMMON = "packages/core/src/catalog/import/import-csv.ts";
 
-/** Fișiere care pot scrie «sep=»: parserul, care îl citește din fișierele încărcate. */
+/** Fișiere care pot menționa «sep=»: parserul, care îl citește din fișierele încărcate. */
 const SEP_EXCEPTIONS: Readonly<Record<string, string>> = {
   "packages/core/src/catalog/import/import-file.ts":
     "parserul recunoaște linia «sep=» a fișierelor încărcate",
@@ -57,7 +59,7 @@ export function findCsvViolations(files: readonly SourceFile[]): string[] {
     }
     if (/["'`]sep=/i.test(content) && !Object.hasOwn(SEP_EXCEPTIONS, path)) {
       problems.push(
-        `${path}: scrie linia «sep=» de mână; o pune doar funcția comună din import-csv.ts`,
+        `${path}: scrie linia «sep=»; aplicația nu o mai scrie (face Excel să ignore BOM-ul), iar importul o citește doar în import-file.ts`,
       );
     }
     if (/Content-Disposition/i.test(content) && CSV_FILE_NAME.test(content)) {
@@ -101,13 +103,20 @@ function loadSource(): SourceFile[] {
 describe("CSV-urile generate trec prin funcția comună (sursa reală)", () => {
   const files = loadSource();
 
-  it("scanează codul real (nu trece în gol) și funcția comună pune BOM și «sep=;»", () => {
+  it("scanează codul real (nu trece în gol) și funcția comună scrie UTF-16LE cu BOM și TAB, fără «sep=»", () => {
     expect(files.length).toBeGreaterThan(100);
     const common = files.find((f) => f.path === COMMON);
     expect(common).toBeDefined();
     const content = common?.content ?? "";
-    expect(content).toMatch(/0xfeff/i);
-    expect(content).toMatch(/sep=\$\{DELIMITER\}/);
+    // fără comentarii: textul explicativ poate pomeni «sep=», codul nu
+    const code = content.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/0xfeff/i);
+    expect(code).toMatch(/const DELIMITER = "\\t"/);
+    expect(code).toMatch(/setUint16\(.*,\s*true\)/);
+    expect(code).toMatch(/charset=utf-16le/);
+    expect(code).not.toMatch(/sep=/i);
+    expect(code).not.toMatch(/TextEncoder/);
+    expect(code).not.toMatch(/charset=utf-8/i);
     expect(content).toMatch(/export function toCsv/);
     expect(content).toMatch(/export function csvResponse/);
     // excepțiile există (altfel lista s-ar învechi în tăcere)

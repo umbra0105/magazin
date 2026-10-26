@@ -117,11 +117,11 @@ const bytesOf = async (response: Response): Promise<Uint8Array> =>
   new Uint8Array(await response.arrayBuffer());
 
 describe("POST /api/admin/product-exports", () => {
-  it("CSV: BOM + «sep=;» + antet + rânduri, în flux, cu formulele neutralizate și fără cache", async () => {
+  it("CSV: BOM UTF-16LE + antet + rânduri cu TAB, în flux, cu formulele neutralizate și fără cache", async () => {
     const { deps, prepareCalls } = setup({ subject: manager });
     const response = await handleProductExport(request({ format: "csv", scope: "all" }), deps);
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe("text/csv; charset=utf-8");
+    expect(response.headers.get("content-type")).toBe("text/csv; charset=utf-16le");
     expect(response.headers.get("content-disposition")).toBe(
       'attachment; filename="export-test.csv"',
     );
@@ -130,18 +130,17 @@ describe("POST /api/admin/product-exports", () => {
     expect(prepareCalls).toEqual([{ format: "csv", scope: "all" }]);
 
     const bytes = await bytesOf(response);
-    // octeții, nu textul: `Response.text()` scoate BOM-ul
-    expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    // TextDecoder scoate singur BOM-ul
-    const body = new TextDecoder().decode(bytes);
+    // octeții, nu textul: BOM UTF-16LE (FF FE) chiar la începutul fluxului, fără linia «sep=»
+    expect([...bytes.slice(0, 2)]).toEqual([0xff, 0xfe]);
+    const body = new TextDecoder("utf-16le", { ignoreBOM: true }).decode(bytes);
     expect(body).toBe(
-      [
-        "sep=;",
-        "SKU;Titlu;Subtitlu",
-        "SKU-1;'=HYPERLINK(x);'-5°C",
-        'SKU-2;"Pompă; cu „ghilimele”";',
-        "",
-      ].join(String.fromCharCode(13, 10)),
+      String.fromCharCode(0xfeff) +
+        [
+          "SKU\tTitlu\tSubtitlu",
+          "SKU-1\t'=HYPERLINK(x)\t'-5°C",
+          "SKU-2\tPompă; cu „ghilimele”\t",
+          "",
+        ].join(String.fromCharCode(13, 10)),
     );
   });
 

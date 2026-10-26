@@ -9,6 +9,7 @@ import { AuditService } from "../../audit/audit-service";
 import { createPrismaAuditStore } from "../../audit/prisma-store";
 import { PermissionService } from "../../rbac/permission-service";
 import { runBaseSeed } from "../../seed/base-seed";
+import { decodeUtf16le } from "../../../test/utf-16le";
 import { inRolledBackTransaction, type TestTx } from "../../test-utils/rollback";
 import { toCsv } from "../import/import-csv";
 import { IMPORT_FIELD_KEYS, isCostLikeHeader } from "../import/import-fields";
@@ -249,7 +250,7 @@ async function drain(prepared: PreparedExport) {
 }
 
 const csvBytes = (prepared: PreparedExport, rows: string[][]): Uint8Array =>
-  new TextEncoder().encode(toCsv([prepared.headers, ...rows]));
+  toCsv([prepared.headers, ...rows]);
 
 describe("exportul de produse pe baza reală", () => {
   it("implicit exclude coșul de gunoi; câte un rând pe variantă; antetele sunt cele ale importului", async () => {
@@ -427,7 +428,7 @@ describe("exportul de produse pe baza reală", () => {
         includeTrash: true,
       });
       const rows = await drain(csv);
-      const text = toCsv([csv.headers, ...rows]);
+      const text = decodeUtf16le(toCsv([csv.headers, ...rows]));
       for (const form of COST_FORMS) expect(text, form).not.toContain(form);
       expect(csv.headers.some((h) => isCostLikeHeader(h))).toBe(false);
 
@@ -498,8 +499,10 @@ describe("exportul de produse pe baza reală", () => {
       const analysis = await importer.register(manager, file);
       expect(analysis).toMatchObject({
         format: "csv",
-        delimiter: ";",
-        delimiterSource: "sep-line",
+        // UTF-16LE cu BOM și TAB, fără linia «sep=»: delimitatorul se detectează din antet
+        delimiter: "\t",
+        delimiterSource: "detected",
+        encoding: "utf-16le",
       });
       // maparea propusă: toate câmpurile importului, apoi cele două coloane doar pentru citire, ignorate
       expect(analysis.columns.map((c) => c.field)).toEqual([...IMPORT_FIELD_KEYS, null, null]);
@@ -699,7 +702,7 @@ describe("exportul de produse pe baza reală", () => {
         if (format === "csv") {
           const rows = await drain(prepared);
           bytes = csvBytes(prepared, rows);
-          const text = new TextDecoder().decode(bytes);
+          const text = decodeUtf16le(bytes);
           // în fișier textele periculoase au apostrof în față (nu încep cu = + - @)
           expect(text).toContain(`'=HYPERLINK`);
           expect(text).toContain(`'-5°C`);

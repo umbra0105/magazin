@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { decodeUtf16le } from "../packages/core/test/utf-16le";
 import { encodeWindows1250 } from "../packages/core/test/windows-1250";
 import {
   e2eXlsx,
@@ -124,11 +125,12 @@ test.describe("import de produse", () => {
     const template = await page.request.get("/api/admin/product-imports/template?format=csv");
     expect(template.status()).toBe(200);
     expect(template.headers()["content-disposition"]).toContain("sablon-import-produse.csv");
-    // șablonul CSV începe cu BOM UTF-8 și cu linia «sep=;»: Excel îl deschide cu coloanele separate
+    // șablonul CSV începe cu BOM UTF-16LE (FF FE), apoi antetul cu TAB, fără «sep=»: Excel îl deschide cu
+    // diacriticele corecte ȘI coloanele separate
     const templateBytes = new Uint8Array(await template.body());
-    expect([...templateBytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    expect(new TextDecoder().decode(templateBytes.subarray(3, 9))).toBe(
-      "sep=;" + String.fromCharCode(13),
+    expect([...templateBytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+    expect(decodeUtf16le(templateBytes).slice(0, 11)).toBe(
+      String.fromCharCode(0xfeff) + "SKU\tTitlu\t",
     );
     // XLSX-ul apare primul și recomandat, CSV-ul al doilea, cu instrucțiunea pentru Excel
     await expect(page.locator("[data-template]").first()).toHaveAttribute("data-template", "xlsx");
@@ -188,22 +190,20 @@ test.describe("import de produse", () => {
     const report = await page.request.get(`/api/admin/product-imports/${importId}/report`);
     expect(report.status()).toBe(200);
     expect(report.headers()["content-disposition"]).toContain("attachment");
-    // octeții raportului: BOM UTF-8, apoi «sep=;», apoi antetul (Excel separă coloanele la dublu-click)
+    // octeții raportului: BOM UTF-16LE (FF FE), apoi direct antetul cu TAB (Excel: diacritice corecte și coloane separate)
     const reportBytes = new Uint8Array(await report.body());
-    expect([...reportBytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    const reportText = new TextDecoder().decode(reportBytes.subarray(3));
-    expect(
-      reportText.startsWith("sep=;" + String.fromCharCode(13, 10) + "Rând;SKU;Rezultat;Motiv"),
-    ).toBe(true);
+    expect([...reportBytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+    const reportText = decodeUtf16le(reportBytes).slice(1);
+    expect(reportText.startsWith("Rând\tSKU\tRezultat\tMotiv")).toBe(true);
     expect(report.headers()["content-type"]).toContain("text/csv");
     // textele cu virgulă (ex. «Ciornă, Activ sau Arhivat») rămân într-o singură celulă, nu se sparg pe virgulă
     expect(reportText).toContain("valoare invalidă „abc”");
     const badLine =
-      reportText.split(String.fromCharCode(13, 10)).find((l) => l.includes("-BAD;")) ?? "";
-    const cells = badLine.split(";");
-    expect(cells).toHaveLength(5); // Rând;SKU;Rezultat;Motiv;Câmpuri: virgulele din motiv nu adaugă coloane
+      reportText.split(String.fromCharCode(13, 10)).find((l) => l.includes("-BAD\t")) ?? "";
+    const cells = badLine.split("\t");
+    expect(cells).toHaveLength(5); // Rând, SKU, Rezultat, Motiv, Câmpuri: virgulele din motiv nu adaugă coloane
     expect(cells[3]).toContain("cu virgulă sau punct");
-    expect(reportText).toContain(`${sku("BAD")};eroare;`);
+    expect(reportText).toContain(`${sku("BAD")}\teroare\t`);
     expect(reportText).not.toContain("9999");
 
     // aplicarea, cu confirmare
@@ -307,15 +307,15 @@ test.describe("import de produse", () => {
     });
     await page.getByRole("button", { name: "Import nou" }).click();
 
-    // șablonul CSV al aplicației, încărcat înapoi: delimitatorul vine din linia «sep=», fără avertismente
+    // șablonul CSV al aplicației (UTF-16LE, TAB), încărcat înapoi: delimitatorul se detectează, fără avertismente
     const template = await page.request.get("/api/admin/product-imports/template?format=csv");
     await upload(page, {
       name: `e2e-${tag}-sablon.csv`,
       buffer: Buffer.from(await template.body()),
     });
     await expect(page.getByRole("heading", { name: "Mapează coloanele" })).toBeVisible();
-    await expect(page.getByLabel("Delimitator")).toHaveValue(";");
-    await expect(page.getByText("Indicat de fișier (linia «sep=»)")).toBeVisible();
+    await expect(page.getByLabel("Delimitator")).toHaveValue("\t");
+    await expect(page.getByText("Detectat din primul rând al fișierului.")).toBeVisible();
     await expect(page.getByText("l-am citit ca Windows-1250")).toHaveCount(0);
     await expect(page.getByLabel("Importă în câmpul: SKU")).toHaveValue("sku");
     await expect(page.getByRole("columnheader", { name: "Coloană din fișier" })).toBeVisible();

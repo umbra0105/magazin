@@ -6,7 +6,8 @@ import { XlsxShapeError, assertWorkbookShape } from "./xlsx-bounds";
 /**
  * Citirea fișierelor de import (CSV și XLSX) într-un tabel de texte, cu limite stricte:
  *  - **CSV:** parser propriu (RFC 4180: ghilimele, ghilimele duble, linii noi în celule, CRLF/LF/CR),
- *    UTF-8 cu sau fără BOM (rezervă: Windows-1250, cu avertisment), delimitator `,` `;` sau tab.
+ *    UTF-16LE cu BOM (formatul scris de aplicație și «Unicode Text» din Excel), UTF-8 cu sau fără BOM (rezervă:
+ *    Windows-1250, cu avertisment), delimitator `,` `;` sau tab.
  *  - **XLSX:** doar prima foaie, fără macro-uri, fără evaluarea formulelor (se citește valoarea din
  *    cache, ca în Excel). Arhiva se verifică ÎNAINTE de bibliotecă: pachetul de citire nu limitează
  *    dimensiunea decomprimată, deci `sanitizeXlsx` păstrează doar intrările necesare, cu plafon pe
@@ -45,7 +46,7 @@ export interface ParsedTable {
   delimiter: CsvDelimiter | null;
   /** De unde vine delimitatorul CSV: linia «sep=», ales explicit sau detectat din antet. */
   delimiterSource: "sep-line" | "chosen" | "detected" | null;
-  encoding: "utf-8" | "windows-1250" | null;
+  encoding: "utf-16le" | "utf-8" | "windows-1250" | null;
   headers: string[];
   /** Rândurile de date, fără cele complet goale; fiecare are exact `headers.length` celule. */
   rows: string[][];
@@ -57,6 +58,9 @@ export interface ParsedTable {
 const fail = (code: string, message: string, details?: Record<string, unknown>): never => {
   throw new ImportFileError(code, message, details);
 };
+
+/** UTF-16 little-endian cu BOM (FF FE): formatul pe care îl scrie aplicația și pe care îl salvează Excel ca «Unicode Text». */
+const isUtf16le = (bytes: Uint8Array): boolean => bytes[0] === 0xff && bytes[1] === 0xfe;
 
 /** Formatul real, din octeți (extensia nu contează). */
 export function detectFormat(bytes: Uint8Array): ImportFormat {
@@ -72,10 +76,15 @@ export function detectFormat(bytes: Uint8Array): ImportFormat {
       "Formatul Excel vechi (.xls) nu e acceptat. Salvează fișierul ca .xlsx sau .csv.",
     );
   }
-  // UTF-16 (cu BOM): nu e acceptat
-  if ((bytes[0] === 0xff && bytes[1] === 0xfe) || (bytes[0] === 0xfe && bytes[1] === 0xff)) {
-    return fail("IMPORT_FILE_UNSUPPORTED", "Fișierul e codat UTF-16. Salvează-l ca „CSV UTF-8”.");
+  // UTF-16 big-endian (FE FF): nu e acceptat (Excel scrie little-endian)
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return fail(
+      "IMPORT_FILE_UNSUPPORTED",
+      "Fișierul e codat UTF-16 big-endian, care nu e acceptat. Salvează-l ca „CSV UTF-8” sau „Unicode Text”.",
+    );
   }
+  // UTF-16LE cu BOM (FF FE): un CSV, chiar dacă literele ASCII au octeți nuli
+  if (isUtf16le(bytes)) return "csv";
   const head = bytes.subarray(0, Math.min(bytes.length, 8192));
   if (head.includes(0)) {
     return fail("IMPORT_FILE_UNSUPPORTED", "Fișierul nu e un CSV sau un XLSX valid.");
@@ -98,11 +107,27 @@ const CEDILLA_TO_COMMA: Readonly<Record<number, string>> = {
 const fixCedillas = (text: string): string =>
   text.replace(/[ŞşŢţ]/g, (char) => CEDILLA_TO_COMMA[char.charCodeAt(0)] ?? char);
 
-/** Text din octeți: UTF-8 strict (BOM scos); dacă nu e valid, Windows-1250. */
+/**
+ * Text din octeți: UTF-16LE dacă începe cu FF FE (BOM scos; octeți impari sau surogate singure = fișier deteriorat,
+ * refuzat); altfel UTF-8 strict (BOM scos); dacă nu e valid, Windows-1250.
+ */
 export function decodeCsvText(bytes: Uint8Array): {
   text: string;
-  encoding: "utf-8" | "windows-1250";
+  encoding: "utf-16le" | "utf-8" | "windows-1250";
 } {
+  if (isUtf16le(bytes)) {
+    try {
+      return {
+        text: new TextDecoder("utf-16le", { fatal: true }).decode(bytes),
+        encoding: "utf-16le",
+      };
+    } catch {
+      return fail(
+        "IMPORT_FILE_UNSUPPORTED",
+        "Fișierul UTF-16 pare deteriorat (număr impar de octeți sau caractere invalide). Salvează-l din nou ca „CSV UTF-8” sau „Unicode Text”.",
+      );
+    }
+  }
   try {
     return { text: new TextDecoder("utf-8", { fatal: true }).decode(bytes), encoding: "utf-8" };
   } catch {

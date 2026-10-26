@@ -9,6 +9,7 @@ import { createLogger } from "@ecom/shared";
 import { AuditService } from "../../audit/audit-service";
 import { createPrismaAuditStore } from "../../audit/prisma-store";
 import { PermissionService } from "../../rbac/permission-service";
+import { decodeUtf16le } from "../../../test/utf-16le";
 import { runBaseSeed } from "../../seed/base-seed";
 import { settingGroups } from "../../settings/registry";
 import { inRolledBackTransaction, type TestTx } from "../../test-utils/rollback";
@@ -657,12 +658,16 @@ describe("import pe baza reală", () => {
       );
       await service.validate(manager, { importId: analysis.importId, columns: MAP });
       const { rows, fileName } = await service.reportRows(manager, analysis.importId);
-      const text = toCsv(rows);
+      const bytes = toCsv(rows);
+      const text = decodeUtf16le(bytes);
       expect(fileName).toBe("raport-import-produse.csv");
-      expect(text.startsWith(String.fromCharCode(0xfeff) + "sep=;\r\nRând;SKU;")).toBe(true);
-      expect(text).toContain("Rând;SKU;Rezultat;Motiv");
-      expect(text).toContain(`BAD-${tag};eroare;`);
-      expect(text).toContain(`AR-${tag};ignorat;`);
+      // BOM UTF-16LE (FF FE), apoi antetul cu TAB; nicio linie «sep=»
+      expect([...bytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+      expect(text.startsWith(String.fromCharCode(0xfeff) + "Rând\tSKU\t")).toBe(true);
+      expect(text).not.toContain("sep=");
+      expect(text).toContain("Rând\tSKU\tRezultat\tMotiv");
+      expect(text).toContain(`BAD-${tag}\teroare\t`);
+      expect(text).toContain(`AR-${tag}\tignorat\t`);
     });
   });
 

@@ -48,10 +48,10 @@ export function instructionRows(): string[][] {
   ];
 }
 
-/** Șablonul ca octeți (CSV cu BOM UTF-8 și `;`, ca Excel-ul în limba română; sau XLSX). */
+/** Șablonul ca octeți (CSV UTF-16LE cu BOM și TAB, pentru Excel; sau XLSX). */
 export async function buildTemplate(format: ImportFormat): Promise<Uint8Array> {
   if (format === "csv") {
-    return new TextEncoder().encode(toCsv(templateRows()));
+    return toCsv(templateRows());
   }
   const text = (value: string, bold = false) => ({
     value,

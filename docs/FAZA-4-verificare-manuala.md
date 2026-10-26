@@ -424,7 +424,7 @@ exportă niciodată**.
 11.2 **CSV.** Alege „Tot catalogul” și „CSV (pentru Excel)”, „Exportă”. **Vezi:** „Exportul a fost descărcat:
 export-produse-AAAA-LL-ZZ.csv”. Deschide fișierul **cu dublu-click în Excel**. **Vezi:** coloanele **separate** (SKU, Titlu,
 Preț…), nu lipite într-o singură coloană; diacriticele corecte (de exemplu „Mărime”, „Pompă”, nu semne ciudate precum „PompÄƒ”);
-prima linie `sep=;` nu se vede în Excel. **Dacă nu:** dacă coloanele sunt lipite sau diacriticele sunt stricate, e o problemă
+nu există nicio linie `sep=` (fișierul e UTF-16LE cu BOM și TAB). **Dacă nu:** dacă coloanele sunt lipite sau diacriticele sunt stricate, e o problemă
 (notează versiunea de Excel).
 **Verifică că NU există** nicio coloană de „Preț de achiziție” / „cost”.
 

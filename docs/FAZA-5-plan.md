@@ -169,7 +169,7 @@ Reguli care **nu se schimbă**: prețurile sunt brute (cu TVA), în bani; TVA-ul
   într-un al doilea import generic **pe SKU de variantă** (sau în admin). *Alternativă:* mapare opțională „atributul X devine pas” în profilul WooCommerce — o lăsăm pentru mai târziu, ca să nu complicăm importul.
 - Importul generic primește coloane noi: **„Unitate de măsură”**, **„Baza prețului”** (unitate / pas), **„Pas de vânzare”**, **„Minim (pași)”**, **„SmartBill: stocul e ținut în”** (+ numele unității). Un rând = un SKU (variantă): se actualizează variante existente
   după SKU; un SKU nou creează un produs nou cu o singură variantă (regula actuală). Crearea unui produs cu 4 variante rămâne pe profilul WooCommerce sau pe generatorul din admin.
-- **Zecimale:** virgula zecimală românească (`2,03`) și punctul (`2.03`) se acceptă; celulele ambigue (`1.234`) se refuză cu explicație; **CSV doar prin funcția comună** (BOM + `sep=;`, antet în română, deschis cu dublu-click în Excel cu coloanele separate).
+- **Zecimale:** virgula zecimală românească (`2,03`) și punctul (`2.03`) se acceptă; celulele ambigue (`1.234`) se refuză cu explicație; **CSV doar prin funcția comună** (UTF-16LE cu BOM + TAB, fără `sep=`, antet în română, deschis cu dublu-click în Excel cu coloanele separate ȘI diacriticele corecte).
   **Excel poate transforma `2.03` în dată** — în șablon și export, valorile se scriu cu **virgulă**, iar **XLSX** (celule text pentru coduri, numere pentru cantități) rămâne formatul recomandat.
 
 ### D11.8 Cantitate minimă

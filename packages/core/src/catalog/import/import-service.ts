@@ -141,7 +141,7 @@ export interface ImportAnalysis {
   delimiter: CsvDelimiter | null;
   /** De unde vine delimitatorul: linia «sep=» a fișierului, alegerea ta sau detectarea. */
   delimiterSource: "sep-line" | "chosen" | "detected" | null;
-  encoding: "utf-8" | "windows-1250" | null;
+  encoding: "utf-16le" | "utf-8" | "windows-1250" | null;
   headers: string[];
   /** Primele rânduri de date, cu celulele scurtate, pentru previzualizare. */
   sample: string[][];

@@ -167,7 +167,7 @@ export async function handleProductImportTemplate(
   const requested = new URL(request.url).searchParams.get("format");
   if (requested !== "csv" && requested !== "xlsx") return json({ code: "VALIDATION_ERROR" }, 400);
   const format: ImportFormat = requested;
-  // CSV-ul trece prin funcția comună (BOM + «sep=;»); XLSX-ul are propriul generator
+  // CSV-ul trece prin funcția comună (UTF-16LE cu BOM, TAB); XLSX-ul are propriul generator
   if (format === "csv") return csvResponse(templateRows(), TEMPLATE_FILE_NAMES.csv);
   const bytes = await buildTemplate(format);
   return new Response(Buffer.from(bytes), {

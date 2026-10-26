@@ -237,11 +237,12 @@ describe("șablon și raport", () => {
     );
     expect(csv.headers.get("x-content-type-options")).toBe("nosniff");
     const csvBytes = new Uint8Array(await csv.arrayBuffer());
-    // BOM UTF-8 (EF BB BF), apoi antetul
-    expect([...csvBytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    expect(new TextDecoder().decode(csvBytes.subarray(3, 21))).toBe(
-      "sep=;" + String.fromCharCode(13, 10) + "SKU;Titlu;S",
+    // BOM UTF-16LE (FF FE), apoi antetul cu TAB, fără linia «sep=»
+    expect([...csvBytes.subarray(0, 2)]).toEqual([0xff, 0xfe]);
+    expect(new TextDecoder("utf-16le", { ignoreBOM: true }).decode(csvBytes.subarray(0, 24))).toBe(
+      String.fromCharCode(0xfeff) + "SKU\tTitlu\tS",
     );
+    expect(csv.headers.get("content-type")).toBe("text/csv; charset=utf-16le");
 
     const xlsx = await handleProductImportTemplate(templateRequest("xlsx"), {
       getSubject: getSubject(manager),

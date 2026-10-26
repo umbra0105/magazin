@@ -1,8 +1,9 @@
 import { strToU8, unzipSync, zipSync } from "fflate";
 import writeExcelFile from "write-excel-file/node";
 import { describe, expect, it } from "vitest";
+import { decodeUtf16le, encodeUtf16le, head } from "../../../test/utf-16le";
 import { encodeWindows1250 } from "../../../test/windows-1250";
-import { CSV_MIME, csvResponse, toCsv } from "./import-csv";
+import { CSV_MIME, csvResponse, csvStreamResponse, toCsv } from "./import-csv";
 import { IMPORT_FIELDS, suggestMapping } from "./import-fields";
 import { buildTemplate } from "./import-template";
 import {
@@ -70,7 +71,10 @@ describe("detectDelimiter și detectFormat", () => {
     expect(detectFormat(bytes("a,b\n1,2"))).toBe("csv");
     expect(detectFormat(new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0]))).toBe("xlsx");
     expect(() => detectFormat(new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 1]))).toThrowError(/\.xls/);
-    expect(() => detectFormat(new Uint8Array([0xff, 0xfe, 0x61, 0]))).toThrowError(/UTF-16/);
+    // UTF-16LE cu BOM (FF FE) e un CSV: octeții nuli ai literelor ASCII nu-l fac „binar”
+    expect(detectFormat(new Uint8Array([0xff, 0xfe, 0x61, 0]))).toBe("csv");
+    // big-endian (FE FF) nu se acceptă, cu mesaj clar
+    expect(() => detectFormat(new Uint8Array([0xfe, 0xff, 0, 0x61]))).toThrowError(/UTF-16/);
     expect(() => detectFormat(new Uint8Array([0x61, 0x00, 0x62]))).toThrowError(/nu e un CSV/);
     expect(() => detectFormat(new Uint8Array())).toThrowError(/gol/);
   });
@@ -275,22 +279,22 @@ describe("protecție împotriva arhivelor-bombă", () => {
 });
 
 describe("linia «sep=» (convenția Excel)", () => {
-  it("șablonul CSV generat de aplicație se importă fără avertismente; «sep=» nu devine antet", async () => {
+  it("șablonul CSV generat de aplicație (UTF-16LE, TAB, fără «sep=») se importă fără avertismente", async () => {
     const template = await buildTemplate("csv");
-    // BOM UTF-8, apoi linia sep=
-    expect([...template.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    expect(new TextDecoder().decode(template.subarray(3, 12))).toBe("sep=;\r\nSK");
+    // BOM UTF-16LE (FF FE), apoi antetul direct: nicio linie sep=
+    expect(head(template, 2)).toEqual([0xff, 0xfe]);
+    expect(decodeUtf16le(template).slice(0, 9)).toBe(`${String.fromCharCode(0xfeff)}SKU\tTitl`);
     const table = await parseImportFile(template, limits);
     expect(table).toMatchObject({
-      delimiter: ";",
-      delimiterSource: "sep-line",
-      encoding: "utf-8",
+      delimiter: "\t",
+      delimiterSource: "detected",
+      encoding: "utf-16le",
       warnings: [],
     });
     expect(table.headers).toEqual(IMPORT_FIELDS.map((f) => f.label));
     expect(table.headers[0]).toBe("SKU");
     expect(table.rows).toHaveLength(2);
-    // antetul rămâne rândul 1 (Excel nu afișează linia sep=)
+    // antetul e rândul 1, primul rând de date e 2
     expect(table.rowNumbers).toEqual([2, 3]);
     expect(suggestMapping(table.headers).map((c) => c.field)).toEqual(
       IMPORT_FIELDS.map((f) => f.key),
@@ -395,37 +399,182 @@ describe("CSV salvat din Excel pe un calculator cu separatorul «,» (Windows-12
   });
 });
 
-describe("toCsv", () => {
+describe("toCsv (UTF-16LE cu BOM și TAB, pentru Excel)", () => {
   const bom = String.fromCharCode(0xfeff);
-  const prefix = `${bom}sep=;\r\n`;
+  const text = (rows: readonly (readonly string[])[]): string => decodeUtf16le(toCsv(rows));
 
-  it("începe ÎNTOTDEAUNA cu BOM UTF-8 și linia «sep=;», apoi antetul (Excel deschide corect fișierul)", () => {
-    expect(toCsv([["a", "b"]])).toBe(`${prefix}a;b\r\n`);
-    expect(toCsv([["Rând", "SKU"]]).startsWith(prefix + "Rând;SKU")).toBe(true);
+  it("începe ÎNTOTDEAUNA cu BOM UTF-16LE (FF FE), apoi antetul, FĂRĂ linia «sep=» (o linie sep= face Excel să ignore BOM-ul)", () => {
+    const bytes = toCsv([["a", "b"]]);
+    expect(head(bytes, 2)).toEqual([0xff, 0xfe]);
+    // BOM + «a TAB b CRLF», fiecare caracter pe 2 octeți
+    expect(bytes.length).toBe(2 * (1 + "a\tb\r\n".length));
+    expect(text([["a", "b"]])).toBe(bom + "a\tb\r\n");
+    expect(text([["Rând", "SKU"]]).startsWith(bom + "Rând\tSKU")).toBe(true);
   });
 
-  it("pune ghilimele unde trebuie și neutralizează celulele care ar fi formule", () => {
-    const text = toCsv([
-      ["a", 'b"c', "d;e", "f\ng"],
-      ["=SUM(A1)", "+1", "-1", "@x"],
+  it("diacriticele sunt unități UTF-16LE întregi (ă = 03 01, ț = 1B 02), nu octeți UTF-8 citiți greșit", () => {
+    expect([...toCsv([["ăț"]]).subarray(2)]).toEqual([
+      0x03, 0x01, 0x1b, 0x02, 0x0d, 0x00, 0x0a, 0x00,
     ]);
-    expect(text).toBe(`${prefix}a;"b""c";"d;e";"f\ng"\r\n'=SUM(A1);'+1;'-1;'@x\r\n`);
   });
 
-  it("virgula dintr-un text nu rupe coloana (delimitatorul e «;»), iar textul nu primește ghilimele degeaba", () => {
-    const text = toCsv([["Stare", "valoare necunoscută (Ciornă, Activ sau Arhivat)"]]);
-    expect(text).toBe(`${prefix}Stare;valoare necunoscută (Ciornă, Activ sau Arhivat)\r\n`);
+  it("pune ghilimele unde trebuie (TAB, ghilimele, linii noi) și neutralizează celulele care ar fi formule", () => {
+    expect(
+      text([
+        ["a", 'b"c', "d\te", "f\ng"],
+        ["=SUM(A1)", "+1", "-1", "@x"],
+      ]),
+    ).toBe(bom + 'a\t"b""c"\t"d\te"\t"f\ng"\r\n\'=SUM(A1)\t\'+1\t\'-1\t\'@x\r\n');
   });
 
-  it("csvResponse: aceleași reguli, ca atașament, fără cache", async () => {
+  it("punctul și virgula dintr-un text nu rup coloana (delimitatorul e TAB) și nu primesc ghilimele degeaba", () => {
+    expect(text([["Stare", "valoare necunoscută (Ciornă, Activ; Arhivat)"]])).toBe(
+      bom + "Stare\tvaloare necunoscută (Ciornă, Activ; Arhivat)\r\n",
+    );
+  });
+
+  it("csvResponse: aceiași octeți, ca atașament, fără cache, cu tipul de conținut UTF-16LE", async () => {
     const response = csvResponse([["a", "b"]], "fisier.csv");
-    // text() scoate BOM-ul la decodare: se verifică octeții
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    expect(new TextDecoder().decode(bytes.subarray(3))).toBe(`sep=;\r\na;b\r\n`);
+    const body = new Uint8Array(await response.arrayBuffer());
+    expect(head(body, 2)).toEqual([0xff, 0xfe]);
+    expect(body).toEqual(toCsv([["a", "b"]]));
+    expect(decodeUtf16le(body)).toBe(bom + "a\tb\r\n");
+    expect(CSV_MIME).toBe("text/csv; charset=utf-16le");
     expect(response.headers.get("content-type")).toBe(CSV_MIME);
     expect(response.headers.get("content-disposition")).toBe('attachment; filename="fisier.csv"');
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+
+  it("csvStreamResponse: în flux, aceiași octeți ca toCsv (BOM o singură dată, caractere din afara BMP întregi)", async () => {
+    async function* source(
+      rows: readonly (readonly string[])[],
+    ): AsyncGenerator<readonly string[]> {
+      for (const row of rows) yield row;
+    }
+    const rows = [
+      ["Adresă", "Preț"],
+      ["a-1", "Șurub\tcu tab"],
+      ["😀", 'x"y'],
+    ];
+    const response = csvStreamResponse(source(rows), "flux.csv");
+    const body = new Uint8Array(await response.arrayBuffer());
+    expect(head(body, 2)).toEqual([0xff, 0xfe]);
+    expect(body).toEqual(toCsv(rows));
+    expect(decodeUtf16le(body).split(bom)).toHaveLength(2);
+    expect(response.headers.get("content-type")).toBe(CSV_MIME);
+    expect(response.headers.get("content-disposition")).toBe('attachment; filename="flux.csv"');
+    // fără niciun rând, fișierul tot începe cu BOM
+    const empty = new Uint8Array(await csvStreamResponse(source([]), "gol.csv").arrayBuffer());
+    expect([...empty]).toEqual([0xff, 0xfe]);
+  });
+});
+
+describe("parseImportFile: UTF-16LE, UTF-8 și Windows-1250, cu delimitator ; , sau TAB", () => {
+  const table = [
+    ["Adresă (slug)", "Preț (lei)", "Titlu"],
+    ["a-1", "19,99", 'Pompă "mare"'],
+    ["a-2", "5", "linia 1\nlinia 2"],
+  ];
+  const csvOf = (delimiter: string, rows: readonly (readonly string[])[] = table): string =>
+    rows
+      .map((row) =>
+        row
+          .map((cell) => (/[";,\n\t]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell))
+          .join(delimiter),
+      )
+      .join("\r\n") + "\r\n";
+  // Windows-1250 are doar ş/ţ cu sedilă; importul le normalizează la forma corectă (ș/ț cu virgulă)
+  const legacy = (text: string): string => text.replace(/ț/g, "ţ").replace(/Ș/g, "Ş");
+
+  const encodings: ReadonlyArray<
+    [string, (text: string) => Uint8Array, "utf-16le" | "utf-8" | "windows-1250"]
+  > = [
+    ["UTF-16LE cu BOM", (text) => encodeUtf16le(text), "utf-16le"],
+    ["UTF-8 cu BOM", (text) => bytes(String.fromCharCode(0xfeff) + text), "utf-8"],
+    ["UTF-8 fără BOM", (text) => bytes(text), "utf-8"],
+    ["Windows-1250", (text) => encodeWindows1250(legacy(text)), "windows-1250"],
+  ];
+
+  for (const [name, encode, encoding] of encodings) {
+    for (const [label, delimiter] of [
+      ["punct și virgulă", ";"],
+      ["virgulă", ","],
+      ["TAB", "\t"],
+    ] as const) {
+      it(name + ", delimitator " + label + ": aceleași valori, delimitator detectat", async () => {
+        const parsed = await parseImportFile(encode(csvOf(delimiter)), limits);
+        expect(parsed.headers).toEqual(table[0]);
+        expect(parsed.rows).toEqual(table.slice(1));
+        expect(parsed.delimiter).toBe(delimiter);
+        expect(parsed.delimiterSource).toBe("detected");
+        expect(parsed.encoding).toBe(encoding);
+        expect(parsed.warnings).toHaveLength(encoding === "windows-1250" ? 1 : 0);
+      });
+    }
+  }
+
+  it("un fișier exportat de aplicație (toCsv) se reimportă neschimbat: diacritice, ghilimele, TAB și linii noi în celule, emoji", async () => {
+    const rows = [
+      ["SKU", "Titlu", "Descriere"],
+      ["A1", 'Șurub "M8"', "linia 1\nlinia 2\tcu tab"],
+      ["A2", "😀 ținută", "; , '"],
+      ["A3", "", "doar descriere"],
+    ];
+    const parsed = await parseImportFile(toCsv(rows), limits);
+    expect(parsed.encoding).toBe("utf-16le");
+    expect(parsed.delimiter).toBe("\t");
+    expect(parsed.headers).toEqual(rows[0]);
+    expect(parsed.rows).toEqual(rows.slice(1));
+    expect(parsed.rowNumbers).toEqual([2, 3, 4]);
+    expect(parsed.warnings).toEqual([]);
+  });
+
+  it("un fișier «Unicode Text» salvat de Excel (UTF-16LE, BOM, TAB, CRLF) se importă", async () => {
+    const parsed = await parseImportFile(
+      encodeUtf16le("SKU\tTitlu\r\nA1\tPompă\r\nA2\tȘurub\r\n"),
+      limits,
+    );
+    expect(parsed.headers).toEqual(["SKU", "Titlu"]);
+    expect(parsed.rows).toEqual([
+      ["A1", "Pompă"],
+      ["A2", "Șurub"],
+    ]);
+  });
+
+  it("linia «sep=» a unui fișier străin merge și în UTF-16LE (citită după decodare)", async () => {
+    const parsed = await parseImportFile(encodeUtf16le("sep=;\r\nSKU;Titlu\r\nA1;b\r\n"), limits);
+    expect(parsed).toMatchObject({
+      delimiter: ";",
+      delimiterSource: "sep-line",
+      encoding: "utf-16le",
+    });
+    expect(parsed.headers).toEqual(["SKU", "Titlu"]);
+  });
+
+  it("UTF-16 big-endian (BOM FE FF) se refuză cu mesaj clar; UTF-16LE deteriorat la fel", async () => {
+    const be = new Uint8Array([0xfe, 0xff, 0x00, 0x53, 0x00, 0x4b, 0x00, 0x55]);
+    await expect(parseImportFile(be, limits)).rejects.toMatchObject({
+      code: "IMPORT_FILE_UNSUPPORTED",
+      message: expect.stringMatching(/UTF-16/),
+    });
+    // număr impar de octeți: fișier trunchiat
+    const odd = new Uint8Array([0xff, 0xfe, 0x53, 0x00, 0x4b]);
+    await expect(parseImportFile(odd, limits)).rejects.toMatchObject({
+      code: "IMPORT_FILE_UNSUPPORTED",
+      message: expect.stringMatching(/UTF-16/),
+    });
+    // surogat singur, invalid
+    const lone = new Uint8Array([0xff, 0xfe, 0x00, 0xd8, 0x41, 0x00]);
+    await expect(parseImportFile(lone, limits)).rejects.toMatchObject({
+      code: "IMPORT_FILE_UNSUPPORTED",
+    });
+  });
+
+  it("UTF-16LE: aceleași limite ca la UTF-8 (rânduri)", async () => {
+    const rows = [["SKU", "Titlu"], ...Array.from({ length: 10 }, (_, i) => ["S" + i, "t"])];
+    await expect(
+      parseImportFile(encodeUtf16le(csvOf("\t", rows)), { ...limits, maxRows: 5 }),
+    ).rejects.toMatchObject({ code: "IMPORT_FILE_TOO_MANY_ROWS" });
   });
 });
