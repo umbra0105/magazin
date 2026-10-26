@@ -41,7 +41,7 @@ export function mirrorDecision(
   safetyWindowMinutes: number,
 ): MirrorDecision {
   assertWindow(safetyWindowMinutes);
-  const photo = time(snapshotAt, "Ora pozei");
+  const photo = time(snapshotAt, "Ora actualizării");
   if (invoicedAt === null) return "committed";
   const invoice = time(invoicedAt, "Ora facturii");
   return invoice <= photo - safetyWindowMinutes * 60_000 ? "mirrored" : "committed";
@@ -83,7 +83,7 @@ export interface ReconcileResult {
 
 /** Rezultatul aplicării unei poze noi; nu scrie nimic (serviciul aplică totul într-o tranzacție, toate sau niciuna). */
 export function reconcileSnapshot(input: ReconcileInput): ReconcileResult {
-  const photoTime = time(input.snapshot.takenAt, "Ora pozei");
+  const photoTime = time(input.snapshot.takenAt, "Ora actualizării");
   assertWindow(input.safetyWindowMinutes);
 
   const kept = input.adjustments.filter((a) => time(a.effectiveAt, "Ora efectivă") > photoTime);
@@ -138,11 +138,11 @@ export function snapshotFreshness(
 ): SnapshotFreshness {
   if (!Number.isInteger(staleHours) || staleHours < 1 || staleHours > MAX_STALE_HOURS) {
     throw new RangeError(
-      `Pragul «poza e veche» trebuie să fie între 1 și ${MAX_STALE_HOURS} de ore`,
+      `Pragul «neactualizat» trebuie să fie între 1 și ${MAX_STALE_HOURS} de ore`,
     );
   }
   if (takenAt === null) return { status: "never" };
-  const ageMs = Math.max(0, time(now, "Ora curentă") - time(takenAt, "Ora pozei"));
+  const ageMs = Math.max(0, time(now, "Ora curentă") - time(takenAt, "Ora actualizării"));
   const ageHours = ageMs / 3_600_000;
   return { status: ageMs > staleHours * 3_600_000 ? "stale" : "fresh", ageHours };
 }

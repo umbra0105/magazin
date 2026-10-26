@@ -150,7 +150,7 @@ test.describe("ecranul de stoc", () => {
     await login(page, manager, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
     await expect(page.getByRole("heading", { level: 1, name: "Stoc" })).toBeVisible();
     await expect(page.locator("[data-result-count]")).toHaveAttribute("data-result-count", "6");
-    await expect(page.locator('[data-banner="fresh"]')).toContainText("Stoc verificat la");
+    await expect(page.locator('[data-banner="fresh"]')).toContainText("Actualizat acum 3 ore");
 
     // liner: 100 mp, rola de 41,25 mp → 2 pași, rest 17,5 mp (exact la pragul «Stoc limitat»)
     const liner = row(page, skus[LINER] as string);
@@ -207,7 +207,7 @@ test.describe("ecranul de stoc", () => {
     await expect(page).toHaveURL(/\/admin\/produse\/stoc$/);
   });
 
-  test("banner-ul «stoc verificat la …»: fără poză, veche, proaspătă", async ({
+  test("banner-ul «Sincronizare SmartBill»: neimportat, neactualizat, la zi", async ({
     page,
     request,
     baseURL,
@@ -219,24 +219,24 @@ test.describe("ecranul de stoc", () => {
     await setE2eStockSnapshot(null);
     await page.reload();
     const never = page.locator('[data-banner="never"]');
-    await expect(never).toContainText("Nu există nicio poză SmartBill");
+    await expect(never).toContainText("Stocul nu a fost încă importat din SmartBill");
     await expect(never).toHaveAttribute("role", "alert");
 
     await setE2eStockSnapshot(30);
     await page.reload();
     const stale = page.locator('[data-banner="stale"]');
-    await expect(stale).toContainText("Poza SmartBill e veche");
-    await expect(stale).toContainText("Pragul este de 24 h");
+    await expect(stale).toContainText("Ultima actualizare: acum 30 de ore");
+    await expect(stale).toContainText("Cantitățile pot fi depășite");
     await expect(stale).toHaveAttribute("data-tone", "danger");
 
     await setE2eStockSnapshot(3);
     await page.reload();
-    await expect(page.locator('[data-banner="fresh"]')).toContainText("acum 3 h");
+    await expect(page.locator('[data-banner="fresh"]')).toContainText("Actualizat acum 3 ore");
   });
 });
 
-test.describe("Panoul: cardul «Poza SmartBill»", () => {
-  test("urmează starea pozei: la zi, lipsă, veche, apoi la zi; cardul duce în pagina Stoc, unde e banner-ul", async ({
+test.describe("Panoul: cardul «Sincronizare SmartBill»", () => {
+  test("urmează starea sincronizării: la zi, neimportat, neactualizat, apoi la zi; cardul duce în pagina Stoc, unde e banner-ul", async ({
     page,
     request,
     baseURL,
@@ -248,25 +248,26 @@ test.describe("Panoul: cardul «Poza SmartBill»", () => {
       // la zi (3 h)
       await expect(card).toHaveAttribute("data-status", "fresh");
       await expect(card).toHaveAttribute("data-tone", "ok");
+      await expect(card).toContainText("Sincronizare SmartBill");
       await expect(card).toContainText("La zi");
-      await expect(card).toContainText("acum 3 h");
+      await expect(card).toContainText("Actualizat acum 3 ore");
 
-      // fără poză
+      // niciun import
       await setE2eStockSnapshot(null);
       await page.reload();
       await expect(card).toHaveAttribute("data-status", "never");
       await expect(card).toHaveAttribute("data-tone", "danger");
-      await expect(card).toContainText("Lipsește");
-      await expect(card).toContainText("Nu există nicio poză SmartBill");
+      await expect(card).toContainText("Neimportat");
+      await expect(card).toContainText("Stocul nu a fost încă importat din SmartBill");
 
-      // ora pozei mutată înapoi (30 h, pragul e 24 h): avertisment
+      // ora ultimei actualizări mutată înapoi (30 h, pragul e 24 h): avertisment
       await setE2eStockSnapshot(30);
       await page.reload();
       await expect(card).toHaveAttribute("data-status", "stale");
       await expect(card).toHaveAttribute("data-tone", "danger");
-      await expect(card).toContainText("Veche");
-      await expect(card).toContainText("Poza SmartBill e veche");
-      await expect(card).toContainText("Pragul este de 24 h");
+      await expect(card).toContainText("Neactualizat");
+      await expect(card).toContainText("Ultima actualizare: acum 30 de ore");
+      await expect(card).toContainText("Cantitățile pot fi depășite");
 
       // cardul duce în pagina Stoc, unde banner-ul spune același lucru
       await card.click();
@@ -277,7 +278,7 @@ test.describe("Panoul: cardul «Poza SmartBill»", () => {
     }
     await page.goto("/admin");
     await expect(card).toHaveAttribute("data-status", "fresh");
-    await expect(card).toContainText("acum 3 h");
+    await expect(card).toContainText("Actualizat acum 3 ore");
   });
 });
 
@@ -423,7 +424,7 @@ test.describe("ajustarea stocului", () => {
     await expect(dialog).toBeHidden();
   });
 
-  test("ora efectivă dinaintea pozei aplicate: ajustarea se salvează, cu avertisment în română", async ({
+  test("ora efectivă dinaintea ultimei actualizări: ajustarea se salvează, cu avertisment în română", async ({
     page,
     request,
     baseURL,
@@ -448,7 +449,9 @@ test.describe("ajustarea stocului", () => {
     await expect(dialog.locator("[data-saved]")).toContainText("80 kg → 75 kg");
     const warnings = dialog.locator("[data-warnings]");
     await expect(warnings).toContainText("Atenție");
-    await expect(warnings).toContainText("Ora efectivă este dinaintea pozei SmartBill din");
+    await expect(warnings).toContainText(
+      "Ora efectivă este dinaintea ultimei actualizări din SmartBill",
+    );
     await dialog.getByRole("button", { name: "Închide" }).last().click();
     await expect(dialog).toBeHidden();
     await expect(

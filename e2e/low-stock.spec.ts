@@ -249,7 +249,7 @@ test.describe("Panoul: cardurile de stoc (punctul 10b)", () => {
       "href",
       "/admin/produse/stoc",
     );
-    await expect(page.locator('[data-alert="snapshot"]')).toContainText("Poza SmartBill");
+    await expect(page.locator('[data-alert="snapshot"]')).toContainText("Sincronizare SmartBill");
 
     // meniul rămâne neschimbat: niciun «Stoc mic» în el
     await expect(sidebar(page).getByRole("link", { name: /Stoc mic/ })).toHaveCount(0);

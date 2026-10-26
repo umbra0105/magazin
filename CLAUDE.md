@@ -97,10 +97,12 @@ există `tenantId`. În schimb:
   «negestionat până la inventar».
 - `manageStock = true`: cantități reale, istoric imuabil de mișcări, alerte de stoc mic.
   **Disponibil = Fizică − Angajat − Rezervat** (niciodată sub 0). Cantitatea fizică vine
-  din SmartBill (poză periodică, la început importul «stoc la zi»); aplicația ține
-  «angajat» (comenzi online confirmate, încă neoglindite în poză) și «rezervat»
-  (plăți în curs). **O bucată se scade o singură dată** (factură înainte de poză =
-  oglindită, după poză = încă angajată).
+  din SmartBill (sincronizare periodică, la început importul «stoc la zi»); aplicația ține
+  «angajat» (comenzi online confirmate, încă neoglindite în ultima sincronizare) și
+  «rezervat» (plăți în curs). **O bucată se scade o singură dată** (factură emisă
+  înaintea ultimei sincronizări = oglindită, după ea = încă angajată). În interfață
+  se spune «Sincronizare SmartBill» (La zi / Neactualizat / Neimportat), niciodată
+  «poză»; «snapshot» rămâne doar numele tehnic din cod și din audit.
 - **Rezervarea (D4):** coșul NU rezervă nimic. Card: rezervare la inițierea plății, expirare
   15 minute (`inventory.reservationMinutes`). Ramburs: scade imediat la plasare. Transfer
   bancar: 3 zile lucrătoare, setabil. **Fără stoc negativ, garantat în baza de date**

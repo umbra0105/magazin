@@ -54,24 +54,24 @@ describe("alertCardsView", () => {
     expect(view.remainder.href).toContain("motiv=rest-nevandabil");
   });
 
-  it("poza SmartBill: la zi (ton ok), veche (ton roșu, cu pragul), lipsă (roșu) sau fără stoc în depozit (informativ)", () => {
+  it("sincronizarea SmartBill: la zi (ton ok), neactualizat (roșu), neimportat (roșu) sau fără stoc în depozit (informativ)", () => {
     const fresh = alertCardsView(alerts()).snapshot;
     expect(fresh).toMatchObject({ status: "fresh", tone: "ok", href: "/admin/produse/stoc" });
-    expect(fresh.text).toContain("Stoc verificat la");
-    expect(fresh.text).toContain("acum 3 h");
+    expect(fresh.text).toBe("Actualizat acum 3 ore.");
 
     const stale = alertCardsView(
       alerts({ freshness: freshness({ status: "stale", ageHours: 30 }) }),
     ).snapshot;
     expect(stale).toMatchObject({ status: "stale", tone: "danger" });
-    expect(stale.text).toContain("Poza SmartBill e veche");
-    expect(stale.text).toContain("24 h");
+    expect(stale.text).toBe("Ultima actualizare: acum 30 de ore. Cantitățile pot fi depășite.");
 
     const never = alertCardsView(
       alerts({ freshness: freshness({ status: "never", takenAt: null, ageHours: null }) }),
     ).snapshot;
     expect(never).toMatchObject({ status: "never", tone: "danger" });
-    expect(never.text).toContain("Nu există nicio poză SmartBill");
+    expect(never.text).toBe(
+      "Stocul nu a fost încă importat din SmartBill. Cantitățile afișate sunt cele introduse manual.",
+    );
 
     const none = alertCardsView(alerts({ freshness: null })).snapshot;
     expect(none).toMatchObject({ status: "none", tone: "info" });

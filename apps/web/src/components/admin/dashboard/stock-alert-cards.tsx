@@ -12,7 +12,7 @@ const CARD =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 /**
- * Cardurile de stoc din Panou: «Stoc mic», «Doar rest nevandabil» și «Poza SmartBill». Fiecare e o legătură spre vederea
+ * Cardurile de stoc din Panou: «Stoc mic», «Doar rest nevandabil» și «Sincronizare SmartBill». Fiecare e o legătură spre vederea
  * «Stoc mic» (sau spre pagina Stoc, pentru poză). Se afișează doar cu `inventory.read`: pagina Panou nici nu citește stocul fără
  * acest drept.
  */

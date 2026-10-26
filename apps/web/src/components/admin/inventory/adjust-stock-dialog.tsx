@@ -37,7 +37,7 @@ export interface AdjustTarget {
   unit: { symbol: string; decimals: number };
   /** Stocul fizic de acum, deja formatat (cu unitate) */
   physicalText: string;
-  /** Data pozei SmartBill aplicate (ISO), pentru avertismentul «ora efectivă dinaintea pozei» */
+  /** Data ultimei sincronizări SmartBill (ISO), pentru avertismentul «ora efectivă dinaintea ultimei actualizări» */
   asOf: string | null;
 }
 

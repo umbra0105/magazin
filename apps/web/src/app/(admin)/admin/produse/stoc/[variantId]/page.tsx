@@ -56,11 +56,7 @@ export default async function StockHistoryPage({
         <p className="text-sm text-muted-foreground">{m.history.immutable}</p>
       </header>
 
-      <FreshnessBanner
-        freshness={detail.freshness}
-        timeZone={detail.settings.timeZone}
-        staleHours={detail.settings.snapshotStaleHours}
-      />
+      <FreshnessBanner freshness={detail.freshness} />
 
       <dl className="grid grid-cols-2 gap-3 rounded-md border border-border p-4 text-sm sm:grid-cols-3 lg:grid-cols-6">
         {[

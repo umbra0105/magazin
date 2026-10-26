@@ -16,17 +16,9 @@ export function badgeVariant(tone: Tone): "success" | "neutral" | "danger" | "in
   return "neutral";
 }
 
-/** Banner-ul «stoc verificat la …». Roșu când poza e veche sau lipsește. */
-export function FreshnessBanner({
-  freshness,
-  timeZone,
-  staleHours,
-}: {
-  freshness: WarehouseFreshness | null;
-  timeZone: string;
-  staleHours: number;
-}) {
-  const view = snapshotView(freshness, timeZone, staleHours);
+/** Banner-ul «Sincronizare SmartBill». Roșu când stocul e neactualizat sau neimportat. */
+export function FreshnessBanner({ freshness }: { freshness: WarehouseFreshness | null }) {
+  const view = snapshotView(freshness);
   return (
     <div
       role={view.tone === "danger" ? "alert" : "status"}

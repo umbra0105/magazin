@@ -325,7 +325,7 @@ async function seed(): Promise<void> {
   console.log(`Au fost create ${PRODUCTS.length} produse de stoc fictive (adresa demo-stoc-…).`);
   console.log(
     takenAt
-      ? `Poza SmartBill: acum ${snapshotAgeHours} ore (${takenAt.toISOString()}).`
+      ? `Sincronizare SmartBill: ultima actualizare acum ${snapshotAgeHours} ore (${takenAt.toISOString()}).`
       : "Fără nicio poză SmartBill.",
   );
   console.log(

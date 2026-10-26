@@ -80,8 +80,8 @@ try {
     for (const w of warehouses) {
       const age =
         w.ageHours === null
-          ? "nicio poză"
-          : `poza de la ${w.takenAt?.toISOString()} (${hours.format(w.ageHours)} h)`;
+          ? "neimportat din SmartBill"
+          : `ultima actualizare ${w.takenAt?.toISOString()} (${hours.format(w.ageHours)} h)`;
       console.log(
         `Depozit «${w.name}»:`.padEnd(35) +
           `${w.status === "fresh" ? "proaspătă" : w.status === "stale" ? "VECHE" : "FĂRĂ POZĂ"}, ${age}, prag ${settings.snapshotStaleHours} h`,

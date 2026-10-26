@@ -85,7 +85,7 @@ try {
     },
   });
   ctx.snapshotIds.push(oldSnapshot.id);
-  say("poza SmartBill a depozitului e veche de 30 h (pragul e de 24 h)");
+  say("ultima actualizare din SmartBill a depozitului e de acum 30 h (pragul e de 24 h)");
 
   // 3) cereri «Anunță-mă» vechi
   await db.backInStockAlert.createMany({

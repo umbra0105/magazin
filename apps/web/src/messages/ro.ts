@@ -141,14 +141,14 @@ export const ro = {
           aria: (count: number) => `Doar rest nevandabil: ${count}. Vezi variantele`,
         },
         snapshot: {
-          title: "Poza SmartBill",
+          title: "Sincronizare SmartBill",
           status: {
             fresh: "La zi",
-            stale: "Veche",
-            never: "Lipsește",
+            stale: "Neactualizat",
+            never: "Neimportat",
             none: "Fără stoc",
           },
-          aria: "Poza SmartBill: vezi starea în pagina Stoc",
+          aria: "Sincronizare SmartBill: vezi starea în pagina Stoc",
         },
       },
     },
@@ -678,7 +678,7 @@ export const ro = {
     inventory: {
       title: "Stoc",
       description:
-        "Cantitatea fizică, angajată și rezervată a fiecărei variante, disponibilul în unitate și în pași și restul nevandabil. Cantitatea fizică vine din poza SmartBill și din ajustările de aici.",
+        "Cantitatea fizică, angajată și rezervată a fiecărei variante, disponibilul în unitate și în pași și restul nevandabil. Cantitatea fizică vine din sincronizarea cu SmartBill și din ajustările de aici.",
       readOnly: "Poți vedea stocul, dar nu îl poți modifica.",
       listLabel: "Stocul variantelor",
       empty: "Nicio variantă nu corespunde filtrelor.",
@@ -739,6 +739,7 @@ export const ro = {
       plural: {
         step: { one: "pas", few: "pași", many: "de pași" },
         day: { one: "zi", few: "zile", many: "de zile" },
+        hour: { one: "oră", few: "ore", many: "de ore" },
       },
       columns: {
         product: "Produs",
@@ -754,7 +755,7 @@ export const ro = {
       cell: {
         none: "—",
         asOf: (at: string) => `valabilă la ${at}`,
-        noSnapshot: "fără poză SmartBill",
+        noSnapshot: "neimportat din SmartBill",
         notInventoried: "neinventariat",
         manageHint: "Pornește gestionarea stocului din editorul produsului.",
         digitalHint: "Fără stoc",
@@ -832,24 +833,23 @@ export const ro = {
       },
       banner: {
         label: "Prospețimea stocului",
-        fresh: (at: string, age: string) => `Stoc verificat la ${at} (${age}).`,
-        stale: (at: string, age: string, hours: number) =>
-          `Poza SmartBill e veche: stoc verificat la ${at} (${age}). Pragul este de ${hours} h; vânzările din magazin de după poză nu sunt cunoscute până la poza următoare.`,
+        fresh: (age: string) => `Actualizat ${age}.`,
+        stale: (age: string) => `Ultima actualizare: ${age}. Cantitățile pot fi depășite.`,
         never:
-          "Nu există nicio poză SmartBill pentru acest depozit: cantitățile afișate sunt cele introduse manual.",
+          "Stocul nu a fost încă importat din SmartBill. Cantitățile afișate sunt cele introduse manual.",
         none: "Nu există încă stoc gestionat în acest depozit.",
         age: {
           lessThanHour: "acum mai puțin de o oră",
-          hours: (n: string) => `acum ${n} h`,
-          days: (n: string) => `acum ${n} ${Number.parseInt(n, 10) === 1 ? "zi" : "zile"}`,
+          hours: (hours: string) => `acum ${hours}`,
+          days: (days: string) => `acum ${days}`,
         },
       },
       warnings: {
         title: "Atenție",
         effective_before_snapshot: (asOf: string) =>
-          `Ora efectivă este dinaintea pozei SmartBill din ${asOf}. Dacă evenimentul era deja în SmartBill la acea poză, va fi scăzut de două ori până la poza următoare.`,
+          `Ora efectivă este dinaintea ultimei actualizări din SmartBill (${asOf}). Dacă evenimentul era deja în SmartBill la acea actualizare, va fi scăzut de două ori până la actualizarea următoare.`,
         effective_before_snapshot_unknown:
-          "Ora efectivă este dinaintea ultimei poze SmartBill. Dacă evenimentul era deja în SmartBill la acea poză, va fi scăzut de două ori până la poza următoare.",
+          "Ora efectivă este dinaintea ultimei actualizări din SmartBill. Dacă evenimentul era deja în SmartBill la acea actualizare, va fi scăzut de două ori până la actualizarea următoare.",
         below_commitments:
           "Stocul fizic a coborât sub cantitatea angajată și rezervată: disponibilul este acum 0.",
       },
@@ -942,7 +942,7 @@ export const ro = {
         },
         kinds: {
           adjustment: "Ajustare",
-          snapshot: "Poză SmartBill",
+          snapshot: "Sincronizare SmartBill",
           commit: "Angajare",
           release: "Eliberare",
           mirror: "Oglindire",

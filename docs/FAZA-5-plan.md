@@ -202,10 +202,10 @@ Implicit **1 pas**. Câmpul „Minim (pași)” e opțional (ex. minim 2 role la
 
 | Parametru | Propunere | Tu |
 | --- | --- | --- |
-| Fereastra de siguranță în jurul orei pozei (D1) | 30 de minute | ___ |
+| Fereastra de siguranță în jurul orei ultimei sincronizări (D1) | 30 de minute | ___ |
 | Tampon de siguranță implicit pentru stoc mic (D1) | 0 sau 1 unitate (în unitatea variantei) | ___ |
 | Frecvența sincronizării până la API (D1) | zilnică, la o oră fixă; cine o face | ___ |
-| Avertisment „poza e veche” după (D1) | 24 de ore | ___ |
+| Avertisment „Neactualizat” (sincronizarea SmartBill e veche) după (D1) | 24 de ore | ___ |
 | Termen global implicit „La comandă” (D6) | 14 zile | ___ |
 | Prag „Stoc limitat” afișat clientului (D6) | același cu „stoc mic” | ___ |
 | Ramburs interzis dacă în coș e un produs „La comandă” (D6; se decide în Faza 9) | da | ___ |
@@ -335,6 +335,12 @@ După aprobare, urmează 🟢 ÎNCEP pe punctul 1. Până atunci nu se atinge ni
 
 ## Anexa A — D1 (APROBAT: varianta A, „poză + angajat”): detalii de proiectare
 
+> **Terminologie:** în această anexă și în deciziile D1, «poza» (snapshot) este termenul tehnic de proiectare pentru
+> cantitatea fizică adusă din SmartBill la un moment dat. **Utilizatorul nu vede niciodată cuvântul «poză»**: în interfață
+> (card Panou, banner, dialogul de ajustare) se spune «Sincronizare SmartBill» cu stările **La zi** («Actualizat acum 3 ore»),
+> **Neactualizat** («Ultima actualizare: acum 2 zile. Cantitățile pot fi depășite.») și **Neimportat** («Stocul nu a fost încă
+> importat din SmartBill. Cantitățile afișate sunt cele introduse manual.»).
+
 ### D1.0 Trei cuvinte, pe înțelesul tuturor
 
 Exemplu: în SmartBill ai **5** bucăți dintr-o pompă. Un client comandă online **1** (plătește cu cardul), iar o persoană cumpără **1**
@@ -342,7 +348,7 @@ din magazinul fizic.
 
 | Cuvânt | Ce înseamnă | În exemplu |
 | --- | --- | --- |
-| **Cantitate fizică** | Cât arată SmartBill că ai în gestiune. **Vine din SmartBill**, nu o inventăm noi. Aplicația păstrează „ultima poză” a ei și **data și ora la care e valabilă** | 5 (la ora pozei) |
+| **Cantitate fizică** | Cât arată SmartBill că ai în gestiune. **Vine din SmartBill**, nu o inventăm noi. Aplicația păstrează „ultima sincronizare” și **data și ora la care e valabilă** | 5 (la ora sincronizării) |
 | **Angajat** | Bucăți din **comenzi online confirmate, dar încă neoglindite** în cantitatea fizică, adică factura lor nu apare încă în „poza” din SmartBill. Rămân angajate până când poza următoare le conține | 1 (clientul online) |
 | **Rezervat** | Bucăți ținute pentru o plată **în curs** (card: 15 minute; transfer bancar: 3 zile lucrătoare). Dacă plata nu vine, se eliberează | 0 (după plată devine „angajat”) |
 | **Disponibil** | Ce poate cumpăra următorul client online. **Disponibil = Fizică − Angajat − Rezervat** (niciodată sub 0) | 5 − 1 − 0 = **4** |
@@ -378,7 +384,7 @@ Cazuri limită și ce facem:
 | --- | --- | --- | --- |
 | **Factura se emite exact în jurul orei pozei** (diferențe de ceas, export doar cu data) | Nu știm sigur dacă poza o conține | Alegem varianta prudentă: bucata rămâne angajată o vreme („fereastră de siguranță”, setabilă, implicit 30 de minute) | Cel mult o **subvânzare** temporară (apare mai puțin stoc decât există), niciodată supravânzare; se corectează la poza următoare |
 | **Factura online eșuează** (SmartBill nu răspunde) | Comanda rămâne confirmată, fără factură | Rămâne **angajată** → stocul nu e vândut a doua oară | Lista „comenzi confirmate fără factură de mai mult de X minute”, alertă (apare cu Faza 13) |
-| **Sincronizarea întârzie** (nu s-a făcut poza de 2 zile) | Vânzările din magazin nu sunt cunoscute | Aplicația **supraestimează** disponibilul → risc de supravânzare la produsele rare | Eticheta „stoc verificat la …” în admin; avertisment după X ore (setabil); **tampon de siguranță** (D1.4); motivul „vânzare în magazin” (D1.3) |
+| **Sincronizarea întârzie** (nu s-a făcut de 2 zile) | Vânzările din magazin nu sunt cunoscute | Aplicația **supraestimează** disponibilul → risc de supravânzare la produsele rare | Starea „Neactualizat” cu „Ultima actualizare: acum X” în admin; avertisment după X ore (setabil); **tampon de siguranță** (D1.4); motivul „vânzare în magazin” (D1.3) |
 | **Sincronizarea eșuează la mijloc** | Poza nouă nu se aplică | Rămâne poza veche, fără modificări parțiale (totul sau nimic) | Raport de eroare; se reia |
 | **Anulare / retur după factură** | În SmartBill se face storno și bucata revine în stoc | Dacă poza următoare e după storno, vede deja bucata înapoi | Local nu adăugăm nimic (altfel s-ar număra dublu); eliberăm doar „angajatul” dacă comanda nu fusese încă oglindită |
 | **Comandă facturată manual în SmartBill, în afara aplicației** | Aplicația nu află de factură | Rămâne angajată la nesfârșit (prudent) | Lista „angajat vechi” + marcare manuală „oglindit”; se rezolvă și când vine integrarea |
@@ -427,7 +433,7 @@ Cazuri limită și ce facem:
 1. **Sincronizare regulată:** minim **zilnică** (la o oră fixă) până apare integrarea API; ținta e la câteva minute. Cineva e
    responsabil de ea (tu / contabilul) și există o listă de verificare.
 2. **Indicator de „prospețime”:** în admin se vede mereu „stoc verificat la …” și un avertisment roșu după X ore (setabil);
-   la lansare, o alertă pe email/panou când poza e prea veche.
+   la lansare, o alertă pe email/panou când sincronizarea e prea veche (Neactualizat).
 3. **SKU = cod SmartBill, 100% verificat** cu raportul de import (zero necunoscute la produsele active).
 4. **Tampon de siguranță** pentru produsele cu stoc mic (setare, de exemplu 1 bucată ținută în rezervă): reduce riscul de
    supravânzare între poze. *De decis: valoarea implicită.*

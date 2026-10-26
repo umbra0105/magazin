@@ -142,7 +142,7 @@ describe("legăturile cu serviciul și cu setările", () => {
   it("o setare nevalidă (prag 0) face rularea să eșueze zgomotos, nu să ruleze cu o valoare ghicită", async () => {
     const { maintenance, read, log } = setup({ snapshotStaleHours: 0 });
     maintenance.checkSnapshotFreshness.mockRejectedValueOnce(
-      new RangeError("Pragul «poza e veche» trebuie să fie între 1 și 720 de ore"),
+      new RangeError("Pragul «neactualizat» trebuie să fie între 1 și 720 de ore"),
     );
     const jobs = buildStockJobs({ maintenance, readSettings: read, logger: log });
     await expect(jobs[1]!.run()).rejects.toThrow(RangeError);

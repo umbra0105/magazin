@@ -232,13 +232,26 @@ export function kindLabel(row: StockOverviewRow): string {
   return row.inventoried ? text.managed : text.notInventoried;
 }
 
-const hoursFormat = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 });
+/** Vârsta se rotunjește la întreg prin formatare (fără Math.round: regula de arhitectură interzice rotunjirile în codul de stoc). */
+const wholeFormat = new Intl.NumberFormat("ro-RO", {
+  maximumFractionDigits: 0,
+  useGrouping: false,
+});
+
+function wholeNumber(value: number): number {
+  return Number.parseInt(wholeFormat.format(value), 10);
+}
 
 function ageText(ageHours: number): string {
   const text = m().banner.age;
+  const plural = m().plural;
   if (ageHours < 1) return text.lessThanHour;
-  if (ageHours < 48) return text.hours(hoursFormat.format(ageHours));
-  return text.days(hoursFormat.format(ageHours / 24));
+  if (ageHours < 48) {
+    const hours = wholeNumber(ageHours);
+    return text.hours(`${hours} ${pluralWord(BigInt(hours), plural.hour)}`);
+  }
+  const days = wholeNumber(ageHours / 24);
+  return text.days(`${days} ${pluralWord(BigInt(days), plural.day)}`);
 }
 
 export interface SnapshotView {
@@ -246,22 +259,20 @@ export interface SnapshotView {
   text: string;
 }
 
-/** Banner-ul «stoc verificat la …»: proaspăt, vechi (roșu), fără nicio poză, sau depozit fără stoc gestionat. */
-export function snapshotView(
-  freshness: WarehouseFreshness | null,
-  timeZone: string,
-  staleHours: number,
-): SnapshotView {
+/**
+ * Starea sincronizării cu SmartBill, în cuvinte simple (banner și card): la zi, neactualizat (roșu), neimportat (roșu)
+ * sau depozit fără stoc gestionat.
+ */
+export function snapshotView(freshness: WarehouseFreshness | null): SnapshotView {
   const banner = m().banner;
   if (freshness === null) return { tone: "info", text: banner.none };
   if (freshness.status === "never" || freshness.takenAt === null) {
     return { tone: "danger", text: banner.never };
   }
-  const at = formatLocalDateTime(freshness.takenAt, timeZone);
   const age = ageText(freshness.ageHours ?? 0);
   return freshness.status === "stale"
-    ? { tone: "danger", text: banner.stale(at, age, staleHours) }
-    : { tone: "ok", text: banner.fresh(at, age) };
+    ? { tone: "danger", text: banner.stale(age) }
+    : { tone: "ok", text: banner.fresh(age) };
 }
 
 export function warningText(

@@ -76,11 +76,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
         )}
       </header>
 
-      <FreshnessBanner
-        freshness={page.freshness}
-        timeZone={page.settings.timeZone}
-        staleHours={page.settings.snapshotStaleHours}
-      />
+      <FreshnessBanner freshness={page.freshness} />
       <ViewSwitch query={query} lowStockTotal={page.lowStock.total} />
       {lowView && (
         <section aria-labelledby="low-stock-heading" className="flex flex-col gap-3">

@@ -4,8 +4,8 @@ import { stockHref } from "./stock-url";
 
 /**
  * Cardurile de stoc din Panou (funcții PURE): numerele vin de la serviciu (`StockOverviewService.alerts`), legăturile duc la
- * vederea «Stoc mic» a paginii Stoc (cu motivul pentru «Doar rest nevandabil»), iar starea pozei SmartBill folosește aceleași
- * texte ca banner-ul paginii Stoc.
+ * vederea «Stoc mic» a paginii Stoc (cu motivul pentru «Doar rest nevandabil»), iar starea sincronizării SmartBill
+ * folosește aceleași texte ca banner-ul paginii Stoc.
  */
 
 export interface AlertCardsView {
@@ -20,10 +20,10 @@ export interface AlertCardsView {
 }
 
 export function alertCardsView(
-  alerts: Pick<StockAlerts, "lowStock" | "freshness" | "settings">,
+  alerts: Pick<StockAlerts, "lowStock" | "freshness">,
 ): AlertCardsView {
-  const { lowStock, freshness, settings } = alerts;
-  const snapshot = snapshotView(freshness, settings.timeZone, settings.snapshotStaleHours);
+  const { lowStock, freshness } = alerts;
+  const snapshot = snapshotView(freshness);
   return {
     lowStock: {
       total: lowStock.total,

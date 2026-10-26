@@ -203,7 +203,7 @@ describe("starea vizibilă și tipul", () => {
   });
 });
 
-describe("banner-ul «stoc verificat la …»", () => {
+describe("banner-ul «Sincronizare SmartBill»", () => {
   const at = new Date("2026-10-23T07:00:00Z"); // 10:00 la București
   const base: WarehouseFreshness = {
     warehouseId: "w",
@@ -213,56 +213,55 @@ describe("banner-ul «stoc verificat la …»", () => {
     ageHours: 3,
   };
 
-  it("proaspăt: data și vârsta, ton liniștit", () => {
-    expect(snapshotView(base, TZ, 24)).toEqual({
-      tone: "ok",
-      text: "Stoc verificat la 23.10.2026, 10:00 (acum 3 h).",
-    });
+  it("la zi: «Actualizat acum …», ton liniștit", () => {
+    expect(snapshotView(base)).toEqual({ tone: "ok", text: "Actualizat acum 3 ore." });
   });
 
-  it("vechi: roșu, cu pragul și consecința", () => {
-    const view = snapshotView({ ...base, status: "stale", ageHours: 54 }, TZ, 24);
+  it("neactualizat: roșu, cu vârsta și avertismentul", () => {
+    const view = snapshotView({ ...base, status: "stale", ageHours: 54 });
     expect(view.tone).toBe("danger");
-    expect(view.text).toBe(
-      "Poza SmartBill e veche: stoc verificat la 23.10.2026, 10:00 (acum 2 zile). Pragul este de 24 h; vânzările din magazin de după poză nu sunt cunoscute până la poza următoare.",
-    );
+    expect(view.text).toBe("Ultima actualizare: acum 2 zile. Cantitățile pot fi depășite.");
   });
 
-  it("fără nicio poză: roșu", () => {
-    const view = snapshotView({ ...base, status: "never", takenAt: null, ageHours: null }, TZ, 24);
+  it("neimportat: roșu", () => {
+    const view = snapshotView({ ...base, status: "never", takenAt: null, ageHours: null });
     expect(view).toEqual({
       tone: "danger",
-      text: "Nu există nicio poză SmartBill pentru acest depozit: cantitățile afișate sunt cele introduse manual.",
+      text: "Stocul nu a fost încă importat din SmartBill. Cantitățile afișate sunt cele introduse manual.",
     });
   });
 
   it("depozit fără stoc gestionat: doar o informare", () => {
-    expect(snapshotView(null, TZ, 24)).toEqual({
+    expect(snapshotView(null)).toEqual({
       tone: "info",
       text: "Nu există încă stoc gestionat în acest depozit.",
     });
   });
 
-  it("vârsta: sub o oră, ore până la 48 h, apoi zile", () => {
-    const age = (hours: number) => snapshotView({ ...base, ageHours: hours }, TZ, 24).text;
-    expect(age(0.4)).toContain("acum mai puțin de o oră");
-    expect(age(1)).toContain("acum 1 h");
-    expect(age(30)).toContain("acum 30 h");
-    expect(age(47.6)).toContain("acum 48 h");
-    expect(age(72)).toContain("acum 3 zile");
+  it("vârsta: sub o oră, ore până la 48 h, apoi zile, cu plural românesc", () => {
+    const age = (hours: number) => snapshotView({ ...base, ageHours: hours }).text;
+    expect(age(0.4)).toBe("Actualizat acum mai puțin de o oră.");
+    expect(age(1)).toBe("Actualizat acum 1 oră.");
+    expect(age(2)).toBe("Actualizat acum 2 ore.");
+    expect(age(19)).toBe("Actualizat acum 19 ore.");
+    expect(age(20)).toBe("Actualizat acum 20 de ore.");
+    expect(age(30)).toBe("Actualizat acum 30 de ore.");
+    expect(age(47.6)).toBe("Actualizat acum 48 de ore.");
+    expect(age(72)).toBe("Actualizat acum 3 zile.");
+    expect(age(24 * 25)).toBe("Actualizat acum 25 de zile.");
   });
 });
 
 describe("avertismentele ajustării", () => {
   const asOf = new Date("2026-10-23T07:00:00Z");
-  it("ora efectivă dinaintea pozei, cu data pozei", () => {
+  it("ora efectivă dinaintea ultimei actualizări, cu data ei", () => {
     expect(warningText("effective_before_snapshot", { asOf, timeZone: TZ })).toBe(
-      "Ora efectivă este dinaintea pozei SmartBill din 23.10.2026, 10:00. Dacă evenimentul era deja în SmartBill la acea poză, va fi scăzut de două ori până la poza următoare.",
+      "Ora efectivă este dinaintea ultimei actualizări din SmartBill (23.10.2026, 10:00). Dacă evenimentul era deja în SmartBill la acea actualizare, va fi scăzut de două ori până la actualizarea următoare.",
     );
   });
-  it("fără data pozei (nu ar trebui să se întâmple) mesajul rămâne corect", () => {
+  it("fără data actualizării (nu ar trebui să se întâmple) mesajul rămâne corect", () => {
     expect(warningText("effective_before_snapshot", { asOf: null, timeZone: TZ })).toContain(
-      "dinaintea ultimei poze SmartBill",
+      "dinaintea ultimei actualizări din SmartBill",
     );
   });
   it("sub angajat și rezervat", () => {
