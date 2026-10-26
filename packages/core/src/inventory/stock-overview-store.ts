@@ -109,26 +109,42 @@ function sourceSelect(warehouseId: string) {
 
 type VariantRow = Prisma.ProductVariantGetPayload<{ select: ReturnType<typeof sourceSelect> }>;
 
-function toSource(row: VariantRow): StockOverviewSource {
+/**
+ * Prisma 7.10 cu adaptorul `pg` execută `select`-ul imbricat ca interogări SEPARATE (variantele, apoi produsele lor, apoi
+ * opțiunile), fără snapshot comun. Dacă un produs (sau o opțiune) e șters definitiv între ele, o relație OBLIGATORIE vine
+ * `null`, deși tipul spune altceva. Citirea trece prin `orNull`, ca verificările să fie reale, nu eliminate de tip.
+ */
+const orNull = <T>(value: T): T | null => value;
+
+/** `null` când produsul variantei a dispărut între interogări: rândul se omite, ca un produs șters. */
+function toSource(row: VariantRow): StockOverviewSource | null {
+  const product = orNull(row.product);
+  if (!product) return null;
   const item = row.inventoryItems[0];
-  const label = [...row.optionValues]
-    .sort((a, b) => a.option.position - b.option.position)
-    .map((entry) => entry.value.value)
+  // o valoare de opțiune fără `option` sau `value` (ștearsă între interogări) nu intră în etichetă
+  const label = row.optionValues
+    .flatMap((entry) => {
+      const option = orNull(entry.option);
+      const value = orNull(entry.value);
+      return option && value ? [{ position: option.position, value: value.value }] : [];
+    })
+    .sort((a, b) => a.position - b.position)
+    .map((entry) => entry.value)
     .join(" · ");
   return {
     variantId: row.id,
     sku: row.sku,
     variantLabel: label === "" ? null : label,
-    productId: row.product.id,
-    productTitle: row.product.title,
-    productSlug: row.product.slug,
-    productType: row.product.type === "digital" ? "digital" : "physical",
-    manageStock: row.manageStock ?? row.product.manageStock,
-    stockStatus: (row.stockStatus ?? row.product.stockStatus) as StockStatusValue,
-    allowBackorder: row.product.allowBackorder,
-    unit: effectiveMeasureUnit(row.measureUnit, row.product.measureUnit, DEFAULT_UNIT),
-    saleStep: effectiveSaleStep(row.saleStep, row.product.saleStep),
-    minSteps: row.minSteps ?? row.product.minSteps,
+    productId: product.id,
+    productTitle: product.title,
+    productSlug: product.slug,
+    productType: product.type === "digital" ? "digital" : "physical",
+    manageStock: row.manageStock ?? product.manageStock,
+    stockStatus: (row.stockStatus ?? product.stockStatus) as StockStatusValue,
+    allowBackorder: product.allowBackorder,
+    unit: effectiveMeasureUnit(row.measureUnit, product.measureUnit, DEFAULT_UNIT),
+    saleStep: effectiveSaleStep(row.saleStep, product.saleStep),
+    minSteps: row.minSteps ?? product.minSteps,
     item: item
       ? {
           physical: quantityFromTicks(item.physical),
@@ -140,9 +156,9 @@ function toSource(row: VariantRow): StockOverviewSource {
         }
       : null,
     leadTime: {
-      productDays: row.product.leadTimeDays,
-      brandDays: row.product.brand?.defaultLeadTimeDays ?? null,
-      brandName: row.product.brand?.name ?? null,
+      productDays: product.leadTimeDays,
+      brandDays: product.brand?.defaultLeadTimeDays ?? null,
+      brandName: product.brand?.name ?? null,
     },
   };
 }
@@ -184,7 +200,11 @@ export function createPrismaStockOverviewStore(db: Db): StockOverviewStore {
         take: limit,
         select: sourceSelect(warehouseId),
       });
-      return rows.map(toSource);
+      // rândurile al căror produs a dispărut între interogări se omit (vezi `toSource`)
+      return rows.flatMap((row) => {
+        const source = toSource(row);
+        return source ? [source] : [];
+      });
     },
 
     async getSource(variantId, warehouseId) {
