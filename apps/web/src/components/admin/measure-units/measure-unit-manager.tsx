@@ -7,7 +7,7 @@ import { Badge, Button, Dialog, Input, Label, Select } from "@ecom/ui";
 import {
   createMeasureUnit,
   updateMeasureUnit,
-} from "@/app/(admin)/admin/produse/(tabs)/unitati-de-masura/actions";
+} from "@/app/(admin)/admin/produse/unitati-de-masura/actions";
 import type { ProductActionFailure } from "@/lib/product-action-support";
 import { getMessages } from "@/messages";
 

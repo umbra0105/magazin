@@ -236,15 +236,17 @@ există `tenantId`. În schimb:
 
 ### Navigarea în administrare — regulă permanentă
 
-- **O singură intrare de meniu pe grup, ecranele grupului ca taburi** (bară de legături de navigare deasupra paginii, nu
-  taburi ARIA care ascund conținut). Primul grup e **Produse** (Toate produsele, Categorii, Branduri, Atribute, Unități de
-  măsură, Fișe explodate, Stoc, sub `/admin/produse/…`; **Media** rămâne separat). Același model pentru **Comenzi, Clienți,
-  Marketing, Conținut, Setări** când apar. Un ecran nou al unui grup se adaugă ca tab în `apps/web/src/lib/admin-nav.ts`
-  (nu ca intrare nouă de meniu), într-un grup de rute `(tabs)` cu `layout.tsx` care desenează `AdminTabBar`.
-- Un tab apare doar dacă utilizatorul are permisiunea (și flag-ul) ecranului; intrarea de meniu apare dacă vede cel puțin un
-  tab și duce la primul tab permis. Meniul și bara nu sunt securitate: fiecare pagină își păstrează `requireAdmin`, iar
-  rutele `api/admin` verifică permisiunea. Editorul unei entități, formularele «nou» și importurile sunt pagini întregi,
-  în afara grupului `(tabs)`.
+- **O singură intrare de meniu pe grup; grupul se deschide și se închide în meniul din stânga (săgeată, `aria-expanded`),
+  iar ecranele lui sunt sub-elemente.** NU există bară de taburi. Primul grup e **Catalog** (Produse, Categorii, Branduri,
+  Atribute, Unități de măsură, Fișe explodate, Stoc, sub `/admin/produse/…`; **Media** rămâne separat). Același model pentru
+  **Comenzi, Clienți, Marketing, Conținut, Setări** când apar. Un ecran nou al unui grup se adaugă ca element în
+  `apps/web/src/lib/admin-nav.ts` (`children` pe intrarea grupului; nu ca intrare nouă de meniu, nu ca bară de taburi),
+  iar `SidebarNav` îl desenează generic, fără cod special pentru grup.
+- Un element apare doar dacă utilizatorul are permisiunea (și flag-ul) ecranului; grupul apare dacă vede cel puțin un
+  element și dispare altfel. Grupul se deschide singur pe paginile lui, cu elementul curent evidențiat (`aria-current`);
+  paginile fără element propriu (editorul de produs, «nou», importul) țin evidențiat elementul cu prefixul cel mai lung,
+  adică «Produse». Meniul nu e securitate: fiecare pagină își păstrează `requireAdmin`, iar rutele `api/admin` verifică
+  permisiunea.
 - Când un ecran își schimbă adresa, adresa veche redirecționează permanent (308) la cea nouă, prin `admin-redirects.ts`,
   iar legăturile interne, testele și ghidurile de verificare se actualizează în același commit (testul de arhitectură
   `admin-navigation` pică la orice legătură spre o adresă veche).

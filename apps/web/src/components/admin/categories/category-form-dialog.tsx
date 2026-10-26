@@ -5,10 +5,7 @@ import { Button, Dialog, Input, Label, Select, Textarea } from "@ecom/ui";
 import { getMessages } from "@/messages";
 import { getMediaStatuses } from "@/app/(admin)/admin/media/actions";
 import { MediaPicker } from "@/components/admin/media/media-picker";
-import {
-  createCategory,
-  updateCategory,
-} from "@/app/(admin)/admin/produse/(tabs)/categorii/actions";
+import { createCategory, updateCategory } from "@/app/(admin)/admin/produse/categorii/actions";
 import type { CategoryCapabilities, CategoryRow } from "./category-types";
 
 const m = getMessages().admin.categories;

@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, GripVertical, Pencil, Trash2, MoveRight } from "luc
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Button, Dialog, Label, Select, cn } from "@ecom/ui";
-import { deleteCategory, moveCategory } from "@/app/(admin)/admin/produse/(tabs)/categorii/actions";
+import { deleteCategory, moveCategory } from "@/app/(admin)/admin/produse/categorii/actions";
 import {
   dropTarget,
   stepTarget,

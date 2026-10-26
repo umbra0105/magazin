@@ -4,7 +4,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button, Dialog, Input, Label, Select, Textarea } from "@ecom/ui";
-import { adjustStock } from "@/app/(admin)/admin/produse/(tabs)/stoc/actions";
+import { adjustStock } from "@/app/(admin)/admin/produse/stoc/actions";
 import type { ProductActionFailure } from "@/lib/product-action-support";
 import {
   allowedDirections,

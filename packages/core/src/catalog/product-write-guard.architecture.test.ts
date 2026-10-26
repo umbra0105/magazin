@@ -148,7 +148,7 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
 
   it("acțiunile de categorii și branduri sunt recunoscute ca scrieri de catalog și sunt învelite cu products.*", () => {
     for (const suffix of ["categorii/actions.ts", "branduri/actions.ts"]) {
-      const file = files.find((f) => f.path.endsWith("(admin)/admin/produse/(tabs)/" + suffix));
+      const file = files.find((f) => f.path.endsWith("(admin)/admin/produse/" + suffix));
       expect(file, suffix).toBeDefined();
       expect(WRITES_PRODUCTS(file?.content ?? ""), suffix).toBe(true);
       const exported = exportsOf(file?.content ?? "");
@@ -199,9 +199,7 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
   });
 
   it("acțiunile paginii Atribute sunt recunoscute ca scrieri de catalog și toate cer products.write", () => {
-    const file = files.find((f) =>
-      f.path.endsWith("(admin)/admin/produse/(tabs)/atribute/actions.ts"),
-    );
+    const file = files.find((f) => f.path.endsWith("(admin)/admin/produse/atribute/actions.ts"));
     expect(file).toBeDefined();
     expect(WRITES_PRODUCTS(file?.content ?? "")).toBe(true);
     const exported = exportsOf(file?.content ?? "");

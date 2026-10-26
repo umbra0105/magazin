@@ -77,6 +77,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     href: entry.href,
     basePath: entry.basePath,
     label: m.nav[entry.id],
+    // grup care se deschide și se închide: doar elementele permise (vezi `visibleNav`)
+    ...(entry.children && {
+      children: entry.children.map((child) => ({
+        id: child.id,
+        href: child.href,
+        label: m.nav[child.id],
+        ...(child.keepParams && { keepParams: child.keepParams }),
+      })),
+    }),
   }));
 
   return (

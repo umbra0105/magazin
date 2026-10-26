@@ -437,14 +437,19 @@ test.describe("drepturi", () => {
       const readerPage = await second.newPage();
       await login(readerPage, reader, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
       await expect(readerPage.getByRole("heading", { level: 1, name: "Stoc" })).toBeVisible();
-      // doar inventory.read: bara are un singur tab (Stoc), iar «Produse» din meniu duce direct la el
-      const bar = readerPage.getByRole("navigation", { name: "Secțiunile produselor" });
-      await expect(bar.getByRole("link")).toHaveText(["Stoc"]);
+      // doar inventory.read: grupul «Catalog» are un singur element (Stoc), deschis pe pagina lui
+      const menu = readerPage.getByRole("navigation", { name: "Navigare principală" });
+      const catalog = menu.getByRole("button", { name: "Catalog", exact: true });
+      await expect(menu.locator('[data-nav-group="catalog"] ul').getByRole("link")).toHaveText([
+        "Stoc",
+      ]);
       await readerPage.goto("/admin");
-      await readerPage
-        .getByRole("navigation", { name: "Navigare principală" })
-        .getByRole("link", { name: "Produse", exact: true })
-        .click();
+      // un clic dat înainte de hidratare se pierde: repetăm până se deschide grupul
+      await expect(async () => {
+        if ((await catalog.getAttribute("aria-expanded")) !== "true") await catalog.click();
+        await expect(catalog).toHaveAttribute("aria-expanded", "true", { timeout: 2_000 });
+      }).toPass({ timeout: 15_000 });
+      await menu.getByRole("link", { name: "Stoc", exact: true }).click();
       await expect(readerPage).toHaveURL(/\/admin\/produse\/stoc$/);
       await readerPage.goto("/admin/produse");
       await expect(readerPage).toHaveURL(/\/admin\/acces-interzis/);

@@ -268,7 +268,7 @@ Fiecare punct: 🟢 ÎNCEP, teste care pică întâi, commit separat, ✅ GATA c
 
 **Etapele punctului 9 (decis de utilizator):** (9b adaugă și: importurile creează produse negestionate, explicit; un fișier exportat cu un simbol de unitate ambiguu folosește codul unității) 9a = migrația `Product.saleStepLabel`, tabul «Stoc» din editor, «Denumirea pasului», termenul implicit pe brand și coloana «Stoc» din listă; 9b = afișarea prețului pe unitate și pe pas, coloana «Preț» din listă, previzualizarea din tabul Prețuri și coloanele noi de import/export.
 
-**Navigarea (blocul 8b, decis de utilizator):** punctele 9–13 construiesc ecranele noi direct în structura cu taburi: meniul are o singură intrare «Produse», iar ecranele (inclusiv cele noi, ex. «Stoc mic» de la punctul 10 sau «Depozite» de la 13) sunt taburi sub `/admin/produse/…`, cu drepturile fiecărui ecran; convenția e în `CLAUDE.md` și `docs/04-backend-admin.md`.
+**Navigarea (blocul 8b, decis de utilizator):** punctele 9–13 construiesc ecranele noi direct în structura cu grup (din 8c: grupul «Catalog», care se deschide și se închide, fără bară de taburi): meniul are o singură intrare «Catalog», iar ecranele (inclusiv cele noi, ex. «Stoc mic» de la punctul 10 sau «Depozite» de la 13) sunt elemente ale grupului, sub `/admin/produse/…`, cu drepturile fiecărui ecran; convenția e în `CLAUDE.md` și `docs/04-backend-admin.md`.
 
 **Cele 6 produse ale tale ca verificare manuală (punctele 3, 9, 12 și 14):** creezi fiecare cu configurația din D11.1 și verifici: cantitățile permise (ex. mozaic: 2,03 · 4,06 · 6,09), refuzul
 unei cantități invalide cu mesaj în română, prețul afișat pe unitate și pe pas, disponibilitatea în pași și restul (liner 100 mp → 2 pași, rest 17,5 mp), abachi cu 4 pași diferiți.

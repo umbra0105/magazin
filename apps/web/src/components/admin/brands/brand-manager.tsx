@@ -8,7 +8,7 @@ import {
   createBrand,
   deleteBrand,
   updateBrand,
-} from "@/app/(admin)/admin/produse/(tabs)/branduri/actions";
+} from "@/app/(admin)/admin/produse/branduri/actions";
 import { getMediaStatuses } from "@/app/(admin)/admin/media/actions";
 import { MediaPicker } from "@/components/admin/media/media-picker";
 import { parseLeadTimeInput, type StockTexts } from "@/components/admin/products/stock-form";

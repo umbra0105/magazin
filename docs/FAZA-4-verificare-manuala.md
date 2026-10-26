@@ -377,7 +377,7 @@ adăugată.” Deschide produsul asociat: la „Din alte produse către acesta�
 
 ## 9. Fișe explodate (cere pasul 0.6.b)
 
-9.1 **Vezi:** în meniul din stânga „Produse”, iar în bara de taburi „Fișe explodate” (dacă nu apare: aștepți până la 5 minute după pasul 0.6.b).
+9.1 **Vezi:** în meniul din stânga grupul „Catalog” (deschide-l cu săgeata) și în el „Fișe explodate” (dacă nu apare: aștepți până la 5 minute după pasul 0.6.b).
 Deschide <http://localhost:3000/admin/produse/fise-explodate>.
 
 9.2 **Faci:** „Fișă nouă”: Titlu `Fișă test`, „Alege imaginea” din bibliotecă, „Creează fișa”. **Vezi:** editorul fișei cu imaginea.
@@ -571,7 +571,7 @@ Folosește o **fereastră privată** pentru conturile de test; Owner-ul rămâne
 
 ### 16.2 Suport clienți (`suport.test@example.test`)
 
-1. Autentifică-te. **Vezi:** meniul fără „Produse” (categoriile, brandurile și atributele sunt taburi în Produse).
+1. Autentifică-te. **Vezi:** meniul fără grupul „Catalog” (categoriile, brandurile și atributele sunt elemente în grupul Catalog).
 2. Tastează `/admin/produse`, `/admin/produse/categorii`, `/admin/produse/import`. **Vezi:** de fiecare dată „Acces interzis”.
 
 ### 16.3 Manager (`manager.test@example.test`)

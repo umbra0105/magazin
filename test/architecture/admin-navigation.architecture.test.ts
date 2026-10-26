@@ -1,16 +1,22 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { ADMIN_NAV, PRODUCT_TABS, activeTabId } from "../../apps/web/src/lib/admin-nav";
+import {
+  ADMIN_NAV,
+  CATALOG_ITEMS,
+  activeItemId,
+  pathInGroup,
+} from "../../apps/web/src/lib/admin-nav";
 import { LEGACY_ADMIN_ROUTES } from "../../apps/web/src/lib/admin-redirects";
 
 /**
- * Navigația de admin (blocul 8b): o intrare de meniu pe grup, ecranele grupului ca taburi. Garanții, pe sursa reală:
- *  1. fiecare tab duce la o pagină care există și fiecare pagină din grupul `(tabs)` e un tab (altfel bara ar
- *     afișa un tab activ greșit sau nimic);
- *  2. paginile pline (editorul de produs, produsul nou, importul, editorul fișei) rămân în afara grupului, deci
- *     fără bară de taburi;
+ * Navigația de admin (blocul 8c): meniul din stânga are GRUPURI care se deschid și se închid (primul: «Catalog»), cu
+ * ecranele grupului ca sub-elemente; nu mai există bară de taburi. Garanții, pe sursa reală:
+ *  1. fiecare element al grupului duce la o pagină care există, iar fiecare pagină de sub adresa grupului are un
+ *     element evidențiat în meniu (editorul de produs, produsul nou și importul țin «Produse» evidențiat);
+ *  2. bara de taburi și dosarul de rute `(tabs)` au dispărut, iar meniul desenează grupurile generic (săgeată,
+ *     `aria-expanded`), nu cu cod special pentru «Catalog»;
  *  3. nicio sursă nu mai leagă de adresele vechi (ele există doar în tabelul de redirecturi).
  */
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -29,9 +35,10 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const rel = (full: string): string => relative(root, full).replaceAll("\\", "/");
+const read = (path: string): string => readFileSync(join(root, path), "utf8");
 
-/** `…/admin/produse/(tabs)/stoc/[variantId]/page.tsx` → `/admin/produse/stoc/[variantId]`, plus dacă e în grup. */
-function adminPages(): { url: string; inTabs: boolean; file: string }[] {
+/** `…/admin/produse/stoc/[variantId]/page.tsx` → `/admin/produse/stoc/[variantId]` (grupurile de rute în paranteze nu intră în adresă). */
+function adminPages(): { url: string; file: string }[] {
   return walk(join(root, ADMIN_PAGES))
     .map(rel)
     .filter((f) => f.endsWith("/page.tsx"))
@@ -42,7 +49,6 @@ function adminPages(): { url: string; inTabs: boolean; file: string }[] {
         .filter(Boolean);
       return {
         file,
-        inTabs: segments.includes("(tabs)"),
         url: `/admin${segments
           .filter((s) => !/^\(.*\)$/.test(s))
           .map((s) => `/${s}`)
@@ -51,47 +57,93 @@ function adminPages(): { url: string; inTabs: boolean; file: string }[] {
     });
 }
 
-describe("bara de taburi a grupului «Produse»", () => {
+describe("grupul «Catalog» din meniu", () => {
   const pages = adminPages();
-  const tabPages = pages.filter((p) => p.inTabs);
+  const group = ADMIN_NAV.find((entry) => entry.id === "catalog");
 
-  it("fiecare tab are o pagină în grupul (tabs)", () => {
-    expect(tabPages.length).toBeGreaterThanOrEqual(PRODUCT_TABS.length);
-    const urls = new Set(tabPages.map((p) => p.url));
-    for (const tab of PRODUCT_TABS) expect(urls.has(tab.href), tab.href).toBe(true);
+  it("fiecare element are o pagină care există", () => {
+    const urls = new Set(pages.map((p) => p.url));
+    for (const item of CATALOG_ITEMS) expect(urls.has(item.href), item.href).toBe(true);
   });
 
-  it("fiecare pagină din grupul (tabs) are un tab activ (nu apare bara fără un tab selectat)", () => {
-    for (const page of tabPages) {
+  it("fiecare pagină de sub adresa grupului are un element evidențiat (niciuna fără loc în meniu)", () => {
+    const underGroup = pages.filter((p) => pathInGroup(p.url, group?.href ?? "/nu-exista"));
+    expect(underGroup.length).toBeGreaterThanOrEqual(CATALOG_ITEMS.length);
+    for (const page of underGroup) {
       // segmentele dinamice se înlocuiesc cu o valoare oarecare
       const concrete = page.url.replace(/\[[^\]]+\]/g, "x");
-      expect(activeTabId(concrete, PRODUCT_TABS), page.file).toBeDefined();
+      expect(activeItemId(concrete, CATALOG_ITEMS), page.file).toBeDefined();
     }
   });
 
-  it("paginile pline (editor produs, produs nou, import, editorul fișei) sunt în afara grupului", () => {
-    const outside = pages
-      .filter((p) => p.url.startsWith("/admin/produse") && !p.inTabs)
-      .map((p) => p.url)
-      .sort();
-    expect(outside).toEqual(
-      [
-        "/admin/produse/[id]",
-        "/admin/produse/fise-explodate/[id]",
-        "/admin/produse/import",
-        "/admin/produse/import/istoric",
-        "/admin/produse/import/istoric/[id]",
-        "/admin/produse/nou",
-      ].sort(),
-    );
+  it("paginile de produs (editor, produs nou, import, istoric) țin «Produse» evidențiat; ecranele proprii, elementul lor", () => {
+    const highlighted = (url: string) =>
+      activeItemId(url.replace(/\[[^\]]+\]/g, "x"), CATALOG_ITEMS);
+    expect(highlighted("/admin/produse/[id]")).toBe("allProducts");
+    expect(highlighted("/admin/produse/nou")).toBe("allProducts");
+    expect(highlighted("/admin/produse/import")).toBe("allProducts");
+    expect(highlighted("/admin/produse/import/istoric")).toBe("allProducts");
+    expect(highlighted("/admin/produse/import/istoric/[id]")).toBe("allProducts");
+    expect(highlighted("/admin/produse/stoc/[variantId]")).toBe("inventory");
+    expect(highlighted("/admin/produse/fise-explodate/[id]")).toBe("partsDiagrams");
+    // paginile reale chiar există la aceste adrese
+    const urls = new Set(pages.map((p) => p.url));
+    for (const url of [
+      "/admin/produse/[id]",
+      "/admin/produse/nou",
+      "/admin/produse/import",
+      "/admin/produse/import/istoric",
+      "/admin/produse/import/istoric/[id]",
+      "/admin/produse/stoc/[variantId]",
+      "/admin/produse/fise-explodate/[id]",
+    ]) {
+      expect(urls.has(url), url).toBe(true);
+    }
   });
 
-  it("meniul are o singură intrare pentru tot grupul și niciun tab nu e intrare separată", () => {
+  it("meniul are un singur grup pentru tot catalogul, iar niciun element nu e și intrare separată", () => {
+    expect(ADMIN_NAV.filter((e) => e.children).map((e) => e.id)).toEqual(["catalog"]);
     const hrefs = ADMIN_NAV.map((e) => e.href);
-    for (const tab of PRODUCT_TABS.filter((t) => t.href !== "/admin/produse")) {
-      expect(hrefs, tab.href).not.toContain(tab.href);
+    for (const item of CATALOG_ITEMS.filter((i) => i.href !== group?.href)) {
+      expect(hrefs, item.href).not.toContain(item.href);
     }
-    expect(ADMIN_NAV.filter((e) => e.tabs).map((e) => e.id)).toEqual(["products"]);
+    // toate elementele stau sub adresa grupului
+    for (const item of CATALOG_ITEMS) {
+      expect(pathInGroup(item.href, group?.href ?? ""), item.href).toBe(true);
+    }
+  });
+});
+
+describe("bara de taburi a dispărut; grupurile sunt generice", () => {
+  it("fără AdminTabBar, fără dosarul (tabs), fără eticheta barei", () => {
+    expect(existsSync(join(root, "apps/web/src/components/admin/admin-tab-bar.tsx"))).toBe(false);
+    const files = walk(join(root, "apps", "web", "src")).map(rel);
+    expect(files.some((f) => f.includes("/(tabs)/"))).toBe(false);
+    const offenders: string[] = [];
+    for (const file of files.filter((f) => /\.[tj]sx?$/.test(f))) {
+      const text = readFileSync(join(root, file), "utf8");
+      if (/AdminTabBar|admin-tab-bar|productTabsLabel|PRODUCT_TABS|\(tabs\)/.test(text)) {
+        offenders.push(file);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("meniul desenează orice grup cu săgeată și aria-expanded, din datele ADMIN_NAV (nu cod special pentru «Catalog»)", () => {
+    // în cod, fără comentarii: un cuvânt dintr-un comentariu nu dovedește că atributul e pus
+    const sidebar = read("apps/web/src/components/admin/sidebar-nav.tsx")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    expect(sidebar).toMatch(/aria-expanded=\{/);
+    expect(sidebar).toMatch(/aria-controls=\{/);
+    expect(sidebar).toMatch(/hidden=\{/);
+    expect(sidebar).toMatch(/item\.children/);
+    expect(sidebar).toMatch(/pathInGroup\(/);
+    // fără ramuri speciale pentru un anumit grup sau element (pictograma grupului stă în harta de pictograme, nu într-o condiție)
+    expect(sidebar).not.toMatch(/===\s*["']catalog["']|allProducts|inventory|partsDiagrams/);
+    const layout = read("apps/web/src/app/(admin)/admin/layout.tsx");
+    expect(layout).toMatch(/children/);
+    expect(layout).not.toMatch(/catalog/i);
   });
 });
 

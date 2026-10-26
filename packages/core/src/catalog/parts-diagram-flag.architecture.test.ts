@@ -24,13 +24,11 @@ export interface SourceFile {
 }
 
 const ADMIN_DIR = "apps/web/src/app/(admin)/admin/produse/";
-/** Lista fișelor e tab (în grupul `(tabs)`), editorul fișei e pagină întreagă, în afara grupului. */
-const LIST_PAGE = `${ADMIN_DIR}(tabs)/fise-explodate/page.tsx`;
+/** Lista fișelor e un element al grupului «Catalog»; editorul fișei e pagina ei întreagă, sub aceeași adresă. */
+const LIST_PAGE = `${ADMIN_DIR}fise-explodate/page.tsx`;
 const EDITOR_PAGE = `${ADMIN_DIR}fise-explodate/[id]/page.tsx`;
 const isPartsDiagramPage = (path: string): boolean =>
-  /^apps\/web\/src\/app\/\(admin\)\/admin\/produse\/(?:\(tabs\)\/)?fise-explodate\/(?:.+\/)?page\.tsx$/.test(
-    path,
-  );
+  /^apps\/web\/src\/app\/\(admin\)\/admin\/produse\/fise-explodate\/(?:.+\/)?page\.tsx$/.test(path);
 const FEATURE_REQUIRED = /requireAdmin\(\s*\{[^}]*feature:\s*["']partsDiagrams["'][^}]*\}\s*\)/;
 const PRISMA_DELEGATE = /\.\s*partsDiagram(?:Hotspot|Product)?\s*\./;
 

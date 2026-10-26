@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { PRODUCT_TABS } from "./admin-nav";
+import { CATALOG_ITEMS } from "./admin-nav";
 import { LEGACY_ADMIN_ROUTES, legacyAdminRedirects } from "./admin-redirects";
 
 describe("redirecturile adreselor vechi de admin", () => {
-  it("fiecare adresă veche duce permanent (308) la tabul nou, păstrând restul căii", () => {
+  it("fiecare adresă veche duce permanent (308) la elementul nou, păstrând restul căii", () => {
     expect(legacyAdminRedirects()).toEqual(
       LEGACY_ADMIN_ROUTES.map(({ from, to }) => ({
         source: `${from}/:path*`,
@@ -24,13 +24,13 @@ describe("redirecturile adreselor vechi de admin", () => {
     ]);
   });
 
-  it("destinația fiecărei redirecționări e un tab real al grupului Produse", () => {
-    const tabHrefs = new Set(PRODUCT_TABS.map((tab) => tab.href));
+  it("destinația fiecărei redirecționări e un element real al grupului «Catalog»", () => {
+    const tabHrefs = new Set(CATALOG_ITEMS.map((item) => item.href));
     for (const { to } of LEGACY_ADMIN_ROUTES) expect(tabHrefs.has(to), to).toBe(true);
   });
 
-  it("nicio adresă veche nu mai e un tab și nicio sursă nu se repetă", () => {
-    const tabHrefs = new Set(PRODUCT_TABS.map((tab) => tab.href));
+  it("nicio adresă veche nu mai e un element al grupului și nicio sursă nu se repetă", () => {
+    const tabHrefs = new Set(CATALOG_ITEMS.map((item) => item.href));
     const sources = LEGACY_ADMIN_ROUTES.map((r) => r.from);
     for (const from of sources) expect(tabHrefs.has(from), from).toBe(false);
     expect(new Set(sources).size).toBe(sources.length);

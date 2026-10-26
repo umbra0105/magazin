@@ -126,8 +126,8 @@ export const ro = {
     nav: {
       dashboard: "Panou",
       orders: "Comenzi",
-      products: "Produse",
-      allProducts: "Toate produsele",
+      catalog: "Catalog",
+      allProducts: "Produse",
       inventory: "Stoc",
       customers: "Clienți",
       discounts: "Reduceri",
@@ -147,8 +147,6 @@ export const ro = {
       measureUnits: "Unități de măsură",
       partsDiagrams: "Fișe explodate",
     },
-    /** Eticheta barei de taburi a grupului «Produse» (navigare, nu taburi ARIA). */
-    productTabsLabel: "Secțiunile produselor",
     userMenu: {
       button: "Meniul utilizatorului",
       account: "Contul meu",
