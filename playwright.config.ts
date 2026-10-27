@@ -5,6 +5,7 @@ import {
   assertTestBucket,
   assertTestDatabase,
   assertTestRedis,
+  deriveE2eRedisUrl,
   deriveTestBucket,
   deriveTestDatabaseUrl,
   deriveTestRedisUrl,
@@ -44,7 +45,13 @@ assertTestDatabase(testDatabaseUrl);
 assertTestRedis(testRedisUrl);
 // Văzute de global-setup / global-teardown (procesul principal Playwright).
 process.env["TEST_DATABASE_URL"] = testDatabaseUrl;
-process.env["TEST_REDIS_URL"] = testRedisUrl;
+// Indexul Redis al E2E e separat de cel al testelor de integrare (vezi `deriveE2eRedisUrl`).
+// Playwright reevaluează această configurație în fiecare worker, când `TEST_REDIS_URL` e deja indexul E2E: indexul se
+// păstrează în `E2E_REDIS_URL` și se refolosește, ca derivarea să nu se aplice a doua oară.
+const e2eRedisUrl = process.env["E2E_REDIS_URL"] ?? deriveE2eRedisUrl(testRedisUrl);
+assertTestRedis(e2eRedisUrl);
+process.env["E2E_REDIS_URL"] = e2eRedisUrl;
+process.env["TEST_REDIS_URL"] = e2eRedisUrl;
 
 // Serverul S3: bucket de test (garda „test” în nume) creat de `storage:init` la pornire și Redis pe
 // ALT index (2), ca joburile `media` ale lui să nu fie preluate de workerul serverului cu storage
@@ -72,7 +79,7 @@ const localServer = {
   env: {
     // Mediul serverului de test: baza și Redis-ul de test, nu cele din .env.
     DATABASE_URL: testDatabaseUrl,
-    REDIS_URL: testRedisUrl,
+    REDIS_URL: e2eRedisUrl,
     // Better Auth acceptă doar originea din APP_URL: serverul de test trebuie să o știe pe a lui.
     APP_URL: `http://localhost:${port}`,
     // Director de build propriu: serverul E2E nu scrie peste `.next` al unui server de dev pornit.

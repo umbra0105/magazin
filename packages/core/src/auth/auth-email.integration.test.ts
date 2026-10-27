@@ -3,14 +3,21 @@ import { Redis } from "ioredis";
 import { afterAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
 import { authSettings } from "../test-utils/auth-settings";
+import { deleteByScan, mgetAll, scanKeys } from "../test-utils/redis-scan";
 import { createAuth, type AuthEmailSender, type AuthSettings } from "./auth";
 import { AuthGuard } from "./auth-guard";
 import { MemoryCounterStore } from "./counter-store";
-import { createRedisSecondaryStorage } from "./redis-storage";
+import { DEFAULT_AUTH_PREFIX, createRedisSecondaryStorage } from "./redis-storage";
 
 const db = getDb();
 const redis = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379");
 const RUN = randomBytes(4).toString("hex");
+/**
+ * Prefix de chei Redis propriu fișierului și rulării: testul vede doar ce a scris el. Indexul Redis de test nu se golește
+ * (sesiunile au TTL de zile), deci citirea tuturor cheilor `ecom:auth:*` creștea cu fiecare rulare (41.761 de chei, 14,2 s de
+ * `GET`-uri în serie din 15 s). Producția folosește prefixul implicit.
+ */
+const PREFIX = `${DEFAULT_AUTH_PREFIX}t-${RUN}:`;
 const emails: string[] = [];
 const gen = () => randomBytes(18).toString("base64url");
 
@@ -26,7 +33,7 @@ function makeAuth(sender: AuthEmailSender, overrides: Partial<AuthSettings> = {}
     db,
     guard: new AuthGuard(new MemoryCounterStore(), settings),
     email: sender,
-    secondaryStorage: createRedisSecondaryStorage(redis),
+    secondaryStorage: createRedisSecondaryStorage(redis, PREFIX),
     appUrl: "http://localhost:3000",
     secret: randomBytes(32).toString("base64"),
     isProduction: false,
@@ -34,8 +41,8 @@ function makeAuth(sender: AuthEmailSender, overrides: Partial<AuthSettings> = {}
   });
 }
 
-/** Cheile de verificare din Redis (cu secondaryStorage, Better Auth ține tokenurile acolo, cu TTL). */
-const verificationKeys = () => redis.keys("ecom:auth:verification:*");
+/** Cheile de verificare ale acestei rulări din Redis (cu secondaryStorage, Better Auth ține tokenurile acolo, cu TTL). */
+const verificationKeys = () => scanKeys(redis, `${PREFIX}verification:*`);
 
 /** TTL-ul (secunde) al singurei chei de verificare apărute între două momente. */
 async function newVerificationTtl(before: string[]): Promise<number> {
@@ -56,6 +63,7 @@ const errorOf = async (p: Promise<unknown>) => {
 describe("emailurile de autentificare pe Better Auth real", () => {
   afterAll(async () => {
     await db.user.deleteMany({ where: { email: { in: emails } } });
+    await deleteByScan(redis, `${PREFIX}*`);
     await db.$disconnect();
     redis.disconnect();
   });
@@ -153,17 +161,26 @@ describe("emailurile de autentificare pe Better Auth real", () => {
     });
     const u = newUser();
     await auth.api.signUpEmail({ body: u });
+    const before = await verificationKeys();
     await auth.api.requestPasswordReset({ body: { email: u.email } });
     await new Promise((r) => setTimeout(r, 200));
     const token = resets[0]?.token as string;
     expect(token.length).toBeGreaterThan(10);
 
-    const keys = await redis.keys("ecom:auth:*");
-    for (const key of keys) {
+    // Control pozitiv: tokenul chiar stă în Redis, sub exact o cheie de verificare nouă, a cărei denumire nu îl conține.
+    // Fără el, testul ar trece și dacă tokenul n-ar fi ajuns deloc în prefixul citit.
+    const added = (await verificationKeys()).filter((k) => !before.includes(k));
+    expect(added, "o singură cheie de verificare nouă").toHaveLength(1);
+    expect(added[0], "cheia de verificare nouă").not.toContain(token);
+
+    // Toate cheile acestei rulări (în loturi, cu SCAN + MGET): nici numele, nici valoarea nu conțin tokenul.
+    const keys = await scanKeys(redis, `${PREFIX}*`);
+    expect(keys.length).toBeGreaterThan(0);
+    const values = await mgetAll(redis, keys);
+    keys.forEach((key, index) => {
       expect(key, "cheie Redis").not.toContain(token);
-      const value = await redis.get(key);
-      expect(value ?? "", `valoarea cheii ${key}`).not.toContain(token);
-    }
+      expect(values[index] ?? "", `valoarea cheii ${key}`).not.toContain(token);
+    });
 
     const newPassword = gen();
     await auth.api.resetPassword({ body: { token, newPassword } });

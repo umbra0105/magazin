@@ -3,11 +3,13 @@ import {
   assertTestBucket,
   assertTestDatabase,
   assertTestRedis,
+  deriveE2eRedisUrl,
   deriveTestBucket,
   deriveTestDatabaseUrl,
   deriveTestRedisUrl,
   integrationEnv,
   isTestDatabaseName,
+  redisDbIndex,
 } from "./test-env";
 
 const dev = "postgresql://ecom:parola@localhost:5432/ecom";
@@ -146,5 +148,33 @@ describe("bucket de test pentru storage", () => {
     expect(
       integrationEnv({ S3_BUCKET: "ecom", TEST_S3_BUCKET: "proba-test" } as NodeJS.ProcessEnv),
     ).toEqual({ S3_BUCKET: "proba-test" });
+  });
+});
+
+describe("deriveE2eRedisUrl: indexul Redis al suitei E2E, separat de cel al integrării", () => {
+  it("indexul 3, cu gazda, portul și parola neschimbate", () => {
+    expect(deriveE2eRedisUrl("redis://localhost:6379/1")).toBe("redis://localhost:6379/3");
+    expect(deriveE2eRedisUrl("redis://:parola@redis.local:6380/1")).toBe(
+      "redis://:parola@redis.local:6380/3",
+    );
+  });
+
+  it("dacă integrarea e deja pe 3, E2E trece pe 4", () => {
+    expect(deriveE2eRedisUrl("redis://localhost:6379/3")).toBe("redis://localhost:6379/4");
+  });
+
+  it("niciodată indexul integrării, 0 (dezvoltarea) sau 2 (serverul S3 al E2E), pentru orice index de test", () => {
+    for (let index = 1; index <= 14; index++) {
+      const url = `redis://localhost:6379/${index}`;
+      const e2e = redisDbIndex(deriveE2eRedisUrl(url));
+      expect(e2e, `integrare ${index}`).not.toBe(index);
+      expect(e2e).not.toBe(0);
+      expect(e2e).not.toBe(2);
+      expect(e2e).toBeLessThan(16);
+    }
+  });
+
+  it("trece garda: nu e indexul 0", () => {
+    expect(() => assertTestRedis(deriveE2eRedisUrl("redis://localhost:6379/1"))).not.toThrow();
   });
 });

@@ -33,6 +33,18 @@ export function deriveTestRedisUrl(redisUrl: string, override?: string): string 
   return url.toString();
 }
 
+/**
+ * Redis-ul suitei E2E: alt index decât al testelor de integrare (și decât 0 al dezvoltării și 2 al serverului S3 din E2E).
+ * Sesiunile și contoarele E2E au TTL de zile și nu se curăță între rulări; pe același index cu integrarea, ele fac
+ * mai lente testele care citesc chei în masă (incidentul `auth-email`).
+ */
+export function deriveE2eRedisUrl(testRedisUrl: string): string {
+  const url = new URL(testRedisUrl);
+  const testDb = redisDbIndex(testRedisUrl);
+  url.pathname = `/${testDb === 3 ? 4 : 3}`;
+  return url.toString();
+}
+
 export function databaseName(databaseUrl: string): string {
   return new URL(databaseUrl).pathname.replace(/^\//, "");
 }
