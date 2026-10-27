@@ -135,8 +135,10 @@ export class StockMaintenance {
       const batch = await this.stock.expireDue({ limit: this.batchSize });
       batches++;
       expired += batch.expired;
-      // un lot care n-a umplut loturile înseamnă că nu mai e nimic de expirat acum
-      if (batch.items < this.batchSize) return { expired, batches, complete: true };
+      // Lotul e plin după câte rânduri a CITIT `expireDue`, nu după câte a eliberat această instanță: dacă alta i-a golit
+      // rândurile între citire și baleiere, `items` scade deși mai sunt rezervări scadente (oprire prematură, punctul 7).
+      // Un lot citit incomplet înseamnă că nu mai e nimic de expirat acum.
+      if (batch.scanned < this.batchSize) return { expired, batches, complete: true };
       if (batches >= maxBatches) return { expired, batches, complete: false };
     }
   }

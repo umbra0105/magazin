@@ -1226,12 +1226,18 @@ export class StockService {
   /**
    * Jobul de expirare: eliberează rezervările active a căror oră a trecut, un rând de stoc pe tranzacție. Idempotent și
    * sigur la rulări simultane. `variantIds` restrânge la anumite variante.
+   *
+   * Întoarce `expired` (rezervări eliberate de acest apel), `items` (rânduri de stoc pe care acest apel a eliberat ceva) și
+   * `scanned` (rânduri de stoc CITITE ca având rezervări scadente). Doar `scanned` spune dacă lotul a fost plin: o altă
+   * instanță poate goli rândurile lotului între citire și baleiere, iar atunci `items` scade deși mai sunt rezervări scadente.
    */
   async expireDue(options: { variantIds?: readonly string[]; limit?: number } = {}): Promise<{
     expired: number;
     items: number;
+    scanned: number;
   }> {
-    if (options.variantIds && options.variantIds.length === 0) return { expired: 0, items: 0 };
+    if (options.variantIds && options.variantIds.length === 0)
+      return { expired: 0, items: 0, scanned: 0 };
     const now = this.now();
     const filter = options.variantIds
       ? Prisma.sql`AND "variantId" IN (${Prisma.join([...options.variantIds])})`
@@ -1252,7 +1258,7 @@ export class StockService {
       expired += count;
       if (count > 0) items++;
     }
-    return { expired, items };
+    return { expired, items, scanned: due.length };
   }
 
   /**

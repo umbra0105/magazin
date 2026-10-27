@@ -337,10 +337,19 @@ describe("eliberare și expirare", () => {
       await h.service.reserve(h.ref("a2"), [h.line(a.id, "1")], minutes(T0, 30));
       await h.service.reserve(h.ref("b1"), [h.line(b.id, "1")], minutes(T0, 5));
       h.setClock(minutes(T0, 10));
-      expect(await h.service.expireDue({ variantIds: [a.id] })).toEqual({ expired: 1, items: 1 });
+      expect(await h.service.expireDue({ variantIds: [a.id] })).toEqual({
+        expired: 1,
+        items: 1,
+        scanned: 1,
+      });
       expect((await h.item(a.id)).reserved).toBe(q("1")); // a2 rămâne
       expect((await h.item(b.id)).reserved).toBe(q("1")); // filtrul n-a atins b
-      expect(await h.service.expireDue({ variantIds: [a.id] })).toEqual({ expired: 0, items: 0 });
+      // a2 încă nu a expirat: nicio cheie de citit
+      expect(await h.service.expireDue({ variantIds: [a.id] })).toEqual({
+        expired: 0,
+        items: 0,
+        scanned: 0,
+      });
       expect((await h.service.expireDue()).expired).toBeGreaterThanOrEqual(1);
       expect((await h.item(b.id)).reserved).toBe(0n);
       await h.consistent(a.id);

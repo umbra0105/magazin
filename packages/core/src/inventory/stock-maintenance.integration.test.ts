@@ -170,6 +170,58 @@ describe("expirarea rezervărilor", () => {
     );
   });
 
+  it("lotul unei instanțe golit de alta între citire și baleiere: prima NU se oprește, termină tot, fiecare rezervare expiră o singură dată", async () => {
+    await withStock(
+      async (h) => {
+        const ids: string[] = [];
+        for (let i = 0; i < 8; i++) {
+          const p = await h.product("3");
+          await h.reserveUntil(p.id, "1", `r${i}`, minutes(T0, 1));
+          ids.push(p.id);
+        }
+        h.setClock(minutes(T0, 2));
+        // A citește primul lot de chei; înainte să-l baleieze, B (alta instanță) golește exact acel lot.
+        let injected = false;
+        const afterFirstRead = new Proxy(h.tx, {
+          get(target, prop) {
+            const value = Reflect.get(target, prop) as unknown;
+            if (prop === "$queryRaw" && typeof value === "function") {
+              return async (...args: unknown[]) => {
+                const rows = await (value as (...a: unknown[]) => Promise<unknown>).apply(
+                  target,
+                  args,
+                );
+                if (!injected) {
+                  injected = true;
+                  const other = await h.maintenance.expireReservations({ maxBatches: 1 });
+                  expect(other).toEqual({ expired: 3, batches: 1, complete: false });
+                }
+                return rows;
+              };
+            }
+            return typeof value === "function" ? value.bind(target) : value;
+          },
+        });
+        const a = await new StockMaintenance({
+          db: afterFirstRead as typeof h.tx,
+          audit: new AuditService(h.audit),
+          now: () => minutes(T0, 2),
+          batchSize: 3,
+        }).expireReservations();
+        expect(injected).toBe(true);
+        // B a golit 3 chei; A le-a găsit golite și trebuie să le fi golit pe celelalte 5
+        expect(a).toMatchObject({ expired: 5, complete: true });
+        expect(a.batches).toBeGreaterThanOrEqual(2);
+        for (const id of ids) {
+          expect((await h.item(id)).reserved).toBe(0n);
+          expect(await h.statuses(id)).toEqual(["expired"]);
+          expect((await h.stock.checkConsistency(id)).ok).toBe(true);
+        }
+      },
+      { batchSize: 3 },
+    );
+  });
+
   it("plafonul pe rulare: se oprește cu complete = false, iar următoarea rulare continuă de unde a rămas", async () => {
     await withStock(
       async (h) => {
