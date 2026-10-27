@@ -66,6 +66,8 @@ export interface ProductSpec {
   manageStock?: boolean;
   stockStatus?: "instock" | "outofstock" | "onbackorder";
   allowBackorder?: boolean;
+  /** Starea produsului; implicit cea din bază («draft»). «Anunță-mă» cere un produs «active». */
+  status?: "draft" | "active" | "archived";
   variants?: readonly VariantSpec[];
 }
 
@@ -84,6 +86,7 @@ export async function addStockProduct(
       manageStock: spec.manageStock ?? true,
       stockStatus: spec.stockStatus ?? "instock",
       allowBackorder: spec.allowBackorder ?? false,
+      ...(spec.status !== undefined && { status: spec.status }),
       ...(hasStep && {
         measureUnitId: ctx.unitId,
         saleStep: saleStepToInt(parseQuantity(spec.step as string)),

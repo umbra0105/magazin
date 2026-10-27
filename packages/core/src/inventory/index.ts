@@ -15,3 +15,4 @@ export * from "./stock-overview";
 export * from "./stock-overview-store";
 export * from "./stock-overview-service";
 export * from "./product-stock";
+export * from "./back-in-stock";

@@ -121,6 +121,8 @@ describe("registrul de setări", () => {
       expect(inv.snapshotSafetyWindowMinutes.parse(undefined)).toBe(30);
       expect(inv.snapshotStaleHours.parse(undefined)).toBe(24);
       expect(inv.backInStockRetentionDays.parse(undefined)).toBe(90);
+      expect(inv.backInStockMaxPerEmail.parse(undefined)).toBe(10);
+      expect(inv.backInStockMaxPerVariant.parse(undefined)).toBe(1000);
     });
 
     it("stoc (Faza 5): întregi în limite", () => {
@@ -131,6 +133,8 @@ describe("registrul de setări", () => {
         ["inventory.snapshotSafetyWindowMinutes", [0, 30, 1440], [-1, 1441, 1.5]],
         ["inventory.snapshotStaleHours", [1, 24, 720], [0, 721, 1.5]],
         ["inventory.backInStockRetentionDays", [1, 90, 365], [0, 366, 1.5]],
+        ["inventory.backInStockMaxPerEmail", [1, 10, 100], [0, 101, 1.5, "10"]],
+        ["inventory.backInStockMaxPerVariant", [1, 1000, 100000], [0, 100001, 1.5, "1000"]],
       ];
       for (const [key, good, bad] of cases) {
         for (const value of good) expect(ok(key, value), `${key}=${value}`).toBe(true);

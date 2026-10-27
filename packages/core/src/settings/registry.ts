@@ -59,6 +59,10 @@ export const settingGroups = {
     snapshotStaleHours: z.number().int().min(1).max(720).default(24),
     /** Cât se păstrează o cerere «Anunță-mă când revine» netrimisă, în zile (D12). */
     backInStockRetentionDays: z.number().int().min(1).max(365).default(90),
+    /** Cererile «Anunță-mă» în așteptare pe o singură adresă (plafon împotriva abuzului, D12). */
+    backInStockMaxPerEmail: z.number().int().min(1).max(100).default(10),
+    /** Cererile «Anunță-mă» în așteptare pe o singură variantă (plafon împotriva abuzului, D12). */
+    backInStockMaxPerVariant: z.number().int().min(1).max(100_000).default(1000),
   },
   catalog: {
     /**
