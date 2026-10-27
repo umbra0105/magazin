@@ -2,7 +2,7 @@
 
 ## 2026-10-26 · Sesiunea 6 · Faza 5 (Stoc) — în curs, următorul: punctul 10 din 14
 **Terminat:** punctele 1–9 din 14, confirmate de utilizator: 1–8 publicate (CI verde), 9a publicat (`38f57ec`, CI verde); 9b (`6200985`, afișarea prețului și coloanele de import/export) și corecția CSV pentru Excel (`41dbc6e`, UTF-16LE cu BOM și TAB, fără `sep=`) confirmate și împinse, aștept «CI verde». Planul `docs/FAZA-5-plan.md` (versiunea a patra) și deciziile lui rămân cele aprobate.
-**În lucru:** punctul 10b («contoarele din Panou», `[~]`): făcut și verificat, aștept confirmarea utilizatorului (nepublicat; `706ae08` și commit-ul 10b așteaptă push; dev serverul se repornește de utilizator). Punctul 11 («Anunță-mă când revine») începe abia după «CI verde» pe 10b
+**În lucru:** nimic deschis (niciun `[~]` în TODO). 10b («contoarele din Panou», `52634ed`) și textele «Sincronizare SmartBill» (`ae0a171`) sunt confirmate și publicate împreună cu `706ae08`; aștept «CI verde» și raportul despre testul `auth-email` (investigație fără cod). Punctul 11 («Anunță-mă când revine») începe abia după ambele
 **Blocat:** —
 
 **Corecție de texte — «Sincronizare SmartBill» în loc de «poză» (FĂRĂ migrație; cere repornirea dev serverului):**
