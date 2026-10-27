@@ -1,5 +1,5 @@
 /**
- * Procesul de worker: `pnpm worker`. Consumă cozile `emails`, `media`, `product-import` și `product-import-images`, și rulează periodic retenția conturilor neverificate și joburile de stoc (expirarea rezervărilor, prospețimea pozei, curățarea cererilor «Anunță-mă»). În dezvoltare, `pnpm dev:web`
+ * Procesul de worker: `pnpm worker`. Consumă cozile `emails`, `media`, `product-import` și `product-import-images`, și rulează periodic retenția conturilor neverificate și joburile de stoc (expirarea rezervărilor, prospețimea pozei, curățarea cererilor «Anunță-mă» și trimiterea emailurilor «Anunță-mă când revine»). În dezvoltare, `pnpm dev:web`
  * pornește aceiași workeri în procesul aplicației, deci nu trebuie rulat separat.
  */
 import { getLogger } from "@ecom/shared";

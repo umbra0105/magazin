@@ -35,6 +35,7 @@
     "dev:stock-adjust": "node --import tsx packages/core/scripts/dev-stock-adjust.ts",
     "dev:seed-stock": "node --import tsx packages/core/scripts/dev-seed-stock.ts",
     "dev:stock-jobs": "node --import tsx packages/jobs/scripts/dev-stock-jobs.ts",
+    "dev:back-in-stock": "node --import tsx packages/jobs/scripts/dev-back-in-stock.ts",
     "stock:jobs": "node --import tsx packages/jobs/scripts/stock-jobs.ts",
     "dev:perf-catalog": "node --import tsx packages/core/scripts/dev-perf-catalog.ts",
     "dev:preset": "node --import tsx packages/core/scripts/dev-apply-preset.ts",

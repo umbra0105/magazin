@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { buildResetPasswordLink, buildVerifyEmailLink } from "./links";
+import { buildProductLink, buildResetPasswordLink, buildVerifyEmailLink } from "./links";
 import { openEmailPayload, sealEmailPayload, type EmailPayload } from "./payload-seal";
 import { redactSecrets } from "./sanitize";
 
@@ -8,7 +8,7 @@ const APP_KEY = Buffer.alloc(32, 7).toString("base64");
 const OTHER_KEY = Buffer.alloc(32, 9).toString("base64");
 const token = () => randomBytes(32).toString("base64url");
 
-const payload = (): EmailPayload => ({
+const payload = (): Extract<EmailPayload, { kind: "reset-password" }> => ({
   kind: "reset-password",
   to: "client@example.test",
   name: "Ana Popescu",
@@ -36,6 +36,48 @@ describe("payload-ul joburilor de email (criptat)", () => {
     expect(() => openEmailPayload(OTHER_KEY, job)).toThrow();
     expect(() => openEmailPayload(APP_KEY, { ...job, sealed: `${job.sealed}x` })).toThrow();
     expect(() => openEmailPayload(APP_KEY, { ...job, sealed: "v1:a:b:c" })).toThrow();
+  });
+});
+
+describe("payload-ul «Anunță-mă când revine» (doar identificatorul cererii)", () => {
+  const alert = (): EmailPayload => ({
+    kind: "back-in-stock",
+    alertId: "cm9x2k1a30000abcd1234efgh",
+  });
+
+  it("se deschide înapoi identic și nu conține nicio adresă de email", () => {
+    const p = alert();
+    const job = sealEmailPayload(APP_KEY, p);
+    expect(openEmailPayload(APP_KEY, job)).toEqual(p);
+    expect(job.kind).toBe("back-in-stock");
+    expect(JSON.stringify(job)).not.toContain("@");
+  });
+
+  it("un identificator ciudat (spații, bară, prea lung, gol) e respins la deschidere", () => {
+    for (const alertId of ["", "a b", "a/b", "a:b", "x".repeat(65)]) {
+      const job = sealEmailPayload(APP_KEY, { kind: "back-in-stock", alertId });
+      expect(() => openEmailPayload(APP_KEY, job), JSON.stringify(alertId)).toThrow();
+    }
+  });
+});
+
+describe("linkul spre produs din emailul «Anunță-mă»", () => {
+  it("se construiește din originea APP_URL: /produs/{slug}, fără query și fără fragment", () => {
+    const url = new URL(
+      buildProductLink("https://magazin.example/orice/cale?x=1", "pompa-caldura-12"),
+    );
+    expect(url.origin).toBe("https://magazin.example");
+    expect(url.pathname).toBe("/produs/pompa-caldura-12");
+    expect(url.search).toBe("");
+    expect(url.hash).toBe("");
+  });
+
+  it("slugul se codifică: nu poate ieși din cale și nu poate schimba gazda", () => {
+    const url = new URL(buildProductLink("https://magazin.example", "../x?y=1#z/@evil.example"));
+    expect(url.origin).toBe("https://magazin.example");
+    expect(url.pathname.startsWith("/produs/")).toBe(true);
+    expect(url.search).toBe("");
+    expect(url.hash).toBe("");
   });
 });
 

@@ -71,7 +71,7 @@ function setup(options: {
   return { queue, worker, logs, queueName };
 }
 
-const reset = (): EmailPayload => ({
+const reset = (): Extract<EmailPayload, { kind: "reset-password" }> => ({
   kind: "reset-password",
   to: "client@example.test",
   name: "Ana",

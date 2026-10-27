@@ -104,6 +104,8 @@ try {
   };
   const definitions = buildStockJobs({
     maintenance,
+    // această demonstrație nu trimite emailuri: trimiterea «Anunță-mă» se probează cu `dev:back-in-stock`
+    backInStock: { dispatch: async () => ({ found: 0, enqueued: 0, failed: 0 }) },
     readSettings: async () => ({
       snapshotStaleHours: 24,
       backInStockRetentionDays: 90,

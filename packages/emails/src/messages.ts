@@ -42,6 +42,20 @@ export const emailMessagesRo = {
       } și poate fi folosit o singură dată.`,
     afterNotice: "După schimbare, vei fi deconectat de pe toate dispozitivele.",
   },
+  // «Anunță-mă când revine»: un singur mesaj de serviciu, fără conținut promoțional (textul aprobat de utilizator).
+  backInStock: {
+    subject: (storeName: string, productTitle: string) =>
+      `${storeName}: ${productTitle} e din nou în stoc`,
+    preview: (productTitle: string) => `${productTitle} e din nou în stoc.`,
+    heading: "Produsul e din nou în stoc",
+    intro: (productTitle: string, variantLabel: string | null) =>
+      `Produsul pe care îl așteptai, ${productTitle}${variantLabel ? ` (${variantLabel})` : ""}, este din nou disponibil.`,
+    onlyMessage:
+      "Acesta este singurul mesaj pe care îl primești pentru această cerere; adresa ta a fost ștearsă.",
+    button: "Vezi produsul",
+    ignoreNotice:
+      "Dacă nu ai cerut tu această notificare, poți ignora mesajul; adresa ta a fost ștearsă și nu vei mai primi altele.",
+  },
 } as const;
 
 export type EmailMessages = typeof emailMessagesRo;

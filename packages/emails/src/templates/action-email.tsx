@@ -11,7 +11,8 @@ export interface ActionEmailProps {
   buttonLabel: string;
   link: string;
   linkFallback: string;
-  validity: string;
+  /** Cât e valabil linkul; lipsește la mesajele fără expirare (de exemplu linkul spre un produs) */
+  validity?: string;
   ignoreNotice: string;
   footer: string;
 }
@@ -50,10 +51,19 @@ export function ActionEmail(props: ActionEmailProps) {
       >
         {props.buttonLabel}
       </Button>
-      <Text style={{ ...text, margin: "20px 0 8px", fontSize: "14px", color: colors.muted }}>
-        {props.validity}
-      </Text>
-      <Text style={{ ...text, margin: "0 0 4px", fontSize: "14px", color: colors.muted }}>
+      {props.validity ? (
+        <Text style={{ ...text, margin: "20px 0 8px", fontSize: "14px", color: colors.muted }}>
+          {props.validity}
+        </Text>
+      ) : null}
+      <Text
+        style={{
+          ...text,
+          margin: props.validity ? "0 0 4px" : "20px 0 4px",
+          fontSize: "14px",
+          color: colors.muted,
+        }}
+      >
         {props.linkFallback}
       </Text>
       <Text style={{ margin: "0 0 16px", fontSize: "13px", wordBreak: "break-all" }}>

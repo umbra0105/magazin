@@ -17,3 +17,8 @@ export function buildVerifyEmailLink(appUrl: string, token: string): string {
 export function buildResetPasswordLink(appUrl: string, token: string): string {
   return `${origin(appUrl)}/resetare-parola#token=${encodeURIComponent(token)}`;
 }
+
+/** Pagina produsului (`/produs/{slug}`), pentru emailul «Anunță-mă când revine»: fără token, fără query, slugul codificat. */
+export function buildProductLink(appUrl: string, slug: string): string {
+  return `${origin(appUrl)}/produs/${encodeURIComponent(slug)}`;
+}

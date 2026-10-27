@@ -26,7 +26,12 @@ export function startDevEmailWorker(): void {
     getLogger().info(
       {
         queues: ["emails", "media", "product-import", "product-import-images"],
-        jobs: ["stock-expire-reservations", "stock-snapshot-freshness", "stock-alerts-cleanup"],
+        jobs: [
+          "stock-expire-reservations",
+          "stock-snapshot-freshness",
+          "stock-alerts-cleanup",
+          "stock-back-in-stock",
+        ],
       },
       "workeri porniți în procesul de dezvoltare",
     );

@@ -34,6 +34,21 @@ export function createEmailQueue(
   });
 }
 
+/**
+ * Pune în coadă emailul «Anunță-mă când revine» pentru o cerere. Jobul poartă doar identificatorul cererii (adresa nu
+ * ajunge în Redis), iar `jobId`-ul e derivat din el: cât timp jobul există (în așteptare, activ, în reîncercare sau eșuat,
+ * 24 h), o a doua punere în coadă a aceleiași cereri, din orice instanță, e ignorată de BullMQ.
+ */
+export async function enqueueBackInStock(
+  queue: EmailQueue,
+  appKey: string,
+  alertId: string,
+): Promise<void> {
+  await queue.add("send", sealEmailPayload(appKey, { kind: "back-in-stock", alertId }), {
+    jobId: `back-in-stock-${alertId}`,
+  });
+}
+
 /** Pune un email în coadă, cu payload-ul criptat cu o cheie derivată din `APP_KEY`. */
 export async function enqueueEmail(
   queue: EmailQueue,

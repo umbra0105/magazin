@@ -84,6 +84,68 @@ describe("șabloanele de email", () => {
   });
 });
 
+describe("emailul «Anunță-mă când revine»", () => {
+  const PRODUCT_LINK = "https://magazin.example/produs/pompa-caldura-12";
+  const content = {
+    kind: "back-in-stock" as const,
+    productTitle: "Pompă de căldură 12 kW",
+    variantLabel: "Alb · 230 V" as string | null,
+    link: PRODUCT_LINK,
+  };
+
+  it("subiect, textul aprobat, butonul «Vezi produsul» și linkul spre produs (HTML și text)", async () => {
+    const email = await renderEmail(theme, content);
+    expect(email.subject).toBe("Piscine Demo: Pompă de căldură 12 kW e din nou în stoc");
+    for (const part of [email.html, email.text]) {
+      expect(part).toContain("Bună,");
+      expect(part).toContain(
+        "Produsul pe care îl așteptai, Pompă de căldură 12 kW (Alb · 230 V), este din nou disponibil.",
+      );
+      expect(part).toContain(
+        "Acesta este singurul mesaj pe care îl primești pentru această cerere; adresa ta a fost ștearsă.",
+      );
+      expect(part).toContain(
+        "Dacă nu ai cerut tu această notificare, poți ignora mesajul; adresa ta a fost ștearsă și nu vei mai primi altele.",
+      );
+      expect(part).toContain("Vezi produsul");
+      expect(part).toContain(PRODUCT_LINK);
+    }
+    expect(email.html).toContain(`href="${PRODUCT_LINK}"`);
+  });
+
+  it("fără variantă (produs simplu): titlul apare fără paranteze goale", async () => {
+    const email = await renderEmail(theme, { ...content, variantLabel: null });
+    expect(email.text).toContain("Produsul pe care îl așteptai, Pompă de căldură 12 kW, este din");
+    expect(email.text).not.toContain("()");
+  });
+
+  it("un mesaj de serviciu: nicio valabilitate de link, nicio frază de resetare, nicio promoție", async () => {
+    const email = await renderEmail(theme, content);
+    for (const part of [email.html, email.text]) {
+      expect(part).not.toContain("valabil ");
+      expect(part).not.toContain("Dacă nu ai cerut tu acest mesaj");
+    }
+    // singurele legături: butonul, linkul de rezervă (același URL) — fără imagini, pixeli de urmărire sau alte adrese
+    const hrefs = [...email.html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+    expect(new Set(hrefs)).toEqual(new Set([PRODUCT_LINK]));
+    expect(email.html).not.toContain("<img");
+  });
+
+  it("titlul produsului e codificat în HTML (nu se poate injecta marcaj)", async () => {
+    const email = await renderEmail(theme, {
+      ...content,
+      productTitle: '<script>alert("x")</script> Pompă',
+    });
+    expect(email.html).not.toContain("<script>");
+    expect(email.html).toContain("&lt;script&gt;");
+  });
+
+  it("subiectul rămâne pe o linie, chiar dacă titlul are rânduri noi", async () => {
+    const email = await renderEmail(theme, { ...content, productTitle: "Pompă\r\nBcc: x@y.test" });
+    expect(email.subject).not.toMatch(/[\r\n]/);
+  });
+});
+
 describe("roCount (acord românesc)", () => {
   it("1 oră, 2 ore, 19 ore, 20 de ore, 24 de ore, 101 ore, 120 de ore", () => {
     const hours = (n: number) => roCount(n, "oră", "ore", "ore");

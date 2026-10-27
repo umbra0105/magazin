@@ -12,6 +12,8 @@ import {
 import { getDb } from "@ecom/db";
 import { getLogger } from "@ecom/shared";
 import { Redis } from "ioredis";
+import { createBackInStockService } from "./back-in-stock-runtime";
+import { createEmailQueue, enqueueBackInStock } from "./queues";
 import {
   startPeriodicJob,
   type JobSchedule,
@@ -26,6 +28,7 @@ import {
  * | job                         | când                           | ce face                                                     |
  * |-----------------------------|--------------------------------|-------------------------------------------------------------|
  * | `stock-expire-reservations` | la 60 de secunde               | eliberează rezervările cu termenul trecut (card, transfer)   |
+ * | `stock-back-in-stock`      | la 60 de secunde               | pune în coadă emailul «Anunță-mă» al variantelor revenite    |
  * | `stock-snapshot-freshness`  | la 15 minute                   | alertă în audit când poza SmartBill e veche; memento la 24 h |
  * | `stock-alerts-cleanup`      | zilnic la 03:30, ora magazinului | șterge cererile «Anunță-mă» vechi (GDPR)                    |
  *
@@ -35,12 +38,59 @@ import {
 
 export const STOCK_JOB_SCHEDULES = {
   expireReservations: { everyMs: 60_000 },
+  backInStock: { everyMs: 60_000 },
   snapshotFreshness: { everyMs: 15 * 60_000 },
   cleanup: { dailyAt: "03:30" },
 } as const;
 
 export type StockJobName =
-  "stock-expire-reservations" | "stock-snapshot-freshness" | "stock-alerts-cleanup";
+  | "stock-expire-reservations"
+  | "stock-snapshot-freshness"
+  | "stock-alerts-cleanup"
+  | "stock-back-in-stock";
+
+/** Câte cereri «Anunță-mă» se pun în coadă la o rulare (restul urmează la rularea următoare, la 60 de secunde) */
+export const BACK_IN_STOCK_BATCH = 200;
+
+export interface BackInStockDispatchResult {
+  /** câte cereri ale unor variante revenite în stoc a găsit selecția */
+  found: number;
+  enqueued: number;
+  /** puse în coadă fără succes (Redis indisponibil); se reiau la rularea următoare */
+  failed: number;
+}
+
+/** Ce rulează jobul `stock-back-in-stock` (și ce se înlocuiește în teste). */
+export interface BackInStockDispatcher {
+  dispatch(): Promise<BackInStockDispatchResult>;
+}
+
+/**
+ * Găsește cererile ale căror variante au revenit în stoc și le pune în coadă, câte un job pe cerere (doar identificatorul).
+ * Nu ia cererile: `claim` se face în procesor, imediat înainte de trimitere. O cerere deja în coadă nu se dublează
+ * (`jobId` derivat din cerere), așa că rularea simultană a mai multor instanțe e sigură.
+ */
+export function createBackInStockDispatcher(deps: {
+  service: { findNotifiable(options: { limit: number }): Promise<Array<{ id: string }>> };
+  enqueue(alertId: string): Promise<void>;
+}): BackInStockDispatcher {
+  return {
+    async dispatch() {
+      const alerts = await deps.service.findNotifiable({ limit: BACK_IN_STOCK_BATCH });
+      let enqueued = 0;
+      let failed = 0;
+      for (const alert of alerts) {
+        try {
+          await deps.enqueue(alert.id);
+          enqueued += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+      return { found: alerts.length, enqueued, failed };
+    },
+  };
+}
 
 /** Ce îi trebuie joburilor de la `StockMaintenance` (și ce se înlocuiește în teste). */
 export interface StockJobsMaintenance {
@@ -71,12 +121,13 @@ export interface StockJobDefinition {
 
 export interface BuildStockJobsOptions {
   maintenance: StockJobsMaintenance;
+  backInStock: BackInStockDispatcher;
   readSettings: () => Promise<StockJobsSettings>;
   logger: PeriodicJobLogger;
 }
 
 export function buildStockJobs(options: BuildStockJobsOptions): StockJobDefinition[] {
-  const { maintenance, readSettings } = options;
+  const { maintenance, readSettings, backInStock } = options;
   return [
     {
       name: "stock-expire-reservations",
@@ -124,6 +175,15 @@ export function buildStockJobs(options: BuildStockJobsOptions): StockJobDefiniti
         return r.unsent + r.sent === 0 ? null : { unsent: r.unsent, sent: r.sent };
       },
     },
+    {
+      name: "stock-back-in-stock",
+      schedule: STOCK_JOB_SCHEDULES.backInStock,
+      run: () => backInStock.dispatch(),
+      summarize: (result) => {
+        const r = result as BackInStockDispatchResult;
+        return r.found === 0 ? null : { found: r.found, enqueued: r.enqueued, failed: r.failed };
+      },
+    },
   ];
 }
 
@@ -166,6 +226,12 @@ export function createStockJobsFromEnv() {
     db,
     audit: new AuditService(createPrismaAuditStore(db)),
   });
+  const emailQueue = createEmailQueue(env.REDIS_URL);
+  emailQueue.on("error", () => undefined); // o pierdere de conexiune nu oprește procesul; următoarea rulare reîncearcă
+  const backInStock = createBackInStockDispatcher({
+    service: createBackInStockService(db, settings),
+    enqueue: (alertId) => enqueueBackInStock(emailQueue, env.APP_KEY, alertId),
+  });
   const readSettings = async (): Promise<StockJobsSettings> => {
     const [inventory, regional] = await Promise.all([
       settings.getGroup("inventory"),
@@ -181,10 +247,11 @@ export function createStockJobsFromEnv() {
   return {
     maintenance,
     readSettings,
-    definitions: buildStockJobs({ maintenance, readSettings, logger }),
+    definitions: buildStockJobs({ maintenance, readSettings, backInStock, logger }),
     logger,
     close() {
       redis.disconnect();
+      void emailQueue.close();
     },
   };
 }
@@ -196,6 +263,7 @@ export function startStockJobsFromEnv(): StockJobsHandle {
     {
       jobs: real.definitions.map((d) => d.name),
       expireEveryMs: STOCK_JOB_SCHEDULES.expireReservations.everyMs,
+      backInStockEveryMs: STOCK_JOB_SCHEDULES.backInStock.everyMs,
       snapshotCheckEveryMs: STOCK_JOB_SCHEDULES.snapshotFreshness.everyMs,
       cleanupDailyAt: STOCK_JOB_SCHEDULES.cleanup.dailyAt,
     },

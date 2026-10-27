@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  BACK_IN_STOCK_BATCH,
   STOCK_JOB_SCHEDULES,
   buildStockJobs,
+  createBackInStockDispatcher,
   startStockJobs,
+  type BackInStockDispatcher,
+  type BuildStockJobsOptions,
   type StockJobsMaintenance,
   type StockJobsSettings,
 } from "./stock-jobs";
@@ -13,6 +17,14 @@ import {
  */
 
 afterEach(() => vi.useRealTimers());
+
+/** Dispecerul «Anunță-mă» al testelor care nu îl privesc: nu găsește nimic */
+const idleDispatcher: BackInStockDispatcher = {
+  dispatch: async () => ({ found: 0, enqueued: 0, failed: 0 }),
+};
+
+const build = (options: Omit<BuildStockJobsOptions, "backInStock">) =>
+  buildStockJobs({ ...options, backInStock: idleDispatcher });
 
 function logger() {
   return { info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
@@ -46,19 +58,21 @@ function setup(overrides: Partial<StockJobsSettings> = {}) {
 }
 
 describe("programul joburilor de stoc (valorile din plan)", () => {
-  it("expirarea rulează la 60 de secunde, prospețimea pozei la 15 minute, curățarea zilnic la 03:30", () => {
+  it("expirarea rulează la 60 de secunde, «Anunță-mă» la 60 de secunde, prospețimea pozei la 15 minute, curățarea zilnic la 03:30", () => {
     expect(STOCK_JOB_SCHEDULES.expireReservations).toEqual({ everyMs: 60_000 });
+    expect(STOCK_JOB_SCHEDULES.backInStock).toEqual({ everyMs: 60_000 });
     expect(STOCK_JOB_SCHEDULES.snapshotFreshness).toEqual({ everyMs: 15 * 60_000 });
     expect(STOCK_JOB_SCHEDULES.cleanup).toEqual({ dailyAt: "03:30" });
   });
 
-  it("trei joburi, cu nume stabile", async () => {
+  it("patru joburi, cu nume stabile", async () => {
     const { maintenance, read, log } = setup();
-    const jobs = buildStockJobs({ maintenance, readSettings: read, logger: log });
+    const jobs = build({ maintenance, readSettings: read, logger: log });
     expect(jobs.map((j) => j.name)).toEqual([
       "stock-expire-reservations",
       "stock-snapshot-freshness",
       "stock-alerts-cleanup",
+      "stock-back-in-stock",
     ]);
   });
 });
@@ -66,7 +80,7 @@ describe("programul joburilor de stoc (valorile din plan)", () => {
 describe("legăturile cu serviciul și cu setările", () => {
   it("expirarea nu cere setări; întoarce rezumat doar când a expirat ceva", async () => {
     const { maintenance, read, log } = setup();
-    const [expire] = buildStockJobs({ maintenance, readSettings: read, logger: log });
+    const [expire] = build({ maintenance, readSettings: read, logger: log });
     const none = await expire!.run();
     expect(maintenance.expireReservations).toHaveBeenCalledTimes(1);
     expect(read).not.toHaveBeenCalled();
@@ -87,14 +101,14 @@ describe("legăturile cu serviciul și cu setările", () => {
       batches: 50,
       complete: false,
     });
-    const [expire] = buildStockJobs({ maintenance, readSettings: read, logger: log });
+    const [expire] = build({ maintenance, readSettings: read, logger: log });
     const result = await expire!.run();
     expect(expire!.summarize?.(result)).toMatchObject({ expired: 10000, complete: false });
   });
 
   it("prospețimea pozei citește pragul din setări LA FIECARE rulare (schimbat din admin, se aplică imediat)", async () => {
     const { maintenance, read, state, log } = setup();
-    const jobs = buildStockJobs({ maintenance, readSettings: read, logger: log });
+    const jobs = build({ maintenance, readSettings: read, logger: log });
     const freshness = jobs[1]!;
     await freshness.run();
     expect(maintenance.checkSnapshotFreshness).toHaveBeenLastCalledWith({ staleHours: 24 });
@@ -106,7 +120,7 @@ describe("legăturile cu serviciul și cu setările", () => {
 
   it("curățarea citește retenția la fiecare rulare și se programează în fusul din setări", async () => {
     const { maintenance, read, state, log } = setup();
-    const jobs = buildStockJobs({ maintenance, readSettings: read, logger: log });
+    const jobs = build({ maintenance, readSettings: read, logger: log });
     const cleanup = jobs[2]!;
     await cleanup.run();
     expect(maintenance.purgeBackInStockAlerts).toHaveBeenLastCalledWith({ retentionDays: 90 });
@@ -122,7 +136,7 @@ describe("legăturile cu serviciul și cu setările", () => {
 
   it("rezumatele spun doar ce s-a întâmplat: alerte noi, refaceri, ștergeri", async () => {
     const { maintenance, read, log } = setup();
-    const jobs = buildStockJobs({ maintenance, readSettings: read, logger: log });
+    const jobs = build({ maintenance, readSettings: read, logger: log });
     const freshness = jobs[1]!;
     const cleanup = jobs[2]!;
     expect(freshness.summarize?.(await freshness.run())).toBeNull();
@@ -144,7 +158,7 @@ describe("legăturile cu serviciul și cu setările", () => {
     maintenance.checkSnapshotFreshness.mockRejectedValueOnce(
       new RangeError("Pragul «neactualizat» trebuie să fie între 1 și 720 de ore"),
     );
-    const jobs = buildStockJobs({ maintenance, readSettings: read, logger: log });
+    const jobs = build({ maintenance, readSettings: read, logger: log });
     await expect(jobs[1]!.run()).rejects.toThrow(RangeError);
   });
 });
@@ -155,13 +169,10 @@ describe("pornirea tuturor joburilor", () => {
     vi.setSystemTime(new Date("2026-10-23T10:00:00Z"));
     const { maintenance, read, log } = setup();
     maintenance.checkSnapshotFreshness.mockRejectedValue(new Error("baza e jos"));
-    const handle = startStockJobs(
-      buildStockJobs({ maintenance, readSettings: read, logger: log }),
-      {
-        logger: log,
-        initialDelayMs: 1_000,
-      },
-    );
+    const handle = startStockJobs(build({ maintenance, readSettings: read, logger: log }), {
+      logger: log,
+      initialDelayMs: 1_000,
+    });
     await vi.advanceTimersByTimeAsync(1_000);
     expect(maintenance.expireReservations).toHaveBeenCalledTimes(1);
     expect(maintenance.checkSnapshotFreshness).toHaveBeenCalledTimes(1);
@@ -173,6 +184,66 @@ describe("pornirea tuturor joburilor", () => {
     const calls = maintenance.expireReservations.mock.calls.length;
     await vi.advanceTimersByTimeAsync(10 * 60_000);
     expect(maintenance.expireReservations.mock.calls.length).toBe(calls);
-    expect(handle.jobs.map((j) => j.name)).toHaveLength(3);
+    expect(handle.jobs.map((j) => j.name)).toHaveLength(4);
+  });
+});
+
+describe("jobul «Anunță-mă când revine» (stock-back-in-stock)", () => {
+  const ids = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: `a${i}`, variantId: `v${i}` }));
+
+  function dispatcherWith(found: Array<{ id: string; variantId: string }>) {
+    const service = {
+      findNotifiable: vi.fn<(o: { limit: number }) => Promise<typeof found>>(async () => found),
+    };
+    const enqueue = vi.fn<(alertId: string) => Promise<void>>(async () => undefined);
+    return { service, enqueue, dispatcher: createBackInStockDispatcher({ service, enqueue }) };
+  }
+
+  it("jobul din program cheamă dispecerul și spune doar ce s-a întâmplat (nimic găsit = nicio linie de jurnal)", async () => {
+    const { maintenance, read, log } = setup();
+    const dispatch = vi.fn(async () => ({ found: 0, enqueued: 0, failed: 0 }));
+    const job = buildStockJobs({
+      maintenance,
+      readSettings: read,
+      logger: log,
+      backInStock: { dispatch },
+    }).find((j) => j.name === "stock-back-in-stock")!;
+    expect(job.schedule).toEqual({ everyMs: 60_000 });
+    expect(job.summarize?.(await job.run())).toBeNull();
+    dispatch.mockResolvedValueOnce({ found: 3, enqueued: 2, failed: 1 });
+    expect(job.summarize?.(await job.run())).toEqual({ found: 3, enqueued: 2, failed: 1 });
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("pune în coadă câte o cerere găsită, cu identificatorul ei, și cere cel mult un lot", async () => {
+    const { service, enqueue, dispatcher } = dispatcherWith(ids(3));
+    expect(await dispatcher.dispatch()).toEqual({ found: 3, enqueued: 3, failed: 0 });
+    expect(service.findNotifiable).toHaveBeenCalledWith({ limit: BACK_IN_STOCK_BATCH });
+    expect(enqueue.mock.calls.map((c) => c[0])).toEqual(["a0", "a1", "a2"]);
+  });
+
+  it("nimic găsit: nimic în coadă", async () => {
+    const { enqueue, dispatcher } = dispatcherWith([]);
+    expect(await dispatcher.dispatch()).toEqual({ found: 0, enqueued: 0, failed: 0 });
+    expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  it("o punere în coadă care eșuează nu le oprește pe celelalte și se numără, fără să arunce", async () => {
+    const { enqueue, dispatcher } = dispatcherWith(ids(4));
+    enqueue.mockRejectedValueOnce(new Error("Redis nu răspunde"));
+    enqueue.mockRejectedValueOnce(new Error("Redis nu răspunde"));
+    expect(await dispatcher.dispatch()).toEqual({ found: 4, enqueued: 2, failed: 2 });
+    expect(enqueue).toHaveBeenCalledTimes(4);
+  });
+
+  it("dacă selecția cade (baza e jos), eroarea ajunge la jobul periodic, care o jurnalizează și continuă", async () => {
+    const service = {
+      findNotifiable: vi.fn(async () => {
+        throw new Error("baza e jos");
+      }),
+    };
+    const dispatcher = createBackInStockDispatcher({ service, enqueue: async () => undefined });
+    await expect(dispatcher.dispatch()).rejects.toThrow("baza e jos");
   });
 });

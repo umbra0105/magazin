@@ -23,6 +23,12 @@ export const emailPayloadSchema = z.discriminatedUnion("kind", [
     token: z.string().min(16),
     validForMinutes: z.number().int().positive(),
   }),
+  // «Anunță-mă când revine»: doar identificatorul cererii. Adresa rămâne în baza de date până la `claim` și nu intră
+  // niciodată în Redis (nici criptată); identificatorul e și parte din `jobId`, deci are formă sigură (litere, cifre, `_`, `-`).
+  z.object({
+    kind: z.literal("back-in-stock"),
+    alertId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  }),
 ]);
 
 export type EmailPayload = z.infer<typeof emailPayloadSchema>;

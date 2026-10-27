@@ -14,6 +14,7 @@ import {
 import { getDb } from "@ecom/db";
 import type { EmailTheme } from "@ecom/emails";
 import { getLogger } from "@ecom/shared";
+import { createBackInStockService } from "./back-in-stock-runtime";
 import type { EmailProcessorDeps } from "./email-processor";
 import { sendViaSmtp } from "./mailer";
 import { startEmailWorker } from "./worker";
@@ -76,6 +77,7 @@ export function createEmailRuntime(): {
     },
     sendMail: sendViaSmtp,
     logger: getLogger(),
+    backInStock: createBackInStockService(db, settings),
   };
   return { deps, redisUrl: env.REDIS_URL, close: () => redis.disconnect() };
 }
