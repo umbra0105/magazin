@@ -31,7 +31,7 @@
     "read-excel-file": "9.3.12",
     "sharp": "0.35.5",
     "write-excel-file": "4.1.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^24.19.1",
