@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   ADJUSTMENT_NOTE_MAX,
   ADJUSTMENT_REASONS,
@@ -8,6 +9,7 @@ import {
   can,
   parseStockOverviewQuery,
 } from "@ecom/core";
+import { buttonVariants } from "@ecom/ui";
 import type { ReasonOption } from "@/components/admin/inventory/adjust-stock-dialog";
 import { LowStockTable } from "@/components/admin/inventory/low-stock-table";
 import {
@@ -67,7 +69,16 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">{m.title}</h1>
+          <Link
+            href="/admin/produse/stoc/import"
+            className={buttonVariants({ variant: "outline" })}
+            data-stock-import-link
+          >
+            {m.stockImport.open}
+          </Link>
+        </div>
         <p className="text-sm text-muted-foreground">{m.description}</p>
         {!canWrite && (
           <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">

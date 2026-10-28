@@ -60,6 +60,6 @@ export function middleware(request: NextRequest) {
  */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/media$|api/admin/product-imports$|api/admin/products/[^/]+/documents$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/media$|api/admin/product-imports$|api/admin/stock-imports$|api/admin/products/[^/]+/documents$).*)",
   ],
 };

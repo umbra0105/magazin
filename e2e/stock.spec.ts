@@ -1,11 +1,16 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
+import { buildReport } from "../packages/integrations/src/spreadsheet/test-utils/report-workbook";
 import {
+  E2E_STOCK_IMPORT_FILE,
   createE2eRole,
   promoteE2eUser,
+  readE2eAuditByEntity,
   readE2eStock,
+  readE2eStockImports,
   readE2eStockAudit,
   removeE2eStock,
+  removeE2eStockImports,
   removeE2eStockShared,
   seedE2eStock,
   setE2eStockSnapshot,
@@ -549,5 +554,273 @@ test.describe("drepturi", () => {
   test("anonim: trimis la autentificare", async ({ page }) => {
     await page.goto("/admin/produse/stoc");
     await expect(page).toHaveURL(/\/autentificare/);
+  });
+});
+
+/**
+ * Faza 5, punctul 12c: importul «stoc la zi» din SmartBill în browser (`/admin/produse/stoc/import`). Fișiere FABRICATE
+ * (rânduri inventate, cu structura raportului). Stau în fișierul care deține starea pozei de stoc: testele de aici creează
+ * poze pe depozitul implicit și le șterg la final (la fel și alegerea gestiunilor), iar fișierul rulează serial.
+ */
+const tagImport = randomBytes(3).toString("hex");
+const GEST = `Gestiune E2E ${tagImport}`;
+let importSkus: string[] = [];
+
+function reportFile(
+  rows: Array<{ warehouse?: string; code: string; unit: string; quantity: number }>,
+): { name: string; mimeType: string; buffer: Buffer } {
+  return {
+    name: E2E_STOCK_IMPORT_FILE,
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: buildReport({
+      format: "xlsx",
+      // o dată veche, fixă: raportul nu e niciodată «de azi», deci ora are mereu avertismente
+      dateText: "Data: 15.03.2020",
+      rows: rows.map((r) => ({ warehouse: GEST, ...r })),
+    }),
+  };
+}
+
+test.describe("importul «stoc la zi»", () => {
+  test.beforeAll(async () => {
+    importSkus = await seedE2eStock(tagImport, [
+      { title: `Import A E2E ${tagImport}`, variants: [{ sku: "IA", physical: "0" }] },
+      { title: `Import B E2E ${tagImport}`, variants: [{ sku: "IB", physical: "2" }] },
+    ]);
+  });
+
+  test.afterAll(async () => {
+    await removeE2eStock({ tag: tagImport });
+    await removeE2eStockImports();
+    // pozele mutate de import nu trebuie să schimbe starea așteptată de restul fișierului
+    await setE2eStockSnapshot(3);
+  });
+
+  test("Manager: alege gestiunea, verifică, bifează ora și aplică; stocul, istoricul și auditul se schimbă", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    failOnNativeDialog(page);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin/produse/stoc");
+    await page.getByRole("link", { name: "Import stoc la zi" }).click();
+    await expect(page).toHaveURL(/\/admin\/produse\/stoc\/import$/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Import «stoc la zi» din SmartBill" }),
+    ).toBeVisible();
+    // «Stoc» rămâne evidențiat în meniu: ecranul nu are element propriu
+    await expect(
+      page
+        .getByRole("navigation", { name: "Navigare principală" })
+        .getByRole("link", { name: "Stoc", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+
+    const [A, B] = importSkus as [string, string];
+    const file = reportFile([
+      { code: A, unit: "BUC", quantity: 7 },
+      { code: B, unit: "BUC", quantity: 5 },
+      { code: skus[UNMANAGED] as string, unit: "BUC", quantity: 3 },
+      { code: `NECUNOSCUT-${tagImport}`, unit: "BUC", quantity: 1 },
+      { warehouse: "Alta gestiune E2E", code: A, unit: "BUC", quantity: 99 },
+    ]);
+    await page.locator("#stock-import-file").setInputFiles(file);
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+
+    // gestiunea nu e aleasă: se listează cele din fișier, nealese, și nu se poate aplica
+    const warehouse = page.locator(`[data-warehouse="${GEST}"]`);
+    await expect(warehouse).toBeVisible();
+    await expect(warehouse).toContainText("Nealeasă");
+    await expect(page.getByText("Nu este aleasă nicio gestiune SmartBill")).toBeVisible();
+    await expect(page.locator('[data-warehouse="Alta gestiune E2E"]')).toBeVisible();
+    await expect(page.getByRole("button", { name: "Aplică raportul" })).toBeDisabled();
+    await expect(page.locator("[data-counters]")).toHaveCount(0);
+
+    // alege gestiunea și salvează: raportul apare (contoarele există doar după verificarea cu gestiunea aleasă)
+    await warehouse.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "Salvează gestiunile" }).click();
+    await expect(page.locator('[data-counter="matched"]')).toHaveText("2");
+    await expect(page.locator('[data-counter="unknown"]')).toHaveText("1");
+    await expect(page.locator('[data-counter="unmanaged"]')).toHaveText("1");
+    await expect(page.locator('[data-counter="otherWarehouses"]')).toHaveText("1");
+    await expect(page.locator('[data-counter="errors"]')).toHaveText("0");
+    await expect(page.locator(`[data-warehouse="${GEST}"]`)).toContainText("Aleasă");
+
+    // negestionata nu se aplică (și nu i se pornește gestionarea)
+    await expect(page.locator('[data-list="unmanaged"]')).toContainText(skus[UNMANAGED] as string);
+    await expect(page.locator('[data-list="unknown"]')).toContainText(`NECUNOSCUT-${tagImport}`);
+    // variantele lipsă din fișier: bifa «pune pe 0» există și NU este bifată
+    const zero = page.locator("[data-zero-block]").getByRole("checkbox");
+    await expect(zero).not.toBeChecked();
+
+    // capturi (desktop și telefon) și verificarea că pe telefon pagina nu are derulare orizontală
+    await page.screenshot({ path: "test-results/stock-import-desktop.png", fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: "test-results/stock-import-phone.png", fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    // raportul din fișier are altă dată decât azi: avertisment și bifă obligatorie
+    const apply = page.getByRole("button", { name: "Aplică raportul" });
+    await expect(page.getByText("Avertismente despre oră")).toBeVisible();
+    await expect(apply).toBeDisabled();
+    await page.getByLabel("Am verificat ora și vreau să continui").check();
+    await expect(apply).toBeEnabled();
+
+    // nimic nu s-a schimbat până aici
+    expect((await readE2eStock(A))?.physical).toBe("0");
+    expect((await readE2eStockImports()).length).toBe(0);
+
+    await apply.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toContainText("2 variante se schimbă");
+    await dialog.getByRole("button", { name: "Aplică", exact: true }).click();
+    await expect(page.locator("[data-import-result]")).toContainText("2 variante actualizate");
+    await page.screenshot({ path: "test-results/stock-import-result.png", fullPage: true });
+
+    // stocul s-a schimbat exact cu ce era în fișier; negestionata a rămas neatinsă
+    expect((await readE2eStock(A))?.physical).toBe("70000");
+    expect((await readE2eStock(B))?.physical).toBe("50000");
+    expect((await readE2eStock(skus[UNMANAGED] as string))?.physical ?? null).toBeNull();
+    expect((await readE2eStock(A))?.movements.map((m) => m.kind)).toContain("snapshot");
+
+    // poza, istoricul și auditul
+    const snapshots = await readE2eStockImports();
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]?.fileHash).toMatch(/^[0-9a-f]{64}$/);
+    const snapshotId = snapshots[0]?.id as string;
+    await expect(page.locator(`[data-snapshot="${snapshotId}"]`)).toContainText(
+      E2E_STOCK_IMPORT_FILE,
+    );
+    await expect(page.locator(`[data-snapshot="${snapshotId}"]`)).toContainText("2 schimbate");
+    const audit = await readE2eAuditByEntity("stock.import.apply", snapshotId);
+    expect(audit.map((r) => r.outcome)).toEqual(["success"]);
+    expect(audit[0]?.after).toMatchObject({ applied: 2, zeroedMissing: 0 });
+  });
+
+  test("același fișier încă o dată: «neschimbate», fără mișcări noi", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    failOnNativeDialog(page);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin/produse/stoc/import");
+    const [A, B] = importSkus as [string, string];
+    const before = (await readE2eStock(A))?.movements.length;
+    await page.locator("#stock-import-file").setInputFiles(
+      reportFile([
+        { code: A, unit: "BUC", quantity: 7 },
+        { code: B, unit: "BUC", quantity: 5 },
+      ]),
+    );
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+    await expect(page.locator('[data-counter="unchanged"]')).toHaveText("2");
+    await expect(page.locator('[data-counter="changed"]')).toHaveText("0");
+    expect((await readE2eStock(A))?.movements.length).toBe(before);
+  });
+
+  test("fișier cu unitate greșită: erori listate, aplicarea blocată, nimic modificat", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    failOnNativeDialog(page);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin/produse/stoc/import");
+    const [A] = importSkus as [string];
+    await page
+      .locator("#stock-import-file")
+      .setInputFiles(reportFile([{ code: A, unit: "KG", quantity: 9 }]));
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+    await expect(page.locator('[data-counter="errors"]')).toHaveText("1");
+    await expect(page.locator('[data-list="errors"]')).toBeVisible();
+    await expect(page.getByRole("button", { name: "Aplică raportul" })).toBeDisabled();
+    await expect(
+      page.getByText("Raportul are erori: corectează fișierul și verifică din nou."),
+    ).toBeVisible();
+    expect((await readE2eStock(A))?.physical).toBe("70000");
+  });
+
+  test("un fișier care nu e Excel e refuzat cu mesaj în română", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    failOnNativeDialog(page);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin/produse/stoc/import");
+    await page.locator("#stock-import-file").setInputFiles({
+      name: "raport.xls",
+      mimeType: "application/vnd.ms-excel",
+      buffer: Buffer.from("Gestiune;Cod;U.M.;Stoc final\nA;B;C;1\n"),
+    });
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+    await expect(page.locator("[data-problem]")).toContainText("nu este un registru Excel");
+    await expect(page.locator("[data-counters]")).toHaveCount(0);
+  });
+
+  test("fără fișier ales: mesaj propriu, fără baloane native", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    failOnNativeDialog(page);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin/produse/stoc/import");
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+    await expect(page.locator("[data-problem]")).toHaveText("Alege mai întâi un fișier.");
+  });
+
+  test("doar inventory.read: vede istoricul, dar nu poate încărca; fără drepturi: acces interzis", async ({
+    page,
+    request,
+    baseURL,
+    browser,
+  }) => {
+    failOnNativeDialog(page);
+    await createE2eRole("e2e-stoc-citire", ["admin.access", "inventory.read"]);
+    const reader = await createAccount(request, baseURL as string, "e2e-stoc-citire");
+    await login(page, reader, "/admin/produse/stoc/import");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Import «stoc la zi» din SmartBill" }),
+    ).toBeVisible();
+    await expect(page.getByText("Poți vedea istoricul pozelor, dar nu poți încărca")).toBeVisible();
+    await expect(page.locator("#stock-import-file")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Istoricul pozelor" })).toBeVisible();
+
+    // ruta de încărcare refuză și forțată, fără permisiune
+    const forced = await page.request.post("/api/admin/stock-imports?mode=preview", {
+      headers: { origin: baseURL as string },
+      data: "x",
+    });
+    expect(forced.status()).toBe(403);
+
+    const other = await browser.newContext({ baseURL: baseURL as string });
+    try {
+      const editorPage = await other.newPage();
+      const editor = await createAccount(request, baseURL as string, "editor");
+      await login(editorPage, editor, "/admin/produse/stoc/import");
+      await expect(editorPage).not.toHaveURL(/\/stoc\/import/);
+    } finally {
+      await other.close();
+    }
+  });
+
+  test("anonim: trimis la autentificare; ruta de încărcare refuză cu 401", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    await page.goto("/admin/produse/stoc/import");
+    await expect(page).toHaveURL(/\/autentificare/);
+    const res = await request.post(`${baseURL}/api/admin/stock-imports?mode=preview`, {
+      headers: { origin: baseURL as string, "x-forwarded-for": uniqueClientIp() },
+      data: "x",
+    });
+    expect(res.status()).toBe(401);
   });
 });

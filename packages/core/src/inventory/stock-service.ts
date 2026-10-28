@@ -209,6 +209,48 @@ function isRetryable(error: unknown): boolean {
   );
 }
 
+export interface StockTransactionOptions {
+  /** Timpul maxim al tranzacției, în ms (implicit 30 s; importul «stoc la zi» cere mai mult) */
+  timeout?: number;
+}
+
+/**
+ * O tranzacție (cu reîncercare la deadlock/conflict) pe clientul rădăcină sau, pe un client de tranzacție, un SAVEPOINT
+ * (testele rulează în tranzacție anulată). Aceeași cale pentru `StockService` și pentru importul «stoc la zi».
+ */
+export async function runStockTransaction<T>(
+  db: Db,
+  fn: (tx: Tx) => Promise<T>,
+  options: StockTransactionOptions = {},
+): Promise<T> {
+  if (isRootClient(db)) {
+    const config = {
+      maxWait: TRANSACTION.maxWait,
+      timeout: options.timeout ?? TRANSACTION.timeout,
+    };
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await db.$transaction(fn, config);
+      } catch (error) {
+        if (attempt >= MAX_ATTEMPTS || !isRetryable(error)) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 25 * attempt));
+      }
+    }
+  }
+  const inner = db as Tx;
+  const savepoint = `sp_${randomUUID().replaceAll("-", "")}`;
+  await inner.$executeRawUnsafe(`SAVEPOINT ${savepoint}`);
+  try {
+    const result = await fn(inner);
+    await inner.$executeRawUnsafe(`RELEASE SAVEPOINT ${savepoint}`);
+    return result;
+  } catch (error) {
+    await inner.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    await inner.$executeRawUnsafe(`RELEASE SAVEPOINT ${savepoint}`);
+    throw error;
+  }
+}
+
 /** Varianta are stoc gestionat: nu e digitală, iar bifa de pe variantă (dacă există) bate pe cea de pe produs. */
 function isManagedVariant(variant: {
   manageStock: boolean | null;
@@ -321,29 +363,7 @@ export class StockService {
 
   /** O tranzacție (cu reîncercare la deadlock/conflict) sau, pe un client de tranzacție, un SAVEPOINT. */
   private async atomic<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
-    const db = this.deps.db;
-    if (isRootClient(db)) {
-      for (let attempt = 1; ; attempt++) {
-        try {
-          return await db.$transaction(fn, TRANSACTION);
-        } catch (error) {
-          if (attempt >= MAX_ATTEMPTS || !isRetryable(error)) throw error;
-          await new Promise((resolve) => setTimeout(resolve, 25 * attempt));
-        }
-      }
-    }
-    const inner = db as Tx;
-    const savepoint = `sp_${randomUUID().replaceAll("-", "")}`;
-    await inner.$executeRawUnsafe(`SAVEPOINT ${savepoint}`);
-    try {
-      const result = await fn(inner);
-      await inner.$executeRawUnsafe(`RELEASE SAVEPOINT ${savepoint}`);
-      return result;
-    } catch (error) {
-      await inner.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savepoint}`);
-      await inner.$executeRawUnsafe(`RELEASE SAVEPOINT ${savepoint}`);
-      throw error;
-    }
+    return runStockTransaction(this.deps.db, fn);
   }
 
   private async defaultWarehouseId(tx: Tx): Promise<string> {

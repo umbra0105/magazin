@@ -676,6 +676,163 @@ export const ro = {
       saleLabel: "Preț redus",
     },
     inventory: {
+      stockImport: {
+        title: "Import «stoc la zi» din SmartBill",
+        description:
+          "Încarci raportul «Stoc la zi» exportat din SmartBill (.xls sau .xlsx). Mai întâi se verifică fără nicio modificare; abia după ce vezi raportul îl aplici. Aplicarea e toată-sau-deloc: dacă ceva nu merge, nu se schimbă nimic.",
+        open: "Import stoc la zi",
+        back: "Înapoi la Stoc",
+        readOnly: "Poți vedea istoricul pozelor, dar nu poți încărca un raport.",
+        upload: {
+          heading: "1. Fișierul",
+          file: "Raportul SmartBill (.xls sau .xlsx)",
+          help: (mb: number) =>
+            `Cel mult ${mb} MB. Se citește doar prima foaie, fără formule. Fișierul nu se păstrează pe server.`,
+          check: "Verifică fișierul",
+          checking: "Se verifică…",
+          noFile: "Alege mai întâi un fișier.",
+        },
+        time: {
+          heading: "2. Ora raportului",
+          hint: "Raportul SmartBill are doar data, fără oră. Ora hotărăște ce ajustări manuale înlocuiește raportul și ce comenzi rămân angajate. Implicit este ora de acum.",
+          date: "Data raportului (zz.ll.aaaa)",
+          time: "Ora raportului (hh:mm)",
+          zone: (zone: string) => `Ora magazinului (${zone}).`,
+          recheck: "Verifică din nou cu această oră",
+          changed: "Ora s-a schimbat: verifică din nou înainte de a aplica.",
+          acknowledge: "Am verificat ora și vreau să continui",
+          warningsHeading: "Avertismente despre oră",
+          lastSnapshot: (when: string) => `Ultima sincronizare aplicată: ${when}.`,
+          fileDate: (day: string) => `Data din raport: ${day}.`,
+          noFileDate: "Raportul nu conține o dată.",
+          errors: {
+            dateRequired: "Data este obligatorie.",
+            dateInvalid: "Scrie data așa: zz.ll.aaaa, de exemplu 28.10.2026.",
+            timeRequired: "Ora este obligatorie.",
+            timeInvalid: "Scrie ora așa: hh:mm, de exemplu 14:30.",
+          },
+        },
+        warehouses: {
+          heading: "3. Gestiunile citite",
+          hint: "Doar gestiunile bifate se citesc; rândurile celorlalte se ignoră. Alegerea se păstrează în setări și o poate schimba oricine poate modifica stocul.",
+          inFile: (name: string, rows: number) =>
+            `${name} · ${rows} ${rows === 1 ? "rând" : "rânduri"}`,
+          chosen: "Aleasă",
+          notChosen: "Nealeasă",
+          notInFile: "aleasă în setări, dar nu apare în fișier",
+          none: "Nu am găsit nicio gestiune în fișier.",
+          save: "Salvează gestiunile",
+          saving: "Se salvează…",
+          saved: "Gestiunile au fost salvate.",
+          needed: "Alege cel puțin o gestiune, apoi salvează.",
+          selected: (names: string) => `Citită acum: ${names}.`,
+        },
+        counters: {
+          heading: "Raportul verificării",
+          rows: "Rânduri în fișier",
+          otherWarehouses: "Alte gestiuni (ignorate)",
+          services: "Servicii (ignorate)",
+          withoutQuantity: "Fără cantitate (ignorate)",
+          matched: "Variante potrivite",
+          changed: "Se schimbă",
+          unchanged: "Neschimbate",
+          unknown: "Coduri necunoscute",
+          unmanaged: "Negestionate – nu se aplică",
+          missing: "Lipsă din fișier",
+          errors: "Erori",
+          warnings: "Avertismente",
+        },
+        lists: {
+          showing: (shown: number, total: number) =>
+            shown < total ? `Se arată primele ${shown} din ${total}.` : `${total} în total.`,
+          lines: "Variante care se actualizează",
+          errors: "Erori (blochează aplicarea)",
+          warnings: "Avertismente",
+          unknown: "Coduri din fișier care nu există în catalog (nu se creează produse)",
+          unmanaged:
+            "Negestionate – nu se aplică (importul nu pornește gestionarea stocului; o pornești din produs)",
+          missing: "Variante gestionate care lipsesc din fișier",
+          row: "Rând",
+          sku: "SKU",
+          product: "Produs",
+          fileQuantity: "În fișier",
+          quantity: "De aplicat",
+          current: "Acum",
+          difference: "Diferență",
+          noStock: "neinventariat",
+          message: "Mesaj",
+        },
+        zero: {
+          label: (count: number) =>
+            `Pune pe 0 cele ${count} ${count === 1 ? "variantă lipsă" : "variante lipsă"} din fișier`,
+          hint: "Fără această bifă, variantele lipsă din fișier rămân neatinse. Cu ea, stocul lor devine 0 prin aceeași poză.",
+        },
+        apply: {
+          button: "Aplică raportul",
+          applying: "Se aplică…",
+          disabledErrors: "Raportul are erori: corectează fișierul și verifică din nou.",
+          dialogTitle: "Aplici raportul de stoc?",
+          dialogDescription:
+            "Se aplică toate variantele deodată. Dacă ceva nu merge, nu se schimbă nimic.",
+          summary: (changed: number, unchanged: number, zeroed: number) =>
+            `${changed} ${changed === 1 ? "variantă se schimbă" : "variante se schimbă"}, ${unchanged} neschimbate` +
+            (zeroed > 0 ? `, ${zeroed} puse pe 0.` : "."),
+          at: (when: string) => `Ora raportului: ${when}.`,
+          confirm: "Aplică",
+          cancel: "Renunță",
+          close: "Închide",
+        },
+        result: {
+          heading: "Raportul a fost aplicat",
+          applied: (n: number) =>
+            `${n} ${n === 1 ? "variantă actualizată" : "variante actualizate"}.`,
+          zeroed: (n: number) => `${n} ${n === 1 ? "variantă pusă pe 0" : "variante puse pe 0"}.`,
+          mirrored: (n: number) =>
+            `${n} ${n === 1 ? "angajare de comandă oglindită" : "angajări de comenzi oglindite"} de poză.`,
+          again: "Încarcă alt raport",
+          toStock: "Vezi stocul",
+        },
+        history: {
+          heading: "Istoricul pozelor",
+          empty: "Nicio poză aplicată încă.",
+          takenAt: "Valabilă la",
+          uploadedAt: "Aplicată la",
+          file: "Fișier",
+          by: "De către",
+          result: "Rezultat",
+          source: { import: "Import din fișier", api: "API" } as Record<string, string>,
+          changed: (changed: number | null, unchanged: number | null, zeroed: number | null) =>
+            changed === null || unchanged === null
+              ? "—"
+              : `${changed} schimbate, ${unchanged} neschimbate` +
+                (zeroed ? `, ${zeroed} puse pe 0` : ""),
+          label: "Istoricul pozelor SmartBill",
+        },
+        errors: {
+          generic: "Importul nu a putut fi făcut. Încearcă din nou.",
+          network: "Nu am putut trimite fișierul. Verifică conexiunea și încearcă din nou.",
+          STOCK_IMPORT_PLAN_CHANGED:
+            "Fișierul, setările sau stocul s-au schimbat de la verificare. Verifică din nou înainte de a aplica.",
+          STOCK_IMPORT_NOT_NEWER:
+            "Ora raportului nu este mai nouă decât a unei sincronizări deja aplicate. Nu s-a aplicat nimic.",
+          STOCK_IMPORT_PLAN_HAS_ERRORS:
+            "Raportul are erori. Corectează fișierul și verifică din nou. Nu s-a aplicat nimic.",
+          STOCK_IMPORT_WAREHOUSE_REQUIRED: "Alege gestiunea SmartBill din care se citește stocul.",
+          STOCK_IMPORT_TIME_NOT_ACKNOWLEDGED:
+            "Ora raportului are avertismente: confirmă că ai verificat-o.",
+          STOCK_IMPORT_TIME_INVALID: "Data și ora raportului nu sunt valide.",
+          STOCK_IMPORT_ZERO_COUNT_MISMATCH:
+            "Numărul variantelor lipsă din fișier s-a schimbat de la verificare. Verifică din nou.",
+          STOCK_IMPORT_ZERO_NOT_CONFIRMED:
+            "Punerea pe 0 a variantelor lipsă cere confirmare explicită.",
+          STOCK_IMPORT_WAREHOUSES_INVALID: "Gestiunile alese nu sunt valide.",
+          STOCK_REPORT_FILE_TOO_LARGE: "Fișierul depășește mărimea maximă permisă.",
+          AUTH_FORBIDDEN: "Nu ai permisiunea să modifici stocul.",
+          AUTH_UNAUTHENTICATED: "Sesiunea a expirat. Autentifică-te din nou.",
+          AUTH_RATE_LIMITED: "Prea multe încercări. Așteaptă puțin și încearcă din nou.",
+          ORIGIN_INVALID: "Cererea nu a putut fi verificată. Reîncarcă pagina.",
+        } as Record<string, string>,
+      },
       title: "Stoc",
       description:
         "Cantitatea fizică, angajată și rezervată a fiecărei variante, disponibilul în unitate și în pași și restul nevandabil. Cantitatea fizică vine din sincronizarea cu SmartBill și din ajustările de aici.",

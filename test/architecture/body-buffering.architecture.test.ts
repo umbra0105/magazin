@@ -17,6 +17,7 @@ const read = (path: string) => readFileSync(`${root}${path}`, "utf8");
 export const UPLOAD_ROUTES = [
   "/api/media",
   "/api/admin/product-imports",
+  "/api/admin/stock-imports",
   "/api/admin/products/abc123/documents",
 ] as const;
 

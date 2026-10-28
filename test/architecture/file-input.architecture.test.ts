@@ -92,6 +92,7 @@ describe('niciun <input type="file"> direct (sursa reală)', () => {
       .map((f) => f.path)
       .sort();
     expect(users).toEqual([
+      "apps/web/src/components/admin/inventory/stock-import-panel.tsx",
       "apps/web/src/components/admin/media/upload-panel.tsx",
       "apps/web/src/components/admin/products/documents-tab.tsx",
       "apps/web/src/components/admin/products/product-import-wizard.tsx",

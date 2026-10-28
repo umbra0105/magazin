@@ -1281,6 +1281,8 @@ export interface E2eStockProduct {
 
 const E2E_STOCK_SKU_PREFIX = "E2ESTOC";
 const E2E_STOCK_SNAPSHOT = "e2e-stoc";
+/** Numele fișierului trimis de testele importului «stoc la zi»: după el se găsesc și se șterg pozele lor. */
+export const E2E_STOCK_IMPORT_FILE = "e2e-stoc-import.xlsx";
 
 /** Text cu virgulă → zecimi de miime (ca șir pentru `bigint` din Postgres), fără `float`. */
 function e2eTicks(text: string): string {
@@ -1568,16 +1570,69 @@ async function removeSharedStockRows(db: {
   query: (sql: string, values?: unknown[]) => Promise<unknown>;
 }): Promise<void> {
   await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_STOCK_SNAPSHOT]);
+  await removeStockImportSnapshots(db);
   await db.query(
     `delete from user_role where "roleId" in (select id from role where key like 'e2e-%')`,
   );
   await db.query(`delete from role where key like 'e2e-%' and "isSystem" = false`);
 }
 
+/**
+ * Pozele create de testele importului «stoc la zi» (după numele fișierului). Mișcările lor sunt ale variantelor de test și se
+ * șterg înainte, odată cu produsele; dacă au rămas, triggerul de imuabilitate se oprește doar cât durează ștergerea.
+ */
+async function removeStockImportSnapshots(db: {
+  query: (sql: string, values?: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  await db.query('ALTER TABLE "stock_movement" DISABLE TRIGGER "stock_movement_no_update_delete"');
+  await db.query(
+    `delete from stock_movement where "snapshotId" in (select id from stock_snapshot where "fileName" = $1)`,
+    [E2E_STOCK_IMPORT_FILE],
+  );
+  await db.query('ALTER TABLE "stock_movement" ENABLE TRIGGER "stock_movement_no_update_delete"');
+  await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_STOCK_IMPORT_FILE]);
+}
+
+/** Pozele importului de test, cele mai noi primele: ora, numărul de rânduri, amprenta fișierului și raportul păstrat. */
+export async function readE2eStockImports(): Promise<
+  Array<{ id: string; takenAt: Date; rowCount: number; fileHash: string | null; report: unknown }>
+> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select id, "takenAt", "rowCount", "fileHash", report from stock_snapshot where "fileName" = $1 order by "takenAt" desc`,
+      [E2E_STOCK_IMPORT_FILE],
+    );
+    return result.rows as never;
+  });
+}
+
+/** Șterge pozele importului de test (și mișcările lor) și alegerea gestiunilor făcută de test. */
+export async function removeE2eStockImports(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query("BEGIN");
+    try {
+      await removeStockImportSnapshots(db);
+      await db.query(`delete from setting where key = 'inventory.smartbillWarehouses'`);
+      await db.query("COMMIT");
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
 /** Șterge rolurile `e2e-…` și poza de test (comune); folosită de fișierul care le creează, după curățarea pe tag. */
 export async function removeE2eStockShared(): Promise<void> {
   await withClient(async (db) => {
-    await removeSharedStockRows(db);
+    // într-o tranzacție: triggerul de imuabilitate al mișcărilor nu rămâne oprit dacă ștergerea eșuează
+    await db.query("BEGIN");
+    try {
+      await removeSharedStockRows(db);
+      await db.query("COMMIT");
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
   });
 }
 
