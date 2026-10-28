@@ -504,14 +504,16 @@ describe("prospețimea pozei SmartBill", () => {
   it("cu jurnalul real de audit (Prisma): alerta ajunge în audit_log, o singură dată", async () => {
     await inRolledBackTransaction(db, async (tx) => {
       await runBaseSeed(tx);
-      const ctx = await createStockContext(tx, { useDefaultWarehouse: true });
+      // Depozit PROPRIU (anulat odată cu tranzacția): alerta se scrie la TRECERE și se repetă la 24 h, iar starea se citește
+      // din audit. Depozitul implicit poate avea deja rânduri COMMITATE de joburile aplicației din E2E (aceeași bază
+      // `ecom_test`), caz în care memento-ul nu e scadent și testul ar vedea 0 rânduri noi.
+      const ctx = await createStockContext(tx);
       await addStockProduct(tx, ctx, { variants: [{ physical: "5" }] });
       const maintenance = new StockMaintenance({
         db: tx,
         audit: new AuditService(createPrismaAuditStore(tx)),
       });
-      // depozitul implicit poate avea deja rânduri de audit scrise de joburile unei aplicații care rulează pe aceeași bază
-      // (rămase din E2E): se numără ce adaugă testul, nu un total fix
+      // se numără ce adaugă testul, nu un total fix
       const where = { entity: "warehouse", entityId: ctx.warehouseId };
       const before = await tx.auditLog.count({ where });
       await maintenance.checkSnapshotFreshness({ staleHours: 24 });

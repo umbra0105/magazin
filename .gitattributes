@@ -15,3 +15,6 @@
 *.woff binary
 *.woff2 binary
 *.pdf binary
+
+# Arhive de dependențe copiate în repo (vendor/): binare, fără normalizarea terminațiilor de linie
+*.tgz binary
