@@ -63,6 +63,11 @@ export const settingGroups = {
     backInStockMaxPerEmail: z.number().int().min(1).max(100).default(10),
     /** Cererile «Anunță-mă» în așteptare pe o singură variantă (plafon împotriva abuzului, D12). */
     backInStockMaxPerVariant: z.number().int().min(1).max(100_000).default(1000),
+    /**
+     * Gestiunile SmartBill din care importul «stoc la zi» citește cantitățile (numele exact din raport, fără deosebire de
+     * litere). Goală = importul refuză să pornească; celelalte gestiuni din fișier se ignoră. Numele nu se scrie în cod.
+     */
+    smartbillWarehouses: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
   },
   catalog: {
     /**

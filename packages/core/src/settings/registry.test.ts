@@ -123,6 +123,7 @@ describe("registrul de setări", () => {
       expect(inv.backInStockRetentionDays.parse(undefined)).toBe(90);
       expect(inv.backInStockMaxPerEmail.parse(undefined)).toBe(10);
       expect(inv.backInStockMaxPerVariant.parse(undefined)).toBe(1000);
+      expect(inv.smartbillWarehouses.parse(undefined)).toEqual([]);
     });
 
     it("stoc (Faza 5): întregi în limite", () => {
@@ -139,6 +140,28 @@ describe("registrul de setări", () => {
       for (const [key, good, bad] of cases) {
         for (const value of good) expect(ok(key, value), `${key}=${value}`).toBe(true);
         for (const value of bad) expect(ok(key, value), `${key}=${String(value)}`).toBe(false);
+      }
+    });
+
+    it("gestiunile SmartBill citite la import: listă de nume nevide, cel mult 20", () => {
+      for (const value of [
+        [],
+        ["Gestiune"],
+        ["A", "B"],
+        Array.from({ length: 20 }, (_, i) => `G${i}`),
+      ]) {
+        expect(ok("inventory.smartbillWarehouses", value), JSON.stringify(value)).toBe(true);
+      }
+      const bad: unknown[] = [
+        [""],
+        ["  "],
+        "Gestiune",
+        [1],
+        Array.from({ length: 21 }, (_, i) => `G${i}`),
+        [`${"x".repeat(101)}`],
+      ];
+      for (const value of bad) {
+        expect(ok("inventory.smartbillWarehouses", value), JSON.stringify(value)).toBe(false);
       }
     });
 
