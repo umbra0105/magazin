@@ -137,6 +137,10 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
   - [x] (11a) **Serviciul din core:** `subscribe` (răspuns neutru, idempotent, plafoane pe adresă și pe variantă), selecția cererilor ale căror variante au revenit în stoc (disponibil ≥ 1 pas și ≥ minim; negestionat: «în stoc»), `claim` / `release` / `complete`; teste de concurență pe Postgres real
   - [x] (11b, confirmat de utilizator; push cu `9244914` și `285a504`) **Trimiterea:** tip nou de email în coadă (payload sigilat cu DOAR `alertId`: adresa nu ajunge în Redis), șablon, procesorul face `claim` atomic, trimite și șterge adresa; job `stock-back-in-stock` la 60 de secunde; probă în Mailpit (un singur email) cu `dev:back-in-stock`
 - [ ] (12) **Import «stoc la zi» din SmartBill:** șablon, «valabil la», separator zecimal explicit, conversie SmartBill → unitatea noastră (rotunjire în jos + avertisment), verificare fără modificări cu raport, aplicare toată-sau-deloc, istoricul pozelor, audit; `FileInput`; regula D2 în importul WooCommerce (negestionat, «în stoc», «buc»)
+  - [~] (12a) **Planul de import (modul pur în core):** setarea gestiunilor citite, tabelul de unități, citirea exactă a cantităților, potrivirea pe SKU, conversia SmartBill → unitatea noastră, raportul (necunoscute, duplicate, lipsă, unitate diferită, negestionate), fără parser și fără bază de date
+  - [ ] (12b) **Cititorul de fișier .xls / .xlsx** (adaptor în `packages/integrations`; cere un pachet nou, aprobat de utilizator înainte de instalare)
+  - [ ] (12c) **Serviciul și ecranul:** previzualizare fără modificări, aplicare toată-sau-deloc (`StockSnapshot` + `applySnapshot`), confirmarea explicită pentru «lipsă din fișier → 0», ora pozei, audit, istoricul pozelor; `FileInput`
+  - [ ] (12d) **Regula D2 în importul WooCommerce** (negestionat, «în stoc», «buc») și închiderea punctului
 - [ ] (13) **Multi-depozit în spatele comutatorului `multiWarehouse`:** CRUD depozite, selector, transfer; oprit = invizibil
 - [ ] (14) **Închiderea fazei:** E2E, testul de concurență final în suită, acoperirea față de cerințe, `docs/FAZA-5-verificare-manuala.md` (cu cele 6 produse ca scenarii), lista «înainte de lansare» (D1.5) în TODO, adăugirile pentru Fazele 8, 9, 12, 13, 15, 22 (vezi `docs/FAZA-5-plan.md` §4), PROGRESS, `docs/04`/`docs/15`
 
@@ -262,6 +266,9 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Setări: date firmă, TVA (cota standard din setări, implicit 21%), cont bancar
 - [ ] ~~Taxare inversă intracomunitară cu validare VIES~~ **nu în Val 1** (vânzare doar în România)
 - [ ] Alertă în admin după 3 eșecuri de emitere
+- [ ] **Factura fără descărcare de gestiune** (răspuns contabil 2026-10-28: SmartBill refuză factura la stoc 0 dacă «descărcare gestiune» e activă): facturile pentru produse «La comandă» sau fără stoc se emit FĂRĂ descărcare de gestiune și NU se socotesc «oglindite» la regula poză + angajat (angajatul rămâne până la o poză care conține scăderea reală)
+- [ ] **Cantitatea de pe factură are cel mult 2 zecimale** (SmartBill: 2 zecimale, rotunjire la cea mai apropiată cifră): verificare la configurarea pasului și a conversiilor SmartBill (un pas sau un raport care dă mai mult de 2 zecimale pe factură se refuză sau se avertizează); kg se facturează în kg, sacul ca bucată
+- [ ] **Momentul facturii pentru «La comandă»** (răspuns contabil): la plată dacă a fost plătit, la expediere dacă se plătește la livrare (ramburs)
 
 ## FAZA 14 — Cont client și retururi · ~4-5 zile
 - [ ] Dashboard, istoric comenzi, detaliu cu timeline și tracking AWB

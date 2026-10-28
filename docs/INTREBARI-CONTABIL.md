@@ -29,6 +29,16 @@ inventate.
 Ce aduce proprietarul (nu e pentru contabil): raportul „stoc la zi” din SmartBill (cu cele 6 produse) și verificarea că SKU-ul din magazin
 este același cu codul de produs din SmartBill.
 
+## Răspunsuri primite
+
+**2026-10-28** (de la proprietar și contabil; întrebările de mai jos rămân cu `Răspuns:` gol până le rezumă contabilul în scris):
+
+- **Întrebarea 1 (stoc negativ):** SmartBill REFUZĂ factura la stoc 0 dacă bifa «descărcare gestiune» e activă. Factura se poate emite FĂRĂ descărcare de gestiune.
+- **Întrebarea 3 (zecimale):** SmartBill folosește 2 zecimale la cantitate, cu rotunjire la cea mai apropiată cifră (2,348 devine 2,35).
+- **Întrebarea 5 (produse pe ambalaj):** la kilograme se facturează în kg; sacul se facturează ca bucată.
+- **Întrebarea 7 (momentul facturii la «La comandă»):** produsele «La comandă» se facturează la plată dacă au fost plătite, iar la expediere dacă se plătesc la livrare (ramburs).
+- Consecințele pentru cod sunt trecute în TODO, Faza 13 (factura fără descărcare pentru «La comandă» sau fără stoc; cel mult 2 zecimale pe factură). Nu sunt rezolvate încă.
+
 ---
 
 ## Pentru contabil
