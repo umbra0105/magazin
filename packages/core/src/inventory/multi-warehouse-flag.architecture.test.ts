@@ -28,6 +28,8 @@ const AWARE = new Set([
   "packages/core/src/features/registry.ts",
   "packages/core/src/inventory/warehouse-service.ts",
   "packages/core/src/inventory/warehouse-store.ts",
+  // transferul între depozite: refuză cu FEATURE_DISABLED (importă eroarea serviciului de depozite)
+  "packages/core/src/inventory/stock-transfer.ts",
   "packages/core/src/inventory/index.ts",
   // legătura serviciului cu flag-ul real (singurul loc în care `isEnabled("multiWarehouse")` e scris pentru depozite)
   "apps/web/src/lib/inventory.ts",
@@ -147,6 +149,32 @@ describe("multiWarehouse: codul de multi-depozit rămâne separat de restul stoc
     expect(authorize.indexOf("this.deps.isEnabled()")).toBeLessThan(
       authorize.indexOf("assertCan("),
     );
+  });
+});
+
+describe("transferul între depozite verifică steagul înaintea drepturilor și a bazei (sursa reală)", () => {
+  const content = readFileSync(join(root, "packages/core/src/inventory/stock-transfer.ts"), "utf8");
+  const body = content.slice(
+    content.indexOf("async transfer("),
+    content.indexOf("private async run("),
+  );
+
+  it("transfer() citește steagul întâi, apoi dreptul, apoi cererea; baza e atinsă abia la urmă", () => {
+    const flag = body.indexOf("this.deps.isEnabled()");
+    const permission = body.indexOf('assertCan(subject, "inventory.write")');
+    const parse = body.indexOf("parseInput(");
+    const database = body.indexOf("runStockTransaction(");
+    expect(flag).toBeGreaterThan(-1);
+    expect(flag).toBeLessThan(permission);
+    expect(permission).toBeLessThan(parse);
+    expect(parse).toBeLessThan(database);
+  });
+
+  it("singura cale spre baza de date e runStockTransaction (nicio altă metodă publică)", () => {
+    const klass = content.slice(content.indexOf("export class StockTransferService"));
+    // metodele publice sunt `  async nume(` (cele private au `private` înainte)
+    const publicMethods = [...klass.matchAll(/\n {2}async (\w+)\(/g)].map((m) => m[1]);
+    expect(publicMethods).toEqual(["transfer"]);
   });
 });
 

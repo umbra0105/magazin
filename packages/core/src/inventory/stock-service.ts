@@ -45,7 +45,7 @@ import { effectiveMeasureUnit } from "./units";
  */
 
 type Db = PrismaClient | Prisma.TransactionClient;
-type Tx = Prisma.TransactionClient;
+export type Tx = Prisma.TransactionClient;
 
 const TRANSACTION = { maxWait: 15_000, timeout: 30_000 } as const;
 const MAX_ATTEMPTS = 3;
@@ -156,12 +156,12 @@ export interface ConsistencyReport {
   committedFromRows: Quantity;
 }
 
-interface ItemKey {
+export interface ItemKey {
   variantId: string;
   warehouseId: string;
 }
 
-interface ItemRow extends ItemKey {
+export interface ItemRow extends ItemKey {
   physical: bigint;
   physicalAsOf: Date | null;
   committed: bigint;
@@ -170,7 +170,7 @@ interface ItemRow extends ItemKey {
   lowStockSteps: number | null;
 }
 
-interface Counters {
+export interface Counters {
   physical: bigint;
   committed: bigint;
   reserved: bigint;
@@ -252,7 +252,7 @@ export async function runStockTransaction<T>(
 }
 
 /** Varianta are stoc gestionat: nu e digitală, iar bifa de pe variantă (dacă există) bate pe cea de pe produs. */
-function isManagedVariant(variant: {
+export function isManagedVariant(variant: {
   manageStock: boolean | null;
   product: { type: string; manageStock: boolean };
 }): boolean {
@@ -260,7 +260,7 @@ function isManagedVariant(variant: {
 }
 
 /** Blochează rândurile de stoc cerute, într-o singură comandă, în ordinea fixă; întoarce rândurile existente. */
-async function lockItems(tx: Tx, keys: readonly ItemKey[]): Promise<Map<string, ItemRow>> {
+export async function lockItems(tx: Tx, keys: readonly ItemKey[]): Promise<Map<string, ItemRow>> {
   const unique = [...new Map(keys.map((k) => [keyId(k), k])).values()];
   const found = new Map<string, ItemRow>();
   if (unique.length === 0) return found;
@@ -315,7 +315,7 @@ async function claim(
 }
 
 /** Eliberează rezervările active expirate ale rândurilor date (sub blocarea lor). Întoarce câte s-au eliberat. */
-async function sweepExpired(tx: Tx, keys: readonly ItemKey[], now: Date): Promise<number> {
+export async function sweepExpired(tx: Tx, keys: readonly ItemKey[], now: Date): Promise<number> {
   if (keys.length === 0) return 0;
   const rows = await tx.$queryRaw<Array<ItemKey & { quantity: bigint }>>(Prisma.sql`
     UPDATE stock_reservation

@@ -4,6 +4,7 @@ import {
   StockMaintenance,
   StockOverviewService,
   StockService,
+  StockTransferService,
   WarehouseService,
   createPrismaMeasureUnitStore,
   createPrismaStockOverviewStore,
@@ -19,6 +20,7 @@ const globalForInventory = globalThis as unknown as {
   __ecomStockOverview?: StockOverviewService;
   __ecomStockAdjustments?: StockAdjustmentService;
   __ecomWarehouses?: WarehouseService;
+  __ecomStockTransfers?: StockTransferService;
 };
 
 /** Unitățile de măsură (listă, creare, editare). Un singur serviciu per proces. */
@@ -75,6 +77,19 @@ export function getWarehouseService(): WarehouseService {
     isEnabled: () => getFeatureFlags().isEnabled("multiWarehouse"),
   });
   return globalForInventory.__ecomWarehouses;
+}
+
+/**
+ * Transferul unei variante între două depozite, în spatele steagului `multiWarehouse` (steagul oprit → `FEATURE_DISABLED`,
+ * înaintea drepturilor). O singură tranzacție, două mișcări cu aceeași referință, audit.
+ */
+export function getStockTransferService(): StockTransferService {
+  globalForInventory.__ecomStockTransfers ??= new StockTransferService({
+    db: getDb(),
+    audit: getAudit(),
+    isEnabled: () => getFeatureFlags().isEnabled("multiWarehouse"),
+  });
+  return globalForInventory.__ecomStockTransfers;
 }
 
 export { readStockSettings };
