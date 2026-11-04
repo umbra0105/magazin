@@ -443,7 +443,7 @@ describe("istoricul importurilor pe baza reală", () => {
     await withHistory(async ({ tx, service, as }) => {
       const owner = await as("owner");
       const analysis = await service.register(owner, {
-        bytes: wooCsv(syntheticWooRows()),
+        bytes: wooCsv(syntheticWooRows(new Date())),
         fileName: "woo.csv",
       });
       const validation = await service.validate(owner, {

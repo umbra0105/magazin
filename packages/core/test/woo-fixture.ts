@@ -3,6 +3,9 @@
  * română, 79 de coloane, aceeași ordine), dar cu conținut INVENTAT: nume, descrieri, categorii, branduri și
  * coduri de fantezie. Nimic din fișierul real (`local-data/`) nu intră aici. Coloana `Meta: _pret_intrare`
  * (prețul de intrare) are o valoare-santinelă, ca testele să dovedească că nu ajunge nicăieri.
+ *
+ * Datele nu sunt scrise în fișier: `syntheticWooRows(now)` le calculează din ora primită (promoția începe peste 30 de
+ * zile și se încheie peste 60), ca fixture-ul să nu depindă de data la care rulează testul (regula din `CLAUDE.md`).
  */
 
 export const WOO_HEADERS = [
@@ -106,8 +109,34 @@ const LONG_HTML = [
 const HOSTILE_HTML =
   '<p>Text normal &amp; sigur.</p><script>alert("x")</script><iframe src="https://exemplu.invalid/x"></iframe><p onclick="x()">Final</p>';
 
-/** Rândurile fixture-ului, cu valori inventate. Fiecare caz e descris în comentariu. */
-export function syntheticWooRows(): WooFixtureRow[] {
+const DAY_MS = 86_400_000;
+
+/** Zilele promoției din fixture, ca text `aaaa-ll-zz`: începe peste 30 de zile și se încheie peste 60, față de `now`. */
+export function wooPromotionDates(now: Date): { start: string; end: string } {
+  const day = (offsetDays: number): string =>
+    new Date(now.getTime() + offsetDays * DAY_MS).toISOString().slice(0, 10);
+  return { start: day(30), end: day(60) };
+}
+
+const bucharestParts = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Europe/Bucharest",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+/** Un moment, scris ca `aaaa-ll-zz hh:mm:ss` în ora României (verificare independentă a fusului orar, prin Intl). */
+export function localInBucharest(date: Date): string {
+  return bucharestParts.format(date);
+}
+
+/** Rândurile fixture-ului, cu valori inventate. Fiecare caz e descris în comentariu. `now` fixează datele promoției. */
+export function syntheticWooRows(now: Date): WooFixtureRow[] {
+  const promotion = wooPromotionDates(now);
   const common: WooFixtureRow = {
     Publicat: "1",
     "Este reprezentativ?": "0",
@@ -133,8 +162,8 @@ export function syntheticWooRows(): WooFixtureRow[] {
       Nume: "Pompă de circulație Aqua 100",
       "Descriere scurtă": "<p>Silențioasă, <em>clasa A</em></p>",
       Descriere: LONG_HTML,
-      "Dată începere promoție": "2099-11-01",
-      "Dată încheiere promoție": "2099-11-30",
+      "Dată începere promoție": promotion.start,
+      "Dată încheiere promoție": promotion.end,
       "Greutate (kg)": "12,5",
       "Lungime (cm)": "40,5",
       "Lățime (cm)": "30",

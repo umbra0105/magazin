@@ -328,7 +328,10 @@ describe("planul de imagini (fără rețea)", () => {
 
   it("planul nu conține prețul de achiziție și nici adresele brute respinse", async () => {
     const p = await plan(
-      syntheticWooRows().map((r) => ({ ...r, Imagini: "http://x.invalid/a.jpg?k=SECRET" })),
+      syntheticWooRows(new Date("2030-06-15T09:00:00Z")).map((r) => ({
+        ...r,
+        Imagini: "http://x.invalid/a.jpg?k=SECRET",
+      })),
     );
     const json = JSON.stringify(p);
     expect(json).not.toContain(WOO_COST_SENTINEL);

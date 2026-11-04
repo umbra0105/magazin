@@ -89,7 +89,7 @@ test.describe("import WooCommerce", () => {
   }) => {
     const owner = await createAccount(request, baseURL as string, "owner");
     const tag = randomBytes(3).toString("hex");
-    const bytes = Buffer.from(wooCsv(syntheticWooRows()));
+    const bytes = Buffer.from(wooCsv(syntheticWooRows(new Date())));
     await login(page, owner, "/admin/produse/import");
 
     // pasul 1: alegerea profilului (generic implicit), apoi WooCommerce
@@ -221,7 +221,7 @@ test.describe("import WooCommerce", () => {
     const tag = randomBytes(3).toString("hex");
     const fileName = `e2e-${tag}-woo-istoric.csv`;
     await login(page, owner, "/admin/produse/import");
-    await upload(page, fileName, Buffer.from(wooCsv(syntheticWooRows())), true);
+    await upload(page, fileName, Buffer.from(wooCsv(syntheticWooRows(new Date()))), true);
     await page.locator("[data-import-check]").click();
     await page.locator("[data-import-apply]").click();
     await page.locator("[data-import-confirm]").click();
@@ -253,7 +253,7 @@ test.describe("import WooCommerce", () => {
   }) => {
     const owner = await createAccount(request, baseURL as string, "owner");
     const tag = randomBytes(3).toString("hex");
-    const bytes = Buffer.from(wooCsv(syntheticWooRows()));
+    const bytes = Buffer.from(wooCsv(syntheticWooRows(new Date())));
     await login(page, owner, "/admin/produse/import");
     await upload(page, `e2e-${tag}-woo.csv`, bytes, true);
     await page.locator("[data-import-check]").click();

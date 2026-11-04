@@ -4,6 +4,7 @@ import {
   WOO_HEADERS,
   syntheticWooRows,
   wooCsv,
+  wooPromotionDates,
   type WooFixtureRow,
 } from "../../../../test/woo-fixture";
 import { DEFAULT_IMPORT_LIMITS, parseImportFile, type ParsedTable } from "../import-file";
@@ -25,6 +26,10 @@ import type {
   WooSnapshotExtras,
   WooUpdateOp,
 } from "./woo-types";
+
+// Planul nu citește ceasul: ora curentă e doar intrarea din care fixture-ul își calculează datele (azi + 30 / + 60 de zile).
+const NOW = new Date("2030-06-15T09:00:00Z");
+const WINTER_NOW = new Date("2030-01-10T09:00:00Z");
 
 const CTX: WooContext = {
   // contul poate importa imagini (media.write), dar opțiunea e oprită în opțiunile implicite
@@ -78,7 +83,7 @@ function snapshot(
 }
 
 async function plan(
-  rows: WooFixtureRow[] = syntheticWooRows(),
+  rows: WooFixtureRow[] = syntheticWooRows(NOW),
   options: Partial<WooOptions> = {},
   snap: WooSnapshot = snapshot(),
   ctx = CTX,
@@ -208,6 +213,21 @@ describe("planificarea fixture-ului sintetic pe un catalog gol", () => {
     });
   });
 
+  it("promoția fixture-ului urmează ora curentă primită (iarna: EET, UTC+2) și rămâne în viitor", async () => {
+    const op = bySku(await plan(syntheticWooRows(WINTER_NOW)), "FIX-101").op as WooCreateOp;
+    // 10 ianuarie 2030 + 30 de zile = 9 februarie; + 60 de zile = 11 martie (înainte de trecerea la ora de vară)
+    expect(wooPromotionDates(WINTER_NOW)).toEqual({ start: "2030-02-09", end: "2030-03-11" });
+    expect(op.variants[0]?.saleStartsAt).toBe("2030-02-08T22:00:00.000Z");
+    expect(op.variants[0]?.saleEndsAt).toBe("2030-03-11T21:59:59.000Z");
+    // începe peste 30 de zile și se încheie peste 60, față de ora primită
+    const starts = Date.parse(op.variants[0]?.saleStartsAt ?? "");
+    const ends = Date.parse(op.variants[0]?.saleEndsAt ?? "");
+    expect(starts - WINTER_NOW.getTime()).toBeGreaterThan(29 * 86_400_000);
+    expect(starts - WINTER_NOW.getTime()).toBeLessThan(31 * 86_400_000);
+    expect(ends - WINTER_NOW.getTime()).toBeGreaterThan(60 * 86_400_000);
+    expect(ends - WINTER_NOW.getTime()).toBeLessThan(61 * 86_400_000);
+  });
+
   it("produsul simplu complet: preț, promoție cu date în fusul magazinului, unități exacte, clasă, EAN, ciornă, ID vechi", async () => {
     const row = bySku(await plan(), "FIX-101");
     const op = row.op as WooCreateOp;
@@ -230,9 +250,10 @@ describe("planificarea fixture-ului sintetic pe un catalog gol", () => {
       widthMm: 300,
       heightMm: 250,
     });
-    // 1 nov 2026 00:00 și 30 nov 2026 23:59:59, ora României (EET, UTC+2)
-    expect(v?.saleStartsAt).toBe("2099-10-31T22:00:00.000Z");
-    expect(v?.saleEndsAt).toBe("2099-11-30T21:59:59.000Z");
+    // azi + 30 de zile = 15 iulie 2030, 00:00 și azi + 60 = 14 august 2030, 23:59:59, ora României (EEST, UTC+3)
+    expect(wooPromotionDates(NOW)).toEqual({ start: "2030-07-15", end: "2030-08-14" });
+    expect(v?.saleStartsAt).toBe("2030-07-14T21:00:00.000Z");
+    expect(v?.saleEndsAt).toBe("2030-08-14T20:59:59.000Z");
     expect(op.legacyId).toBe("101");
     expect(op.product.categoryKeys).toEqual(["pompe>pompe de circulatie", "accesorii"]);
     // relații: id:103 se rezolvă în fișier (WC-103), id:104 la fel; NEEXISTENT-1 devine avertisment
@@ -349,7 +370,7 @@ describe("planificarea fixture-ului sintetic pe un catalog gol", () => {
   });
 
   it("unitățile din opțiuni: greutate în g și dimensiuni în mm se iau ca atare; antet diferit dă avertisment", async () => {
-    const rows = syntheticWooRows().filter((r) => r.SKU === "00123");
+    const rows = syntheticWooRows(NOW).filter((r) => r.SKU === "00123");
     const ok = await plan(
       rows.map((r) => ({ ...r, "Greutate (kg)": "250", "Lungime (cm)": "125" })),
       {
@@ -512,7 +533,7 @@ describe("reimport: produs existent", () => {
   }
 
   it("SKU existent → actualizare doar a ce diferă; celulele goale lasă valoarea neschimbată", async () => {
-    const rows = syntheticWooRows().filter((r) => r.SKU === "FIX-104");
+    const rows = syntheticWooRows(NOW).filter((r) => r.SKU === "FIX-104");
     const p = await plan(rows, {}, existingFor("FIX-104"));
     const row = bySku(p, "FIX-104");
     expect(row.outcome).toBe("updated");
@@ -524,7 +545,7 @@ describe("reimport: produs existent", () => {
   });
 
   it("produs arhivat sau din coș → ignorat cu motiv, nu actualizat în tăcere", async () => {
-    const rows = syntheticWooRows().filter((r) => r.SKU === "FIX-104");
+    const rows = syntheticWooRows(NOW).filter((r) => r.SKU === "FIX-104");
     const archived = await plan(rows, {}, existingFor("FIX-104", { status: "archived" }));
     expect(bySku(archived, "FIX-104").outcome).toBe("skipped");
     const deleted = await plan(rows, {}, existingFor("FIX-104", { deleted: true }));
@@ -532,7 +553,7 @@ describe("reimport: produs existent", () => {
   });
 
   it("variație nouă la un produs variabil existent = eroare clară (nu se adaugă variante la produse existente)", async () => {
-    const rows = syntheticWooRows().filter((r) => ["200", "201", "202"].includes(r.ID ?? ""));
+    const rows = syntheticWooRows(NOW).filter((r) => ["200", "201", "202"].includes(r.ID ?? ""));
     const p = await plan(rows, {}, existingFor("FIX-VAR-05"));
     expect(bySku(p, "FIX-VAR-075").outcome).toBe("error");
     expect(textOf(bySku(p, "FIX-VAR-075"))).toMatch(/Variație nouă la un produs existent/);
@@ -541,7 +562,7 @@ describe("reimport: produs existent", () => {
 
 describe("colectarea căutărilor", () => {
   it("SKU-uri (cu WC-<ID> pentru lipsă), ID-uri vechi și țintele relațiilor", async () => {
-    const table = await tableOf(syntheticWooRows());
+    const table = await tableOf(syntheticWooRows(NOW));
     const lookups = collectWooLookups(table);
     expect(lookups.skus).toEqual(
       expect.arrayContaining(["FIX-101", "00123", "WC-103", "NEEXISTENT-1"]),

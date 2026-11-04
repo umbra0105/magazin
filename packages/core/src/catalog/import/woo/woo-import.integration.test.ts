@@ -5,7 +5,13 @@ import { z } from "zod";
 import { getDb, type PrismaClient } from "@ecom/db";
 import type { StorageDriver } from "@ecom/integrations";
 import { createLogger } from "@ecom/shared";
-import { WOO_COST_SENTINEL, syntheticWooRows, wooCsv } from "../../../../test/woo-fixture";
+import {
+  WOO_COST_SENTINEL,
+  localInBucharest,
+  syntheticWooRows,
+  wooCsv,
+  wooPromotionDates,
+} from "../../../../test/woo-fixture";
 import { AuditService } from "../../../audit/audit-service";
 import { createPrismaAuditStore } from "../../../audit/prisma-store";
 import { PermissionService } from "../../../rbac/permission-service";
@@ -94,7 +100,12 @@ async function withWoo<T>(
   });
 }
 
-const file = (name = "woo.csv") => ({ bytes: wooCsv(syntheticWooRows()), fileName: name });
+// Serviciul de produse compară promoția cu ceasul real: datele fixture-ului se calculează din ora de la rulare
+// (începe peste 30 de zile, se încheie peste 60), deci testul nu îmbătrânește.
+const file = (name = "woo.csv") => ({
+  bytes: wooCsv(syntheticWooRows(new Date())),
+  fileName: name,
+});
 
 async function check(
   service: ReturnType<typeof createProductImportService>,
@@ -239,8 +250,11 @@ describe("import WooCommerce pe baza reală", () => {
         widthMm: 300,
         heightMm: 250,
       });
-      expect(v101.saleStartsAt?.toISOString()).toBe("2099-10-31T22:00:00.000Z");
-      expect(v101.saleEndsAt?.toISOString()).toBe("2099-11-30T21:59:59.000Z");
+      // promoția salvată e 00:00 / 23:59:59 ale zilelor din fixture, în fusul magazinului (fusul orar îl calculează Intl, nu codul testat)
+      const promotion = wooPromotionDates(new Date());
+      expect(localInBucharest(v101.saleStartsAt as Date)).toBe(`${promotion.start} 00:00:00`);
+      expect(localInBucharest(v101.saleEndsAt as Date)).toBe(`${promotion.end} 23:59:59`);
+      expect((v101.saleStartsAt as Date).getTime()).toBeGreaterThan(Date.now());
       expect(v101.product).toMatchObject({
         status: "draft",
         shippingClass: "pallet",
