@@ -26,3 +26,5 @@ export * from "./stock-report-upload";
 export * from "./stock-activation-plan";
 export * from "./stock-activation";
 export * from "./stock-activation-upload";
+export * from "./warehouse-service";
+export * from "./warehouse-store";

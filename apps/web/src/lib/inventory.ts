@@ -4,18 +4,21 @@ import {
   StockMaintenance,
   StockOverviewService,
   StockService,
+  WarehouseService,
   createPrismaMeasureUnitStore,
   createPrismaStockOverviewStore,
+  createPrismaWarehouseStore,
   type StockOverviewServiceSettings,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { getAudit } from "./admin-writes";
-import { getSettings } from "./services";
+import { getFeatureFlags, getSettings } from "./services";
 
 const globalForInventory = globalThis as unknown as {
   __ecomMeasureUnits?: MeasureUnitService;
   __ecomStockOverview?: StockOverviewService;
   __ecomStockAdjustments?: StockAdjustmentService;
+  __ecomWarehouses?: WarehouseService;
 };
 
 /** Unitățile de măsură (listă, creare, editare). Un singur serviciu per proces. */
@@ -59,6 +62,19 @@ export function getStockAdjustmentService(): StockAdjustmentService {
     audit: getAudit(),
   });
   return globalForInventory.__ecomStockAdjustments;
+}
+
+/**
+ * Depozitele (listă, creare, redenumire, dezactivare), în spatele steagului `multiWarehouse`: cu steagul oprit serviciul
+ * refuză orice operație (`FEATURE_DISABLED`). Steagul se citește la fiecare apel, deci pornirea/oprirea se vede imediat.
+ */
+export function getWarehouseService(): WarehouseService {
+  globalForInventory.__ecomWarehouses ??= new WarehouseService({
+    store: createPrismaWarehouseStore(getDb()),
+    audit: getAudit(),
+    isEnabled: () => getFeatureFlags().isEnabled("multiWarehouse"),
+  });
+  return globalForInventory.__ecomWarehouses;
 }
 
 export { readStockSettings };
