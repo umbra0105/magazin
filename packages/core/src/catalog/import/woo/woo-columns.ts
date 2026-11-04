@@ -76,7 +76,7 @@ const IGNORED: readonly { match: RegExp; reason: string }[] = [
   {
     match:
       /^(in stoc|in stock|stoc|stock|cantitate mica in stoc|low stock amount|precomenzile sunt permise|backorders allowed|vandut individual|sold individually)$/,
-    reason: "stocul nu se importă (Faza 5)",
+    reason: "stocul nu se importă din WooCommerce (inventarul se face din Stoc)",
   },
   { match: /^(etichete|tags)$/, reason: "etichetele nu se importă" },
   {

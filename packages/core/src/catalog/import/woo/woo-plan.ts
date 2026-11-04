@@ -262,7 +262,7 @@ export function planWoo(
   const stockColumns = columns.ignored.filter((c) => c.reason.startsWith("stocul"));
   if (stockColumns.length > 0) {
     fileWarnings.push(
-      `Coloanele de stoc (${stockColumns.map((c) => `«${shortValue(c.header)}»`).join(", ")}) au fost ignorate: stocul nu se importă încă (Faza 5).`,
+      `Coloanele de stoc (${stockColumns.map((c) => `«${shortValue(c.header)}»`).join(", ")}) nu se importă: produsele noi se creează negestionate, «în stoc», cu unitatea «buc»; cele existente nu își schimbă stocul. Inventarul îl faci din Stoc, cu importul «stoc la zi».`,
     );
   }
 

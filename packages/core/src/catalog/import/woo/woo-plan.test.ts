@@ -410,7 +410,12 @@ describe("planificarea fixture-ului sintetic pe un catalog gol", () => {
   it("imaginile (opțiune oprită) și stocul se ignoră cu avertisment la nivel de fișier", async () => {
     const p = await plan();
     expect(p.fileWarnings.join("\n")).toMatch(/Coloana «Imagini» nu se importă/);
-    expect(p.fileWarnings.join("\n")).toMatch(/Coloanele de stoc.*ignorate.*Faza 5/);
+    // regula D2: stocul nu vine din WooCommerce; mesajul spune ce se întâmplă în loc și unde se face inventarul
+    const stock = p.fileWarnings.find((w) => w.startsWith("Coloanele de stoc")) ?? "";
+    expect(stock).toMatch(/nu se importă.*negestionate.*«în stoc».*«buc»/);
+    expect(stock).toContain("cele existente nu își schimbă stocul");
+    expect(stock).toContain("stoc la zi");
+    expect(stock).not.toMatch(/Faza 5/);
   });
 
   it("amprenta planului e stabilă la aceeași intrare și se schimbă când se schimbă catalogul", async () => {

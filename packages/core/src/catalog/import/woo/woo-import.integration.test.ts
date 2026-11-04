@@ -368,6 +368,134 @@ describe("import WooCommerce pe baza reală", () => {
     });
   });
 
+  it("regula D2: produsele noi sunt negestionate, «în stoc», fără unitate («buc»), fără nicio urmă de inventar, deși magazinul gestionează stocul implicit", async () => {
+    await withWoo(async ({ tx, service, as }) => {
+      const owner = await as("owner");
+      const { validation } = await check(service, owner);
+      await service.apply(owner, {
+        importId: validation.importId,
+        confirm: true,
+        expectedPlanHash: validation.planHash,
+      });
+      const products = await tx.product.findMany({
+        where: {
+          variants: { some: { sku: { in: ["FIX-101", "00123", "WC-103", "FIX-VAR-05"] } } },
+        },
+        include: { variants: true },
+      });
+      // simplu, cu SKU numeric, cu SKU generat și variabil: toate felurile de rânduri create
+      expect(products).toHaveLength(4);
+      for (const product of products) {
+        expect(product, product.title).toMatchObject({
+          manageStock: false,
+          stockStatus: "instock",
+          measureUnitId: null,
+          saleStep: null,
+        });
+        for (const variant of product.variants) {
+          expect(variant, variant.sku).toMatchObject({
+            manageStock: null,
+            stockStatus: null,
+            measureUnitId: null,
+            saleStep: null,
+          });
+        }
+      }
+      // fără inventar: niciun InventoryItem și nicio mișcare de stoc
+      const variantIds = products.flatMap((p) => p.variants.map((v) => v.id));
+      expect(variantIds.length).toBeGreaterThanOrEqual(5);
+      expect(await tx.inventoryItem.count({ where: { variantId: { in: variantIds } } })).toBe(0);
+      expect(await tx.stockMovement.count({ where: { variantId: { in: variantIds } } })).toBe(0);
+    });
+  });
+
+  it("regula D2 la actualizare: o a doua rulare nu schimbă gestiunea, starea de stoc, unitatea sau cantitățile unui produs deja pornit", async () => {
+    await withWoo(async ({ tx, service, as }) => {
+      const owner = await as("owner");
+      const first = await check(service, owner);
+      await service.apply(owner, {
+        importId: first.validation.importId,
+        confirm: true,
+        expectedPlanHash: first.validation.planHash,
+      });
+      // utilizatorul a făcut inventarul: produsul e gestionat, în kg, cu stoc fizic, epuizat ca stare
+      const variant = await tx.productVariant.findFirstOrThrow({ where: { sku: "FIX-101" } });
+      const kg = await tx.measureUnit.findFirstOrThrow({ where: { code: "kg" } });
+      const warehouse = await tx.warehouse.findFirstOrThrow({ where: { isDefault: true } });
+      await tx.product.update({
+        where: { id: variant.productId },
+        data: { manageStock: true, stockStatus: "outofstock", measureUnitId: kg.id },
+      });
+      await tx.inventoryItem.create({
+        data: {
+          variantId: variant.id,
+          warehouseId: warehouse.id,
+          physical: 25_000n,
+          committed: 3_000n,
+          reserved: 1_000n,
+        },
+      });
+      // al doilea produs, gestionat dar FĂRĂ stoc: serviciul de produse ar lăsa să i se schimbe gestiunea, deci doar
+      // codul importului îl apără de o suprascriere
+      const empty = await tx.productVariant.findFirstOrThrow({ where: { sku: "00123" } });
+      await tx.product.update({
+        where: { id: empty.productId },
+        data: { manageStock: true, stockStatus: "outofstock" },
+      });
+      // același fișier, cu alt preț pe cele două produse: ambele se actualizează
+      const rows = syntheticWooRows(new Date()).map((r) =>
+        r.SKU === "FIX-101"
+          ? { ...r, "Preț obișnuit": "1500" }
+          : r.SKU === "00123"
+            ? { ...r, "Preț obișnuit": "400" }
+            : r,
+      );
+      const analysis = await service.register(owner, {
+        bytes: wooCsv(rows),
+        fileName: "woo-d2.csv",
+      });
+      const validation = await service.validate(owner, {
+        importId: analysis.importId,
+        profile: "woocommerce",
+        options: { ...(analysis.woo?.defaults as object) },
+      });
+      expect(validation.report.counts.updated).toBeGreaterThanOrEqual(2);
+      const applied = await service.apply(owner, {
+        importId: validation.importId,
+        confirm: true,
+        expectedPlanHash: validation.planHash,
+      });
+      expect(applied.mode).toBe("sync");
+      if (applied.mode !== "sync") throw new Error("așteptam sync");
+      // nicio actualizare nu a eșuat: aceleași 6 rânduri murdare din fișier, nimic în plus
+      expect(applied.report.counts.errors).toBe(6);
+      const emptyAfter = await tx.productVariant.findFirstOrThrow({
+        where: { id: empty.id },
+        include: { product: true },
+      });
+      expect(emptyAfter.price).toBe(40_000);
+      expect(emptyAfter.product).toMatchObject({
+        manageStock: true,
+        stockStatus: "outofstock",
+        measureUnitId: null,
+      });
+      const after = await tx.productVariant.findFirstOrThrow({
+        where: { id: variant.id },
+        include: { product: true },
+      });
+      expect(after.price).toBe(150_000);
+      expect(after.product).toMatchObject({
+        manageStock: true,
+        stockStatus: "outofstock",
+        measureUnitId: kg.id,
+      });
+      expect(after).toMatchObject({ manageStock: null, stockStatus: null, measureUnitId: null });
+      const item = await tx.inventoryItem.findFirstOrThrow({ where: { variantId: variant.id } });
+      expect([item.physical, item.committed, item.reserved]).toEqual([25_000n, 3_000n, 1_000n]);
+      expect(await tx.stockMovement.count({ where: { variantId: variant.id } })).toBe(0);
+    });
+  });
+
   it("«păstrează starea din fișier»: la o a doua rulare doar produsul publicat devine activ", async () => {
     await withWoo(async ({ tx, service, as }) => {
       const owner = await as("owner");

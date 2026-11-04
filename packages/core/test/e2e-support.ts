@@ -983,6 +983,14 @@ export async function readE2eWooFixtureState(): Promise<{
   firstDescription: string | null;
   attribute: { type: string } | null;
   variableOptions: number;
+  /** Regula D2: starea de stoc a produselor create din fixture (numărate din cele 5 produse). */
+  stock: {
+    unmanaged: number;
+    inStock: number;
+    noUnit: number;
+    variantOverrides: number;
+    inventoryItems: number;
+  };
 }> {
   return withClient(async (db) => {
     const first = await db.query(
@@ -1016,8 +1024,29 @@ export async function readE2eWooFixtureState(): Promise<{
       `select count(*)::int as n from product_option o
        join product_variant v on v."productId" = o."productId" where v.sku = 'FIX-VAR-05'`,
     );
+    const fixtureSkus = ["FIX-101", "00123", "WC-103", "FIX-104", "FIX-VAR-05", "FIX-VAR-075"];
+    const stock = await db.query(
+      `select
+         count(distinct p.id) filter (where p."manageStock" = false)::int as unmanaged,
+         count(distinct p.id) filter (where p."stockStatus" = 'instock')::int as in_stock,
+         count(distinct p.id) filter (where p."measureUnitId" is null)::int as no_unit,
+         count(*) filter (where v."manageStock" is not null or v."stockStatus" is not null
+                            or v."measureUnitId" is not null)::int as variant_overrides,
+         (select count(*)::int from inventory_item i
+            join product_variant iv on iv.id = i."variantId" where iv.sku = any($1::text[])) as items
+       from product p join product_variant v on v."productId" = p.id
+       where v.sku = any($1::text[])`,
+      [fixtureSkus],
+    );
     return {
       products: (products.rows[0]?.n as number) ?? 0,
+      stock: {
+        unmanaged: (stock.rows[0]?.unmanaged as number) ?? 0,
+        inStock: (stock.rows[0]?.in_stock as number) ?? 0,
+        noUnit: (stock.rows[0]?.no_unit as number) ?? 0,
+        variantOverrides: (stock.rows[0]?.variant_overrides as number) ?? 0,
+        inventoryItems: (stock.rows[0]?.items as number) ?? 0,
+      },
       categories: categories.rows.map((r) => r.name as string),
       brands: brands.rows.map((r) => r.name as string),
       firstStatus: (first.rows[0]?.status as string | undefined) ?? null,

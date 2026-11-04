@@ -53,6 +53,18 @@ export interface WooRun {
   extraWarnings: Map<number, string[]>;
 }
 
+/**
+ * Regula D2 (docs/FAZA-5-plan.md): inventarul (SKU și cantitate) îl face utilizatorul, nu importul. Un produs NOU din
+ * WooCommerce se creează deci negestionat (explicit, nu valoarea implicită a magazinului), «în stoc» și cu unitatea
+ * «buc» (`measureUnitId = null` înseamnă exact «buc»). Variantele nu primesc suprascrieri: moștenesc de la produs.
+ * Doar la creare: o actualizare nu atinge niciodată gestiunea, starea de stoc sau unitatea unui produs existent.
+ */
+export const WOO_NEW_PRODUCT_STOCK = {
+  manageStock: false,
+  stockStatus: "instock",
+  measureUnitId: null,
+} as const;
+
 const asRecord = (value: unknown): Record<string, unknown> => value as Record<string, unknown>;
 
 function messageOf(error: unknown): string {
@@ -234,8 +246,7 @@ export class WooApplier {
       description: op.product.description,
       // produsul se creează ciornă; o stare «activ» se aplică după, ca regulile de activare să ruleze
       status: "draft",
-      // importurile creează produse NEGESTIONATE, explicit (inventarul îl face utilizatorul, nu valoarea implicită a magazinului)
-      manageStock: false,
+      ...WOO_NEW_PRODUCT_STOCK,
       shippingClass: op.product.shippingClass,
       ...(brandId ? { brandId } : {}),
       categoryIds,

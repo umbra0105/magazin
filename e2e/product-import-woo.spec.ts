@@ -152,6 +152,14 @@ test.describe("import WooCommerce", () => {
     await expect(page.locator("[data-file-warnings]")).toContainText(
       "Coloana «Imagini» nu se importă",
     );
+    // regula D2: mesajul spune ce se întâmplă cu stocul și unde se face inventarul
+    await expect(page.locator("[data-file-warnings]")).toContainText(
+      "produsele noi se creează negestionate, «în stoc», cu unitatea «buc»",
+    );
+    await expect(page.locator("[data-file-warnings]")).toContainText("stoc la zi");
+    await page
+      .locator("[data-file-warnings]")
+      .screenshot({ path: "test-results/woo-d2-avertisment.png" });
     // rândurile murdare au motiv
     await expect(page.locator('[data-outcome="error"]').first()).toBeVisible();
     await expect(page.locator("[data-import-report]")).toContainText(
@@ -183,6 +191,14 @@ test.describe("import WooCommerce", () => {
       firstLegacyId: "101",
       attribute: { type: "text" },
       variableOptions: 1,
+    });
+    // regula D2: toate cele 5 produse create sunt negestionate, «în stoc», fără unitate («buc»), fără inventar
+    expect(state.stock).toEqual({
+      unmanaged: 5,
+      inStock: 5,
+      noUnit: 5,
+      variantOverrides: 0,
+      inventoryItems: 0,
     });
     expect(state.categories).toEqual([
       "Accesorii",
