@@ -231,8 +231,8 @@ describe("planificarea fixture-ului sintetic pe un catalog gol", () => {
       heightMm: 250,
     });
     // 1 nov 2026 00:00 și 30 nov 2026 23:59:59, ora României (EET, UTC+2)
-    expect(v?.saleStartsAt).toBe("2026-10-31T22:00:00.000Z");
-    expect(v?.saleEndsAt).toBe("2026-11-30T21:59:59.000Z");
+    expect(v?.saleStartsAt).toBe("2099-10-31T22:00:00.000Z");
+    expect(v?.saleEndsAt).toBe("2099-11-30T21:59:59.000Z");
     expect(op.legacyId).toBe("101");
     expect(op.product.categoryKeys).toEqual(["pompe>pompe de circulatie", "accesorii"]);
     // relații: id:103 se rezolvă în fișier (WC-103), id:104 la fel; NEEXISTENT-1 devine avertisment

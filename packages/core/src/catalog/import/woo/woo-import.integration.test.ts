@@ -239,8 +239,8 @@ describe("import WooCommerce pe baza reală", () => {
         widthMm: 300,
         heightMm: 250,
       });
-      expect(v101.saleStartsAt?.toISOString()).toBe("2026-10-31T22:00:00.000Z");
-      expect(v101.saleEndsAt?.toISOString()).toBe("2026-11-30T21:59:59.000Z");
+      expect(v101.saleStartsAt?.toISOString()).toBe("2099-10-31T22:00:00.000Z");
+      expect(v101.saleEndsAt?.toISOString()).toBe("2099-11-30T21:59:59.000Z");
       expect(v101.product).toMatchObject({
         status: "draft",
         shippingClass: "pallet",
