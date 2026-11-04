@@ -18,6 +18,7 @@ export const UPLOAD_ROUTES = [
   "/api/media",
   "/api/admin/product-imports",
   "/api/admin/stock-imports",
+  "/api/admin/stock-activations",
   "/api/admin/products/abc123/documents",
 ] as const;
 

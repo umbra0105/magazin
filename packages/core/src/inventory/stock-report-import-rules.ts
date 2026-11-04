@@ -120,6 +120,13 @@ export interface SnapshotReport {
   timeWarnings: SnapshotTimeWarningKind[];
   fileDate: string | null;
   warningKinds: Partial<Record<StockReportWarningKind, number>>;
+  /** Doar la poza unei porniri în masă a gestionării (12e) */
+  activation?: {
+    enabledProducts: number;
+    enabledVariants: number;
+    startedAtZero: number;
+    startUnmatched: boolean;
+  };
 }
 
 const pad = (value: number, length: number): string => String(value).padStart(length, "0");

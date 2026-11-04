@@ -1593,6 +1593,23 @@ async function removeStockImportSnapshots(db: {
   await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_STOCK_IMPORT_FILE]);
 }
 
+/** Bifele de gestionare ale unei variante (după SKU): a produsului și suprascrierea de pe variantă. */
+export async function readE2eManageFlags(sku: string): Promise<{
+  productId: string;
+  variantId: string;
+  productManage: boolean;
+  variantManage: boolean | null;
+} | null> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select p.id as "productId", v.id as "variantId", p."manageStock" as "productManage", v."manageStock" as "variantManage"
+         from product_variant v join product p on p.id = v."productId" where v.sku = $1`,
+      [sku],
+    );
+    return (result.rows[0] as never) ?? null;
+  });
+}
+
 /** Pozele importului de test, cele mai noi primele: ora, numărul de rânduri, amprenta fișierului și raportul păstrat. */
 export async function readE2eStockImports(): Promise<
   Array<{ id: string; takenAt: Date; rowCount: number; fileHash: string | null; report: unknown }>

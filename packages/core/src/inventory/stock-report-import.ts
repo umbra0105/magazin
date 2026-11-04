@@ -186,6 +186,8 @@ export interface SnapshotHistoryRow {
   changed: number | null;
   unchanged: number | null;
   zeroed: number | null;
+  /** Câte variante a pornit pornirea în masă (12e), dacă poza vine de acolo */
+  enabled: number | null;
 }
 
 const MAX_WAREHOUSES = 20;
@@ -204,16 +206,21 @@ interface Analysis {
   blockers: string[];
 }
 
-const dayText = (date: { year: number; month: number; day: number } | null): string | null =>
+export const dayText = (
+  date: { year: number; month: number; day: number } | null,
+): string | null =>
   date
     ? `${String(date.year).padStart(4, "0")}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`
     : null;
 
-function listed<T, V>(items: readonly T[], view: (item: T) => V): PreviewListed<V> {
+export function listed<T, V>(items: readonly T[], view: (item: T) => V): PreviewListed<V> {
   return { total: items.length, items: items.slice(0, STOCK_IMPORT_LIST_LIMIT).map(view) };
 }
 
-function distinctWarehouses(file: StockReportFile, chosen: readonly string[]): WarehouseInFile[] {
+export function distinctWarehouses(
+  file: StockReportFile,
+  chosen: readonly string[],
+): WarehouseInFile[] {
   const chosenKeys = new Set(chosen.map((name) => normalizeUnitText(name)));
   const byKey = new Map<string, WarehouseInFile>();
   for (const row of file.rows) {
@@ -601,18 +608,21 @@ function defaultStock(tx: Db, now: () => Date): StockSnapshotApplier {
 const reportShape = z.object({
   counters: z.object({ changed: z.number(), unchanged: z.number() }),
   zeroedMissing: z.number(),
+  activation: z.object({ enabledVariants: z.number() }).optional(),
 });
 
 function reportSummary(report: unknown): {
   changed: number | null;
   unchanged: number | null;
   zeroed: number | null;
+  enabled: number | null;
 } {
   const parsed = reportShape.safeParse(report);
-  if (!parsed.success) return { changed: null, unchanged: null, zeroed: null };
+  if (!parsed.success) return { changed: null, unchanged: null, zeroed: null, enabled: null };
   return {
     changed: parsed.data.counters.changed,
     unchanged: parsed.data.counters.unchanged,
     zeroed: parsed.data.zeroedMissing,
+    enabled: parsed.data.activation?.enabledVariants ?? null,
   };
 }

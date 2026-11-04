@@ -71,7 +71,9 @@ export function StockImportHistory({
                     </span>
                   </td>
                   <td className="px-3 py-2">{row.actorLabel ?? "—"}</td>
-                  <td className="px-3 py-2">{m.changed(row.changed, row.unchanged, row.zeroed)}</td>
+                  <td className="px-3 py-2">
+                    {m.changed(row.changed, row.unchanged, row.zeroed, row.enabled)}
+                  </td>
                 </tr>
               ))}
             </tbody>

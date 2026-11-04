@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from "@ecom/db";
 import { quantityFromTicks } from "@ecom/shared";
 import { DEFAULT_MEASURE_UNIT_CODE } from "./constants";
 import { effectiveSaleStep } from "./sale-config";
+import type { ActivationCatalogVariant } from "./stock-activation-plan";
 import type { StockReportConversion, StockReportVariant } from "./stock-report-plan";
 import { effectiveMeasureUnit } from "./units";
 
@@ -39,6 +40,7 @@ const variantSelect = (warehouseId: string) =>
     inventoryItems: { where: { warehouseId }, select: { physical: true } },
     product: {
       select: {
+        id: true,
         title: true,
         type: true,
         manageStock: true,
@@ -74,7 +76,7 @@ function conversionOf(row: VariantRow, step: bigint): StockReportConversion | nu
   }
 }
 
-function toVariant(row: VariantRow): StockReportVariant | null {
+function toCatalogVariant(row: VariantRow): ActivationCatalogVariant | null {
   const product = orNull(row.product);
   if (!product) return null;
   const unit = effectiveMeasureUnit<UnitRef | null>(row.measureUnit, product.measureUnit, null);
@@ -92,23 +94,36 @@ function toVariant(row: VariantRow): StockReportVariant | null {
     .map((entry) => entry.value)
     .join(" · ");
   const item = row.inventoryItems[0];
+  const digital = product.type === "digital";
   return {
     variantId: row.id,
+    productId: product.id,
+    productTitle: product.title,
     sku: row.sku,
-    label: label === "" ? product.title : `${product.title} · ${label}`,
-    manageStock: product.type === "digital" ? false : (row.manageStock ?? product.manageStock),
-    expectedUnit: conversion === null && row.smartbillMode === "ratio" ? null : expectedUnit,
-    conversion: conversion ?? { mode: "same_unit" },
-    currentPhysical: item ? quantityFromTicks(item.physical) : null,
+    digital,
+    productManage: product.manageStock,
+    variantManage: row.manageStock,
+    report: {
+      variantId: row.id,
+      sku: row.sku,
+      label: label === "" ? product.title : `${product.title} · ${label}`,
+      manageStock: digital ? false : (row.manageStock ?? product.manageStock),
+      expectedUnit: conversion === null && row.smartbillMode === "ratio" ? null : expectedUnit,
+      conversion: conversion ?? { mode: "same_unit" },
+      currentPhysical: item ? quantityFromTicks(item.physical) : null,
+    },
   };
 }
 
-/** Toate variantele din catalog (cu SKU), în ordinea identificatorului, citite în loturi. */
-export async function loadReportVariants(
+/**
+ * Toate variantele din catalog (cu SKU), în ordinea identificatorului, citite în loturi, cu datele pornirii în masă a
+ * gestionării (produsul, bifa produsului și suprascrierea de pe variantă, digital) pe lângă forma cerută de plan.
+ */
+export async function loadReportCatalog(
   db: Db,
   warehouseId: string,
-): Promise<StockReportVariant[]> {
-  const out: StockReportVariant[] = [];
+): Promise<ActivationCatalogVariant[]> {
+  const out: ActivationCatalogVariant[] = [];
   let cursor: string | undefined;
   for (;;) {
     const rows = await db.productVariant.findMany({
@@ -119,11 +134,19 @@ export async function loadReportVariants(
       select: variantSelect(warehouseId),
     });
     for (const row of rows) {
-      const variant = toVariant(row);
+      const variant = toCatalogVariant(row);
       if (variant) out.push(variant);
     }
     if (rows.length < BATCH) break;
     cursor = rows[rows.length - 1]?.id;
   }
   return out;
+}
+
+/** Variantele în forma planului de import (fără datele pornirii în masă). */
+export async function loadReportVariants(
+  db: Db,
+  warehouseId: string,
+): Promise<StockReportVariant[]> {
+  return (await loadReportCatalog(db, warehouseId)).map((entry) => entry.report);
 }

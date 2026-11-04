@@ -7,6 +7,7 @@ import {
   promoteE2eUser,
   readE2eAuditByEntity,
   readE2eStock,
+  readE2eManageFlags,
   readE2eStockImports,
   readE2eStockAudit,
   removeE2eStock,
@@ -818,6 +819,328 @@ test.describe("importul «stoc la zi»", () => {
     await page.goto("/admin/produse/stoc/import");
     await expect(page).toHaveURL(/\/autentificare/);
     const res = await request.post(`${baseURL}/api/admin/stock-imports?mode=preview`, {
+      headers: { origin: baseURL as string, "x-forwarded-for": uniqueClientIp() },
+      data: "x",
+    });
+    expect(res.status()).toBe(401);
+  });
+});
+
+/**
+ * Faza 5, punctul 12e: pornirea în masă a gestionării stocului din fișierul SmartBill, în browser
+ * (`/admin/produse/stoc/pornire`). Fișiere FABRICATE. Stau în același fișier (starea pozei de stoc). Opțiunea «cu stoc 0» se
+ * verifică în previzualizare și în dialog, dar NU se aplică aici: ar porni și produsele altor fișiere de teste, rulate în paralel
+ * (aplicarea ei e acoperită în testele de integrare și de concurență, pe depozit propriu).
+ */
+const tagAct = randomBytes(3).toString("hex");
+let actSkus: string[] = [];
+const [W1A, W1B, P1A, P1B, N1, D1, M1] = [0, 1, 2, 3, 4, 5, 6];
+
+test.describe("pornirea gestionării stocului", () => {
+  test.beforeAll(async () => {
+    actSkus = await seedE2eStock(tagAct, [
+      {
+        title: `Pornire întreg ${tagAct}`,
+        manageStock: false,
+        variants: [
+          { sku: "W1A", physical: null },
+          { sku: "W1B", physical: null },
+        ],
+      },
+      {
+        title: `Pornire parțial ${tagAct}`,
+        manageStock: false,
+        variants: [
+          { sku: "P1A", physical: null },
+          { sku: "P1B", physical: null },
+        ],
+      },
+      {
+        title: `Pornire fără potrivire ${tagAct}`,
+        manageStock: false,
+        variants: [{ sku: "N1", physical: null }],
+      },
+      {
+        title: `Pornire digital ${tagAct}`,
+        type: "digital",
+        manageStock: false,
+        variants: [{ sku: "D1", physical: null }],
+      },
+      { title: `Pornire deja gestionat ${tagAct}`, variants: [{ sku: "M1", physical: "1" }] },
+    ]);
+  });
+
+  test.afterAll(async () => {
+    await removeE2eStock({ tag: tagAct });
+    await removeE2eStockImports();
+    await setE2eStockSnapshot(3);
+  });
+
+  test("Manager: previzualizare cu nivelurile, opțiunea «cu stoc 0» cu numărul exact, apoi aplicare; bifele, stocul, istoricul și auditul", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    failOnNativeDialog(page);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin/produse/stoc/import");
+    await page.getByRole("link", { name: "Pornește gestionarea stocului" }).click();
+    await expect(page).toHaveURL(/\/admin\/produse\/stoc\/pornire$/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Pornește gestionarea stocului din fișier" }),
+    ).toBeVisible();
+    // «Stoc» rămâne evidențiat în meniu: ecranul nu are element propriu
+    await expect(
+      page
+        .getByRole("navigation", { name: "Navigare principală" })
+        .getByRole("link", { name: "Stoc", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+
+    const file = reportFile([
+      { code: actSkus[W1A] as string, unit: "BUC", quantity: 7 },
+      { code: actSkus[W1B] as string, unit: "BUC", quantity: 3 },
+      { code: actSkus[P1A] as string, unit: "BUC", quantity: 5 },
+      { code: actSkus[D1] as string, unit: "BUC", quantity: 2 },
+      { code: actSkus[M1] as string, unit: "BUC", quantity: 9 },
+      { code: `NECUNOSCUT-${tagAct}`, unit: "BUC", quantity: 1 },
+    ]);
+    await page.locator("#stock-activation-file").setInputFiles(file);
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+
+    // gestiunea (aleasă de testele de import sau nu): se asigură că e aleasă
+    const warehouse = page.locator(`[data-warehouse="${GEST}"]`);
+    await expect(warehouse).toBeVisible();
+    const box = warehouse.getByRole("checkbox");
+    if (!(await box.isChecked()) || (await warehouse.textContent())?.includes("Nealeasă")) {
+      await box.check();
+      await page.getByRole("button", { name: "Salvează gestiunile" }).click();
+    }
+    await expect(page.locator('[data-counter="matched"]')).toHaveText("3");
+
+    // niveluri: întreg = produs; parțial = doar varianta din fișier
+    await expect(page.locator('[data-counter="products"]')).toHaveText("2");
+    await expect(page.locator('[data-counter="alreadyManaged"]')).toHaveText("1");
+    await expect(page.locator('[data-counter="zero"]')).toHaveText("0");
+    const changes = page.locator('[data-list="changes"]');
+    await expect(changes.locator('[data-scope="product"]')).toContainText(
+      `Pornire întreg ${tagAct}`,
+    );
+    await expect(changes.locator('[data-scope="variant"]')).toContainText(
+      `Pornire parțial ${tagAct}`,
+    );
+    await expect(page.locator('[data-list="untouched"]')).toContainText(actSkus[D1] as string);
+    await expect(page.locator('[data-list="unmatched"]')).toContainText(actSkus[P1B] as string);
+    await expect(page.locator('[data-list="unmatched"]')).toContainText(actSkus[N1] as string);
+    await expect(page.locator('[data-list="unknown"]')).toContainText(`NECUNOSCUT-${tagAct}`);
+
+    // nimic nu s-a schimbat până aici
+    expect((await readE2eManageFlags(actSkus[W1A] as string))?.productManage).toBe(false);
+    expect((await readE2eStockImports()).length).toBe(0);
+
+    // opțiunea explicită «cu stoc 0»: nebifată implicit; bifată arată numărul exact, același în contor și în dialog
+    const option = page.locator("[data-start-unmatched]").getByRole("checkbox");
+    await expect(option).not.toBeChecked();
+    const unmatchedCount = Number.parseInt(
+      (await page.locator('[data-counter="unmatchedEligible"]').textContent()) ?? "0",
+      10,
+    );
+    expect(unmatchedCount).toBeGreaterThanOrEqual(2);
+    await option.check();
+    await expect(page.locator('[data-counter="zero"]')).toHaveText(String(unmatchedCount));
+    await expect(page.locator("[data-start-unmatched]")).toContainText(String(unmatchedCount));
+    await page.getByLabel("Am verificat ora și vreau să continui").check();
+    const apply = page.getByRole("button", { name: "Pornește gestionarea" });
+    await expect(apply).toBeEnabled();
+    await apply.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toContainText(`${unmatchedCount} variante fără potrivire, cu stoc 0`);
+    await dialog.getByRole("button", { name: "Renunță" }).click();
+    await expect(dialog).toHaveCount(0);
+    expect((await readE2eManageFlags(actSkus[W1A] as string))?.productManage).toBe(false);
+
+    // fără opțiune: comportamentul rămâne cel de bază
+    await option.uncheck();
+    await expect(page.locator('[data-counter="zero"]')).toHaveText("0");
+
+    // capturi (desktop și telefon) și verificarea că pe telefon pagina nu are derulare orizontală
+    await page.screenshot({ path: "test-results/stock-activation-desktop.png", fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: "test-results/stock-activation-phone.png", fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    // aplicare fără opțiune: dialog cu numerele, apoi rezultatul
+    await page.getByLabel("Am verificat ora și vreau să continui").check();
+    await apply.click();
+    await expect(dialog).toContainText("2 produse");
+    await expect(dialog).toContainText("3 variante");
+    await dialog.getByRole("button", { name: "Pornește", exact: true }).click();
+    await expect(page.locator("[data-activation-result]")).toContainText("3 variante pornite");
+    await page.screenshot({ path: "test-results/stock-activation-result.png", fullPage: true });
+
+    // bifele și stocul, în baza de date
+    const w1a = await readE2eManageFlags(actSkus[W1A] as string);
+    const p1a = await readE2eManageFlags(actSkus[P1A] as string);
+    const p1b = await readE2eManageFlags(actSkus[P1B] as string);
+    expect(w1a).toMatchObject({ productManage: true, variantManage: null });
+    expect(p1a).toMatchObject({ productManage: false, variantManage: true });
+    expect(p1b).toMatchObject({ productManage: false, variantManage: null });
+    expect((await readE2eManageFlags(actSkus[N1] as string))?.productManage).toBe(false);
+    expect((await readE2eManageFlags(actSkus[D1] as string))?.productManage).toBe(false);
+    expect((await readE2eStock(actSkus[W1A] as string))?.physical).toBe("70000");
+    expect((await readE2eStock(actSkus[W1B] as string))?.physical).toBe("30000");
+    expect((await readE2eStock(actSkus[P1A] as string))?.physical).toBe("50000");
+    expect((await readE2eStock(actSkus[M1] as string))?.physical).toBe("90000");
+    expect((await readE2eStock(actSkus[P1B] as string))?.physical ?? null).toBeNull();
+    expect((await readE2eStock(actSkus[N1] as string))?.physical ?? null).toBeNull();
+
+    // poza, auditul agregat și câte un rând per produs / variantă pornită
+    const snapshots = await readE2eStockImports();
+    expect(snapshots).toHaveLength(1);
+    const snapshotId = snapshots[0]?.id as string;
+    const aggregate = await readE2eAuditByEntity("stock.activation.apply", snapshotId);
+    expect(aggregate.map((r) => r.outcome)).toEqual(["success"]);
+    expect(aggregate[0]?.after).toMatchObject({
+      enabledProducts: 2,
+      enabledVariants: 3,
+      startedAtZero: 0,
+      startUnmatched: false,
+    });
+    const productAudit = await readE2eAuditByEntity(
+      "stock.activation.enable",
+      w1a?.productId as string,
+    );
+    expect(productAudit[0]?.after).toMatchObject({
+      manageStock: true,
+      scope: "product",
+      variants: 2,
+    });
+    const variantAudit = await readE2eAuditByEntity(
+      "stock.activation.enable",
+      p1a?.variantId as string,
+    );
+    expect(variantAudit[0]?.after).toMatchObject({ manageStock: true, scope: "variant" });
+
+    // istoricul pozelor (pagina de import) arată câte variante s-au pornit
+    await page.goto("/admin/produse/stoc/import");
+    await expect(page.locator(`[data-snapshot="${snapshotId}"]`)).toContainText("3 pornite");
+  });
+
+  test("a doua rulare cu același fișier: nu mai e nimic de pornit, aplicarea blocată", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    failOnNativeDialog(page);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin/produse/stoc/pornire");
+    await page.locator("#stock-activation-file").setInputFiles(
+      reportFile([
+        { code: actSkus[W1A] as string, unit: "BUC", quantity: 7 },
+        { code: actSkus[W1B] as string, unit: "BUC", quantity: 3 },
+      ]),
+    );
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+    await expect(page.locator('[data-counter="matched"]')).toHaveText("0");
+    await expect(page.getByText("Nu e nimic de pornit")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Pornește gestionarea" })).toBeDisabled();
+  });
+
+  test("fișier cu unitate greșită: erori listate, aplicarea blocată, nimic modificat", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    failOnNativeDialog(page);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin/produse/stoc/pornire");
+    await page
+      .locator("#stock-activation-file")
+      .setInputFiles(reportFile([{ code: actSkus[N1] as string, unit: "KG", quantity: 9 }]));
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+    await expect(page.locator('[data-counter="errors"]')).toHaveText("1");
+    await expect(page.locator('[data-list="errors"]')).toBeVisible();
+    await expect(page.getByRole("button", { name: "Pornește gestionarea" })).toBeDisabled();
+    expect((await readE2eManageFlags(actSkus[N1] as string))?.productManage).toBe(false);
+  });
+
+  test("un fișier care nu e Excel e refuzat; fără fișier ales: mesaj propriu", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    failOnNativeDialog(page);
+    const manager = await createAccount(request, baseURL as string, "manager");
+    await login(page, manager, "/admin/produse/stoc/pornire");
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+    await expect(page.locator("[data-problem]")).toHaveText("Alege mai întâi un fișier.");
+    await page.locator("#stock-activation-file").setInputFiles({
+      name: "raport.xls",
+      mimeType: "application/vnd.ms-excel",
+      buffer: Buffer.from("Gestiune;Cod;U.M.;Stoc final\nA;B;C;1\n"),
+    });
+    await page.getByRole("button", { name: "Verifică fișierul" }).click();
+    await expect(page.locator("[data-problem]")).toContainText("nu este un registru Excel");
+    await expect(page.locator("[data-counters]")).toHaveCount(0);
+  });
+
+  test("drepturi: cer products.write ȘI inventory.write; legătura din import apare doar cu ambele", async ({
+    page,
+    request,
+    baseURL,
+    browser,
+  }) => {
+    failOnNativeDialog(page);
+    await createE2eRole("e2e-stoc-doar-inventar", [
+      "admin.access",
+      "inventory.read",
+      "inventory.write",
+    ]);
+    await createE2eRole("e2e-stoc-doar-produse", [
+      "admin.access",
+      "inventory.read",
+      "products.read",
+      "products.write",
+    ]);
+    const onlyInventory = await createAccount(request, baseURL as string, "e2e-stoc-doar-inventar");
+    await login(page, onlyInventory, "/admin/produse/stoc/import");
+    await expect(page.locator("#stock-import-file")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Pornește gestionarea stocului" })).toHaveCount(0);
+    await page.goto("/admin/produse/stoc/pornire");
+    await expect(page).toHaveURL(/\/admin\/acces-interzis/);
+    const forced = await page.request.post("/api/admin/stock-activations?mode=preview", {
+      headers: { origin: baseURL as string },
+      data: "x",
+    });
+    expect(forced.status()).toBe(403);
+
+    const other = await browser.newContext({ baseURL: baseURL as string });
+    try {
+      const onlyProducts = await createAccount(request, baseURL as string, "e2e-stoc-doar-produse");
+      const productsPage = await other.newPage();
+      await login(productsPage, onlyProducts, "/admin/produse/stoc/pornire");
+      await expect(productsPage).toHaveURL(/\/admin\/acces-interzis/);
+      const forcedProducts = await productsPage.request.post(
+        "/api/admin/stock-activations?mode=preview",
+        { headers: { origin: baseURL as string }, data: "x" },
+      );
+      expect(forcedProducts.status()).toBe(403);
+    } finally {
+      await other.close();
+    }
+  });
+
+  test("anonim: trimis la autentificare; ruta refuză cu 401", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    await page.goto("/admin/produse/stoc/pornire");
+    await expect(page).toHaveURL(/\/autentificare/);
+    const res = await request.post(`${baseURL}/api/admin/stock-activations?mode=preview`, {
       headers: { origin: baseURL as string, "x-forwarded-for": uniqueClientIp() },
       data: "x",
     });

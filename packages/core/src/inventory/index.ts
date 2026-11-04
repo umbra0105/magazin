@@ -23,3 +23,6 @@ export * from "./stock-report-import-rules";
 export * from "./stock-report-variants";
 export * from "./stock-report-import";
 export * from "./stock-report-upload";
+export * from "./stock-activation-plan";
+export * from "./stock-activation";
+export * from "./stock-activation-upload";

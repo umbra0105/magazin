@@ -14,11 +14,11 @@ const m = getMessages().admin.inventory.stockImport;
 
 type ApiError = { code?: string; message?: string };
 
-const errorText = (error: ApiError): string =>
+export const errorText = (error: ApiError): string =>
   m.errors[error.code ?? ""] ?? error.message ?? m.errors["generic"] ?? "";
 
 /** Un tabel dintr-o listă a raportului, în `<details>` (deschis când e important). */
-function ListSection({
+export function ListSection({
   title,
   total,
   shown,
@@ -53,8 +53,8 @@ function ListSection({
   );
 }
 
-const th = "px-2 py-1.5 text-left text-xs font-medium uppercase text-muted-foreground";
-const td = "px-2 py-1.5 align-top";
+export const th = "px-2 py-1.5 text-left text-xs font-medium uppercase text-muted-foreground";
+export const td = "px-2 py-1.5 align-top";
 
 export function StockImportPanel({
   timeZone,

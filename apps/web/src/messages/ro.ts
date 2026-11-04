@@ -676,11 +676,96 @@ export const ro = {
       saleLabel: "Preț redus",
     },
     inventory: {
+      stockActivation: {
+        title: "Pornește gestionarea stocului din fișier",
+        description:
+          "Pornești gestionarea stocului pentru variantele din raportul SmartBill «Stoc la zi» și le dai cantitățile din același fișier, într-o singură tranzacție: nicio variantă nu apare «Indisponibilă» între pornire și cantități. Mai întâi se verifică fără nicio modificare, iar aplicarea e toată-sau-deloc. Produsele digitale și variantele oprite explicit pe variantă rămân neatinse.",
+        back: "Înapoi la import",
+        link: "Pornește gestionarea stocului",
+        linkHint:
+          "Pornește gestionarea stocului pentru variantele din raport, cu cantitățile din același fișier.",
+        upload: {
+          heading: "1. Fișierul",
+          file: "Raportul SmartBill (.xls sau .xlsx)",
+          help: (mb: number) =>
+            `Cel mult ${mb} MB. Se citește doar prima foaie, fără formule. Fișierul nu se păstrează pe server.`,
+        },
+        counters: {
+          heading: "Raportul verificării",
+          products: "Produse care se pornesc",
+          matched: "Variante potrivite (cu cantitatea din fișier)",
+          zero: "Variante pornite cu stoc 0",
+          alreadyManaged: "Deja gestionate (primesc doar cantitatea)",
+          explicitOff: "Oprite explicit pe variantă (neatinse)",
+          digital: "Digitale (neatinse)",
+          unmatchedEligible: "Fără potrivire în fișier (negestionate)",
+          unknown: "Coduri necunoscute",
+          errors: "Erori",
+          warnings: "Avertismente",
+        },
+        lists: {
+          changes: "Ce se schimbă",
+          matched: "Variante care pornesc cu cantitatea din fișier",
+          zero: "Variante care pornesc cu stoc 0 (opțiunea bifată)",
+          unmatched: "Variante negestionate fără potrivire în fișier",
+          untouched: "Din fișier, dar lăsate neatinse",
+          errors: "Erori (blochează aplicarea)",
+          warnings: "Avertismente",
+          unknown: "Coduri din fișier care nu există în catalog (nu se creează produse)",
+          product: "Produs",
+          level: "Nivel",
+          variants: "Variante",
+          sku: "SKU",
+          row: "Rând",
+          reason: "Motiv",
+          message: "Mesaj",
+          scope: {
+            product: "Produs întreg",
+            variant: "Doar varianta (suprascriere pe variantă)",
+          } as Record<string, string>,
+          reasons: {
+            explicit_off: "oprită explicit pe variantă",
+            digital: "produs digital",
+          } as Record<string, string>,
+        },
+        option: {
+          label: (count: number) =>
+            `Pornește și cele ${count} ${count === 1 ? "variantă" : "variante"} fără potrivire în fișier, cu stoc 0`,
+          hint: "Raportul SmartBill listează doar produsele cu stoc: o variantă lipsă din fișier poate fi, de fapt, la 0 în SmartBill, dar ar rămâne negestionată (afișată disponibilă). Nebifat implicit. Se aplică în aceeași tranzacție; digitalele și variantele oprite explicit rămân neatinse.",
+        },
+        apply: {
+          button: "Pornește gestionarea",
+          applying: "Se pornește…",
+          dialogTitle: "Pornești gestionarea stocului?",
+          dialogDescription:
+            "Se schimbă bifele și se aplică cantitățile deodată. Dacă ceva nu merge, nu se schimbă nimic. Calea înapoi: oprești bifa de gestionare pe produs (nu șterge cantitățile).",
+          summary: (products: number, variants: number, zero: number) =>
+            `${products} ${products === 1 ? "produs" : products % 100 >= 1 && products % 100 <= 19 ? "produse" : "de produse"}, ` +
+            `${variants} ${variants === 1 ? "variantă" : variants % 100 >= 1 && variants % 100 <= 19 ? "variante" : "de variante"} cu cantitatea din fișier` +
+            (zero > 0
+              ? `, ${zero} ${zero === 1 ? "variantă" : zero % 100 >= 1 && zero % 100 <= 19 ? "variante" : "de variante"} fără potrivire, cu stoc 0.`
+              : "."),
+          at: (when: string) => `Ora raportului: ${when}.`,
+          confirm: "Pornește",
+          cancel: "Renunță",
+          close: "Închide",
+        },
+        result: {
+          heading: "Gestionarea a fost pornită",
+          enabled: (n: number) => `${n} ${n === 1 ? "variantă pornită" : "variante pornite"}`,
+          products: (n: number) => `în ${n} ${n === 1 ? "produs" : "produse"}`,
+          zero: (n: number) =>
+            `${n} ${n === 1 ? "variantă pornită" : "variante pornite"} cu stoc 0`,
+          again: "Încarcă alt raport",
+          toStock: "Vezi stocul",
+        },
+      },
       stockImport: {
         title: "Import «stoc la zi» din SmartBill",
         description:
           "Încarci raportul «Stoc la zi» exportat din SmartBill (.xls sau .xlsx). Mai întâi se verifică fără nicio modificare; abia după ce vezi raportul îl aplici. Aplicarea e toată-sau-deloc: dacă ceva nu merge, nu se schimbă nimic.",
         open: "Import stoc la zi",
+        activationLink: "Pornește gestionarea stocului",
         back: "Înapoi la Stoc",
         readOnly: "Poți vedea istoricul pozelor, dar nu poți încărca un raport.",
         upload: {
@@ -801,11 +886,17 @@ export const ro = {
           by: "De către",
           result: "Rezultat",
           source: { import: "Import din fișier", api: "API" } as Record<string, string>,
-          changed: (changed: number | null, unchanged: number | null, zeroed: number | null) =>
+          changed: (
+            changed: number | null,
+            unchanged: number | null,
+            zeroed: number | null,
+            enabled: number | null,
+          ) =>
             changed === null || unchanged === null
               ? "—"
               : `${changed} schimbate, ${unchanged} neschimbate` +
-                (zeroed ? `, ${zeroed} puse pe 0` : ""),
+                (zeroed ? `, ${zeroed} puse pe 0` : "") +
+                (enabled ? `, ${enabled} pornite` : ""),
           label: "Istoricul pozelor SmartBill",
         },
         errors: {
@@ -826,6 +917,16 @@ export const ro = {
           STOCK_IMPORT_ZERO_NOT_CONFIRMED:
             "Punerea pe 0 a variantelor lipsă cere confirmare explicită.",
           STOCK_IMPORT_WAREHOUSES_INVALID: "Gestiunile alese nu sunt valide.",
+          STOCK_ACTIVATION_COUNT_MISMATCH:
+            "Numerele din previzualizare s-au schimbat. Verifică din nou înainte de a aplica.",
+          STOCK_ACTIVATION_TOO_MANY:
+            "Fișierul pornește prea multe variante deodată. Împarte raportul sau lasă variantele fără potrivire nepornite.",
+          STOCK_ACTIVATION_NOT_APPLICABLE:
+            "Pornirea nu se poate aplica: raportul are erori sau nu are nimic de pornit. Nu s-a aplicat nimic.",
+          STOCK_ACTIVATION_NOTHING_TO_ENABLE:
+            "Nu e nimic de pornit: variantele din fișier sunt deja gestionate sau neatinse.",
+          STOCK_ACTIVATION_FAILED:
+            "Pornirea gestionării stocului nu a putut fi făcută. Încearcă din nou.",
           STOCK_REPORT_FILE_TOO_LARGE: "Fișierul depășește mărimea maximă permisă.",
           AUTH_FORBIDDEN: "Nu ai permisiunea să modifici stocul.",
           AUTH_UNAUTHENTICATED: "Sesiunea a expirat. Autentifică-te din nou.",

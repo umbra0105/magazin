@@ -31,6 +31,8 @@ export default async function StockImportPage({
 }) {
   const subject = await requireAdmin({ permission: "inventory.read" });
   const canWrite = can(subject, "inventory.write");
+  // pornirea gestionării cere și `products.write`: fără el, legătura nu apare
+  const canActivate = canWrite && can(subject, "products.write");
   const raw = (await searchParams)["pagina"];
   const requested = Number.parseInt(Array.isArray(raw) ? (raw[0] ?? "1") : (raw ?? "1"), 10);
   const history = await getStockReportImportService().history(subject, {
@@ -45,9 +47,20 @@ export default async function StockImportPage({
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold">{m.title}</h1>
-          <Link href="/admin/produse/stoc" className={buttonVariants({ variant: "outline" })}>
-            {m.back}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {canActivate && (
+              <Link
+                href="/admin/produse/stoc/pornire"
+                className={buttonVariants({ variant: "outline" })}
+                data-activation-link
+              >
+                {m.activationLink}
+              </Link>
+            )}
+            <Link href="/admin/produse/stoc" className={buttonVariants({ variant: "outline" })}>
+              {m.back}
+            </Link>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground">{m.description}</p>
         {!canWrite && (
