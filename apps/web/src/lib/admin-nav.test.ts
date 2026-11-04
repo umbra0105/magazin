@@ -169,6 +169,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
       "measureUnits",
       "partsDiagrams",
       "inventory",
+      "warehouses",
     ]) {
       expect(ids, moved).not.toContain(moved);
     }
@@ -186,6 +187,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
       "measureUnits",
       "partsDiagrams",
       "inventory",
+      "warehouses",
     ]);
     expect(CATALOG_ITEMS.map((t) => t.href)).toEqual([
       "/admin/produse",
@@ -195,6 +197,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
       "/admin/produse/unitati-de-masura",
       "/admin/produse/fise-explodate",
       "/admin/produse/stoc",
+      "/admin/produse/depozite",
     ]);
     expect(ADMIN_NAV.find((e) => e.id === "catalog")?.children).toBe(CATALOG_ITEMS);
     // grupul stă între Comenzi și Clienți, unde era intrarea «Produse»
@@ -223,6 +226,37 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
         "inventory",
       ]);
     }
+  });
+
+  it("«Depozite» apare doar cu flag-ul multiWarehouse pornit ȘI cu inventory.read, ultimul în grup", () => {
+    for (const role of ["owner", "admin", "manager", "warehouse"]) {
+      expect(itemIdsFor(role), role).not.toContain("warehouses");
+      const withFlag = itemIdsFor(role, ["multiWarehouse"]);
+      expect(withFlag, role).toContain("warehouses");
+      expect(withFlag[withFlag.length - 1], role).toBe("warehouses");
+      expect(withFlag.indexOf("warehouses"), role).toBe(withFlag.indexOf("inventory") + 1);
+    }
+    // Editorul nu are inventory.read: nici cu flag-ul pornit
+    expect(itemIdsFor("editor", ["multiWarehouse"])).not.toContain("warehouses");
+    for (const role of ["support", "accountant"]) {
+      expect(itemIdsFor(role, ["multiWarehouse"]), role).toEqual([]);
+    }
+  });
+
+  it("flag-ul multiWarehouse oprit ascunde «Depozite» chiar dacă are toate drepturile, fără să atingă restul", () => {
+    const all = { can: () => true, isEnabled: () => false };
+    const off = visibleNav(ADMIN_NAV, all)
+      .find((e) => e.id === "catalog")
+      ?.children?.map((t) => t.id);
+    expect(off).not.toContain("warehouses");
+    expect(off).toContain("inventory");
+    const on = visibleNav(ADMIN_NAV, {
+      can: () => true,
+      isEnabled: (f: FeatureKey) => f === "multiWarehouse",
+    })
+      .find((e) => e.id === "catalog")
+      ?.children?.map((t) => t.id);
+    expect(on).toEqual([...(off ?? []), "warehouses"]);
   });
 
   it("Editorul vede elementele catalogului, dar nu Stoc (nu are inventory.read)", () => {
@@ -279,6 +313,8 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
     ]);
     expect(only("products.read", ["partsDiagrams"])).toContain("partsDiagrams");
     expect(only("inventory.read")).toEqual(["inventory"]);
+    expect(only("inventory.read", ["multiWarehouse"])).toEqual(["inventory", "warehouses"]);
+    expect(only("inventory.write", ["multiWarehouse"])).toBeUndefined();
     expect(only("orders.read")).toBeUndefined();
   });
 
@@ -305,6 +341,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
     expect(activeItemId("/admin/produse", CATALOG_ITEMS)).toBe("allProducts");
     expect(activeItemId("/admin/produse/stoc", CATALOG_ITEMS)).toBe("inventory");
     expect(activeItemId("/admin/produse/stoc/abc123", CATALOG_ITEMS)).toBe("inventory");
+    expect(activeItemId("/admin/produse/depozite", CATALOG_ITEMS)).toBe("warehouses");
     expect(activeItemId("/admin/produse/categorii", CATALOG_ITEMS)).toBe("categories");
     expect(activeItemId("/admin/produse/fise-explodate/x", CATALOG_ITEMS)).toBe("partsDiagrams");
     // paginile de produs: editor, produs nou, import, istoricul importurilor

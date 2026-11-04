@@ -36,7 +36,8 @@ export type AdminNavItemId =
   | "attributes"
   | "measureUnits"
   | "partsDiagrams"
-  | "inventory";
+  | "inventory"
+  | "warehouses";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -88,6 +89,13 @@ export const CATALOG_ITEMS: readonly AdminNavItem[] = [
     feature: "partsDiagrams",
   },
   { id: "inventory", href: "/admin/produse/stoc", permission: "inventory.read", keepParams: ["q"] },
+  // doar cu steagul «Multi-depozit» pornit (oprit: nici elementul, nici ruta, nici acțiunile)
+  {
+    id: "warehouses",
+    href: "/admin/produse/depozite",
+    permission: "inventory.read",
+    feature: "multiWarehouse",
+  },
 ];
 
 /** Destinația unui element, cu parametrii păstrați din ecranul curent (vezi `keepParams`). */

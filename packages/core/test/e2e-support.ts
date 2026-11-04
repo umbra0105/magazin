@@ -1703,3 +1703,132 @@ export async function readE2eStockAudit(
     return result.rows as never;
   });
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Depozite (Faza 5, punctul 13c): testele din browser creează depozite cu numele `E2E Depozit …` și pot redenumi o dată
+// depozitul implicit (numele se restabilește la final). Flag-ul `multiWarehouse` e global: îl pornește/oprește
+// `e2e/warehouses.spec.ts` cu `setE2eFeatureFlag`.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Prefixul numelor depozitelor create de teste: după el se găsesc și se șterg */
+export const E2E_WAREHOUSE_PREFIX = "E2E Depozit";
+
+/** Depozitul cu numele dat, așa cum e în bază, sau `null` */
+export async function readE2eWarehouse(name: string): Promise<{
+  id: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+  isDefault: boolean;
+} | null> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select id, code, name, "isActive", "isDefault" from warehouse where name = $1`,
+      [name],
+    );
+    return (result.rows[0] as never) ?? null;
+  });
+}
+
+/** Câte depozite există (toate) */
+export async function countE2eWarehouses(): Promise<number> {
+  return withClient(async (db) => {
+    const result = await db.query(`select count(*)::int as n from warehouse`);
+    return (result.rows[0]?.n as number | undefined) ?? 0;
+  });
+}
+
+/** Numele depozitului implicit */
+export async function readE2eDefaultWarehouseName(): Promise<string> {
+  return withClient(async (db) => {
+    const result = await db.query(`select name from warehouse where "isDefault" limit 1`);
+    const name = result.rows[0]?.name as string | undefined;
+    if (!name) throw new Error("Nu există depozitul implicit în baza de test (seed lipsă?)");
+    return name;
+  });
+}
+
+/** Redenumește depozitul implicit (pentru a-l restabili după un test care îl redenumește din interfață) */
+export async function setE2eDefaultWarehouseName(name: string): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`update warehouse set name = $1, "updatedAt" = now() where "isDefault"`, [name]);
+  });
+}
+
+/**
+ * Pune stoc fizic pentru o variantă (SKU `E2ESTOC…`, creată de `seedE2eStock`) într-un depozit al testelor (`E2E Depozit …`),
+ * ca depozitul să aibă «stoc nenul». `physical` cu virgulă, ca la `seedE2eStock`.
+ */
+export async function putE2eStockInWarehouse(
+  warehouseName: string,
+  sku: string,
+  physical: string,
+): Promise<void> {
+  if (!warehouseName.startsWith(E2E_WAREHOUSE_PREFIX) || !sku.startsWith(E2E_STOCK_SKU_PREFIX)) {
+    throw new Error("Doar depozitele «E2E Depozit …» și variantele E2ESTOC… se ating");
+  }
+  await withClient(async (db) => {
+    const warehouse = await db.query(`select id from warehouse where name = $1`, [warehouseName]);
+    const variant = await db.query(`select id from product_variant where sku = $1`, [sku]);
+    const warehouseId = warehouse.rows[0]?.id as string | undefined;
+    const variantId = variant.rows[0]?.id as string | undefined;
+    if (!warehouseId || !variantId) throw new Error("Depozitul sau varianta de test lipsește");
+    await db.query(
+      `insert into inventory_item (id, "variantId", "warehouseId", physical, "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $3::bigint, now())
+       on conflict ("variantId", "warehouseId") do update set physical = excluded.physical`,
+      [variantId, warehouseId, e2eTicks(physical)],
+    );
+  });
+}
+
+/** Golește stocul unui depozit al testelor (șterge rândurile de stoc ale variantelor `E2ESTOC…` din el) */
+export async function clearE2eWarehouseStock(warehouseName: string): Promise<void> {
+  if (!warehouseName.startsWith(E2E_WAREHOUSE_PREFIX)) {
+    throw new Error("Doar depozitele «E2E Depozit …» se ating");
+  }
+  await withClient(async (db) => {
+    await db.query(
+      `delete from inventory_item where "warehouseId" in (select id from warehouse where name = $1)
+         and "variantId" in (select id from product_variant where sku like $2)`,
+      [warehouseName, `${E2E_STOCK_SKU_PREFIX}%`],
+    );
+  });
+}
+
+/**
+ * Șterge depozitele create de teste (`E2E Depozit …`, niciodată cel implicit) cu rândurile lor de stoc de test. Auditul rămâne
+ * (jurnalul e doar de adăugare). Întoarce câte depozite s-au șters.
+ */
+export async function removeE2eWarehouses(): Promise<number> {
+  return withClient(async (db) => {
+    const found = await db.query(
+      `select id from warehouse where name like $1 and not "isDefault"`,
+      [`${E2E_WAREHOUSE_PREFIX}%`],
+    );
+    const ids = found.rows.map((row) => row.id as string);
+    if (ids.length === 0) return 0;
+    await db.query(
+      `delete from inventory_item where "warehouseId" = any($1::text[])
+         and "variantId" in (select id from product_variant where sku like $2)`,
+      [ids, `${E2E_STOCK_SKU_PREFIX}%`],
+    );
+    const removed = await db.query(`delete from warehouse where id = any($1::text[])`, [ids]);
+    return removed.rowCount ?? 0;
+  });
+}
+
+/** Acțiunile din jurnalul de audit pentru depozitul cu numele dat, în ordine (cele mai vechi primele) */
+export async function readE2eWarehouseAudit(
+  warehouseName: string,
+): Promise<{ action: string; outcome: string; actorLabel: string | null }[]> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select a.action, a.outcome, a."actorLabel" from audit_log a
+         join warehouse w on w.id = a."entityId"
+       where a.entity = 'warehouse' and w.name = $1 order by a."createdAt" asc`,
+      [warehouseName],
+    );
+    return result.rows as never;
+  });
+}

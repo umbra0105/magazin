@@ -33,6 +33,9 @@ const AWARE = new Set([
   "packages/core/src/inventory/index.ts",
   // legătura serviciului cu flag-ul real (singurul loc în care `isEnabled("multiWarehouse")` e scris pentru depozite)
   "apps/web/src/lib/inventory.ts",
+  // ecranul «Depozite»: elementul din meniu și pagina declară flag-ul (oprit: nici element, nici rută)
+  "apps/web/src/lib/admin-nav.ts",
+  "apps/web/src/app/(admin)/admin/produse/depozite/page.tsx",
 ]);
 
 /** Singurele fișiere care scriu în tabela de depozite (seed-ul creează «Depozit principal») */
@@ -149,6 +152,45 @@ describe("multiWarehouse: codul de multi-depozit rămâne separat de restul stoc
     expect(authorize.indexOf("this.deps.isEnabled()")).toBeLessThan(
       authorize.indexOf("assertCan("),
     );
+  });
+});
+
+describe("ecranul «Depozite» e ascuns de flag: meniu, rută, acțiuni (sursa reală)", () => {
+  const adminFiles = [...load("apps/web/src/app/(admin)/admin/produse/depozite")];
+  const pages = adminFiles.filter((f) => /\/page\.tsx$/.test(f.path));
+  const FEATURE_REQUIRED = /requireAdmin\(\s*\{[^}]*feature:\s*["']multiWarehouse["'][^}]*\}\s*\)/;
+
+  it("fiecare pagină de sub /admin/produse/depozite cere flag-ul ȘI inventory.read în requireAdmin (oprit: 404)", () => {
+    expect(pages.map((p) => p.path)).toEqual([
+      "apps/web/src/app/(admin)/admin/produse/depozite/page.tsx",
+    ]);
+    for (const page of pages) {
+      expect(FEATURE_REQUIRED.test(page.content), page.path).toBe(true);
+      expect(page.content, page.path).toMatch(/permission:\s*["']inventory\.read["']/);
+    }
+  });
+
+  it("intrarea din meniu declară flag-ul și dreptul de citire", () => {
+    const nav = readFileSync(join(root, "apps/web/src/lib/admin-nav.ts"), "utf8");
+    expect(nav).toMatch(
+      /id:\s*"warehouses"[^}]*permission:\s*"inventory\.read"[^}]*feature:\s*"multiWarehouse"/s,
+    );
+  });
+
+  it("acțiunile cer inventory.write și ating depozitele DOAR prin WarehouseService (care verifică flag-ul)", () => {
+    const actions = adminFiles.find((f) => f.path.endsWith("/actions.ts"));
+    expect(actions).toBeDefined();
+    const content = actions?.content ?? "";
+    const exported = [...content.matchAll(/export const (\w+) = withPermission\(\s*"([^"]+)"/g)];
+    expect(exported.map((m) => m[1])).toEqual([
+      "createWarehouse",
+      "renameWarehouse",
+      "setWarehouseActive",
+    ]);
+    for (const [, name, permission] of exported) expect(permission, name).toBe("inventory.write");
+    expect(content).toContain("getWarehouseService()");
+    // nicio cale spre bază: nici importul clientului, nici o folosire a lui, nici delegatul Prisma al depozitelor
+    expect(content).not.toMatch(/getDb|@ecom\/db|\.warehouse\./);
   });
 });
 

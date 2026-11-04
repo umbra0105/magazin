@@ -14,7 +14,8 @@ import { expectResponseOk } from "./support/diagnostics";
  * după drepturile rolului, grupul se deschide singur pe paginile lui cu elementul curent evidențiat, editorul de produs
  * ține «Produse» evidențiat, adresele vechi → noi (308, cu parametrii), firimiturile «Panou › Catalog › …», telefonul.
  * Flag-ul `partsDiagrams` e global și îl pornește/oprește `parts-diagrams.spec.ts`: aici «Fișe explodate» se ignoră în
- * listele de elemente (rolul e acoperit acolo și în unitare).
+ * listele de elemente (rolul e acoperit acolo și în unitare). La fel «Depozite» (flag-ul `multiWarehouse`, pornit/oprit de
+ * `warehouses.spec.ts`).
  */
 
 interface Account {
@@ -57,10 +58,13 @@ const itemLink = (page: Page, name: string) =>
 /** Vechea bară de taburi: nu mai trebuie să existe nicăieri. */
 const oldTabBar = (page: Page) => page.getByRole("navigation", { name: "Secțiunile produselor" });
 
-/** Numele elementelor din grup, în ordinea afișării, fără «Fișe explodate» (flag global, schimbat de alt fișier). */
+/**
+ * Numele elementelor din grup, în ordinea afișării, fără «Fișe explodate» și «Depozite» (flaguri globale, schimbate de alte
+ * fișiere: `parts-diagrams.spec.ts`, `warehouses.spec.ts`).
+ */
 async function itemNames(page: Page): Promise<string[]> {
   const names = await submenu(page).getByRole("link").allInnerTexts();
-  return names.map((n) => n.trim()).filter((n) => n !== "Fișe explodate");
+  return names.map((n) => n.trim()).filter((n) => n !== "Fișe explodate" && n !== "Depozite");
 }
 
 const CATALOG_ITEMS = ["Produse", "Categorii", "Branduri", "Atribute", "Unități de măsură"];

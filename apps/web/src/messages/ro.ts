@@ -175,6 +175,7 @@ export const ro = {
       attributes: "Atribute",
       measureUnits: "Unități de măsură",
       partsDiagrams: "Fișe explodate",
+      warehouses: "Depozite",
     },
     userMenu: {
       button: "Meniul utilizatorului",
@@ -554,6 +555,79 @@ export const ro = {
         BRAND_NOT_FOUND: "Brandul nu mai există. Reîncarcă pagina.",
         BRAND_SLUG_CONFLICT: "Adresa e deja folosită de alt brand.",
         BRAND_LOGO_NOT_FOUND: "Logoul ales nu mai există în bibliotecă.",
+        AUTH_FORBIDDEN: "Nu ai permisiunea pentru această acțiune.",
+        AUDIT_WRITE_FAILED:
+          "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",
+      },
+    },
+    /** Depozitele (13c): ecran vizibil doar cu steagul «Multi-depozit» pornit. */
+    warehouses: {
+      title: "Depozite",
+      description:
+        "Locațiile în care se ține stocul. Rezervările, importul «stoc la zi» din SmartBill și disponibilitatea din magazin citesc din depozitul implicit.",
+      readOnly: "Poți vedea depozitele, dar nu le poți modifica.",
+      defaultNote:
+        "Depozitul implicit se poate redenumi, dar nu se dezactivează și nu se schimbă: de el depind rezervările, importul din SmartBill și disponibilitatea afișată în magazin.",
+      create: "Depozit nou",
+      empty: "Nu există niciun depozit.",
+      listLabel: "Lista depozitelor",
+      columns: {
+        name: "Nume",
+        code: "Cod",
+        stock: "Stoc",
+        status: "Stare",
+        actions: "Acțiuni",
+      },
+      stockedItems: (n: number) =>
+        n === 0 ? "fără stoc" : n === 1 ? "1 rând cu stoc" : `${n} rânduri cu stoc`,
+      status: { active: "Activ", inactive: "Dezactivat", default: "Implicit" },
+      actions: {
+        rename: (name: string) => `Redenumește depozitul ${name}`,
+        renameLabel: "Redenumește",
+        deactivate: (name: string) => `Dezactivează depozitul ${name}`,
+        deactivateLabel: "Dezactivează",
+        activate: (name: string) => `Activează depozitul ${name}`,
+        activateLabel: "Activează",
+      },
+      form: {
+        createTitle: "Depozit nou",
+        renameTitle: (name: string) => `Redenumește «${name}»`,
+        name: "Nume",
+        nameHelp:
+          "Cel mult 100 de caractere. Codul depozitului se alege automat din nume și nu se mai schimbă.",
+        save: "Salvează",
+        saving: "Se salvează…",
+        cancel: "Anulează",
+        close: "Închide",
+      },
+      confirm: {
+        title: (name: string) => `Dezactivezi «${name}»?`,
+        body: "Depozitul nu se mai poate alege în selectoare și nu primește transferuri. Îl poți reactiva oricând.",
+        hasStock: (n: number) =>
+          `Depozitul are stoc (${n === 1 ? "1 rând" : `${n} rânduri`} cu cantitate fizică, angajată sau rezervată). Mută sau scoate stocul înainte să-l dezactivezi.`,
+        confirm: "Dezactivează",
+        confirming: "Se dezactivează…",
+        cancel: "Anulează",
+        close: "Închide",
+      },
+      live: {
+        created: (name: string) => `Depozitul ${name} a fost creat.`,
+        renamed: (name: string) => `Depozitul a fost redenumit «${name}».`,
+        activated: (name: string) => `Depozitul ${name} a fost activat.`,
+        deactivated: (name: string) => `Depozitul ${name} a fost dezactivat.`,
+      },
+      errors: {
+        generic: "Acțiunea a eșuat. Încearcă din nou.",
+        nameRequired: "Numele e obligatoriu.",
+        nameTooLong: "Numele are cel mult 100 de caractere.",
+        FEATURE_DISABLED: "Funcționalitatea «Multi-depozit» este oprită. Reîncarcă pagina.",
+        WAREHOUSE_NOT_FOUND: "Depozitul nu mai există. Reîncarcă pagina.",
+        WAREHOUSE_NAME_CONFLICT: "Există deja un depozit cu acest nume. Alege alt nume.",
+        WAREHOUSE_LIMIT: "Ai atins numărul maxim de depozite.",
+        WAREHOUSE_DEFAULT_PROTECTED: "Depozitul implicit nu poate fi dezactivat.",
+        WAREHOUSE_HAS_STOCK: "Depozitul are stoc: mută sau scoate stocul înainte să-l dezactivezi.",
+        WAREHOUSE_CODE_CONFLICT: "Nu am putut alege un cod liber pentru depozit. Încearcă din nou.",
+        VALIDATION_ERROR: "Datele introduse nu sunt valide.",
         AUTH_FORBIDDEN: "Nu ai permisiunea pentru această acțiune.",
         AUDIT_WRITE_FAILED:
           "Acțiunea a fost executată, dar nu a putut fi înregistrată în jurnalul de audit.",

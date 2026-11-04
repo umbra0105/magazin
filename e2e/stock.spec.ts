@@ -495,9 +495,14 @@ test.describe("drepturi", () => {
       // doar inventory.read: grupul «Catalog» are un singur element (Stoc), deschis pe pagina lui
       const menu = readerPage.getByRole("navigation", { name: "Navigare principală" });
       const catalog = menu.getByRole("button", { name: "Catalog", exact: true });
-      await expect(menu.locator('[data-nav-group="catalog"] ul').getByRole("link")).toHaveText([
-        "Stoc",
-      ]);
+      // «Depozite» se ignoră: flag-ul `multiWarehouse` e global și îl pornește `warehouses.spec.ts` (apare tot cu inventory.read)
+      await expect
+        .poll(async () =>
+          (await menu.locator('[data-nav-group="catalog"] ul').getByRole("link").allInnerTexts())
+            .map((name) => name.trim())
+            .filter((name) => name !== "Depozite"),
+        )
+        .toEqual(["Stoc"]);
       await readerPage.goto("/admin");
       // un clic dat înainte de hidratare se pierde: repetăm până se deschide grupul
       await expect(async () => {

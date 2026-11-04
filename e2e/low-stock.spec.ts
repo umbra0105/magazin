@@ -186,7 +186,7 @@ test.describe("vederea «Stoc mic» în pagina Stoc", () => {
       await sidebar(page).locator('[data-nav-group="catalog"] ul').getByRole("link").allInnerTexts()
     )
       .map((name) => name.trim())
-      .filter((name) => name !== "Fișe explodate");
+      .filter((name) => name !== "Fișe explodate" && name !== "Depozite");
     expect(items).toEqual([
       "Produse",
       "Categorii",
