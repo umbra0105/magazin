@@ -263,6 +263,20 @@ există `tenantId`. În schimb:
 - Orice aserțiune nouă de text pe un element care poate conține deja acel text (select deschis, listă, titlu)
   se respinge la revizuire.
 
+### Teste și fixture-uri — fără date fixe față de «acum» — regulă permanentă
+
+- Fixture-urile și testele NU au voie să depindă de date calendaristice fixe față de «acum»: promoții, termene,
+  expirări, ferestre «de la … până la …», date de reaprovizionare, valabilități. O dată fixă din viitor devine, într-o zi,
+  trecut, iar testul pică fără ca vreun cod să se fi schimbat (cazul din 1 noiembrie 2026: fixture-ul Woo cu promoția
+  1–30 noiembrie 2026, pe care testul o presupunea «în viitor», a picat pe ambele baze și ar fi picat și în CI).
+- Datele se calculează RELATIV la ora curentă (`Date.now()` plus sau minus o durată, de exemplu «începe peste 7 zile»,
+  «s-a încheiat acum 30 de zile»), iar fixture-urile le generează la rulare, nu le au scrise în fișier.
+- Excepție, doar în teste unitare și de integrare: ceasul se INJECTEAZĂ (`now: () => NOW`) și toate datele testului pleacă
+  din acel `NOW` sau sunt intrări explicite ale unei funcții pure (fusuri orare, ora de vară, calendar, analiza unei
+  date), niciodată comparate cu ceasul real. O dată fixă este acceptabilă doar dacă nicio cale a codului testat nu o
+  compară cu `new Date()` / `Date.now()` / `now()` din baza de date.
+- Orice test sau fixture nou cu o dată fixă pe care codul o poate compara cu ceasul real se respinge la revizuire.
+
 ### Comenzi utile
 
 Comenzile generale ale proiectului (cele din documentația de instalare și de pe serverele unde
