@@ -38,6 +38,7 @@
     "dev:back-in-stock": "node --import tsx packages/jobs/scripts/dev-back-in-stock.ts",
     "stock:jobs": "node --import tsx packages/jobs/scripts/stock-jobs.ts",
     "dev:perf-catalog": "node --import tsx packages/core/scripts/dev-perf-catalog.ts",
+    "dev:flag": "node --import tsx packages/core/scripts/dev-flag.ts",
     "dev:preset": "node --import tsx packages/core/scripts/dev-apply-preset.ts",
     "admin:unlock": "node --import tsx packages/core/scripts/admin-unlock.ts",
     "rbac:revoke": "node --import tsx packages/core/scripts/rbac-revoke.ts",
