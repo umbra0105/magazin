@@ -1,5 +1,20 @@
 # Jurnal de progres
 
+## 2026-11-05 · Sesiunea 7 · Faza 4, punctul (15c) — descrierea bogată (ÎN LUCRU)
+**În lucru:** (15c), `[~]` în TODO. Pașii 0–9 din plan (planul aprobat de utilizator pe 2026-11-05); fără estimări de timp. Un pas = un commit, teste care pică întâi, mutanți pe sursa reală. **Fără `git push` până îl cere utilizatorul.** Migrația (pasul 3) o aplică utilizatorul pe baza de dezvoltare; eu o aplic doar pe bazele de test (`ecom_test` ȘI una doar migrată). ✅ GATA la pașii 3, 7 și 9; între ele mă opresc imediat dacă un test de securitate pică sau dacă un mutant supraviețuiește.
+
+**Decizii luate de utilizator (2026-11-05):**
+- **D1 — biblioteci, toate cu versiune EXACTĂ (fără `^`):** `sanitize-html` 2.18.1 (`packages/core`) și `@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/extension-table`, `@tiptap/extension-image` 3.32.3 (`apps/web`). ÎNAINTE de instalare: verific scripturile de instalare (postinstall etc.) și binarele native ale pachetelor și ale dependențelor lor; dacă există, mă opresc și întreb. DUPĂ instalare: rulez auditul și raportez diferența față de azi. Dacă Smart App Control blochează ceva, nu ocolesc: raportez.
+- **D2 — aceeași coloană `Product.description`** devine HTML sanitizat. Migrația de date: testată pe AMBELE baze (`ecom_test` și cea doar migrată), idempotentă, cu escape corect pentru `<` și `&`, fără presupuneri de seed.
+- **D3 — imaginile externe din descrierile Woo se ELIMINĂ**, cu avertisment și contor. Descărcarea lor în media prin `safeFetchImage` = punct separat nou în TODO: **(15d)**.
+- **D4 — reimportul nu suprascrie descrierile editate manual** după import (detectate din audit); le raportează separat.
+- **D5 — export:** HTML în celulă; celulele peste limita Excel de 32.767 de caractere se marchează în raport, nu se taie tăcut.
+- **D6 — profilul exportului real, cu limite:** scriptul citește exportul DOAR din `local-data/` și tipărește EXCLUSIV agregate (nume de etichete și atribute, domenii de imagini, lungimi, contoare): fără conținut, fără nume de produse, fără SKU, fără URL-uri întregi, fără ID-uri. Scriptul și rezultatul NU se comit (rămân în `local-data/` sau sunt gitignored); în raport apare doar ca agregat.
+- **D7 — linkuri externe:** `target="_blank"` + `rel="noopener noreferrer"`; cele interne în aceeași fereastră.
+- **Regula din `CLAUDE.md`** («HTML din descrieri doar prin `sanitizeRichHtml`») se adaugă la pasul 4, în același commit cu testul de arhitectură.
+
+**De unde reiau:** pasul 1 (profilul agregat al exportului real).
+
 ## 2026-11-05 · Sesiunea 6 · Faza 5 (Stoc) — ÎNCHISĂ (punctele 1–14 `[x]`; verificarea manuală cap-coadă nefăcută la închidere)
 **Terminat:** punctele 1–14. Punctele 1–13 sunt confirmate de utilizator, publicate și cu CI verde (ultimul: 13d, `89b6240`, împreună cu regula despre `audit_log` din `ec4728a`). Punctul 14 (`177a712`, cu `9e73738` doar docs) a fost închis la cererea explicită a utilizatorului, din 2026-11-05, care a aprobat și adăugirile din TODO pentru Fazele 8, 9, 12, 13, 15 și 22, plus lista «înainte de lansare». Planul `docs/FAZA-5-plan.md` (versiunea a patra) și deciziile lui rămân cele aprobate. Detaliile fiecărui punct sunt în blocurile de mai jos.
 **Verificarea manuală cap-coadă de către utilizator: nefăcută la închidere (2026-11-05); ghidul rămâne disponibil și se poate parcurge oricând; orice defect găsit ulterior se repară în commit separat de fix.** Ghidul (`docs/FAZA-5-verificare-manuala.md`) a fost adaptat într-un commit separat pentru o bază de dezvoltare care are deja produsele demo, un depozit «Depozit test» și nicio sincronizare SmartBill (cardul arată «Neimportat»), iar pasul 6 citește adresa de probă cu `Read-Host`.
