@@ -62,7 +62,8 @@ Datoria mai veche, nescoasă de Faza 5 (audit netranzacțional, `force-dynamic`,
 
 ## 5. Ce trebuie făcut înainte de Faza 6
 
-1. **Încheierea Fazei 5:** parcurgi `docs/FAZA-5-verificare-manuala.md` și confirmi → push → «CI verde» → tag-ul `faza-5-completa`.
+1. **Încheierea Fazei 5:** închisă pe 2026-11-05, la cererea utilizatorului: push → «CI verde» → tag-ul adnotat `faza-5-completa` (mesaj: «verificare manuală cap-coadă nefăcută»).
+   **PUNCT DESCHIS:** verificarea manuală cap-coadă de către utilizator: nefăcută la închidere (2026-11-05); ghidul (`docs/FAZA-5-verificare-manuala.md`) rămâne disponibil și se poate parcurge oricând; orice defect găsit ulterior se repară în commit separat de fix.
 2. **Punctul (15c) din Faza 4: descrierea bogată** (HTML sanitizat, editor, randare în storefront), **înainte de Faza 6**, apoi reimportul descrierilor din exportul WooCommerce (TODO Faza 4).
 3. **Skill-ul `frontend-design` pentru storefront:** aduci fișierul `SKILL.md`, îl citim integral, verificăm că nu contrazice `CLAUDE.md`, abia apoi îl punem în `.claude/skills/` (TODO Faza 6, primul pas).
 4. **Alegi cele 3–5 magazine de referință UX** (punctul din Faza 0; intră în verificarea skill-ului).
