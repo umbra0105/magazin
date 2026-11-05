@@ -5,6 +5,7 @@ import {
   directionFor,
   validateAmount,
   validateThreshold,
+  validateTransfer,
 } from "./stock-form";
 
 /** Logica pură a formularului «Ajustează» (fără componente): sensul după motiv, validarea cantității, textul trimis. */
@@ -90,5 +91,47 @@ describe("pragul «stoc mic» introdus (în pași; gol = setarea globală)", () 
     for (const bad of ["-1", "abc", "1 000", "1e3", "+3", "٣", "2 pași", "--"]) {
       expect(validateThreshold(bad), bad).toEqual({ ok: false, error: "invalid" });
     }
+  });
+});
+
+describe("formularul de transfer (13d): destinația și cantitatea", () => {
+  const destinations = ["w2", "w3"];
+  const check = (over: Partial<Parameters<typeof validateTransfer>[0]> = {}) =>
+    validateTransfer({ destination: "w2", amount: "2", decimals: 0, destinations, ...over });
+
+  it("destinație din listă și cantitate validă: întoarce cantitatea ca text, fără semn", () => {
+    expect(check()).toEqual({ ok: true, destination: "w2", quantity: "2" });
+    expect(check({ amount: " 2,5 ", decimals: 2 })).toEqual({
+      ok: true,
+      destination: "w2",
+      quantity: "2,5",
+    });
+  });
+
+  it("destinația lipsă sau care nu e în listă (depozit dezactivat între timp) = eroare pe câmpul destinație", () => {
+    expect(check({ destination: "" })).toEqual({ ok: false, errors: { destination: "required" } });
+    expect(check({ destination: "w9" })).toEqual({
+      ok: false,
+      errors: { destination: "required" },
+    });
+  });
+
+  it("cantitatea: obligatorie, număr, mai mare ca zero, în zecimalele unității", () => {
+    expect(check({ amount: "" })).toEqual({ ok: false, errors: { amount: "required" } });
+    expect(check({ amount: "abc" })).toEqual({ ok: false, errors: { amount: "invalid" } });
+    expect(check({ amount: "-2" })).toEqual({ ok: false, errors: { amount: "invalid" } });
+    expect(check({ amount: "0" })).toEqual({ ok: false, errors: { amount: "zero" } });
+    expect(check({ amount: "1,5", decimals: 0 })).toEqual({
+      ok: false,
+      errors: { amount: "decimals" },
+    });
+    expect(check({ amount: "1,50", decimals: 1 })).toMatchObject({ ok: true });
+  });
+
+  it("ambele greșeli deodată: ambele erori", () => {
+    expect(check({ destination: "", amount: "" })).toEqual({
+      ok: false,
+      errors: { destination: "required", amount: "required" },
+    });
   });
 });

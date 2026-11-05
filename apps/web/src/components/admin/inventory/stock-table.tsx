@@ -4,19 +4,31 @@ import { formatQuantity } from "@ecom/shared/quantity";
 import { Badge, buttonVariants } from "@ecom/ui";
 import { History } from "lucide-react";
 import { formatLocalDateTime } from "@/lib/stock-time";
+import { historyHref } from "@/lib/stock-url";
 import {
   availabilityView,
   kindLabel,
   quantityText,
   stateView,
   thresholdTarget,
+  transferTarget,
 } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 import { AdjustStockButton, type ReasonOption } from "./adjust-stock-dialog";
 import { badgeVariant } from "./stock-parts";
 import { SetThresholdButton } from "./threshold-dialog";
+import { TransferStockButton, type TransferDestination } from "./transfer-stock-dialog";
 
 const m = getMessages().admin.inventory;
+
+/**
+ * Transferul între depozite (13d): numele depozitului afișat (sursa) și destinațiile. Îl dă pagina DOAR cu steagul
+ * de multi-depozit pornit, cel puțin două depozite active și `inventory.write`; lipsă = fără buton «Transferă».
+ */
+export interface TransferContext {
+  sourceName: string;
+  destinations: readonly TransferDestination[];
+}
 
 /** Setările dialogului «Prag»: limita de sus și pragul global (în pași), de pe server. */
 export interface ThresholdSettings {
@@ -41,6 +53,8 @@ export function StockTable({
   timeZone,
   noteMax,
   threshold,
+  transfer,
+  warehouseCode,
   rowAttribute = "data-variant-row",
 }: {
   groups: readonly StockProductGroup[];
@@ -51,6 +65,10 @@ export function StockTable({
   noteMax: number;
   /** Dacă e dat (și există `inventory.write`), rândurile gestionate au butonul «Prag»; lipsă = fără buton (alte ecrane) */
   threshold?: ThresholdSettings;
+  /** Dacă e dat, rândurile gestionate au butonul «Transferă» (doar cu `inventory.write`) */
+  transfer?: TransferContext;
+  /** Codul depozitului ales, când nu e cel implicit: intră în legătura «Istoric» */
+  warehouseCode?: string | null;
   /** Atributul `data-…` care marchează rândul unei variante (după SKU); implicit `data-variant-row` */
   rowAttribute?: string;
 }) {
@@ -98,6 +116,8 @@ export function StockTable({
                 timeZone={timeZone}
                 noteMax={noteMax}
                 {...(threshold && { threshold })}
+                {...(transfer && { transfer })}
+                warehouseCode={warehouseCode ?? null}
                 rowAttribute={rowAttribute}
               />
             ))}
@@ -118,6 +138,8 @@ function StockRow({
   timeZone,
   noteMax,
   threshold,
+  transfer,
+  warehouseCode,
   rowAttribute,
 }: {
   row: StockOverviewRow;
@@ -128,6 +150,8 @@ function StockRow({
   timeZone: string;
   noteMax: number;
   threshold?: ThresholdSettings;
+  transfer?: TransferContext;
+  warehouseCode: string | null;
   rowAttribute: string;
 }) {
   const state = stateView(row);
@@ -141,6 +165,14 @@ function StockRow({
       : null;
   const availability = availabilityView(row);
   const name = displayName(row);
+  const transferData =
+    canWrite && transfer
+      ? transferTarget(row, {
+          sourceWarehouseId: warehouseId,
+          sourceWarehouseName: transfer.sourceName,
+          name,
+        })
+      : null;
   return (
     <tr
       {...{ [rowAttribute]: row.sku }}
@@ -234,9 +266,16 @@ function StockRow({
               noteMax={noteMax}
             />
           )}
+          {transferData && transfer && (
+            <TransferStockButton
+              target={transferData}
+              destinations={transfer.destinations}
+              noteMax={noteMax}
+            />
+          )}
           {row.kind === "managed" && (
             <Link
-              href={`/admin/produse/stoc/${row.variantId}`}
+              href={historyHref(row.variantId, warehouseCode)}
               aria-label={m.actions.historyAria(name)}
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >

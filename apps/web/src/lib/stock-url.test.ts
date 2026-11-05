@@ -4,7 +4,7 @@ import {
   LOW_STOCK_REASON_PARAMS as CORE_REASON_PARAMS,
   parseStockOverviewQuery,
 } from "@ecom/core";
-import { LOW_STOCK_FILTER, LOW_STOCK_REASON_PARAMS, stockHref } from "./stock-url";
+import { LOW_STOCK_FILTER, LOW_STOCK_REASON_PARAMS, historyHref, stockHref } from "./stock-url";
 
 /** Adresa paginii Stoc: filtrele în adresă (`?q=&tip=&stare=&filtru=stoc-mic&pagina=`), identice cu ce citește nucleul. */
 
@@ -51,6 +51,62 @@ describe("stockHref", () => {
       const raw = Object.fromEntries(url.searchParams);
       expect(parseStockOverviewQuery(raw), JSON.stringify(query)).toEqual(query);
     }
+  });
+});
+
+describe("stockHref: depozitul ales (?depozit=…, 13d)", () => {
+  it("codul depozitului intră în adresă după filtre și înainte de pagină", () => {
+    expect(stockHref({ warehouseCode: "magazin_nord" })).toBe(
+      "/admin/produse/stoc?depozit=magazin_nord",
+    );
+    expect(
+      stockHref({
+        search: "liner",
+        lowStockOnly: true,
+        reason: "out_of_stock",
+        warehouseCode: "magazin_nord",
+        page: 2,
+      }),
+    ).toBe(
+      "/admin/produse/stoc?q=liner&filtru=stoc-mic&motiv=epuizat&depozit=magazin_nord&pagina=2",
+    );
+  });
+
+  it("fără cod (depozitul implicit sau steag oprit) adresa nu se schimbă", () => {
+    expect(stockHref({})).toBe("/admin/produse/stoc");
+    expect(stockHref({ search: "a" })).toBe("/admin/produse/stoc?q=a");
+    // un cod gol nu se scrie
+    expect(stockHref({ warehouseCode: "" })).toBe("/admin/produse/stoc");
+  });
+
+  it("schimbarea paginii și a vederii păstrează depozitul", () => {
+    const query = { warehouseCode: "magazin_sud", search: "x", page: 3 };
+    expect(stockHref(query, { page: 1 })).toBe("/admin/produse/stoc?q=x&depozit=magazin_sud");
+    expect(stockHref({ ...query, lowStockOnly: true, page: 1 })).toBe(
+      "/admin/produse/stoc?q=x&filtru=stoc-mic&depozit=magazin_sud",
+    );
+  });
+
+  it("codul se codifică în adresă (nu poate injecta alți parametri)", () => {
+    expect(stockHref({ warehouseCode: "a&b=c" })).toBe("/admin/produse/stoc?depozit=a%26b%3Dc");
+  });
+
+  it("nucleul nu citește ?depozit=: parametrul îl rezolvă pagina, doar cu steagul pornit", () => {
+    expect(parseStockOverviewQuery({ depozit: "magazin_nord", q: "x" })).toEqual({ search: "x" });
+    expect(parseStockOverviewQuery({ depozit: "magazin_nord" })).toEqual({});
+  });
+});
+
+describe("historyHref: legătura «Istoric» (13d)", () => {
+  it("fără depozit (implicit sau steag oprit) adresa nu se schimbă", () => {
+    expect(historyHref("v1")).toBe("/admin/produse/stoc/v1");
+    expect(historyHref("v1", null)).toBe("/admin/produse/stoc/v1");
+    expect(historyHref("v1", "")).toBe("/admin/produse/stoc/v1");
+  });
+
+  it("un depozit ales intră în adresă, codificat", () => {
+    expect(historyHref("v1", "magazin_nord")).toBe("/admin/produse/stoc/v1?depozit=magazin_nord");
+    expect(historyHref("v1", "a&b=c")).toBe("/admin/produse/stoc/v1?depozit=a%26b%3Dc");
   });
 });
 

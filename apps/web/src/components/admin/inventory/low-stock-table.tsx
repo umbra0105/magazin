@@ -2,16 +2,20 @@ import Link from "next/link";
 import type { StockOverviewRow } from "@ecom/core";
 import { Badge, buttonVariants } from "@ecom/ui";
 import { History } from "lucide-react";
+import { historyHref } from "@/lib/stock-url";
 import {
   availabilityView,
   lowStockReasonView,
   quantityText,
   thresholdTarget,
+  transferTarget,
 } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 import { AdjustStockButton, type ReasonOption } from "./adjust-stock-dialog";
 import { badgeVariant } from "./stock-parts";
+import type { TransferContext } from "./stock-table";
 import { SetThresholdButton } from "./threshold-dialog";
+import { TransferStockButton } from "./transfer-stock-dialog";
 
 const m = getMessages().admin.inventory;
 
@@ -32,6 +36,8 @@ export function LowStockTable({
   noteMax,
   thresholdMax,
   globalThresholdSteps,
+  transfer,
+  warehouseCode,
 }: {
   rows: readonly StockOverviewRow[];
   canWrite: boolean;
@@ -41,6 +47,10 @@ export function LowStockTable({
   noteMax: number;
   thresholdMax: number;
   globalThresholdSteps: number;
+  /** Dacă e dat, rândurile au butonul «Transferă» (doar cu `inventory.write`) */
+  transfer?: TransferContext;
+  /** Codul depozitului ales, când nu e cel implicit: intră în legătura «Istoric» */
+  warehouseCode?: string | null;
 }) {
   const c = m.lowStock.columns;
   return (
@@ -141,8 +151,17 @@ export function LowStockTable({
                         refreshOnClose
                       />
                     )}
+                    {canWrite && transfer && (
+                      <TransferButtonFor
+                        row={row}
+                        name={name}
+                        transfer={transfer}
+                        warehouseId={warehouseId}
+                        noteMax={noteMax}
+                      />
+                    )}
                     <Link
-                      href={`/admin/produse/stoc/${row.variantId}`}
+                      href={historyHref(row.variantId, warehouseCode)}
                       aria-label={m.actions.historyAria(name)}
                       className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
@@ -157,5 +176,35 @@ export function LowStockTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Butonul «Transferă» al unui rând din vederea «Stoc mic»; lista se reîmprospătează la închiderea dialogului. */
+function TransferButtonFor({
+  row,
+  name,
+  transfer,
+  warehouseId,
+  noteMax,
+}: {
+  row: StockOverviewRow;
+  name: string;
+  transfer: TransferContext;
+  warehouseId: string;
+  noteMax: number;
+}) {
+  const target = transferTarget(row, {
+    sourceWarehouseId: warehouseId,
+    sourceWarehouseName: transfer.sourceName,
+    name,
+  });
+  if (!target) return null;
+  return (
+    <TransferStockButton
+      target={target}
+      destinations={transfer.destinations}
+      noteMax={noteMax}
+      refreshOnClose
+    />
   );
 }

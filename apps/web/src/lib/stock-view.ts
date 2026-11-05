@@ -7,6 +7,7 @@ import type {
 import {
   formatQuantity,
   formatSignedDelta,
+  stepsToQuantity,
   type Quantity,
   type QuantityDelta,
 } from "@ecom/shared/quantity";
@@ -284,4 +285,41 @@ export function warningText(
   return context.asOf
     ? warnings.effective_before_snapshot(formatLocalDateTime(context.asOf, context.timeZone))
     : warnings.effective_before_snapshot_unknown;
+}
+
+export interface TransferTargetData {
+  variantId: string;
+  name: string;
+  sourceWarehouseId: string;
+  sourceWarehouseName: string;
+  unit: { symbol: string; decimals: number };
+  /** Disponibilul din depozitul sursă, cu unitate («10 mp») */
+  availableText: string;
+  /** Același disponibil în pași («20 de pași») */
+  availableSteps: string;
+  /** Pasul de vânzare cu unitate («0,5 mp»): cantitatea transferată e multiplu exact al lui */
+  stepText: string;
+}
+
+/**
+ * Ce primește dialogul «Transferă» pentru un rând (formatat aici, ca dialogul să nu știe de pluraluri). Sursa e depozitul
+ * afișat. `null` la negestionat și digital: nu au stoc de mutat.
+ */
+export function transferTarget(
+  row: StockOverviewRow,
+  context: { sourceWarehouseId: string; sourceWarehouseName: string; name: string },
+): TransferTargetData | null {
+  const availability = availabilityView(row);
+  if (!availability || row.availableSteps === null) return null;
+  return {
+    variantId: row.variantId,
+    name: context.name,
+    sourceWarehouseId: context.sourceWarehouseId,
+    sourceWarehouseName: context.sourceWarehouseName,
+    unit: { symbol: row.unit.symbol, decimals: row.unit.decimals },
+    // se mută doar pași întregi: restul nevandabil (mai mic de un pas) nu intră în «disponibil la transfer»
+    availableText: quantityText(stepsToQuantity(row.availableSteps, row.step), row.unit),
+    availableSteps: availability.steps,
+    stepText: quantityText(row.step, row.unit),
+  };
 }

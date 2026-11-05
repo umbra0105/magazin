@@ -9,7 +9,10 @@ import {
   createPrismaMeasureUnitStore,
   createPrismaStockOverviewStore,
   createPrismaWarehouseStore,
+  resolveWarehouseChoice,
+  type PermissionSubject,
   type StockOverviewServiceSettings,
+  type WarehouseChoice,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { getAudit } from "./admin-writes";
@@ -90,6 +93,21 @@ export function getStockTransferService(): StockTransferService {
     isEnabled: () => getFeatureFlags().isEnabled("multiWarehouse"),
   });
   return globalForInventory.__ecomStockTransfers;
+}
+
+/**
+ * Depozitul afișat în Stoc și Istoric (13d): singurul loc care citește steagul pentru alegerea depozitului. Cu steagul oprit nu
+ * citește depozitele și `?depozit=` se ignoră; selectorul apare doar cu cel puțin două depozite active.
+ */
+export async function getWarehouseChoice(
+  subject: PermissionSubject,
+  requested: string | string[] | undefined,
+): Promise<WarehouseChoice> {
+  return resolveWarehouseChoice({
+    enabled: await getFeatureFlags().isEnabled("multiWarehouse"),
+    requested,
+    loadActive: () => getWarehouseService().listActive(subject),
+  });
 }
 
 export { readStockSettings };

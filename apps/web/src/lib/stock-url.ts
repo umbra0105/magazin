@@ -16,8 +16,14 @@ export const LOW_STOCK_REASON_PARAMS: Readonly<Record<LowStockReason, string>> =
   below_threshold: "sub-prag",
 };
 
+/**
+ * Interogarea din adresă + depozitul ales (`?depozit=<cod>`, 13d). Codul îl pune pagina DOAR când selectorul e vizibil și
+ * depozitul ales nu e cel implicit; nucleul nu citește parametrul (îl rezolvă `getWarehouseChoice`, cu steagul pornit).
+ */
+export type StockUrlQuery = StockOverviewQuery & { warehouseCode?: string };
+
 /** Adresa listei cu interogarea curentă și, eventual, alte valori (pagina). */
-export function stockHref(query: StockOverviewQuery, overrides: { page?: number } = {}): string {
+export function stockHref(query: StockUrlQuery, overrides: { page?: number } = {}): string {
   const params = new URLSearchParams();
   if (query.search) params.set("q", query.search);
   if (query.kind) params.set("tip", query.kind);
@@ -25,8 +31,15 @@ export function stockHref(query: StockOverviewQuery, overrides: { page?: number 
   // un motiv există doar în vederea «Stoc mic»: o pornește și ea
   if (query.lowStockOnly || query.reason) params.set("filtru", LOW_STOCK_FILTER);
   if (query.reason) params.set("motiv", LOW_STOCK_REASON_PARAMS[query.reason]);
+  if (query.warehouseCode) params.set("depozit", query.warehouseCode);
   const page = overrides.page ?? query.page;
   if (page && page > 1) params.set("pagina", String(page));
   const text = params.toString();
   return text ? `/admin/produse/stoc?${text}` : "/admin/produse/stoc";
+}
+
+/** Adresa istoricului unei variante; poartă depozitul ales (`?depozit=`) când nu e cel implicit */
+export function historyHref(variantId: string, warehouseCode?: string | null): string {
+  const base = `/admin/produse/stoc/${variantId}`;
+  return warehouseCode ? `${base}?depozit=${encodeURIComponent(warehouseCode)}` : base;
 }

@@ -1041,6 +1041,10 @@ export const ro = {
         reset: "Resetează",
         kinds: { managed: "Gestionat", unmanaged: "Negestionat", digital: "Digital" },
       },
+      warehouse: {
+        label: "Depozit",
+        hint: "Stocul afișat este al depozitului ales.",
+      },
       states: {
         in_stock: "În stoc",
         limited: "Stoc limitat",
@@ -1244,9 +1248,72 @@ export const ro = {
             "Ajustarea a fost salvată, dar nu a putut fi înregistrată în jurnalul de audit.",
         },
       },
+      transfer: {
+        title: (name: string) => `Transferă stoc: ${name}`,
+        open: "Transferă",
+        openAria: (name: string) => `Transferă stoc: ${name}`,
+        source: (name: string) => `Din depozitul «${name}»`,
+        available: (quantity: string, steps: string) =>
+          `Disponibil în depozitul sursă: ${quantity} (= ${steps})`,
+        availableHelp:
+          "Se mută doar marfa disponibilă; cea rezervată sau angajată rămâne în depozitul sursă.",
+        step: (step: string) =>
+          `Pas de vânzare: ${step}. Cantitatea trebuie să fie multiplu al pasului.`,
+        destination: "Depozit destinație",
+        destinationPlaceholder: "Alege depozitul",
+        amount: "Cantitate",
+        amountHelp: (symbol: string, decimals: number) =>
+          decimals === 0
+            ? `În ${symbol}, număr întreg.`
+            : `În ${symbol}, cu cel mult ${decimals} ${decimals === 1 ? "zecimală" : "zecimale"} (cu virgulă).`,
+        note: "Text (opțional)",
+        noteHelp: "De exemplu: marfă pentru raftul din magazin.",
+        cancel: "Renunță",
+        submit: "Transferă",
+        submitting: "Se transferă…",
+        close: "Închide",
+        saved: (quantity: string, from: string, to: string) =>
+          `Am mutat ${quantity} din «${from}» în «${to}».`,
+        warningsTitle: "De știut",
+        errors: {
+          destinationRequired: "Alege depozitul destinație.",
+          amountRequired: "Cantitatea e obligatorie.",
+          amountInvalid: "Scrie un număr, de exemplu 3 sau 2,5.",
+          amountZero: "Cantitatea trebuie să fie mai mare decât zero.",
+          amountDecimals: (symbol: string, decimals: number) =>
+            decimals === 0
+              ? `Unitatea «${symbol}» nu are zecimale: scrie un număr întreg.`
+              : `Unitatea «${symbol}» are cel mult ${decimals} ${decimals === 1 ? "zecimală" : "zecimale"}.`,
+          noteTooLong: (max: number) => `Textul are cel mult ${max} de caractere.`,
+          generic: "Transferul nu a putut fi făcut. Încearcă din nou.",
+          FEATURE_DISABLED: "Funcționalitatea «Multi-depozit» este oprită. Reîncarcă pagina.",
+          STOCK_TRANSFER_SAME_WAREHOUSE:
+            "Depozitul sursă și cel destinație trebuie să fie diferite.",
+          STOCK_TRANSFER_WAREHOUSE_INACTIVE:
+            "Unul dintre depozite a fost dezactivat. Reîncarcă pagina și alege alt depozit.",
+          STOCK_TRANSFER_QUANTITY_INVALID: "Cantitatea trebuie să fie mai mare decât zero.",
+          STOCK_TRANSFER_AMBIGUOUS_QUANTITY:
+            "Scrie cantitatea cu virgulă pentru zecimale (de exemplu 1,5) și fără separator de mii.",
+          STOCK_TRANSFER_PRECISION: "Cantitatea are mai multe zecimale decât permite unitatea.",
+          STOCK_TRANSFER_INSUFFICIENT:
+            "Stoc disponibil insuficient în depozitul sursă. Mută cel mult cât arată «Disponibil»: marfa rezervată sau angajată nu se mută.",
+          STOCK_TRANSFER_OVERFLOW:
+            "Transferul depășește cantitatea maximă care se poate ține în stoc în depozitul destinație.",
+          QUANTITY_NOT_MULTIPLE_OF_STEP:
+            "Cantitatea trebuie să fie un multiplu al pasului de vânzare.",
+          STOCK_NOT_MANAGED: "Produsul nu are stoc gestionat: nu există nimic de transferat.",
+          STOCK_VARIANT_NOT_FOUND: "Varianta nu mai există.",
+          STOCK_NO_WAREHOUSE: "Unul dintre depozite nu mai există. Reîncarcă pagina.",
+          AUTH_FORBIDDEN: "Nu ai permisiunea să transferi stoc.",
+          VALIDATION_ERROR: "Datele introduse nu sunt valide.",
+          AUDIT_WRITE_FAILED:
+            "Transferul a fost făcut, dar nu a putut fi înregistrat în jurnalul de audit.",
+        },
+      },
       history: {
         title: (name: string) => `Istoric stoc: ${name}`,
         back: "Înapoi la stoc",
+        warehouse: (name: string) => `Depozit: ${name}`,
         breadcrumb: "Istoric",
         listLabel: "Istoricul mișcărilor",
         immutable: "Istoricul nu se poate modifica sau șterge.",

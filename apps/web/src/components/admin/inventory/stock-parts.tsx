@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { LowStockCounts, StockOverviewQuery, WarehouseFreshness } from "@ecom/core";
+import type { LowStockCounts, WarehouseFreshness } from "@ecom/core";
 import { Button, Input, Label, Select, buttonVariants, cn } from "@ecom/ui";
 import { snapshotView, type Tone } from "@/lib/stock-view";
-import { LOW_STOCK_FILTER, stockHref } from "@/lib/stock-url";
+import { LOW_STOCK_FILTER, stockHref, type StockUrlQuery } from "@/lib/stock-url";
 
 import { getMessages } from "@/messages";
 
@@ -38,7 +38,7 @@ export function FreshnessBanner({ freshness }: { freshness: WarehouseFreshness |
 }
 
 /** Filtrele listei: formular GET (funcționează fără JavaScript), fără validare nativă. */
-export function StockFilters({ query }: { query: StockOverviewQuery }) {
+export function StockFilters({ query }: { query: StockUrlQuery }) {
   const f = m.filters;
   return (
     <form
@@ -52,6 +52,8 @@ export function StockFilters({ query }: { query: StockOverviewQuery }) {
       aria-label={f.label}
       className="flex flex-wrap items-end gap-3"
     >
+      {/* depozitul ales rămâne la căutare (13d); fără el formularul GET ar duce înapoi la depozitul implicit */}
+      {query.warehouseCode && <input type="hidden" name="depozit" value={query.warehouseCode} />}
       <div className="flex min-w-[14rem] flex-1 flex-col gap-1.5">
         <Label htmlFor="stock-search">{f.search}</Label>
         <Input
@@ -96,7 +98,10 @@ export function StockFilters({ query }: { query: StockOverviewQuery }) {
       </label>
       <div className="flex gap-2">
         <Button type="submit">{f.apply}</Button>
-        <Link href="/admin/produse/stoc" className={buttonVariants({ variant: "outline" })}>
+        <Link
+          href={stockHref(query.warehouseCode ? { warehouseCode: query.warehouseCode } : {})}
+          className={buttonVariants({ variant: "outline" })}
+        >
           {f.reset}
         </Link>
       </div>
@@ -154,13 +159,13 @@ export function ViewSwitch({
   query,
   lowStockTotal,
 }: {
-  query: StockOverviewQuery;
+  query: StockUrlQuery;
   lowStockTotal: number;
 }) {
   const v = m.lowStock;
   const active = query.lowStockOnly === true ? "low" : "all";
   // comutatorul scoate motivul: «Stoc mic» le arată pe toate, «Toate variantele» iese din vedere
-  const base: StockOverviewQuery = { ...query };
+  const base: StockUrlQuery = { ...query };
   delete base.reason;
   const items = [
     { id: "all", label: v.all, href: stockHref({ ...base, lowStockOnly: false, page: 1 }) },
@@ -199,7 +204,7 @@ export function LowStockSummary({
   query,
 }: {
   counts: LowStockCounts;
-  query: StockOverviewQuery;
+  query: StockUrlQuery;
 }) {
   const v = m.lowStock;
   const { reason: active, ...base } = query;

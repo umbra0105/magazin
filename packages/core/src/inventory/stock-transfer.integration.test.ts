@@ -478,7 +478,10 @@ describe("orice eroare anulează tot", () => {
       expect(await h.item(v.id, h.from)).toMatchObject({ physical: q("10") });
       expect(await h.item(v.id, h.to)).toMatchObject({ physical: MAX_QUANTITY - 5000n });
       expect(await h.tx.stockMovement.count({ where: { refType: TRANSFER_REF_TYPE } })).toBe(0);
-      expect(await h.audit.list({ entity: "stock_transfer" })).toEqual([]);
+      // doar rândurile acestui test (actorul lui): E2E comite rânduri `stock.transfer` în `ecom_test`, iar jurnalul nu se curăță
+      expect(await h.audit.list({ entity: "stock_transfer", actorId: h.manager.userId })).toEqual(
+        [],
+      );
     });
   });
 
@@ -498,7 +501,10 @@ describe("orice eroare anulează tot", () => {
       expect(await h.item(v.id, h.from)).toMatchObject({ physical: q("10") });
       expect(await h.item(v.id, h.to)).toBeNull();
       expect(await h.tx.stockMovement.count({ where: { refType: TRANSFER_REF_TYPE } })).toBe(0);
-      expect(await h.audit.list({ entity: "stock_transfer" })).toEqual([]);
+      // doar rândurile acestui test (actorul lui): E2E comite rânduri `stock.transfer` în `ecom_test`, iar jurnalul nu se curăță
+      expect(await h.audit.list({ entity: "stock_transfer", actorId: h.manager.userId })).toEqual(
+        [],
+      );
     });
   });
 });

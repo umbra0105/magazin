@@ -1601,9 +1601,12 @@ async function removeSharedStockRows(db: {
   await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_STOCK_SNAPSHOT]);
   await removeStockImportSnapshots(db);
   await db.query(
-    `delete from user_role where "roleId" in (select id from role where key like 'e2e-%')`,
+    `delete from user_role where "roleId" in (select id from role where key like 'e2e-%' and key not like 'e2e-depozite-%')`,
   );
-  await db.query(`delete from role where key like 'e2e-%' and "isSystem" = false`);
+  // rolurile `e2e-depozite-…` aparțin lui `e2e/warehouses.spec.ts` (care rulează în paralel și le șterge singur la final)
+  await db.query(
+    `delete from role where key like 'e2e-%' and key not like 'e2e-depozite-%' and "isSystem" = false`,
+  );
 }
 
 /**
@@ -1813,6 +1816,7 @@ export async function removeE2eWarehouses(): Promise<number> {
          and "variantId" in (select id from product_variant where sku like $2)`,
       [ids, `${E2E_STOCK_SKU_PREFIX}%`],
     );
+    await db.query(`delete from stock_snapshot where "fileName" = $1`, [E2E_WAREHOUSE_SNAPSHOT]);
     const removed = await db.query(`delete from warehouse where id = any($1::text[])`, [ids]);
     return removed.rowCount ?? 0;
   });
@@ -1830,5 +1834,159 @@ export async function readE2eWarehouseAudit(
       [warehouseName],
     );
     return result.rows as never;
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Stoc cu mai multe depozite (Faza 5, punctul 13d): selectorul de depozit și transferul. Depozitele se creează direct în bază
+// (cu steagul oprit nu există ecran pentru ele), cu numele `E2E Depozit …`; pozele lor au `fileName = e2e-depozit`.
+// ---------------------------------------------------------------------------------------------------------------------
+
+const E2E_WAREHOUSE_SNAPSHOT = "e2e-depozit";
+
+/** Codul derivat din nume, ca în serviciu: litere mici, `_` în loc de spații (doar pentru numele `E2E Depozit …`) */
+export function e2eWarehouseCode(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+}
+
+/** Creează un depozit activ cu numele dat (care începe cu «E2E Depozit»); întoarce id-ul și codul */
+export async function createE2eWarehouse(name: string): Promise<{ id: string; code: string }> {
+  if (!name.startsWith(E2E_WAREHOUSE_PREFIX)) {
+    throw new Error("Doar depozitele «E2E Depozit …» se creează din teste");
+  }
+  const code = e2eWarehouseCode(name);
+  return withClient(async (db) => {
+    const result = await db.query(
+      `insert into warehouse (id, code, name, "isDefault", "isActive", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, false, true, now()) returning id`,
+      [code, name],
+    );
+    return { id: result.rows[0]?.id as string, code };
+  });
+}
+
+/** Activează / dezactivează depozitele `E2E Depozit …` cu numele date (niciodată cel implicit) */
+export async function setE2eWarehousesActive(
+  names: readonly string[],
+  active: boolean,
+): Promise<void> {
+  if (names.some((name) => !name.startsWith(E2E_WAREHOUSE_PREFIX))) {
+    throw new Error("Doar depozitele «E2E Depozit …» se ating");
+  }
+  await withClient(async (db) => {
+    await db.query(
+      `update warehouse set "isActive" = $2, "updatedAt" = now() where name = any($1::text[]) and not "isDefault"`,
+      [names, active],
+    );
+  });
+}
+
+/** Dezactivează toate depozitele `E2E Depozit …` în afară de cele date (ca selectorul să știe câte depozite active sunt) */
+export async function keepOnlyE2eWarehousesActive(keepNames: readonly string[]): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `update warehouse set "isActive" = (name = any($2::text[])), "updatedAt" = now()
+       where name like $1 and not "isDefault"`,
+      [`${E2E_WAREHOUSE_PREFIX}%`, keepNames],
+    );
+  });
+}
+
+/** O poză SmartBill pentru un depozit al testelor (ca transferul să arate avertismentul despre poza SmartBill) */
+export async function putE2eWarehouseSnapshot(warehouseName: string): Promise<void> {
+  if (!warehouseName.startsWith(E2E_WAREHOUSE_PREFIX)) {
+    throw new Error("Doar depozitele «E2E Depozit …» se ating");
+  }
+  await withClient(async (db) => {
+    const warehouse = await db.query(`select id from warehouse where name = $1`, [warehouseName]);
+    const warehouseId = warehouse.rows[0]?.id as string | undefined;
+    if (!warehouseId) throw new Error("Depozitul de test lipsește");
+    await db.query(
+      `insert into stock_snapshot (id, "warehouseId", "takenAt", source, "fileName")
+       values (gen_random_uuid()::text, $1, $2, 'import', $3)`,
+      [warehouseId, new Date(Date.now() - 3_600_000).toISOString(), E2E_WAREHOUSE_SNAPSHOT],
+    );
+  });
+}
+
+/**
+ * Stocul unei variante într-un depozit: numele unui depozit `E2E Depozit …` sau `"default"`. Cantitățile ca text, în zecimi de
+ * miime; `null` dacă nu există rând de stoc acolo.
+ */
+export async function readE2eStockIn(
+  warehouse: string,
+  sku: string,
+): Promise<{ physical: string; committed: string; reserved: string } | null> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select i.physical::text as physical, i.committed::text as committed, i.reserved::text as reserved
+         from inventory_item i
+         join product_variant v on v.id = i."variantId"
+         join warehouse w on w.id = i."warehouseId"
+        where v.sku = $1 and ($2 = 'default' and w."isDefault" or w.name = $2)`,
+      [sku, warehouse],
+    );
+    return (result.rows[0] as never) ?? null;
+  });
+}
+
+/** Mișcările de transfer ale unei variante (după SKU), cu numele depozitului, în ordinea creării */
+export async function readE2eTransfers(sku: string): Promise<
+  {
+    kind: string;
+    warehouse: string;
+    deltaPhysical: string;
+    refType: string | null;
+    refId: string | null;
+    note: string | null;
+    actorLabel: string | null;
+  }[]
+> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select m.kind, w.name as warehouse, m."deltaPhysical"::text as "deltaPhysical", m."refType", m."refId", m.note,
+              m."actorLabel"
+         from stock_movement m
+         join product_variant v on v.id = m."variantId"
+         join warehouse w on w.id = m."warehouseId"
+        where v.sku = $1 and m.kind in ('transfer_out', 'transfer_in')
+        order by m."createdAt" asc, m.kind desc`,
+      [sku],
+    );
+    return result.rows as never;
+  });
+}
+
+/** Rândurile de audit `stock.transfer` pentru un transfer (după `refId` al mișcărilor) */
+export async function readE2eTransferAudit(refId: string): Promise<
+  {
+    outcome: string;
+    actorLabel: string | null;
+    before: Record<string, unknown> | null;
+    after: Record<string, unknown> | null;
+  }[]
+> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select outcome, "actorLabel", before, after from audit_log
+        where action = 'stock.transfer' and "entityId" = $1 order by "createdAt" asc`,
+      [refId],
+    );
+    return result.rows as never;
+  });
+}
+
+/** Șterge un rol de test `e2e-…` și atribuirile lui (pentru fișierele care își țin rolul în afara curățării comune) */
+export async function removeE2eRole(key: string): Promise<void> {
+  if (!key.startsWith("e2e-")) throw new Error("Rolurile de test au cheia care începe cu «e2e-»");
+  await withClient(async (db) => {
+    await db.query(`delete from user_role where "roleId" in (select id from role where key = $1)`, [
+      key,
+    ]);
+    await db.query(
+      `delete from role_permission where "roleId" in (select id from role where key = $1)`,
+      [key],
+    );
+    await db.query(`delete from role where key = $1 and "isSystem" = false`, [key]);
   });
 }

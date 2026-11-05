@@ -19,10 +19,11 @@ import {
   StockFilters,
   ViewSwitch,
 } from "@/components/admin/inventory/stock-parts";
-import { StockTable } from "@/components/admin/inventory/stock-table";
+import { StockTable, type TransferContext } from "@/components/admin/inventory/stock-table";
+import { WarehouseSwitcher } from "@/components/admin/inventory/warehouse-switcher";
 import { requireAdmin } from "@/lib/admin-page";
-import { getStockOverviewService } from "@/lib/inventory";
-import { stockHref } from "@/lib/stock-url";
+import { getStockOverviewService, getWarehouseChoice } from "@/lib/inventory";
+import { stockHref, type StockUrlQuery } from "@/lib/stock-url";
 import { getMessages } from "@/messages";
 
 const m = getMessages().admin.inventory;
@@ -39,13 +40,24 @@ type SearchParams = Record<string, string | string[] | undefined>;
  */
 export default async function StockPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const subject = await requireAdmin({ permission: "inventory.read" });
-  const query = parseStockOverviewQuery(await searchParams);
+  const rawParams = await searchParams;
+  const query = parseStockOverviewQuery(rawParams);
   const canWrite = can(subject, "inventory.write");
   const lowView = query.lowStockOnly === true;
+  // depozitul ales (13d): doar cu steagul pornit și cel puțin două depozite active; altfel `?depozit=` se ignoră și pagina
+  // rămâne exact ca până acum (depozitul implicit, fără selector și fără buton de transfer)
+  const choice = await getWarehouseChoice(subject, rawParams["depozit"]);
+  const urlQuery: StockUrlQuery = {
+    ...query,
+    ...(choice.urlCode && { warehouseCode: choice.urlCode }),
+  };
 
   let page;
   try {
-    page = await getStockOverviewService().list(subject, query);
+    page = await getStockOverviewService().list(subject, {
+      ...query,
+      ...(choice.selected && { warehouseId: choice.selected.id }),
+    });
   } catch (error) {
     if ((error as { code?: string } | null)?.code === "STOCK_NO_WAREHOUSE") {
       return (
@@ -66,18 +78,29 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
     rule: ADJUSTMENT_SIGN_RULES[value],
   }));
 
+  const transfer: TransferContext | undefined =
+    canWrite && choice.visible
+      ? {
+          sourceName: page.warehouse.name,
+          destinations: choice.destinations.map(({ id, name }) => ({ id, name })),
+        }
+      : undefined;
+
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold">{m.title}</h1>
-          <Link
-            href="/admin/produse/stoc/import"
-            className={buttonVariants({ variant: "outline" })}
-            data-stock-import-link
-          >
-            {m.stockImport.open}
-          </Link>
+          {/* importul «stoc la zi» lucrează pe depozitul implicit: într-un alt depozit ales nu se arată */}
+          {!choice.urlCode && (
+            <Link
+              href="/admin/produse/stoc/import"
+              className={buttonVariants({ variant: "outline" })}
+              data-stock-import-link
+            >
+              {m.stockImport.open}
+            </Link>
+          )}
         </div>
         <p className="text-sm text-muted-foreground">{m.description}</p>
         {!canWrite && (
@@ -87,18 +110,25 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
         )}
       </header>
 
+      {choice.visible && (
+        <WarehouseSwitcher
+          query={urlQuery}
+          options={choice.options.map(({ code, name, isDefault }) => ({ code, name, isDefault }))}
+          value={choice.urlCode ?? ""}
+        />
+      )}
       <FreshnessBanner freshness={page.freshness} />
-      <ViewSwitch query={query} lowStockTotal={page.lowStock.total} />
+      <ViewSwitch query={urlQuery} lowStockTotal={page.lowStock.total} />
       {lowView && (
         <section aria-labelledby="low-stock-heading" className="flex flex-col gap-3">
           <h2 id="low-stock-heading" className="text-lg font-semibold">
             {m.lowStock.heading}
           </h2>
           <p className="text-sm text-muted-foreground">{m.lowStock.hint}</p>
-          <LowStockSummary counts={page.lowStock} query={query} />
+          <LowStockSummary counts={page.lowStock} query={urlQuery} />
         </section>
       )}
-      <StockFilters query={query} />
+      <StockFilters query={urlQuery} />
 
       <p role="status" className="text-sm text-muted-foreground" data-result-count={page.total}>
         {m.resultCount(page.total)}
@@ -123,6 +153,8 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           noteMax={ADJUSTMENT_NOTE_MAX}
           thresholdMax={LOW_STOCK_STEPS_MAX}
           globalThresholdSteps={page.settings.lowStockSteps}
+          {...(transfer && { transfer })}
+          warehouseCode={choice.urlCode}
         />
       ) : (
         <StockTable
@@ -133,12 +165,14 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           timeZone={page.settings.timeZone}
           noteMax={ADJUSTMENT_NOTE_MAX}
           threshold={{ max: LOW_STOCK_STEPS_MAX, globalSteps: page.settings.lowStockSteps }}
+          {...(transfer && { transfer })}
+          warehouseCode={choice.urlCode}
         />
       )}
       <Pager
         page={page.page}
         pageCount={page.pageCount}
-        hrefFor={(target) => stockHref(query, { page: target })}
+        hrefFor={(target) => stockHref(urlQuery, { page: target })}
       />
     </div>
   );

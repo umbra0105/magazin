@@ -6,7 +6,8 @@ import { buttonVariants } from "@ecom/ui";
 import { MovementsTable } from "@/components/admin/inventory/movements-table";
 import { FreshnessBanner, Pager } from "@/components/admin/inventory/stock-parts";
 import { requireAdmin } from "@/lib/admin-page";
-import { getStockOverviewService } from "@/lib/inventory";
+import { getStockOverviewService, getWarehouseChoice } from "@/lib/inventory";
+import { stockHref } from "@/lib/stock-url";
 import { availabilityView, kindLabel, quantityText } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 
@@ -26,9 +27,15 @@ export default async function StockHistoryPage({
 }) {
   const subject = await requireAdmin({ permission: "inventory.read" });
   const { variantId } = await params;
-  const { page: requestedPage } = parseStockOverviewQuery(await searchParams);
+  const rawParams = await searchParams;
+  const { page: requestedPage } = parseStockOverviewQuery(rawParams);
+  // depozitul ales (13d): doar cu steagul pornit și cel puțin două depozite active; altfel `?depozit=` se ignoră
+  const choice = await getWarehouseChoice(subject, rawParams["depozit"]);
+  const warehouseId = choice.selected?.id;
   const service = getStockOverviewService();
-  const detail = await service.variant(subject, variantId);
+  const detail = await service.variant(subject, variantId, {
+    ...(warehouseId && { warehouseId }),
+  });
   if (!detail) notFound();
   const history = await service.movements(subject, variantId, {
     warehouseId: detail.warehouse.id,
@@ -47,13 +54,18 @@ export default async function StockHistoryPage({
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-2">
         <Link
-          href="/admin/produse/stoc"
+          href={stockHref(choice.urlCode ? { warehouseCode: choice.urlCode } : {})}
           className={buttonVariants({ variant: "outline", size: "sm" }) + " w-fit"}
         >
           {m.history.back}
         </Link>
         <h1 className="text-2xl font-semibold">{m.history.title(name)}</h1>
         <p className="text-sm text-muted-foreground">{m.history.immutable}</p>
+        {choice.visible && (
+          <p className="text-sm font-medium" data-warehouse-name>
+            {m.history.warehouse(detail.warehouse.name)}
+          </p>
+        )}
       </header>
 
       <FreshnessBanner freshness={detail.freshness} />
@@ -89,9 +101,13 @@ export default async function StockHistoryPage({
       <Pager
         page={history.page}
         pageCount={history.pageCount}
-        hrefFor={(target) =>
-          `/admin/produse/stoc/${variantId}${target > 1 ? `?pagina=${target}` : ""}`
-        }
+        hrefFor={(target) => {
+          const params = new URLSearchParams();
+          if (choice.urlCode) params.set("depozit", choice.urlCode);
+          if (target > 1) params.set("pagina", String(target));
+          const text = params.toString();
+          return `/admin/produse/stoc/${variantId}${text ? `?${text}` : ""}`;
+        }}
       />
     </div>
   );

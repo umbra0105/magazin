@@ -71,3 +71,32 @@ export function validateThreshold(
   const steps = Number.parseInt(trimmed, 10);
   return steps > max ? { ok: false, error: "range" } : { ok: true, steps };
 }
+
+export type TransferFormResult =
+  | { ok: true; destination: string; quantity: string }
+  | {
+      ok: false;
+      errors: { destination?: "required"; amount?: "required" | "invalid" | "zero" | "decimals" };
+    };
+
+/**
+ * Formularul de transfer: destinația trebuie să fie unul dintre depozitele primite (un depozit dezactivat între timp nu mai e
+ * în listă) și cantitatea un număr pozitiv în zecimalele unității. Pasul de vânzare și disponibilul le verifică serverul
+ * (autoritatea); aici doar dăm un mesaj în română înainte de trimitere.
+ */
+export function validateTransfer(input: {
+  destination: string;
+  amount: string;
+  decimals: number;
+  destinations: readonly string[];
+}): TransferFormResult {
+  const errors: {
+    destination?: "required";
+    amount?: "required" | "invalid" | "zero" | "decimals";
+  } = {};
+  if (!input.destinations.includes(input.destination)) errors.destination = "required";
+  const amount = validateAmount(input.amount, input.decimals);
+  if (!amount.ok) errors.amount = amount.error;
+  if (errors.destination || errors.amount || !amount.ok) return { ok: false, errors };
+  return { ok: true, destination: input.destination, quantity: amount.normalized };
+}

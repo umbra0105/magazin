@@ -220,6 +220,89 @@ describe("transferul între depozite verifică steagul înaintea drepturilor și
   });
 });
 
+describe("Stoc cu mai multe depozite (13d): selectorul și transferul sunt ascunse de flag (sursa reală)", () => {
+  const read = (path: string): string => readFileSync(join(root, path), "utf8");
+  const STOC = "apps/web/src/app/(admin)/admin/produse/stoc";
+
+  it("paginile Stoc și Istoric își aleg depozitul DOAR prin getWarehouseChoice, înaintea oricărei citiri de stoc", () => {
+    for (const path of [`${STOC}/page.tsx`, `${STOC}/[variantId]/page.tsx`]) {
+      const content = read(path);
+      const choice = content.indexOf("getWarehouseChoice(");
+      expect(choice, `${path}: alegerea depozitului`).toBeGreaterThan(-1);
+      expect(choice, `${path}: alegerea vine înaintea citirii`).toBeLessThan(
+        content.search(/\.(?:list|movements|variant)\(\s*subject/),
+      );
+      // nu numesc flag-ul și nu ating serviciul de depozite sau baza: alegerea e rezolvată într-un singur loc
+      expect(content, path).not.toMatch(/multiWarehouse|getWarehouseService|getDb|@ecom\/db/);
+    }
+  });
+
+  it("pagina Stoc desenează selectorul și butonul de transfer doar când alegerea e vizibilă ȘI utilizatorul poate scrie", () => {
+    const page = read(`${STOC}/page.tsx`);
+    expect(page).toMatch(/choice\.visible/);
+    // `transfer` către tabele se dă doar cu `canWrite && choice.visible`
+    expect(page).toMatch(/canWrite\s*&&\s*choice\.visible/);
+    // adresa păstrează depozitul ales în toate legăturile (filtre, vedere, paginare): pagina dă `urlQuery`, nu `query`
+    expect(page).toMatch(/warehouseCode/);
+    expect(page).toMatch(/stockHref\(urlQuery,\s*\{\s*page:\s*target\s*\}\)/);
+    expect(page).toMatch(/<ViewSwitch\s+query=\{urlQuery\}/);
+    expect(page).toMatch(/<StockFilters\s+query=\{urlQuery\}/);
+    expect(page).toMatch(/<LowStockSummary\s+counts=\{page\.lowStock\}\s+query=\{urlQuery\}/);
+  });
+
+  it("getWarehouseChoice citește flag-ul real și îl dă alegerii; nu există altă citire a flag-ului pentru Stoc", () => {
+    const inventory = read("apps/web/src/lib/inventory.ts");
+    const start = inventory.indexOf("export async function getWarehouseChoice");
+    expect(start).toBeGreaterThan(-1);
+    const body = inventory.slice(start);
+    expect(body).toMatch(/enabled:\s*await\s+getFeatureFlags\(\)\.isEnabled\("multiWarehouse"\)/);
+    expect(body).toMatch(/resolveWarehouseChoice\(/);
+    expect(body).toMatch(/getWarehouseService\(\)\.listActive\(/);
+  });
+
+  it("acțiunile din Stoc: ajustare, prag și transfer, toate cu inventory.write; transferul trece doar prin StockTransferService", () => {
+    const actions = read(`${STOC}/actions.ts`);
+    const exported = [...actions.matchAll(/export const (\w+) = withPermission\(\s*"([^"]+)"/g)];
+    expect(exported.map((m) => m[1])).toEqual([
+      "adjustStock",
+      "setLowStockThreshold",
+      "transferStock",
+    ]);
+    for (const [, name, permission] of exported) expect(permission, name).toBe("inventory.write");
+    const transfer = actions.slice(actions.indexOf("export const transferStock"));
+    expect(transfer).toContain("getStockTransferService().transfer(subject, input)");
+    expect(transfer).toContain('{ action: "stock.transfer", entity: "stock_transfer" }');
+    // nicio cale spre baza de date și niciun calcul de stoc în acțiune
+    expect(actions).not.toMatch(/getDb|@ecom\/db|\.inventoryItem\.|\.stockMovement\./);
+  });
+
+  it("fiecare cod de eroare al transferului (și cele de cantitate) ajunge la dialog ca eroare de domeniu, nu ca eroare 500", () => {
+    const transfer = read("packages/core/src/inventory/stock-transfer.ts");
+    const codes = new Set([...transfer.matchAll(/"(STOCK_TRANSFER_[A-Z_]+)"/g)].map((m) => m[1]));
+    expect(codes.size).toBeGreaterThanOrEqual(7);
+    const support = read("apps/web/src/lib/product-action-support.ts");
+    const domain = support.slice(support.indexOf("const DOMAIN_CODES"));
+    for (const code of [
+      ...codes,
+      "QUANTITY_NOT_MULTIPLE_OF_STEP",
+      "STOCK_NO_WAREHOUSE",
+      "FEATURE_DISABLED",
+    ]) {
+      expect(domain, code).toContain(`"${code}"`);
+    }
+  });
+
+  it("dialogul de transfer are mesaj propriu în română pentru fiecare cod de eroare (nu arată codul brut)", () => {
+    const transfer = read("packages/core/src/inventory/stock-transfer.ts");
+    const codes = new Set([...transfer.matchAll(/"(STOCK_TRANSFER_[A-Z_]+)"/g)].map((m) => m[1]));
+    const messages = read("apps/web/src/messages/ro.ts");
+    const section = messages.slice(messages.indexOf("transfer: {"));
+    for (const code of [...codes, "QUANTITY_NOT_MULTIPLE_OF_STEP", "FEATURE_DISABLED"]) {
+      expect(section, code).toContain(`${code}:`);
+    }
+  });
+});
+
 describe("findMultiWarehouseViolations pe fișiere sintetice (testul pică când trebuie)", () => {
   it("prinde importul codului de multi-depozit în rezervări, import sau disponibilitate", () => {
     const problems = findMultiWarehouseViolations([

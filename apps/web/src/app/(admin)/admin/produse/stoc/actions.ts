@@ -1,7 +1,8 @@
 "use server";
 
+import { transferWarningMessage } from "@ecom/core";
 import { formatQuantity, formatSignedDelta } from "@ecom/shared/quantity";
-import { getStockAdjustmentService } from "@/lib/inventory";
+import { getStockAdjustmentService, getStockTransferService } from "@/lib/inventory";
 import { productFailure as failure } from "@/lib/product-action-support";
 import { withPermission } from "@/lib/session";
 
@@ -47,4 +48,27 @@ export const setLowStockThreshold = withPermission(
     }
   },
   { action: "stock.threshold.update", entity: "inventory_item" },
+);
+
+/**
+ * Transferul unei variante între două depozite (13d). Cere `inventory.write` (verificat aici și din nou în serviciu); steagul
+ * steagul de multi-depozit oprit → `FEATURE_DISABLED`, înaintea drepturilor; regulile (disponibil, pas, unitate, depozite active),
+ * cele două mișcări legate și auditul sunt în `StockTransferService` din `@ecom/core`. Rezultatul conține doar text
+ * (serializabil), inclusiv avertismentul despre poza SmartBill.
+ */
+export const transferStock = withPermission(
+  "inventory.write",
+  async (input: unknown, subject) => {
+    try {
+      const result = await getStockTransferService().transfer(subject, input);
+      return {
+        ok: true as const,
+        quantity: formatQuantity(result.quantity),
+        warnings: result.warnings.map(transferWarningMessage),
+      };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "stock.transfer", entity: "stock_transfer" },
 );

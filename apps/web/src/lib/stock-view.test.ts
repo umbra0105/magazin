@@ -19,6 +19,7 @@ import {
   summaryView,
   thresholdTarget,
   thresholdView,
+  transferTarget,
   warningText,
 } from "./stock-view";
 
@@ -430,5 +431,61 @@ describe("ținta dialogului «Prag»", () => {
         globalSteps: 2,
       }),
     ).toBeNull();
+  });
+});
+
+describe("ținta dialogului «Transferă» (13d)", () => {
+  const context = {
+    sourceWarehouseId: "w1",
+    sourceWarehouseName: "Depozit principal",
+    name: "Folie (rolă)",
+  };
+
+  it("variantă gestionată: sursa, unitatea, disponibilul din sursă (în unitate și în pași) și pasul", () => {
+    const target = transferTarget(
+      row({ unit: { code: "mp", symbol: "mp", decimals: 2 }, step: "0,5", physical: "10" }),
+      context,
+    );
+    expect(target).toEqual({
+      variantId: "v",
+      name: "Folie (rolă)",
+      sourceWarehouseId: "w1",
+      sourceWarehouseName: "Depozit principal",
+      unit: { symbol: "mp", decimals: 2 },
+      availableText: "10 mp",
+      availableSteps: "20 de pași",
+      stepText: "0,5 mp",
+    });
+  });
+
+  it("«buc» fără zecimale, pas 1: «1 pas» la un singur pas disponibil", () => {
+    const target = transferTarget(
+      row({ unit: { code: "buc", symbol: "buc", decimals: 0 }, physical: "1" }),
+      context,
+    );
+    expect(target).toMatchObject({
+      unit: { symbol: "buc", decimals: 0 },
+      availableText: "1 buc",
+      availableSteps: "1 pas",
+      stepText: "1 buc",
+    });
+  });
+
+  it("disponibilul e cel vandabil, în pași întregi: restul nevandabil nu se poate muta", () => {
+    // 7 mp fizic, pas 2: se pot muta 6 mp (3 pași); restul de 1 mp nu
+    const target = transferTarget(
+      row({ unit: { code: "mp", symbol: "mp", decimals: 2 }, step: "2", physical: "7" }),
+      context,
+    );
+    expect(target).toMatchObject({
+      availableText: "6 mp",
+      availableSteps: "3 pași",
+      stepText: "2 mp",
+    });
+  });
+
+  it("negestionat și digital nu au țintă (nu există stoc de mutat)", () => {
+    expect(transferTarget(row({ manageStock: false }), context)).toBeNull();
+    expect(transferTarget(row({ productType: "digital" }), context)).toBeNull();
   });
 });

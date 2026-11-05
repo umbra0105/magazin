@@ -29,3 +29,4 @@ export * from "./stock-activation-upload";
 export * from "./warehouse-service";
 export * from "./warehouse-store";
 export * from "./stock-transfer";
+export * from "./warehouse-selection";
