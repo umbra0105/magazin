@@ -1,8 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent, type ReactNode } from "react";
-import { Button, Input, Select, Textarea } from "@ecom/ui";
+import { Button, Input, Select } from "@ecom/ui";
 import { checkProductSlug, saveProductFields } from "@/app/(admin)/admin/produse/editor-actions";
 import { getMessages } from "@/messages";
 import { describeFailure, focusFirstInvalid } from "./editor-support";
@@ -15,6 +16,19 @@ const e = m.editor;
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// editorul vizual (Tiptap) se încarcă doar în browser și doar când se deschide acest tab; magazinul nu primește nimic din el
+const DescriptionEditor = dynamic(
+  () => import("./description-editor").then((module) => module.DescriptionEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <p role="status" className="text-sm text-muted-foreground">
+        {e.general.editor.loading}
+      </p>
+    ),
+  },
+);
+
 /**
  * Tabul General: titlu, subtitlu, adresă, descriere (conținut: `products.content.write`) și stare,
  * brand, clasă de livrare, montaj, excluderea de la discountul de grup (`products.write`). Câmpurile
@@ -25,12 +39,15 @@ export function GeneralTab({
   brands,
   caps,
   preview,
+  editorHtml,
 }: {
   product: EditorProduct;
   brands: readonly PickOption[];
   caps: EditorCaps;
   /** Descrierea salvată, randată pe server; lipsește când produsul nu are descriere. */
   preview?: ReactNode;
+  /** Conținutul de pornire al editorului vizual al descrierii. */
+  editorHtml: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -213,12 +230,13 @@ export function GeneralTab({
         error={errors["description"]}
       >
         {(control) => (
-          <Textarea
-            {...control}
-            value={values.description}
-            onChange={(ev) => form.set("description", ev.target.value)}
-            rows={10}
-            disabled={!content}
+          <DescriptionEditor
+            id={control.id}
+            initialHtml={editorHtml}
+            editable={content}
+            invalid={control["aria-invalid"] === true}
+            describedBy={control["aria-describedby"]}
+            onChange={(html) => form.set("description", html)}
           />
         )}
       </Field>

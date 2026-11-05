@@ -10,6 +10,7 @@ import {
 } from "@/lib/catalog";
 import { parseMoneyInput } from "@/lib/money-input";
 import { productFailure as failure } from "@/lib/product-action-support";
+import { describeEditorImages } from "@/lib/rich-text";
 import { getSettings } from "@/lib/services";
 import { withPermission } from "@/lib/session";
 import { parseZonedLocal } from "@/lib/zoned-time";
@@ -67,6 +68,18 @@ export const saveProductFields = withPermission(
     }
   },
   { action: "product.update", entity: "product" },
+);
+
+/**
+ * Adresa de previzualizare și textul alternativ implicit ale imaginilor alese din bibliotecă pentru descriere. Doar citire,
+ * dar tot cu `products.content.write` (cine poate edita descrierea). `src`-ul NU se salvează: la salvare serverul păstrează doar id-ul.
+ */
+export const previewDescriptionImages = withPermission(
+  "products.content.write",
+  async (input: unknown) => {
+    const parsed = z.object({ ids: z.array(id).min(1).max(50) }).parse(input);
+    return { ok: true as const, items: await describeEditorImages(parsed.ids) };
+  },
 );
 
 export const createProduct = withPermission(

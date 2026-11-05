@@ -177,6 +177,8 @@ describe("scrierile de produse trec prin withPermission(products.*) (sursa real�
         "previewProductVariants",
         "generateProductVariants",
         "deleteProductVariant",
+        // 15c: previzualizarea imaginilor alese pentru descriere (doar citire, tot cu products.content.write)
+        "previewDescriptionImages",
       ],
       "purchase-actions.ts": ["savePurchasePrice"],
       // blocul 11c: documentele (încărcarea are ruta ei, acoperită de testul rutelor de upload)

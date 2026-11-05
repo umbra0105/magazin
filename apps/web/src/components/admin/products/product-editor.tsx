@@ -72,6 +72,8 @@ export interface ProductEditorProps {
   stockSlot: ReactNode;
   /** Descrierea salvată, randată pe server (`RichText`), pentru previzualizarea din tabul General. */
   descriptionPreviewSlot?: ReactNode;
+  /** Conținutul de pornire al editorului vizual al descrierii (HTML re-sanitizat, cu imaginile arătate prin previzualizare). */
+  descriptionEditorHtml?: string;
   defaultTab: string;
   /** Panoul prețului de achiziție, randat pe server; `null` fără permisiunea de vizualizare. */
   purchaseSlot: ReactNode;
@@ -110,6 +112,7 @@ function EditorBody({
   stockLeadTime,
   stockSlot,
   descriptionPreviewSlot,
+  descriptionEditorHtml,
   defaultTab,
   purchaseSlot,
 }: ProductEditorProps) {
@@ -135,6 +138,7 @@ function EditorBody({
           brands={brands}
           caps={caps}
           preview={descriptionPreviewSlot}
+          editorHtml={descriptionEditorHtml ?? ""}
         />
       ),
     },

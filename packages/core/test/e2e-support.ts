@@ -326,6 +326,18 @@ export async function setE2eProductDescription(
   });
 }
 
+/** Id-urile fișierelor media legate de descrierea unui produs de probă (`product_description_media`), sortate. */
+export async function readE2eDescriptionMediaIds(slug: string): Promise<string[]> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select d."mediaId" as id from product_description_media d join product p on p.id = d."productId"
+       where p.slug = $1 order by d."mediaId"`,
+      [slug],
+    );
+    return result.rows.map((row: { id: string }) => row.id);
+  });
+}
+
 /** Descrierea salvată a unui produs de probă, citită direct din bază. */
 export async function readE2eProductDescription(slug: string): Promise<string | null> {
   return withClient(async (db) => {

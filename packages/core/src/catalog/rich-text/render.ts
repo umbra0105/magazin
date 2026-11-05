@@ -115,3 +115,32 @@ export async function renderRichText(
   }
   return html;
 }
+
+/** Imaginea din conținutul de pornire al editorului: `src` de previzualizare + `alt` + `data-media-id`. */
+const EDITOR_IMG = /<img src="[^"<>]*" alt="[^"<>]*" data-media-id="[A-Za-z0-9_-]{8,40}" \/>/g;
+
+/**
+ * Conținutul de pornire al editorului vizual din administrare: aceeași re-sanitizare ca la randare, dar imaginile primesc
+ * `src` de previzualizare (editorul trebuie să le arate) și păstrează `data-media-id` (la salvare, serverul păstrează doar id-ul;
+ * `src`-ul nu se salvează niciodată), iar tabelele NU sunt puse în regiuni derulabile (editorul are propriile lor controale).
+ */
+export async function renderRichTextForEditor(
+  value: string | null | undefined,
+  resolve: MediaResolver,
+): Promise<string> {
+  if (value === null || value === undefined) return "";
+  const entry = sanitizeCached(value);
+  if (!entry) return "";
+  const media =
+    entry.mediaIds.length > 0 ? await resolve(entry.mediaIds) : new Map<string, RenderedMedia>();
+  const html = entry.html.replace(SANITIZED_IMG, (_match, alt: string, id: string) => {
+    const found = media.get(id);
+    return found && SAFE_SRC.test(found.src)
+      ? `<img src="${escapeAttribute(found.src)}" alt="${alt}" data-media-id="${id}" />`
+      : "";
+  });
+  if (findRichHtmlViolations(html.replace(EDITOR_IMG, "")).length > 0) {
+    return plainTextToHtml(richTextToPlain(entry.html)) ?? "";
+  }
+  return html;
+}

@@ -29,6 +29,7 @@ import {
 } from "@/lib/catalog";
 import { getMeasureUnitService, getStockOverviewService } from "@/lib/inventory";
 import { RichText } from "@/components/rich-text/rich-text-server";
+import { renderDescriptionForEditor } from "@/lib/rich-text";
 import { getProductDocumentsService } from "@/lib/product-documents";
 import { getFeatureFlags, getSettings } from "@/lib/services";
 import { formatZonedLocal } from "@/lib/zoned-time";
@@ -219,6 +220,8 @@ export default async function ProductEditorPage({
     : "general";
 
   const primary = assigned.find((c) => c.isPrimary)?.categoryId ?? null;
+  // conținutul de pornire al editorului vizual (re-sanitizat, cu imaginile arătate prin previzualizare)
+  const descriptionEditorHtml = await renderDescriptionForEditor(product.description);
 
   return (
     <div className="flex flex-col gap-4">
@@ -238,6 +241,7 @@ export default async function ProductEditorPage({
         </p>
       )}
       <ProductEditor
+        descriptionEditorHtml={descriptionEditorHtml}
         descriptionPreviewSlot={
           product.description ? <RichText html={product.description} /> : undefined
         }

@@ -37,7 +37,8 @@ export function classifyHref(raw: string | undefined): ClassifiedHref | null {
   if (scheme === "tel") return TEL.test(value) ? { value, external: false } : null;
   try {
     const url = new URL(value);
-    if ((url.protocol !== "http:" && url.protocol !== "https:") || url.hostname === "") return null;
+    // pentru http(s), parserul aruncă deja la o gazdă goală («https://»): nu mai verificăm separat
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
   } catch {
     return null;
   }

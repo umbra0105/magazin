@@ -411,8 +411,10 @@ export {
 } from "./rich-text/description";
 export {
   renderRichText,
+  renderRichTextForEditor,
   type MediaResolver,
   type RenderedMedia,
   type RenderOptions,
 } from "./rich-text/render";
 export { createDbMediaResolver } from "./rich-text/media-resolver";
+export { classifyHref, type ClassifiedHref } from "./rich-text/href";

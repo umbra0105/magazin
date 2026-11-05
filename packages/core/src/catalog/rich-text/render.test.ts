@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { oracleViolations } from "./oracle";
-import { renderRichText, type MediaResolver, type RenderedMedia } from "./render";
+import {
+  renderRichText,
+  renderRichTextForEditor,
+  type MediaResolver,
+  type RenderedMedia,
+} from "./render";
 
 const ID_A = "cm0imaginea1234567890xy";
 const ID_B = "cm0imagineb1234567890xy";
@@ -240,5 +245,52 @@ describe("renderRichText: plasa finală și memoria mărginită", () => {
     await fresh("<p>0</p>", none, OPTIONS);
     expect(sanitize).toHaveBeenCalledTimes(131);
     vi.doUnmock("./description");
+  });
+});
+
+describe("renderRichTextForEditor (conținutul de pornire al editorului vizual)", () => {
+  it.each([null, undefined, "", "<p></p>"])("%j → șir gol", async (empty) => {
+    expect(await renderRichTextForEditor(empty, none)).toBe("");
+  });
+
+  it("păstrează formatarea, tabelele (fără regiune derulabilă) și linkurile; re-sanitizează", async () => {
+    const html = await renderRichTextForEditor(
+      '<h2>T</h2><p onclick="x">a <b>b</b></p><table><tr><td>c</td></tr></table><script>1</script><a href="https://exemplu.ro/x">l</a>',
+      none,
+    );
+    expect(html).toBe(
+      '<h2>T</h2><p>a <strong>b</strong></p><table><tr><td>c</td></tr></table><a href="https://exemplu.ro/x" target="_blank" rel="noopener noreferrer">l</a>',
+    );
+  });
+
+  it("imaginile primesc src de previzualizare, alt și data-media-id; cele fără fișier dispar", async () => {
+    const html = await renderRichTextForEditor(
+      `<p>t</p><img data-media-id="${ID_A}" alt="Pompă"><img data-media-id="${ID_B}" alt="b">`,
+      resolverOf({ [ID_A]: media() }),
+    );
+    expect(html).toBe(
+      `<p>t</p><img src="/media/a-800.webp" alt="Pompă" data-media-id="${ID_A}" />`,
+    );
+  });
+
+  it("un src nesigur nu ajunge în editor: imaginea dispare", async () => {
+    const html = await renderRichTextForEditor(
+      `<p>t</p><img data-media-id="${ID_A}" alt="">`,
+      resolverOf({ [ID_A]: media({ src: "javascript:alert(1)" }) }),
+    );
+    expect(html).toBe("<p>t</p>");
+  });
+
+  it("src-ul se escapează în atribut", async () => {
+    const html = await renderRichTextForEditor(
+      `<img data-media-id="${ID_A}" alt="">`,
+      resolverOf({ [ID_A]: media({ src: '/media/x.webp"onerror="alert(1)' }) }),
+    );
+    expect(html).toMatch(/^<img src="[^"<>]*" alt="" data-media-id="[A-Za-z0-9_-]+" \/>$/);
+    expect(html).toContain("&quot;");
+  });
+
+  it("o descriere imposibil de randat dă șir gol", async () => {
+    expect(await renderRichTextForEditor(`<p>${"a".repeat(600_000)}</p>`, none)).toBe("");
   });
 });
