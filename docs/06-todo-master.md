@@ -148,7 +148,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
   - [x] (13b, confirmat de utilizator; push cu `1a5009f`) **Transferul între depozite** (serviciu, fără interfață): scade într-un depozit și adaugă în celălalt într-o singură tranzacție, două mișcări `transfer_out` / `transfer_in` cu aceeași referință, blocare în ordine fixă (fără deadlock), niciodată sub «angajat + rezervat» la sursă; teste de concurență pe Postgres real
   - [x] (13c, confirmat de utilizator; push cu `dcd5739` (`dev:flag`, utilitar de dezvoltare), `ce446db` și `1685677`) **Ecranul «Depozite»** (element nou în grupul Catalog, apare doar cu steagul pornit): listă, creare, redenumire, dezactivare; drepturi, audit, telefon
   - [x] (13d, confirmat de utilizator în browser; CI verde pentru 89b6240) **Selectorul de depozit în Stoc și dialogul de transfer** (apar doar cu steagul pornit și cel puțin două depozite active); cu steagul oprit adresa `?depozit=` se ignoră
-- [ ] (14) **Închiderea fazei:** E2E, testul de concurență final în suită, acoperirea față de cerințe, `docs/FAZA-5-verificare-manuala.md` (cu cele 6 produse ca scenarii), lista «înainte de lansare» (D1.5) în TODO, adăugirile pentru Fazele 8, 9, 12, 13, 15, 22 (vezi `docs/FAZA-5-plan.md` §4), PROGRESS, `docs/04`/`docs/15`
+- [~] (14, în așteptarea confirmării cap-coadă; făcut: testul de concurență final, 2 goluri de acoperire umplute, `docs/FAZA-5-acoperire-teste.md`, `docs/FAZA-5-verificare-manuala.md`, `docs/FAZA-5-bilant.md`, adăugirile pentru Fazele 8, 9, 12, 13, 15, 22 și lista «înainte de lansare»; tag-ul `faza-5-completa` după «CI verde») **Închiderea fazei:** E2E, testul de concurență final în suită, acoperirea față de cerințe, `docs/FAZA-5-verificare-manuala.md` (cu cele 6 produse ca scenarii), lista «înainte de lansare» (D1.5) în TODO, adăugirile pentru Fazele 8, 9, 12, 13, 15, 22 (vezi `docs/FAZA-5-plan.md` §4), PROGRESS, `docs/04`/`docs/15`
 
 ## FAZA 6 — Design system și layout · ~4-5 zile
 - [ ] ⚠️ **PRIMUL PAS, înainte de orice lucru pe design: skill-ul `frontend-design` pentru storefront (verificat împreună cu utilizatorul).** Utilizatorul aduce fișierul `SKILL.md`; îl citim INTEGRAL și verificăm că nu conține instrucțiuni care contrazic `CLAUDE.md` (accesibilitate, performanță, conversie, referințele UX alese de utilizator, regulile de securitate, fără culori sau texte hardcodate). Abia apoi îl punem în `.claude/skills/`, într-un commit separat. **Nu se rulează `npx claude-code-templates` sau alt instalator:** doar fișierul text, copiat și citit. Nu se instalează fără confirmarea explicită a utilizatorului
@@ -183,6 +183,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] ⚠️ **Rutele funcționalităților opționale** (`requireFeature`, `apps/web/src/lib/features.ts`) citesc flag-ul la fiecare cerere, deci ruta devine **dinamică**. Alege conștient: pagina rămâne dinamică sau flag-ul se citește la build/ISR. În ambele cazuri, **paginile din cache trebuie invalidate (`revalidateTag`/`revalidatePath`) când se schimbă un flag**, altfel o pagină oprită rămâne servită din cache
 
 ## FAZA 8 — Motor de prețuri și coș · ~5-6 zile ⚠️
+- [ ] **Din Faza 5 (punctul 14):** motorul primește cantitatea ca `Quantity` (`bigint`), aplică R1 (pe unitate) / R2 (pe pas) și face **o singură rotunjire pe linie**; testele numerice includ cele 6 produse-model (3 × 2,03 = 6,09; liner 41,25 mp; bisulfat pe pas, 120,00 lei/sac) și depășirile (`MAX_MONEY`). Dacă răspunsul contabilului (întrebarea 4 din `docs/INTREBARI-CONTABIL.md`) schimbă regula, 🛑 înainte de cod
 - [ ] ⚠️ **Decizia despre helperul `Money` și regula de rotunjire** (din Faza 5, punctul 2): `CLAUDE.md` nu mai pretinde un `Money` existent; aici se decide dacă se creează un helper de bani în `packages/shared` și se confirmă cu contabilul regula de rotunjire pe linie (R1 pe unitate / R2 pe pas, provizorie în `docs/PROGRESS.md`). Motorul primește cantitatea ca `Quantity` și folosește primitivele exacte din `packages/shared/src/quantity.ts` (`exactLineValue`, `exactStepsValue`, `splitScaledMoney`), cu `MAX_MONEY` ca plafon de linie; rotunjirea e o singură dată pe linie
 - [ ] **Motor de prețuri** (`09-preturi-si-parteneri.md` §3): preț brut → salePrice → preț de grup (`none` / `discount` / `cost_plus`; extinderea vine în Faza 15) → cupon → puncte → total linie → extragere TVA
 - [ ] Extragere TVA din brut, rotunjire pe linie, o singură dată
@@ -196,6 +197,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Aplicare cupon cu toate condițiile
 
 ## FAZA 9 — Checkout și plasare comandă · ~8-10 zile ⚠️ partea critică
+- [ ] ⚠️ **Din Faza 5 (punctul 14), stoc în coș și plată:** coșul NU rezervă (D4); starea vizibilă (În stoc / Stoc limitat / La comandă cu termen / Indisponibil) și termenul de livrare apar în coș și la plată; **coșuri mixte: livrare toată odată, cu termenul cel mai lung** (D6); selector de cantitate **în pași**, cu **validarea pasului la adăugare, modificare și plasare, pe server** (cantitatea comandată e mereu multiplu EXACT al pasului, nu doar în interfață); fără limită de cantitate la «La comandă», dar cu limita tehnică de siguranță pe linie (setabilă); **ramburs la «La comandă»: decizie (🛑, atinge plata și textele legale, vezi `docs/INTREBARI-AVOCAT.md` §1.5)**
 - [ ] `Order.channelId` (implicit canalul `web`), `Order.externalId`, `Order.externalData` (JSON brut, pentru depanare), pregătite pentru eMAG (mutate din Faza 4, punctul 5; `12` §2)
 - [ ] ⚠️ **Din Faza 5:** angajarea de stoc ține o referință generică (tip + id, cu unicitate) spre comandă, fiindcă `Order` nu exista. Aici se înlocuiește cu **cheie străină** spre `Order`/`OrderLine`, cu **validarea datelor existente** (referințe orfane) înainte de migrație, și testele de concurență din Faza 5 se rulează din nou pe schema nouă
 - [ ] `Order.parentSubscriptionId` (câmp pregătitor pentru abonamente, nefolosit; mutat din Faza 4, punctul 4)
@@ -247,6 +249,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Emailul de confirmare conține informațiile precontractuale cerute de lege
 
 ## FAZA 12 — Livrare și AWB (agregator + Sameday) · ~5-6 zile
+- [ ] **Din Faza 5 (punctul 14):** greutatea liniei = **greutate pe unitate × cantitate** (cantitățile sunt zecimale: 6,09 mp, 25 kg), calculată exact cu `Quantity`; greutatea volumetrică și cea reală se compară pe LINIE, nu pe produs
 - [ ] ⚠️ **Reguli de preț și de curier pe clase de transport** (`standard` / `oversized` / `pallet`, `shippingClass` din Faza 4): ce curier/serviciu primește `pallet`, dacă prețul vine tot din API, prag de transport gratuit per clasă, blocarea easybox-ului. De decis cu utilizatorul înainte de implementare
 - [ ] Interfață `ShippingProvider`
 - [ ] **Adaptor wootPRO**: AWB, etichetă, tracking, anulare, puncte de ridicare, tarife în timp real
@@ -259,6 +262,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Circuit breaker: curier picat ≠ comandă pierdută
 
 ## FAZA 13 — Facturare și e-Factura (SmartBill) · ~4-5 zile
+- [ ] ⚠️ **Din Faza 5 (punctul 14), stoc și facturare:** **ora facturii pe comandă** (`StockService.markInvoiced`: factură înaintea ultimei sincronizări = oglindită, după ea = încă angajată; o bucată se scade o singură dată); unitățile SmartBill (tabelul din `smartbill-units.ts`), **2 zecimale la cantitate cu rotunjire la cea mai apropiată cifră**, kg în kg și sacul ca bucată (răspunsurile contabilului din 2026-10-28), conversia SmartBill ↔ unitatea noastră; **cele 20 de cazuri numerice** (total încasat = total factură, la 1 ban); lista **«comenzi confirmate fără factură»** (altfel rămân angajate la nesfârșit, D1.5 punctul 6); stornoul returnează stocul (D13); factura la «La comandă» (la plată sau, la ramburs, la expediere); SmartBill refuză factura la stoc 0 cu descărcare de gestiune activă, deci emitere fără descărcare când e cazul
 - [ ] **Înainte de a începe:** citește documentația API curentă a SmartBill; utilizatorul a confirmat cu SmartBill că abonamentul include acces API (`10` Partea II #9)
 - [ ] Interfață `InvoiceProvider` (SmartBill primul; Oblio posibil mai târziu prin aceeași interfață)
 - [ ] **SmartBill**: emitere, storno (total și parțial), proformă, PDF, status e-Factura. Seria și numărul le definește SmartBill (fără numerotare locală); e-Factura o transmite SmartBill automat
@@ -301,6 +305,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Test: comandă mixtă → digitalul livrat instant, fizicul rămâne `partially_fulfilled`
 
 ## FAZA 15 — Grupuri de clienți, prețuri de partener și prețuri NIR · ~4-5 zile
+- [ ] **Din Faza 5 (punctul 14): poza de stoc prin API** în locul fișierului «Stoc la zi»: când integrarea SmartBill cu API-ul există, sincronizarea periodică (ținta: câteva minute, minim zilnic) aplică aceeași `applySnapshot` ca importul din fișier; fișierul rămâne ca soluție de rezervă. Citește documentația API SmartBill (gestiune la factură, unități, zecimale) înainte
 - [ ] **Înainte de a începe:** primești de la utilizator un fișier exemplu de export SmartBill (`10` Partea II #10)
 - [ ] Schema: `CustomerGroup` cu `pricingType` (`none` | `discount` | `cost_plus`), `discountBps`, `markupBps` (întregi în puncte de bază) + `Customer.groupId` + `excludeFromGroupDiscount` pe produs și categorie (se aplică ambelor tipuri)
 - [ ] Snapshot pe comandă: `customerGroupId`, `groupPricingType`, `groupDiscountBps` / `groupMarkupBps`, `groupAdvantageAmount`
@@ -439,6 +444,16 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Mediu de staging identic cu producția
 
 ## FAZA 22 — Testare finală și lansare · ~4-5 zile
+- [ ] ⚠️ **Stoc — «înainte de lansare» (D1.5, din Faza 5, punctul 14).** Fără acestea stocul se îndepărtează de realitate:
+  - [ ] **Sincronizare regulată:** minim zilnică (la o oră fixă) până apare API-ul; **cineva anume e responsabil** (tu / contabilul) și există o listă de verificare
+  - [ ] **Indicatorul de prospețime** funcționează: bannerul «Sincronizare SmartBill» și cardul din Panou, avertisment după X ore (setarea `inventory.snapshotStaleHours`, implicit 24), alertă pe email când e «Neactualizat» (Faza 11)
+  - [ ] **SKU = cod SmartBill, verificat 100%** cu raportul de import (zero necunoscute la produsele active)
+  - [ ] **Tamponul de siguranță** pentru produsele cu stoc mic: decizi valoarea implicită și se adaugă setarea/ecranul (azi există doar coloana `safetyBuffer`)
+  - [ ] **Procedura de supravânzare** scrisă: contactezi clientul, oferi «la comandă» (D6) sau anulezi cu rambursare
+  - [ ] **Lista «comenzi confirmate fără factură»** există (Faza 13)
+  - [ ] **Inventariere fizică** periodică (cel puțin la început de sezon, februarie) și **raport săptămânal de diferențe** aplicație ↔ SmartBill (Faza 20)
+  - [ ] **Retururile și anulările** se fac prin storno în SmartBill; nu se adaugă stoc local manual (D13)
+  - [ ] **Test de realitate:** numărăm fizic 20 de produse și comparăm cu aplicația (unități, pași și resturi incluse)
 - [ ] E2E complet: guest cu ramburs · logat cu card sandbox · client partener cu discount · cu cupon · retur · admin creează produs → apare în storefront · AWB + factură
  unitare: pricing, TVA, promoții, discount de grup, transport, state machines, stoc
  de concurență și de idempotență

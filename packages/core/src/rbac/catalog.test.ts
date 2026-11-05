@@ -22,6 +22,24 @@ describe("catalogul RBAC", () => {
     }
   });
 
+  it("stocul (Faza 5): inventory.read și inventory.write le au Owner, Admin, Manager și Depozit; Editor, Suport și Contabil nu văd cantitățile", () => {
+    expect(rolesWith("inventory.read")).toEqual(["admin", "manager", "owner", "warehouse"]);
+    expect(rolesWith("inventory.write")).toEqual(["admin", "manager", "owner", "warehouse"]);
+    for (const key of ["editor", "support", "accountant"]) {
+      const role = DEFAULT_ROLES.find((r) => r.key === key);
+      expect(role?.permissions, key).not.toContain("inventory.read");
+      expect(role?.permissions, key).not.toContain("inventory.write");
+    }
+  });
+
+  it("inventory.write implică inventory.read (cine poate ajusta stocul îl și vede)", () => {
+    for (const role of DEFAULT_ROLES) {
+      if (role.permissions.includes("inventory.write")) {
+        expect(role.permissions, role.key).toContain("inventory.read");
+      }
+    }
+  });
+
   it("prețul de achiziție (products.cost.view) îl văd Owner, Admin, Manager și Contabil", () => {
     expect(rolesWith("products.cost.view")).toEqual(["accountant", "admin", "manager", "owner"]);
   });

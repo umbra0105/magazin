@@ -200,7 +200,7 @@ Construim imaginea + tabelul numerotat (~1 zi). **Dar tabela `PartsDiagramHotspo
 
 Vânzările vor fi concentrate în martie-august, cu vârf în mai-iunie.
 
-- **Stocul** se pregătește din februarie. Rapoartele de rotație și alertele de stoc mic contează mai mult decât la un magazin obișnuit
+- **Stocul (Faza 5, livrat)** se pregătește din februarie; produsele din nișă se vând la metru, pe suprafață sau în ambalaje, așa că stocul are **unitate, pas de vânzare și cantități zecimale exacte**: țeavă PVC-U (ml, pas 2,5), liner (mp, rola de 41,25 mp), bisulfat de sodiu (kg, sacul de 25 kg, preț pe sac), furtun de dozare (ml, pas 1), mozaic (mp, cutia de 2,03 mp), lemn de abachi (ml, pas pe variantă: 1,5 / 1,8 / 2,1 / 2,6). Disponibilul se arată în pași, cu **restul nevandabil** vizibil doar în admin (100 mp de liner = 2 role, rest 17,5 mp). Verificarea cap-coadă pornește de la aceste 6 produse: `docs/FAZA-5-verificare-manuala.md`. Înainte de lansare: inventariere fizică la început de sezon, tampon de siguranță și test de realitate (lista «înainte de lansare» din TODO, Faza 22). Rapoartele de rotație și alertele de stoc mic contează mai mult decât la un magazin obișnuit
 - **Produse „la comandă"** în extrasezon: bifa `manageStock = false` cu status „la comandă" și termen de livrare afișat e exact ce îți trebuie
 - **Precomandă** devine relevantă în februarie-martie — infrastructura e deja pregătită
 - Campanii de deschidere și de închidere de sezon

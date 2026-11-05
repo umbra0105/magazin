@@ -94,8 +94,10 @@ PriceHistory      variantId, price, effectiveFrom     ← necesar pentru Omnibus
 
 ### Stoc
 ```
-Warehouse         name, code, address, isDefault, priority
-InventoryItem     variantId, warehouseId, onHand, reserved, incoming, lowStockThreshold
+MeasureUnit       code, name, symbol, smartbillName?, decimals(0-4), isActive, isSystem  (unitatea nulă = «buc», de sistem)
+Warehouse         code, name, isDefault, isActive   («Depozit principal», redenumibil; mai multe doar cu flag-ul multiWarehouse)
+InventoryItem     variantId, warehouseId, physical, physicalAsOf?, committed, reserved, safetyBuffer, lowStockSteps?
+                  (cantități BIGINT în zecimi de miime = 4 zecimale; CHECK ≥ 0; Disponibil = physical − committed − reserved)
 
 ⚠️ **Gestiunea stocului — exact ca în WooCommerce:**
 - Setare globală `inventory.manageStock` (implicit ON) — valoarea implicită pentru produse noi
@@ -103,19 +105,26 @@ InventoryItem     variantId, warehouseId, onHand, reserved, incoming, lowStockTh
 - La produse cu variante, bifa poate fi și la nivel de variantă (moștenește de la produs)
 
 **Dacă `manageStock = true`** (implicit):
-  disponibilitatea vine din `InventoryItem.onHand - reserved`
-  → rezervare la inițierea plății, expirare 15 min, decrement la confirmare
-  → alerte de stoc mic, istoric de mișcări, backorder opțional
+  disponibilitatea vine din `InventoryItem`: Fizică − Angajat − Rezervat (niciodată sub 0), în PAȘI de vânzare
+  → rezervare la inițierea plății (card 15 min; transfer bancar 3 zile lucrătoare; ramburs: angajare imediată), angajare la confirmare
+  → alerte de stoc mic (în pași), istoric imuabil de mișcări, «La comandă» doar cu `allowBackorder`
+  → cantitățile vin din SmartBill (import «Stoc la zi», apoi API); aplicația ține «angajat» și «rezervat»
 
 **Dacă `manageStock = false`**:
   disponibilitatea vine din `stockStatus` — un simplu dropdown în admin
   → NICIUN InventoryItem nu se creează, nicio rezervare, niciun decrement
   → se poate comanda oricâte bucăți; adminul comută manual pe „stoc epuizat"
   → ramură explicită în cod, nu simulare cu o cantitate mare
-StockMovement     variantId, warehouseId, type(purchase|sale|return|adjustment|transfer|reservation),
-                  quantity, reference(orderId/...), reason, userId, createdAt
-StockReservation  variantId, warehouseId, quantity, orderId|cartId, expiresAt
-BackInStockAlert  variantId, email, notifiedAt
+StockSnapshot     warehouseId, takenAt, source, fileName?, fileHash?, rowCount, actor, report(json)   (poza SmartBill aplicată)
+StockMovement     variantId, warehouseId, kind(adjustment|snapshot|commit|release|mirror|transfer_in|transfer_out), reason?, note?, deltaPhysical, deltaCommitted,
+                  physicalAfter, committedAfter, effectiveAt, refType?/refId?, snapshotId?, actor   (IMUABIL: trigger în bază)
+StockReservation  variantId, warehouseId, quantity, status(active|confirmed|released|expired), refType/refId (generic până în Faza 9), expiresAt
+StockCommitment   variantId, warehouseId, quantity, status(open|mirrored|released), refType/refId (unic), committedAt, invoicedAt?, mirroredAt?
+BackInStockAlert  variantId, email, notifiedAt?, createdAt   (o singură trimitere, apoi adresa se șterge)
+
+În cod: `packages/core/src/inventory` (StockService, StockAdjustmentService, StockTransferService, WarehouseService, importul «stoc la zi»,
+disponibilitatea), cantități în `packages/shared/src/quantity.ts`. Ghidul de verificare: `docs/FAZA-5-verificare-manuala.md`; acoperirea
+testelor: `docs/FAZA-5-acoperire-teste.md`; bilanțul: `docs/FAZA-5-bilant.md`.
 ```
 
 ### Coș și comandă
