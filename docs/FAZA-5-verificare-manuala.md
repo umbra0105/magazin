@@ -39,14 +39,20 @@ Parolele le alegi tu. Nu le scrie în fișiere sau în mesaje.
    singletonurile păstrează codul vechi. **Vezi:** <http://localhost:3000/api/health> răspunde „ok”.
 3. Într-un al doilea terminal pornește emailul de probă (`npm.cmd run dev:mail`, mesajele apar în <http://localhost:8025>) și, într-un al
    treilea, **worker-ul** (`npm.cmd run worker`): fără el nu se trimit emailurile și nu rulează joburile de stoc.
-4. Creează cele 6 produse-model, cu poza SmartBill **veche** (ca să vezi alerta de la pasul 4):
+4. **Produsele-model.** Mai întâi vezi dacă le ai deja: **Catalog → Stoc**, caută „demo stoc”.
 
-   ```powershell
-   npm.cmd run dev:seed-stock -- --poza=veche
-   ```
+   - **Dacă le ai deja** (cazul bazei tale de dezvoltare, create la verificările anterioare): **nu rula nimic** și treci la pasul 5.
+     Scriptul `dev:seed-stock` nu face nimic când produsele există și nu poate nici să le șteargă pe cele cu mișcări de stoc
+     (registrul e imuabil). Cantitățile pot fi diferite de cele din tabelul pasului 1, fiindcă le-ai ajustat între timp: contează
+     **regulile** (pasul, disponibilul în pași, restul nevandabil), nu cifrele exacte. Baza ta nu are nicio sincronizare SmartBill, deci
+     pasul 4 arată starea «Neimportat», nu «Neactualizat».
+   - **Dacă nu le ai** (bază nouă), creează-le cu poza SmartBill **veche**, ca să vezi alerta «Neactualizat» la pasul 4:
 
-   **Vezi:** „Au fost create 10 produse de stoc fictive (adresa demo-stoc-…)”. Dacă le ai deja, scriptul nu face nimic; ca să schimbi
-   poza, șterge-le întâi cu `-- --remove` (doar produsele fără mișcări de stoc se șterg).
+     ```powershell
+     npm.cmd run dev:seed-stock -- --poza=veche
+     ```
+
+     **Vezi:** „Au fost create 10 produse de stoc fictive (adresa demo-stoc-…)”.
 5. Autentifică-te ca Owner pe <http://localhost:3000/autentificare>. Pentru pasul de drepturi (pasul 8) ai nevoie și de un cont **Editor**
    (îl ai din ghidul Fazei 4), într-o fereastră privată.
 
@@ -56,7 +62,9 @@ Parolele le alegi tu. Nu le scrie în fișiere sau în mesaje.
 
 **Faci:** meniul **Catalog → Stoc**, caută „demo stoc”.
 
-**Vezi,** pe fiecare rând: stocul fizic în unitatea produsului, **disponibilul în pași** și **restul nevandabil** (doar în admin):
+**Vezi,** pe fiecare rând: stocul fizic în unitatea produsului, **disponibilul în pași** și **restul nevandabil** (doar în admin). Tabelul
+arată starea la crearea produselor; pe o bază deja folosită, cantitățile fizice pot diferi, dar disponibilul în pași și restul trebuie să
+iasă din cantitatea afișată pe rând, cu pasul din a doua coloană:
 
 | Produs | Unitate · pas | Stoc fizic | Disponibil în pași | Rest nevandabil |
 | --- | --- | --- | --- | --- |
@@ -81,14 +89,16 @@ Parolele le alegi tu. Nu le scrie în fișiere sau în mesaje.
 ## 2. Ajustări și istoric
 
 **Faci:** în **Stoc**, la Furtun de dozare apasă **Ajustează**, motiv **Vânzare în magazin**, cantitate `-10`, notă „proba mea”.
-**Vezi:** dialogul se închide cu confirmare; fizicul devine 290 ml. Apasă **Istoric**: o mișcare nouă, cu motivul, ora efectivă, „stoc
-după”, numele tău.
+**Vezi:** dialogul se închide cu confirmare; fizicul scade cu 10 ml (de la 300 la 290, dacă produsul e neatins). Apasă **Istoric**: o
+mișcare nouă, cu motivul, ora efectivă, „stoc după”, numele tău.
 
-**Faci:** repetă cu `-1000`. **Vezi:** refuz în română („sub zero”), stocul rămâne 290. Motivul **Recepție marfă** nu primește cantitate
+**Faci:** repetă cu o cantitate mai mare decât tot stocul, de exemplu `-1000`. **Vezi:** refuz în română („sub zero”), stocul rămâne cel de
+dinainte. Motivul **Recepție marfă** nu primește cantitate
 negativă. Lista de motive: Vânzare în magazin, Recepție marfă, Retur, Inventariere (corecție), Deteriorat, Pierdut/Furt, Alt motiv.
 
-**Faci:** la Liner, ajustează cu `+0,5` (motiv **Recepție marfă**). **Vezi:** ajustarea nu cere să fie multiplu de pas (fizicul devine
-100,5 mp); disponibilul rămâne 2 pași, iar restul nevandabil devine 18 mp. Corectează la loc cu `-0,5`, motiv **Inventariere (corecție)**.
+**Faci:** la Liner, ajustează cu `+0,5` (motiv **Recepție marfă**). **Vezi:** ajustarea nu cere să fie multiplu de pas (fizicul crește cu
+0,5 mp, de exemplu de la 100 la 100,5 mp); disponibilul în pași rămâne la fel, iar restul nevandabil crește cu 0,5 mp (de la 17,5 la 18 mp,
+dacă produsul e neatins). Corectează la loc cu `-0,5`, motiv **Inventariere (corecție)**.
 
 ---
 
@@ -107,13 +117,16 @@ Nu schimba nimic aici: trecerea gestionat / negestionat ai verificat-o la punctu
 ## 4. Alerte: stoc mic, prag, Panou, sincronizare veche
 
 **Faci:** în **Stoc**, comutatorul **Stoc mic**.
-**Vezi:** variantele epuizate sau la prag, cele mai urgente primele (de exemplu *Pompa de căldură*, la 0, apoi *Clor tablete* și *Liner
-placare*, la 2 pași, care e pragul implicit); meniul nu are un element nou. Apasă **Prag** la Clor și pune `1`: rândul iese din vedere
-(stocul de 2 pași e peste prag); șterge pragul propriu (gol) și revine la setarea magazinului.
+**Vezi:** variantele epuizate sau la prag, cele mai urgente primele (pe produsele neatinse: *Pompa de căldură*, la 0, apoi *Clor tablete*
+și *Liner placare*, la 2 pași, care e pragul implicit; dacă ai ajustat produsele, lista poate diferi, dar ordinea rămâne de la cele mai
+urgente la cele mai puțin urgente); meniul nu are un element nou. Apasă **Prag** la o variantă din listă și pune `1`: dacă stocul ei
+e de 2 pași, rândul iese din vedere (e peste prag); șterge pragul propriu (gol) și revine la setarea magazinului.
 
 **Faci:** deschide **Panoul** (`/admin`). **Vezi:** secțiunea „Alerte de stoc” cu cardurile **Stoc mic**, **Doar rest nevandabil** și
-**Sincronizare SmartBill: Neactualizat**; fiecare duce în vederea potrivită din Stoc. Pe pagina Stoc, bannerul roșu „Ultima actualizare:
-acum … Cantitățile pot fi depășite.”
+**Sincronizare SmartBill**; fiecare duce în vederea potrivită din Stoc. Pe baza ta, fără nicio sincronizare, cardul spune
+**Neimportat**, iar pe pagina Stoc bannerul spune „Stocul nu a fost încă importat din SmartBill. Cantitățile afișate sunt cele
+introduse manual.” (Pe o bază cu poza veche, creată cu `--poza=veche`, ar fi **Neactualizat** și „Ultima actualizare: acum … Cantitățile
+pot fi depășite.”) După importul de la pasul 7 starea devine **La zi**.
 
 ---
 
@@ -132,17 +145,33 @@ Aceste două scripturi rulează pe baza de **test** (`ecom_test`), nu pe a ta, �
 
 ## 6. «Anunță-mă când revine» (de la cerere la email)
 
-**Faci:** în terminal, cu adresa ta de probă în mediu (nu pe linia de comandă):
+**Faci:** în terminal, cu adresa ta de probă citită de la tastatură (nu se scrie pe linia de comandă și nu rămâne în istoricul
+comenzilor; scriptul nu o afișează):
 
 ```powershell
-$env:PROBE_EMAIL = "adresa.ta@exemplu.ro"
+$env:PROBE_EMAIL = Read-Host "Adresa de email pentru probă"
+```
+
+Scrie adresa la întrebare și apasă Enter. Variabila trăiește doar în această fereastră de terminal; folosește aceeași fereastră pentru
+toate comenzile `dev:back-in-stock` de mai jos. Apoi:
+
+```powershell
 npm.cmd run dev:back-in-stock -- add DEMO-STOC-POMPA
 ```
 
 Apoi, în admin, **Stoc**, la *Pompă de căldură* apasă **Ajustează**, motiv **Recepție marfă**, cantitate `3`.
-**Vezi:** în Mailpit (<http://localhost:8025>), în cel mult un minut, **un singur email** «Anunță-mă când revine». Dacă mai ajustezi o dată
+**Vezi:** în Mailpit (<http://localhost:8025>), în cel mult ~2 minute, **un singur email** «Anunță-mă când revine». Dacă mai ajustezi o dată
 (`+3`), nu mai vine altul: cererea s-a consumat. `npm.cmd run dev:back-in-stock -- status DEMO-STOC-POMPA` spune în ce stare e cererea.
-Curăță: `npm.cmd run dev:back-in-stock -- clean DEMO-STOC-POMPA`.
+Curăță: `npm.cmd run dev:back-in-stock -- clean DEMO-STOC-POMPA`, apoi șterge variabila din fereastră:
+
+```powershell
+Remove-Item Env:PROBE_EMAIL
+```
+
+Dacă *Pompa de căldură* nu mai e la 0 (ai ajustat-o într-o verificare anterioară), scriptul spune „Varianta se poate comanda deja, deci
+nu s-a păstrat nicio cerere. Pune stocul la 0 (Admin → Stoc) și rulează din nou.”: coboară-o întâi la 0 cu o ajustare negativă (motiv
+**Deteriorat** sau **Inventariere (corecție)**), apoi repetă comanda `add`. Emailul apare în Mailpit în cel mult ~2 minute (worker-ul
+trebuie să ruleze).
 
 ---
 
@@ -150,7 +179,9 @@ Curăță: `npm.cmd run dev:back-in-stock -- clean DEMO-STOC-POMPA`.
 
 **Faci:** **Stoc → Import stoc la zi**; alege exportul tău real din `local-data/`, gestiunea setată, apasă **Verifică** (nu modifică nimic).
 **Vezi:** raportul cu potrivirile pe SKU, necunoscutele (în ambele sensuri), unitățile diferite, rotunjirile și diferențele; ora pozei
-(avertisment dacă lipsește ora). Aplică (cu bifa pentru ora pozei; dacă ai aplicat deja exportul la punctul 12, rezultatul e «neschimbate», e în regulă). **Vezi:** bannerul devine „La zi” (Actualizat acum …), cardul din Panou
+(avertisment dacă lipsește ora). Aplică (cu bifa pentru ora pozei). Pe baza ta, fără nicio sincronizare, aplicarea creează prima poză; dacă
+ai aplicat totuși exportul la punctul 12, rezultatul e «neschimbate», e în regulă. Produsele demo nu sunt în exportul real: **nu
+confirma** punerea la 0 a variantelor gestionate care lipsesc din fișier, altfel le golești. **Vezi:** bannerul devine „La zi” (Actualizat acum …), cardul din Panou
 la fel, iar în **Istoric** apar mișcările pozei. A doua rulare cu același fișier: „neschimbate”, fără mișcări noi.
 
 **Faci:** în ecranul de import, legătura **Pornește gestionarea stocului**; încarcă același fișier.
@@ -169,19 +200,25 @@ interzis” și meniul nu are „Stoc”. Cu Owner totul se vede.
 
 ## 9. Multi-depozit (steagul `multiWarehouse`)
 
+Baza ta are deja un depozit în plus, **«Depozit test»**: îl folosești ca destinație și **nu mai creezi** un „Depozit secundar”. Dacă într-o
+bază nouă nu există niciun al doilea depozit, creează unul după ce pornești steagul (**Catalog → Depozite**) și folosește numele lui.
+
 **Faci,** steagul oprit (starea normală): **Catalog**. **Vezi:** nu există „Depozite”; în **Stoc**, `?depozit=oricare` nu schimbă nimic și
 nu apar selector sau buton „Transferă”.
 
 **Faci:** `npm.cmd run dev:flag -- multiWarehouse on` (fără repornire; schimbarea se vede la următoarea cerere).
-**Vezi:** în **Catalog** apare ultimul element **Depozite**, cu „Depozit principal” (fără buton de dezactivare). Creează „Depozit
-secundar”. În **Stoc** apare selectorul **Depozit**; alege-l: lista se schimbă după depozitul ales, iar adresa conține `?depozit=…`.
+**Vezi:** în **Catalog** apare ultimul element **Depozite**, cu „Depozit principal” (fără buton de dezactivare) și „Depozit test”. În
+**Stoc** apare selectorul **Depozit**; alege „Depozit test”: lista se schimbă după depozitul ales, iar adresa conține `?depozit=…`.
 
-**Faci:** revino la „Depozit principal”, la Mozaic apasă **Transferă**, destinația „Depozit secundar”, `2,03`.
-**Vezi:** dialogul arată „Din depozitul …”, disponibilul din sursă (8,12 mp = 4 pași) și pasul; `2,5` (nu e multiplu de pas) e refuzat cu mesaj în română. La
-reușită: „Am mutat … din … în …”, iar în **Istoric** două mișcări legate (ieșire și intrare). În depozitul secundar apare mozaicul cu 2,03 mp.
+**Faci:** notează cât mozaic (mp) are „Depozit principal” și cât „Depozit test” (poate fi 0 sau să nu apară deloc). Revino la „Depozit
+principal”, la Mozaic apasă **Transferă**, destinația „Depozit test”, `2,03`.
+**Vezi:** dialogul arată „Din depozitul …”, disponibilul din sursă (în pași) și pasul; `2,5` (nu e multiplu de pas) e refuzat cu mesaj în
+română. La reușită: „Am mutat … din … în …”, iar în **Istoric** două mișcări legate (ieșire și intrare). Stocul din „Depozit principal”
+scade cu 2,03 mp, iar în „Depozit test” crește cu 2,03 mp față de cât ai notat (pe un mozaic neatins, cu 10 mp în principal: 7,97 mp
+rămân, iar disponibilul din sursă înainte de transfer era 8,12 mp = 4 pași).
 
 **Faci:** `npm.cmd run dev:flag -- multiWarehouse off`. **Vezi:** meniul „Depozite”, selectorul și butonul „Transferă” dispar; stocul din
-„Depozit principal” rămâne 7,97 mp pentru mozaic (mutarea a avut loc, depozitul secundar nu se mai vede cât timp steagul e oprit).
+„Depozit principal” rămâne cel de după transfer (mutarea a avut loc, al doilea depozit nu se mai vede cât timp steagul e oprit).
 
 ---
 
@@ -190,7 +227,7 @@ reușită: „Am mutat … din … în …”, iar în **Istoric** două mișcă
 1. `npm.cmd run dev:flag -- multiWarehouse off` (dacă nu l-ai oprit deja).
 2. `npm.cmd run dev:seed-stock -- --remove`: șterge produsele fictive **fără mișcări**. Cele pe care ai făcut ajustări sau transfer
    (Furtun, Liner, Pompă, Mozaic) au mișcări și **rămân**: registrul de mișcări nu se șterge (e imuabil). Le poți arhiva din **Produse**.
-   „Depozit secundar” rămâne și el (are stoc, deci nu se dezactivează); e inofensiv cât steagul e oprit.
+   «Depozit test» rămâne și el (după transfer are stoc, deci nu se dezactivează); e inofensiv cât steagul e oprit.
 3. Închide worker-ul și `dev:mail`.
 
 ---
