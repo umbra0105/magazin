@@ -1,9 +1,14 @@
 import type { PrismaClient } from "@ecom/db";
 import { MediaUsageRegistry, type MediaUsage, type MediaUsageProvider } from "../media/usage";
 
-type Db = Pick<PrismaClient, "productMedia" | "partsDiagram" | "category" | "brand">;
+type Db = Pick<
+  PrismaClient,
+  "productMedia" | "productDescriptionMedia" | "partsDiagram" | "category" | "brand"
+>;
 
 export const PRODUCT_MEDIA_USAGE_PROVIDER = "product-media";
+
+export const PRODUCT_DESCRIPTION_MEDIA_USAGE_PROVIDER = "product-description-media";
 
 export const PARTS_DIAGRAM_MEDIA_USAGE_PROVIDER = "parts-diagram-media";
 export const CATEGORY_MEDIA_USAGE_PROVIDER = "category-media";
@@ -44,6 +49,41 @@ export function createProductMediaUsageProvider(db: Db): MediaUsageProvider {
           href: `/admin/produse/${row.product.id}`,
         };
         out.set(row.mediaId, [...(out.get(row.mediaId) ?? []), usage]);
+      }
+      return out;
+    },
+  };
+}
+
+/**
+ * Produsele a căror DESCRIERE bogată folosește fișierul (`<img data-media-id>`). Include și produsele șterse (soft
+ * delete): legătura rămâne, iar baza refuză ștergerea fișierului (FK `Restrict`), deci biblioteca explică refuzul.
+ */
+export function createProductDescriptionMediaUsageProvider(db: Db): MediaUsageProvider {
+  return {
+    name: PRODUCT_DESCRIPTION_MEDIA_USAGE_PROVIDER,
+    async findUsages(mediaIds) {
+      const out = new Map<string, MediaUsage[]>();
+      if (mediaIds.length === 0) return out;
+      const rows = await db.productDescriptionMedia.findMany({
+        where: { mediaId: { in: [...mediaIds] } },
+        select: {
+          mediaId: true,
+          product: { select: { id: true, title: true, deletedAt: true } },
+        },
+        orderBy: { product: { title: "asc" } },
+      });
+      for (const row of rows) {
+        if (!row.product) continue;
+        const deleted = row.product.deletedAt ? " (șters)" : "";
+        out.set(row.mediaId, [
+          ...(out.get(row.mediaId) ?? []),
+          {
+            kind: "product_description",
+            label: `Descriere produs: ${row.product.title}${deleted}`,
+            href: `/admin/produse/${row.product.id}`,
+          },
+        ]);
       }
       return out;
     },
@@ -141,6 +181,7 @@ export function createBrandMediaUsageProvider(db: Db): MediaUsageProvider {
  */
 export const MEDIA_REFERENCING_MODELS: Readonly<Record<string, string>> = {
   ProductMedia: PRODUCT_MEDIA_USAGE_PROVIDER,
+  ProductDescriptionMedia: PRODUCT_DESCRIPTION_MEDIA_USAGE_PROVIDER,
   PartsDiagram: PARTS_DIAGRAM_MEDIA_USAGE_PROVIDER,
   Category: CATEGORY_MEDIA_USAGE_PROVIDER,
   Brand: BRAND_MEDIA_USAGE_PROVIDER,
@@ -153,6 +194,7 @@ export const MEDIA_REFERENCING_MODELS: Readonly<Record<string, string>> = {
 export function createMediaUsageRegistry(db: Db): MediaUsageRegistry {
   const registry = new MediaUsageRegistry();
   registry.register(createProductMediaUsageProvider(db));
+  registry.register(createProductDescriptionMediaUsageProvider(db));
   registry.register(createPartsDiagramMediaUsageProvider(db));
   registry.register(createCategoryMediaUsageProvider(db));
   registry.register(createBrandMediaUsageProvider(db));

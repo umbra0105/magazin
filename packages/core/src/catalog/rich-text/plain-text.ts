@@ -10,6 +10,9 @@ import { DROPPED_WITH_CONTENT } from "./rules";
  *  - `richTextToPlain`: text derivat din HTML (meta descriere, căutare, feed-uri).
  */
 
+/** Linie goală = doar spații, tab, FF sau VT (clasă ASCII explicită, identică cu cea din migrația SQL). */
+const BLANK_LINE = /^[ \t\f\v]*$/;
+
 const escapeText = (text: string): string =>
   text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
@@ -18,7 +21,7 @@ export function plainTextToHtml(text: string): string | null {
   const paragraphs: string[][] = [];
   let current: string[] = [];
   for (const line of lines) {
-    if (line.trim() === "") {
+    if (BLANK_LINE.test(line)) {
       if (current.length > 0) paragraphs.push(current);
       current = [];
     } else current.push(line);

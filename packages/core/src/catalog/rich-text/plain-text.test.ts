@@ -29,6 +29,10 @@ describe("plainTextToHtml (descrierile vechi, text simplu → HTML sigur)", () =
     );
   });
 
+  it("o linie cu doar spațiu de nerupere NU e goală (clasa de spații e explicit ASCII, ca în SQL)", () => {
+    expect(plainTextToHtml("a\n\u00a0\nb")).toBe("<p>a<br />\u00a0<br />b</p>");
+  });
+
   it("text gol sau doar spații → null", () => {
     for (const empty of ["", " ", "\n\n", " \t \r\n "]) expect(plainTextToHtml(empty)).toBeNull();
   });

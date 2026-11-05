@@ -247,6 +247,8 @@ model Media {
   uploadedById    String?
   uploadedBy      User?          @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   productMedia    ProductMedia[]
+  /// Folosit în descrierea bogată a unor produse (`<img data-media-id>`); FK Restrict, ca la `productMedia`
+  productDescriptions ProductDescriptionMedia[]
   partsDiagrams   PartsDiagram[]
   categories      Category[]
   brands          Brand[]
@@ -390,6 +392,7 @@ model Product {
   variants                 ProductVariant[]
   categories               ProductCategory[]
   media                    ProductMedia[]
+  descriptionMedia         ProductDescriptionMedia[]
   options                  ProductOption[]
   attributes               AttributeValue[]
   collections              CollectionProduct[]
@@ -533,6 +536,20 @@ model ProductMedia {
   @@index([variantId])
   @@index([mediaId])
   @@map("product_media")
+}
+
+/// Fișierele din biblioteca media folosite în DESCRIEREA bogată a unui produs. Se ține în pas cu HTML-ul de către
+/// serviciul de produse (la fiecare salvare); FK Restrict spre `Media`: un fișier folosit într-o descriere nu se poate șterge.
+model ProductDescriptionMedia {
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@id([productId, mediaId])
+  @@index([mediaId])
+  @@map("product_description_media")
 }
 
 // ---------------------------------------------------------------------------
