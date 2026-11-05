@@ -3,7 +3,7 @@ import { DomainError, getLogger } from "@ecom/shared";
 import type { AuditService } from "../../audit/audit-service";
 import { assertCan, type PermissionSubject } from "../../rbac/can";
 import { parseProductListQuery } from "../product-list";
-import { exportHeaders, productRows, type ExportRow } from "./export-rows";
+import { EXCEL_CELL_LIMIT, exportHeaders, productRows, type ExportRow } from "./export-rows";
 import type { ExportScope, ListFilters, ProductExportStore } from "./export-store";
 
 /**
@@ -61,7 +61,7 @@ export interface PreparedExport {
   headers: string[];
   /** Rândurile de date, pe măsură ce se citesc din bază. Auditul se scrie la sfârșitul iterării. */
   rows: AsyncGenerator<ExportRow>;
-  counts: { rows: number; products: number; withoutVariants: number };
+  counts: { rows: number; products: number; withoutVariants: number; longDescriptions: number };
   /** Descrierea exportului, pentru foaia «Despre export» a XLSX-ului. */
   about: ExportAbout;
 }
@@ -74,9 +74,17 @@ export interface ExportAbout {
   rows: number;
   products: number;
   withoutVariants: number;
+  /** Produse cu descrierea peste limita unei celule Excel (în XLSX celula rămâne goală; în CSV rămâne întreagă). */
+  longDescriptions: number;
+  /** SKU-urile lor (cel mult 20), pentru foaia «Despre export». */
+  longDescriptionSkus: string[];
+  /** Câte SKU-uri au în total o descriere prea lungă (peste cele listate, restul se arată ca «…»). */
+  longDescriptionSkuTotal: number;
 }
 
 const BATCH_SIZE = 200;
+/** Câte SKU-uri cu descriere prea lungă se listează în foaia «Despre export». */
+const MAX_LISTED_SKUS = 20;
 
 const SCOPE_LABELS = {
   selection: "Produsele selectate",
@@ -115,6 +123,8 @@ export interface ExportHistoryItem {
   filtered: boolean;
   /** Motivul unui refuz sau al unei întreruperi (cod scurt, nu valori). */
   reason: string | null;
+  /** Produse cu descrierea peste limita unei celule Excel în acel export (`null` la exporturile mai vechi). */
+  longDescriptions: number | null;
 }
 
 export class ProductExportService {
@@ -149,6 +159,7 @@ export class ProductExportService {
           includeTrash: after["includeTrash"] === true,
           filtered: after["filtered"] === true,
           reason: text("reason"),
+          longDescriptions: num("longDescriptions"),
         };
       });
   }
@@ -203,6 +214,9 @@ export class ProductExportService {
       rows: counts.variants,
       products: counts.products,
       withoutVariants: 0,
+      longDescriptions: 0,
+      longDescriptionSkus: [],
+      longDescriptionSkuTotal: 0,
     };
 
     const summary = {
@@ -219,12 +233,21 @@ export class ProductExportService {
       format: request.format,
       fileName,
       headers: exportHeaders(),
-      counts: { rows: counts.variants, products: counts.products, withoutVariants: 0 },
+      counts: {
+        rows: counts.variants,
+        products: counts.products,
+        withoutVariants: 0,
+        longDescriptions: 0,
+      },
       about,
       rows: this.stream(subject as PermissionSubject, scope, format, summary, (stats) => {
         // produsele fără nicio variantă n-au SKU și n-au rânduri: se numără, pentru foaia «Despre export»
         prepared.counts.withoutVariants = stats.withoutVariants;
         about.withoutVariants = stats.withoutVariants;
+        prepared.counts.longDescriptions = stats.longDescriptions;
+        about.longDescriptions = stats.longDescriptions;
+        about.longDescriptionSkus = stats.longDescriptionSkus;
+        about.longDescriptionSkuTotal = stats.longDescriptionSkuTotal;
       }),
     };
     return prepared;
@@ -283,11 +306,19 @@ export class ProductExportService {
     scope: ExportScope,
     format: (date: Date) => string,
     summary: Record<string, unknown>,
-    onFinish: (stats: { withoutVariants: number }) => void,
+    onFinish: (stats: {
+      withoutVariants: number;
+      longDescriptions: number;
+      longDescriptionSkus: string[];
+      longDescriptionSkuTotal: number;
+    }) => void,
   ): AsyncGenerator<ExportRow> {
     let rows = 0;
     let products = 0;
     let withoutVariants = 0;
+    let longDescriptions = 0;
+    const longDescriptionSkus: string[] = [];
+    let longDescriptionSkuTotal = 0;
     let completed = false;
     try {
       for await (const batch of this.deps.store.batches(scope, BATCH_SIZE)) {
@@ -295,6 +326,14 @@ export class ProductExportService {
           products += 1;
           const produced = productRows(product, format);
           if (produced.length === 0) withoutVariants += 1;
+          if ((product.description?.length ?? 0) > EXCEL_CELL_LIMIT) {
+            longDescriptions += 1;
+            for (const variant of product.variants) {
+              longDescriptionSkuTotal += 1;
+              if (longDescriptionSkus.length < MAX_LISTED_SKUS)
+                longDescriptionSkus.push(variant.sku);
+            }
+          }
           for (const row of produced) {
             rows += 1;
             yield row;
@@ -303,8 +342,14 @@ export class ProductExportService {
       }
       completed = true;
     } finally {
-      onFinish({ withoutVariants });
-      await this.record(subject, completed, { ...summary, rows, products, withoutVariants });
+      onFinish({ withoutVariants, longDescriptions, longDescriptionSkus, longDescriptionSkuTotal });
+      await this.record(subject, completed, {
+        ...summary,
+        rows,
+        products,
+        withoutVariants,
+        longDescriptions,
+      });
     }
   }
 

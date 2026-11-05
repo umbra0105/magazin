@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   IMPORT_FIELDS,
   isCostLikeFieldKey,
@@ -720,5 +720,52 @@ describe("apostroful pus de export în fața textelor periculoase (=, +, -, @)",
     expect(
       collectLookups(table(["SKU", "Preț"], [["'-X1", "1"]]), mapping("sku", "price")).skus,
     ).toEqual(["-X1"]);
+  });
+});
+
+describe("planImport: raportul descrierii (15c)", () => {
+  const m = mapping("sku", "title", "price", "description");
+  const headers = ["SKU", "Titlu", "Preț", "Descriere"];
+  const messages = (cell: string) =>
+    planImport(table(headers, [["N1", "Produs nou", "100", cell]]), m, snapshot());
+
+  it("text simplu sau HTML curat: nicio avertizare; produsul nou primește HTML-ul sanitizat", () => {
+    for (const cell of ["Text simplu\ncu două linii", "<p>Deja <strong>HTML</strong></p>"]) {
+      const plan = messages(cell);
+      expect(plan.rows[0]?.outcome, cell).toBe("new");
+      expect(messagesOf(plan, 0), cell).toEqual([]);
+    }
+  });
+
+  it("HTML cu elemente nepermise: rândul se importă, cu avertisment care spune ce s-a eliminat", () => {
+    const plan = messages(
+      '<p>Text</p><script>alert(1)</script><iframe src="https://x.example"></iframe><img src="https://x.example/p.png">',
+    );
+    expect(plan.rows[0]?.outcome).toBe("new");
+    expect(messagesOf(plan, 0)).toEqual([
+      "Descriere: HTML curățat, eliminat: 1 imagine externă, 2 elemente nepermise (script, iframe, stil…)",
+    ]);
+  });
+
+  it("o eroare neașteptată a sanitizatorului (alta decât «prea lung») nu se înghite", async () => {
+    vi.resetModules();
+    vi.doMock("../rich-text/description", async (importOriginal) => ({
+      ...(await importOriginal<Record<string, unknown>>()),
+      sanitizeDescription: () => {
+        throw new Error("boom");
+      },
+    }));
+    const { planImport: mocked } = await import("./import-plan");
+    expect(() =>
+      mocked(table(headers, [["N1", "Produs nou", "100", "text"]]), m, snapshot()),
+    ).toThrow("boom");
+    vi.doUnmock("../rich-text/description");
+  });
+
+  it("o descriere peste limită e eroare de rând (nu se taie)", () => {
+    // 25.000 de «&» devin 125.000 de caractere de HTML ("&amp;"): peste limita de 100.000
+    const plan = messages("&".repeat(25_000));
+    expect(plan.rows[0]?.outcome).toBe("error");
+    expect(messagesOf(plan, 0)[0]).toMatch(/^Descriere: .*depășește/);
   });
 });

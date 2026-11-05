@@ -5,6 +5,7 @@ import {
   parseImageUrl,
   splitImageCell,
 } from "../../../media/image-url";
+import { ValidationError } from "@ecom/shared";
 import { parseDecimalInput } from "@ecom/shared/decimal";
 import { MAX_CATEGORY_DEPTH } from "../../category-tree";
 import { SHIPPING_CLASSES, type ShippingClass } from "../../constants";
@@ -33,8 +34,12 @@ import {
   type PlannedRow,
   type RowOutcome,
 } from "../import-plan";
-import { normalizeDescriptionForCompare } from "../../rich-text/description";
-import { htmlToPlainText } from "./html-to-text";
+import {
+  normalizeDescriptionForCompare,
+  sanitizeDescription,
+  summarizeDescriptionLosses,
+} from "../../rich-text/description";
+import { htmlToPlainText, stripWpShortcodes } from "./html-to-text";
 import { detectWooColumns, looksLikeWooExport, type WooRole } from "./woo-columns";
 import type {
   WooAttributeDef,
@@ -550,10 +555,25 @@ export function planWoo(
     }
     const long = at(r.cells, "description");
     if (long) {
-      const result = htmlToPlainText(long, 100_000);
-      countDescription(result, "Descriere");
-      if (result.truncated) warn(r, "Descriere: tăiată la 100.000 de caractere");
-      if (result.text) level.description = result.text;
+      // descrierea lungă rămâne HTML, sanitizat (listă albă); shortcode-urile WordPress se scot întâi
+      const stripped = stripWpShortcodes(long);
+      stats.descriptionShortcodes += stripped.count;
+      try {
+        const result = sanitizeDescription(stripped.text);
+        stats.descriptionTables += result.stats.tables;
+        stats.descriptionLinks += result.stats.links;
+        stats.descriptionImages += result.stats.removedImages;
+        const losses = summarizeDescriptionLosses(result.stats, stripped.count);
+        if (losses) {
+          stats.descriptionsSanitized += 1;
+          warn(r, `Descriere: HTML curățat, eliminat: ${losses}`);
+        }
+        if (result.html) level.description = result.html;
+      } catch (error) {
+        // peste limită: nu se taie (HTML tăiat ar fi stricat); produsul se importă fără descriere
+        if (!(error instanceof ValidationError)) throw error;
+        warn(r, `Descriere: ${error.message}; descrierea nu a fost importată`);
+      }
     }
 
     const shipping = at(r.cells, "shippingClass");

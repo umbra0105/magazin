@@ -738,3 +738,185 @@ describe("exportul de produse pe baza reală", () => {
     });
   });
 });
+
+describe("exportul: descrieri peste limita unei celule Excel (15c)", () => {
+  const LIMIT = 32_767;
+
+  async function twoProducts(tx: TestTx, tag: string) {
+    const long = await tx.product.create({
+      data: {
+        slug: `exp-long-${tag}`,
+        title: `Produs lung ${tag}`,
+        description: `<p>${"x".repeat(40_000)}</p>`,
+      },
+    });
+    await tx.productVariant.create({
+      data: { productId: long.id, sku: `LONG-${tag}`, price: 5_000, isDefault: true },
+    });
+    const short = await tx.product.create({
+      data: {
+        slug: `exp-short-${tag}`,
+        title: `Produs scurt ${tag}`,
+        description: "<p>Descriere scurtă</p>",
+      },
+    });
+    await tx.productVariant.create({
+      data: { productId: short.id, sku: `SHORT-${tag}`, price: 5_000, isDefault: true },
+    });
+    return { long, short };
+  }
+
+  it("CSV: descrierea rămâne întreagă (fără limită de celulă); exportul numără și numește descrierile lungi", async () => {
+    await withExport(async ({ tx, exporter, as, tag }) => {
+      const manager = await as("manager");
+      const { long, short } = await twoProducts(tx, tag);
+      const prepared = await exporter.prepare(manager, {
+        format: "csv",
+        scope: "selection",
+        ids: [long.id, short.id],
+      });
+      const rows = await drain(prepared);
+      const descriptionIndex = prepared.headers.indexOf("Descriere");
+      expect(descriptionIndex).toBeGreaterThanOrEqual(0);
+      expect(rows.map((r) => (r[descriptionIndex] ?? "").length).sort((a, b) => a - b)).toEqual([
+        "<p>Descriere scurtă</p>".length,
+        40_007,
+      ]);
+      expect(prepared.counts.longDescriptions).toBe(1);
+      expect(prepared.about.longDescriptions).toBe(1);
+      expect(prepared.about.longDescriptionSkus).toEqual([`LONG-${tag}`]);
+      const events = await tx.auditLog.findMany({
+        where: { action: "product.export", actorId: manager?.userId },
+      });
+      expect(events[0]?.after).toMatchObject({ longDescriptions: 1 });
+      const history = await exporter.history(manager);
+      expect(history[0]).toMatchObject({ longDescriptions: 1 });
+    });
+  });
+
+  it("XLSX: celula prea lungă rămâne GOALĂ (nu se taie), foaia «Despre export» o numește, iar reimportul o lasă neschimbată", async () => {
+    await withExport(async ({ tx, exporter, importer, as, tag }) => {
+      const manager = await as("manager");
+      const { long, short } = await twoProducts(tx, tag);
+      const prepared = await exporter.prepare(manager, {
+        format: "xlsx",
+        scope: "selection",
+        ids: [long.id, short.id],
+      });
+      const bytes = await buildExportXlsx(prepared);
+      const decoded = Object.values(unzipSync(bytes))
+        .map((entry) => new TextDecoder().decode(entry))
+        .join("\n");
+      // nicio celulă nu depășește limita Excel și nu există text tăiat
+      expect(decoded).not.toContain("x".repeat(1000));
+      expect(decoded).toContain("Descriere scurtă");
+      expect(decoded).toContain("Descrieri prea lungi pentru o celulă Excel");
+      expect(decoded).toContain(`LONG-${tag}`);
+      expect(prepared.counts.longDescriptions).toBe(1);
+      expect(LIMIT).toBe(32_767);
+
+      const analysis = await importer.register(manager, { bytes, fileName: "e.xlsx" });
+      const validation = await importer.validate(manager, {
+        importId: analysis.importId,
+        columns: analysis.columns.map((c) => c.field),
+      });
+      // celula goală lasă descrierea din bază neschimbată: nimic de actualizat, nicio eroare
+      expect(validation.report.counts).toMatchObject({ new: 0, updated: 0, errors: 0 });
+    });
+  });
+
+  it("limita e exactă: 32.767 de caractere încap, 32.768 nu (se numără și celula rămâne goală în XLSX)", async () => {
+    await withExport(async ({ tx, exporter, as, tag }) => {
+      const manager = await as("manager");
+      const make = async (key: string, length: number) => {
+        const product = await tx.product.create({
+          data: {
+            slug: `exp-${key}-${tag}`,
+            title: `Produs ${key} ${tag}`,
+            description: `<p>${"z".repeat(length - 7)}</p>`,
+          },
+        });
+        await tx.productVariant.create({
+          data: { productId: product.id, sku: `${key}-${tag}`, price: 5_000, isDefault: true },
+        });
+        return product.id;
+      };
+      const exact = await make("EXACT", LIMIT);
+      const over = await make("OVER", LIMIT + 1);
+      const prepared = await exporter.prepare(manager, {
+        format: "xlsx",
+        scope: "selection",
+        ids: [exact, over],
+      });
+      await buildExportXlsx(prepared);
+      expect(prepared.counts.longDescriptions).toBe(1);
+      expect(prepared.about.longDescriptionSkus).toEqual([`OVER-${tag}`]);
+    });
+  });
+
+  it("foaia «Despre export» listează cel mult 20 de SKU-uri și arată că mai sunt", async () => {
+    await withExport(async ({ tx, exporter, as, tag }) => {
+      const manager = await as("manager");
+      const product = await tx.product.create({
+        data: {
+          slug: `exp-many-${tag}`,
+          title: `Multe variante ${tag}`,
+          description: `<p>${"x".repeat(40_000)}</p>`,
+        },
+      });
+      for (let n = 0; n < 25; n++) {
+        await tx.productVariant.create({
+          data: {
+            productId: product.id,
+            sku: `MANY-${tag}-${String(n).padStart(2, "0")}`,
+            price: 5_000,
+            isDefault: n === 0,
+            position: n,
+          },
+        });
+      }
+      const prepared = await exporter.prepare(manager, {
+        format: "xlsx",
+        scope: "selection",
+        ids: [product.id],
+      });
+      const bytes = await buildExportXlsx(prepared);
+      expect(prepared.counts.longDescriptions).toBe(1);
+      expect(prepared.about.longDescriptionSkus).toHaveLength(20);
+      const decoded = Object.values(unzipSync(bytes))
+        .map((entry) => new TextDecoder().decode(entry))
+        .join("\n");
+      // în foaia «Despre export»: primele 20 de SKU-uri, apoi «…» (celelalte 5 nu sunt listate)
+      expect(decoded).toContain(`MANY-${tag}-00, MANY-${tag}-01`);
+      expect(decoded).toContain(`MANY-${tag}-19…`);
+      expect(decoded).not.toContain(`MANY-${tag}-19, MANY-${tag}-20`);
+    });
+  });
+
+  it("o descriere exact la limită (32.767) se exportă întreagă și nu se numără", async () => {
+    await withExport(async ({ tx, exporter, as, tag }) => {
+      const manager = await as("manager");
+      const product = await tx.product.create({
+        data: {
+          slug: `exp-edge-${tag}`,
+          title: `La limită ${tag}`,
+          description: `<p>${"y".repeat(LIMIT - 7)}</p>`,
+        },
+      });
+      await tx.productVariant.create({
+        data: { productId: product.id, sku: `EDGE-${tag}`, price: 5_000, isDefault: true },
+      });
+      const prepared = await exporter.prepare(manager, {
+        format: "xlsx",
+        scope: "selection",
+        ids: [product.id],
+      });
+      const bytes = await buildExportXlsx(prepared);
+      const decoded = Object.values(unzipSync(bytes))
+        .map((entry) => new TextDecoder().decode(entry))
+        .join("\n");
+      expect(decoded).toContain("y".repeat(1000));
+      expect(prepared.counts.longDescriptions).toBe(0);
+    });
+  });
+});

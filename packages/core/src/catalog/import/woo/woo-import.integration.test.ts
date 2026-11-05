@@ -271,9 +271,11 @@ describe("import WooCommerce pe baza reală", () => {
       expect(v101.product.brand?.name).toBe("Marca Fixture A");
       expect(v101.product.categories).toHaveLength(2);
       expect(v101.product.categories.find((c) => c.isPrimary)?.categoryId).toBe(circulatie.id);
-      expect(v101.product.description).toContain("Putere: 0,75 kW");
-      // textul simplu din import devine paragrafe: nicio altă etichetă nu a rămas
-      expect(v101.product.description?.replace(/<\/?p>|<br \/>/g, "")).not.toMatch(/<\/?[a-z]/i);
+      // descrierea rămâne HTML sanitizat: tabelul se păstrează, ce era periculos sau extern a dispărut
+      expect(v101.product.description).toContain("<td>Putere</td><td>0,75 kW</td>");
+      expect(v101.product.description).not.toMatch(
+        /<img|<style|<script|class=|style=|exemplu\.invalid\/poza/i,
+      );
       // Omnibus: un singur punct de istoric, la data importului, cu prețul efectiv (promoția e în viitor)
       const history = await tx.priceHistory.findMany({ where: { variantId: v101.id } });
       expect(history).toHaveLength(1);

@@ -314,6 +314,14 @@ export default async function ImportHistoryPage({
                         {item.rows !== null && item.products !== null
                           ? m.exports.rowsAndProducts(item.rows, item.products)
                           : "—"}
+                        {item.longDescriptions !== null && item.longDescriptions > 0 && (
+                          <span
+                            className="block text-xs text-muted-foreground"
+                            data-long-descriptions
+                          >
+                            {m.exports.longDescriptions(item.longDescriptions)}
+                          </span>
+                        )}
                       </td>
                       <td className="p-3">
                         <Badge variant={item.state === "downloaded" ? "success" : "danger"}>

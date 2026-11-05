@@ -2,7 +2,7 @@ import writeExcelFile from "write-excel-file/node";
 import { neutralizeCell } from "../import/cell-safety";
 import { EXPORT_READONLY_COLUMNS, IMPORT_FIELDS } from "../import/import-fields";
 import { XLSX_MIME } from "../import/import-template";
-import type { ExportCell } from "./export-rows";
+import { EXCEL_CELL_LIMIT, type ExportCell } from "./export-rows";
 import type { PreparedExport } from "./export-service";
 
 /**
@@ -61,6 +61,16 @@ function aboutRows(prepared: PreparedExport): (SheetCell | null)[][] {
           ],
         ]
       : []),
+    ...(about.longDescriptions > 0
+      ? [
+          [
+            plain("Descrieri prea lungi pentru o celulă Excel"),
+            plain(
+              `${about.longDescriptions} (limita e ${EXCEL_CELL_LIMIT} de caractere): în această foaie celula Descriere a rămas GOALĂ, iar la reimport o celulă goală lasă descrierea din magazin neschimbată. Exportă în CSV pentru textul întreg. SKU: ${about.longDescriptionSkus.join(", ")}${about.longDescriptionSkuTotal > about.longDescriptionSkus.length ? "…" : ""}`,
+            ),
+          ] as (SheetCell | null)[],
+        ]
+      : []),
     [null, null],
     [bold("Cum se folosește"), null],
     [
@@ -90,7 +100,15 @@ function aboutRows(prepared: PreparedExport): (SheetCell | null)[][] {
 /** Fișierul XLSX ca octeți: citește tot fluxul de rânduri al exportului (limitat de `productExport.maxRows`). */
 export async function buildExportXlsx(prepared: PreparedExport): Promise<Uint8Array> {
   const data: (SheetCell | null)[][] = [prepared.headers.map(bold)];
-  for await (const row of prepared.rows) data.push(row.map(toSheetCell));
+  for await (const row of prepared.rows) {
+    data.push(
+      row.map((cell) =>
+        // un text mai lung decât o celulă Excel (în practică, doar descrierea) NU se taie (HTML tăiat ar fi stricat): celula
+        // rămâne goală, iar importul lasă valoarea din magazin neschimbată; foaia «Despre export» spune câte sunt
+        cell.kind === "text" && cell.value.length > EXCEL_CELL_LIMIT ? null : toSheetCell(cell),
+      ),
+    );
+  }
 
   const widths = [
     ...IMPORT_FIELDS.map((f) => f.label),

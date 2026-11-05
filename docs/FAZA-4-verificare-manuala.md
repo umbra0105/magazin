@@ -28,7 +28,7 @@ Ca să nu pierzi timp, iată ce lipsește sau ce nu are încă interfață. Paș
 | **Magazinul public** (vitrina) | Nu există încă (Faza 7). „Doar produsele Active apar în magazin” nu se poate vedea; vezi doar starea în admin. |
 | **Jurnalul de audit** din meniu | Pagina e „în construire”. Auditul îl citești direct în Prisma Studio, tabela `AuditLog`. |
 | **Cantitățile de stoc** | Vin în Faza 5. Tabul „Stoc” al produsului are doar „Disponibilitate” (în stoc / epuizat / la comandă). |
-| **Descrierea cu text îmbogățit** (bold, tabele, imagini în descriere) | E planificată înainte de Faza 6 (punctul 15c). Acum descrierea e **text simplu**; HTML-ul din WooCommerce se reduce la text la import (e normal). |
+| **Descrierea cu text îmbogățit** (bold, tabele, imagini în descriere) | Gata din 15c: editor vizual în tabul General, HTML sanitizat, previzualizare; importul WooCommerce păstrează HTML-ul curățat (tabele, liste, linkuri). |
 | **Butonul „Oprește importul întrerupt”** | Capacitatea există pe server (după reparațiile de securitate), dar butonul din interfață nu a fost adăugat. Nu poți opri un import blocat din browser. |
 | **Ștergerea unei categorii care are mapări către canale (eMAG)** | Mapările către canale nu au încă interfață, deci refuzul nu se poate provoca manual. A fost verificat doar prin teste automate. |
 | **Câmpurile de dată-oră ale promoției** (`Promoția începe` / `se termină`) | Folosesc câmpul nativ al browserului, în limba browserului (datorie cunoscută, pentru Faza 17/18). Nu e un defect nou. |
@@ -492,8 +492,8 @@ atributele din fișier cu opțiunea de a le crea sau ignora, și secțiunea „I
 Lasă bifa pentru imagini **debifată** acum.
 
 13.3 **Verificare.** **Faci:** continuă la „Verifică (fără modificări)”. **Vezi:** numărul de produse noi/neschimbate,
-lista „Ce se creează odată cu produsele” (categorii, branduri, atribute de creat), „Alte constatări” (descrieri reduse la
-text, tabele reduse la linii) și, dacă fișierul are coloane de cost sau furnizor, mesajul că sunt **BLOCATE** și nu apar
+lista „Ce se creează odată cu produsele” (categorii, branduri, atribute de creat), „Alte constatări” (descrieri curățate, tabele
+păstrate, imagini externe eliminate) și, dacă fișierul are coloane de cost sau furnizor, mesajul că sunt **BLOCATE** și nu apar
 în raport. **Dacă nu:** dacă vezi sume de preț de achiziție în raport, e problemă gravă.
 
 13.4 **Aplică.** **Faci:** „Aplică importul…” → „Confirm și aplic”. **Vezi:** „Import terminat”. În lista de produse

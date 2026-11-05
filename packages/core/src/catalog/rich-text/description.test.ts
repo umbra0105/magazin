@@ -1,7 +1,13 @@
 import { ValidationError } from "@ecom/shared";
 import type { PrismaClient } from "@ecom/db";
 import { describe, expect, it, vi } from "vitest";
-import { looksLikeHtml, prepareDescription, sanitizeDescription } from "./description";
+import {
+  looksLikeHtml,
+  prepareDescription,
+  sanitizeDescription,
+  summarizeDescriptionLosses,
+} from "./description";
+import type { RichTextStats } from "./sanitize";
 import { RICH_TEXT_LIMITS } from "./rules";
 
 const ID_A = "cm0imaginea1234567890xy";
@@ -138,5 +144,44 @@ describe("prepareDescription (verifică în bază fișierele media din descriere
   it("o descriere doar cu o imagine inexistentă devine null", async () => {
     const { db } = fakeDb([]);
     expect((await prepareDescription(db, `<img data-media-id="${ID_A}" alt="a">`)).html).toBeNull();
+  });
+});
+
+describe("summarizeDescriptionLosses (ce a pierdut o descriere la curățare, pentru raportul de import)", () => {
+  const stats = (over: Partial<RichTextStats> = {}): RichTextStats => ({
+    tables: 0,
+    links: 0,
+    images: 0,
+    removedImages: 0,
+    removedBlocks: 0,
+    failedClosed: false,
+    ...over,
+  });
+
+  it("nimic pierdut → null (tabelele și linkurile păstrate nu sunt pierderi)", () => {
+    expect(summarizeDescriptionLosses(stats())).toBeNull();
+    expect(summarizeDescriptionLosses(stats({ tables: 3, links: 5, images: 2 }))).toBeNull();
+  });
+
+  it("imagini externe, elemente nepermise și shortcode-uri, cu singular și plural", () => {
+    expect(summarizeDescriptionLosses(stats({ removedImages: 1 }))).toBe("1 imagine externă");
+    expect(summarizeDescriptionLosses(stats({ removedImages: 3 }))).toBe("3 imagini externe");
+    expect(summarizeDescriptionLosses(stats({ removedBlocks: 1 }))).toBe(
+      "1 element nepermis (script, iframe, stil…)",
+    );
+    expect(summarizeDescriptionLosses(stats({ removedBlocks: 2 }))).toBe(
+      "2 elemente nepermise (script, iframe, stil…)",
+    );
+    expect(summarizeDescriptionLosses(stats(), 1)).toBe("1 shortcode WordPress");
+    expect(summarizeDescriptionLosses(stats(), 4)).toBe("4 shortcode-uri WordPress");
+    expect(summarizeDescriptionLosses(stats({ removedImages: 2, removedBlocks: 1 }), 3)).toBe(
+      "2 imagini externe, 1 element nepermis (script, iframe, stil…), 3 shortcode-uri WordPress",
+    );
+  });
+
+  it("conținutul redus la text de a doua plasă este semnalat", () => {
+    expect(summarizeDescriptionLosses(stats({ failedClosed: true }))).toBe(
+      "conținut nesigur redus la text",
+    );
   });
 });

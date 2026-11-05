@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { htmlToPlainText } from "./html-to-text";
+import { htmlToPlainText, stripWpShortcodes } from "./html-to-text";
 
 const text = (html: string): string => htmlToPlainText(html).text;
 
@@ -180,5 +180,37 @@ describe("htmlToPlainText", () => {
     const started = Date.now();
     htmlToPlainText("<div".repeat(20_000) + "<table>".repeat(2_000));
     expect(Date.now() - started).toBeLessThan(2_000);
+  });
+});
+
+describe("stripWpShortcodes (shortcode-urile WordPress din HTML, înainte de sanitizare)", () => {
+  it("scoate shortcode-urile cunoscute, cele cu atribute și cele cu _ sau -, și le numără; textul dintre ele rămâne", () => {
+    const result = stripWpShortcodes('[caption id="a"]Montaj[/caption] [gallery ids="1,2"]');
+    expect(result.text).toBe("Montaj ");
+    expect(result.count).toBe(3);
+    expect(stripWpShortcodes("[vc_row][vc_column]x[/vc_column][/vc_row]")).toEqual({
+      text: "x",
+      count: 4,
+    });
+  });
+
+  it("o închidere [/nume] se scoate chiar dacă numele nu e cunoscut și nu are _ sau -", () => {
+    expect(stripWpShortcodes("a [/foo] b")).toEqual({ text: "a  b", count: 1 });
+  });
+
+  it("nu atinge textul obișnuit între paranteze drepte", () => {
+    expect(stripWpShortcodes("Lungime [min 5 m] și [1] sau [x]")).toEqual({
+      text: "Lungime [min 5 m] și [1] sau [x]",
+      count: 0,
+    });
+  });
+
+  it("nu se blochează pe intrări ostile", () => {
+    const started = performance.now();
+    const hostile = stripWpShortcodes("[a ".repeat(60_000));
+    expect(performance.now() - started).toBeLessThan(2000);
+    expect(hostile.count).toBe(0);
+    const closing = stripWpShortcodes(`[${"x".repeat(100_000)}`);
+    expect(closing.count).toBe(0);
   });
 });

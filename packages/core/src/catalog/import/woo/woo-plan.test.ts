@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   WOO_COST_SENTINEL,
   WOO_HEADERS,
@@ -264,27 +264,75 @@ describe("planificarea fixture-ului sintetic pe un catalog gol", () => {
     expect(textOf(row)).toContain("NEEXISTENT-1");
   });
 
-  it("descrierea devine text simplu: tabel → «Etichetă: valoare», fără HTML, fără shortcode-uri; raport pe rând", async () => {
+  it("descrierea păstrează HTML-ul sanitizat: tabel, listă, link cu target/rel; fără imagini externe, stil sau shortcode-uri; raport pe rând", async () => {
     const row = bySku(await plan(), "FIX-101");
     const description = (row.op as WooCreateOp).product.description as string;
-    expect(description).toContain("Putere: 0,75 kW");
-    expect(description).toContain("Debit maxim: 12 m³/h");
-    expect(description).toContain("- Corp din material plastic");
-    expect(description).toContain("fișa tehnică");
-    expect(description).not.toMatch(/<\/?[a-z]/i);
+    expect(description).toContain("<h2>Caracteristici</h2>");
+    expect(description).toContain("<strong>silențioasă</strong>");
+    expect(description).toContain(
+      '<a href="https://exemplu.invalid/fisa.pdf" target="_blank" rel="noopener noreferrer">fișa tehnică</a>',
+    );
+    expect(description).toContain(
+      "<table><tbody><tr><td>Putere</td><td>0,75 kW</td></tr><tr><td>Debit maxim</td><td>12\u00a0m³/h</td></tr></tbody></table>",
+    );
+    expect(description).toContain(
+      "<ul><li>Corp din material plastic</li><li>Garanție 24 de luni</li></ul>",
+    );
+    expect(description).toContain("Montaj");
+    // ce nu are voie să rămână
+    expect(description).not.toMatch(/<img|<style|class=|style=|exemplu\.invalid\/poza|color/i);
     expect(description).not.toContain("caption");
-    expect(description).not.toContain("exemplu.invalid");
-    expect(description).not.toContain("color:blue");
+    expect(description).not.toContain("gallery");
     expect(textOf(row)).toMatch(
-      /Descriere: HTML redus la text simplu \(1 tabel, 1 link, 1 imagine/,
+      /Descriere: HTML curățat, eliminat: 1 imagine externă, 1 element nepermis \(script, iframe, stil…\), 3 shortcode-uri WordPress/,
     );
   });
 
-  it("descrierea ostilă (script, iframe, eveniment) nu lasă nimic periculos", async () => {
-    const op = bySku(await plan(), "WC-103").op as WooCreateOp;
-    expect(op.product.description).toBe("Text normal & sigur.\n\nFinal");
+  it("descrierea ostilă (script, iframe, eveniment) nu lasă nimic periculos; raportul spune ce s-a eliminat", async () => {
+    const row = bySku(await plan(), "WC-103");
+    expect((row.op as WooCreateOp).product.description).toBe(
+      "<p>Text normal &amp; sigur.</p><p>Final</p>",
+    );
+    expect(textOf(row)).toMatch(/eliminat: 2 elemente nepermise/);
     const everything = JSON.stringify(await plan());
     expect(everything).not.toMatch(/<script|<iframe|onclick|alert\(/i);
+  });
+
+  it("statisticile descrierilor: tabele și linkuri păstrate, imagini externe eliminate, descrieri curățate", async () => {
+    const p = await plan();
+    expect(p.woo?.stats).toMatchObject({
+      descriptionTables: 1,
+      descriptionLinks: 1,
+      descriptionImages: 1,
+      descriptionShortcodes: 3,
+      // FIX-101 și WC-103 (descrierea lungă curățată) + FIX-101 (descrierea scurtă redusă la text pentru subtitlu)
+      descriptionsSanitized: 3,
+    });
+  });
+
+  it("o eroare neașteptată a sanitizatorului (alta decât «prea lung») nu se înghite: planul eșuează", async () => {
+    vi.resetModules();
+    vi.doMock("../../rich-text/description", async (importOriginal) => ({
+      ...(await importOriginal<Record<string, unknown>>()),
+      sanitizeDescription: () => {
+        throw new Error("boom");
+      },
+    }));
+    const { planWoo: mocked } = await import("./woo-plan");
+    const table = await tableOf(syntheticWooRows(NOW));
+    expect(() => mocked(table, { ...DEFAULT_WOO_OPTIONS }, snapshot(), CTX)).toThrow("boom");
+    vi.doUnmock("../../rich-text/description");
+  });
+
+  it("o descriere peste limită nu se taie (HTML tăiat ar fi stricat): rândul se importă fără ea, cu avertisment", async () => {
+    const rows = syntheticWooRows(NOW);
+    const first = rows[0] as WooFixtureRow;
+    // celula are 25.000 de caractere (sub limita fișierului), dar fiecare «&» devine «&amp;»: HTML-ul rezultat depășește 100.000
+    const hugeRow = { ...first, Descriere: "&".repeat(25_000) } as WooFixtureRow;
+    const row = bySku(await plan([hugeRow, ...rows.slice(1)]), "FIX-101");
+    expect((row.op as WooCreateOp).product.description ?? null).toBeNull();
+    expect(row.outcome).not.toBe("error");
+    expect(textOf(row)).toMatch(/Descriere: .*nu a fost importată/);
   });
 
   it("SKU numeric rămâne text; SKU lipsă devine WC-<ID> cu avertisment; clasa necunoscută → standard cu avertisment", async () => {
@@ -293,9 +341,11 @@ describe("planificarea fixture-ului sintetic pe un catalog gol", () => {
     expect(numeric.variants[0]?.sku).toBe("00123");
     expect(numeric.variants[0]).toMatchObject({ weightGrams: 500, lengthMm: 125, price: 34_990 });
     expect(numeric.product.shippingClass).toBe("oversized");
+    // textul simplu din fișier devine paragraf HTML (cu <br />), fără avertisment: nu s-a pierdut nimic
     expect(numeric.product.description).toBe(
-      "Filtru pentru piscine de până la 40 m³.\nSe livrează cu ventil.",
+      "<p>Filtru pentru piscine de până la 40 m³.<br />Se livrează cu ventil.</p>",
     );
+    expect(textOf(bySku(p, "00123"))).not.toMatch(/Descriere:/);
 
     const fallback = bySku(p, "WC-103");
     expect(textOf(fallback)).toMatch(/SKU lipsă în fișier: se folosește «WC-103»/);

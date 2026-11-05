@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { ValidationError } from "@ecom/shared";
 import {
   MAX_MONEY,
   productCreateSchema,
@@ -6,7 +7,11 @@ import {
   variantUpdateSchema,
 } from "../product-schemas";
 import { PRODUCT_STATUSES, SHIPPING_CLASSES } from "../constants";
-import { normalizeDescriptionForCompare } from "../rich-text/description";
+import {
+  normalizeDescriptionForCompare,
+  sanitizeDescription,
+  summarizeDescriptionLosses,
+} from "../rich-text/description";
 import { isValidSlug } from "../slug";
 import {
   CATEGORY_PATH_SEPARATOR,
@@ -359,9 +364,28 @@ function parseFields(
         else if ((raw as string).length > 300) fail(key, "cel mult 300 de caractere");
         else out.subtitle = raw as string;
         break;
-      case "description":
-        out.description = raw === null ? null : (raw as string);
+      case "description": {
+        if (raw === null) {
+          out.description = null;
+          break;
+        }
+        // descrierea e HTML sanitizat: raportul spune ce s-a eliminat; peste limită e eroare de rând (nu se taie)
+        try {
+          const result = sanitizeDescription(raw as string);
+          const losses = summarizeDescriptionLosses(result.stats);
+          if (losses) {
+            errors.push({
+              level: "warning",
+              text: `${labelOf(key)}: HTML curățat, eliminat: ${losses}`,
+            });
+          }
+          out.description = raw as string;
+        } catch (error) {
+          if (!(error instanceof ValidationError)) throw error;
+          fail(key, error.message);
+        }
         break;
+      }
       case "slug":
         if (!isValidSlug(raw as string)) {
           fail(key, "doar litere mici, cifre și cratime (cel mult 80 de caractere)");

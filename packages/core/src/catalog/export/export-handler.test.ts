@@ -57,7 +57,7 @@ function prepared(format: "csv" | "xlsx" = "csv"): PreparedExport {
     fileName: format === "csv" ? "export-test.csv" : "export-test.xlsx",
     headers: ["SKU", "Titlu", "Subtitlu"],
     rows: rows(),
-    counts: { rows: 2, products: 2, withoutVariants: 0 },
+    counts: { rows: 2, products: 2, withoutVariants: 0, longDescriptions: 0 },
     about: {
       exportedAt: "2026-10-17 12:00:00",
       scope: "Tot catalogul",
@@ -66,6 +66,9 @@ function prepared(format: "csv" | "xlsx" = "csv"): PreparedExport {
       rows: 2,
       products: 2,
       withoutVariants: 0,
+      longDescriptions: 0,
+      longDescriptionSkus: [],
+      longDescriptionSkuTotal: 0,
     },
   };
 }

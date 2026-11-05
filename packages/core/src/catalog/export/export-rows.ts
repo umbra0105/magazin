@@ -91,6 +91,9 @@ export interface ExportProductData {
   variants: readonly ExportVariantData[];
 }
 
+/** Cel mai mare număr de caractere dintr-o celulă Excel. O descriere (HTML) mai lungă nu încape într-o foaie XLSX. */
+export const EXCEL_CELL_LIMIT = 32_767;
+
 const text = (value: string | null): ExportCell =>
   value === null || value === "" ? { kind: "empty" } : { kind: "text", value };
 const integer = (value: number | null): ExportCell =>

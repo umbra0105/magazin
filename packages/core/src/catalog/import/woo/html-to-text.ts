@@ -1,8 +1,8 @@
 /**
  * HTML (și shortcode-uri WordPress) → text simplu, FĂRĂ parser extern: o trecere cu expresii regulate pe
- * un set mic de etichete, destul pentru descrierile unui export WooCommerce. Câmpul `description` al
- * aplicației e text simplu (nu există încă un sanitizator HTML: descrierea bogată e un punct separat,
- * înainte de Faza 6), deci importul NU păstrează HTML: ce intră în baza de date nu conține etichete.
+ * un set mic de etichete. Din 15c, descrierea LUNGĂ a produsului rămâne HTML sanitizat (`rich-text/`); acest modul
+ * mai servește doar descrierea SCURTĂ (care devine subtitlu, text simplu) și scoaterea shortcode-urilor WordPress
+ * (`stripWpShortcodes`) din HTML-ul de importat.
  *
  * Reguli:
  *  - blocurile `<style>`, `<script>`, `<noscript>`, `<template>`, `<iframe>`, `<video>`, `<audio>`, `<object>`,
@@ -239,21 +239,33 @@ function tableToLines(table: string): string {
   return `${PB}${lines.join(LB)}${PB}`;
 }
 
+/** Un shortcode WordPress: «[nume …]» sau «[/nume]»; un text obișnuit între paranteze drepte («[min 5 m]») NU se atinge. */
+const SHORTCODE = /\[(\/?)([a-z][a-z0-9_-]{1,40})((?:\s+[^\]]{0,500})?)\]/gi;
+
+/**
+ * Scoate shortcode-urile WordPress dintr-un text sau HTML (textul dintre ele rămâne) și le numără. Se aplică înainte de
+ * sanitizarea descrierii, pe HTML-ul din export (unde shortcode-urile sunt text, cu ghilimelele ca entități).
+ */
+export function stripWpShortcodes(text: string): { text: string; count: number } {
+  let count = 0;
+  const result = text.replace(SHORTCODE, (match, closing: string, name: string, attrs: string) => {
+    const lower = name.toLowerCase();
+    const looksLikeShortcode =
+      closing === "/" ||
+      KNOWN_SHORTCODES.has(lower) ||
+      /[_-]/.test(lower) ||
+      /\w+\s*=\s*["'\w]/.test(attrs);
+    if (!looksLikeShortcode) return match;
+    count += 1;
+    return "";
+  });
+  return { text: result, count };
+}
+
 function stripShortcodes(text: string, stats: HtmlToTextStats): string {
-  return text.replace(
-    /\[(\/?)([a-z][a-z0-9_-]{1,40})((?:\s+[^\]]{0,500})?)\]/gi,
-    (match, closing: string, name: string, attrs: string) => {
-      const lower = name.toLowerCase();
-      const looksLikeShortcode =
-        closing === "/" ||
-        KNOWN_SHORTCODES.has(lower) ||
-        /[_-]/.test(lower) ||
-        /\w+\s*=\s*["'\w]/.test(attrs);
-      if (!looksLikeShortcode) return match;
-      stats.shortcodes += 1;
-      return "";
-    },
-  );
+  const stripped = stripWpShortcodes(text);
+  stats.shortcodes += stripped.count;
+  return stripped.text;
 }
 
 /**

@@ -209,9 +209,9 @@ test.describe("import WooCommerce", () => {
       "Pompe de circulație",
     ]);
     expect(state.brands).toEqual(["Marca Fixture A", "Marca Fixture B"]);
-    expect(state.firstDescription).toContain("Putere: 0,75 kW");
-    // textul simplu din import devine paragrafe (15c): nicio altă etichetă nu a rămas
-    expect(state.firstDescription.replace(/<\/?p>|<br \/>/g, "")).not.toMatch(/<\/?[a-z]/i);
+    // descrierea rămâne HTML sanitizat (15c): tabelul se păstrează, ce era periculos sau extern a dispărut
+    expect(state.firstDescription).toContain("<td>Putere</td><td>0,75 kW</td>");
+    expect(state.firstDescription).not.toMatch(/<img|<style|<script|class=|style=/i);
 
     // un singur eveniment de audit al importului
     const href = await page.locator("[data-import-download]").getAttribute("href");

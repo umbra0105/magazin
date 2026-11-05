@@ -2195,7 +2195,7 @@ export const ro = {
       openButton: "Exportă…",
       title: "Exportă produsele",
       description:
-        "Fișierul are aceleași coloane ca importul, deci se poate reimporta fără mapare. Prețul de achiziție nu se exportă niciodată.",
+        "Fișierul are aceleași coloane ca importul, deci se poate reimporta fără mapare. Prețul de achiziție nu se exportă niciodată. Descrierile sunt HTML. O celulă Excel ține cel mult 32.767 de caractere: într-un XLSX, o descriere mai lungă rămâne goală (reimportul o lasă neschimbată), iar în CSV rămâne întreagă (Excel o arată tăiată la deschidere, dar fișierul e intact).",
       scopeLegend: "Ce exporți",
       scope: {
         selection: (n: number) => `Produsele selectate (${n})`,
@@ -2343,6 +2343,8 @@ export const ro = {
           filtered: "cu filtre",
           rowsAndProducts: (rows: number, products: number) =>
             `${rows} ${rows === 1 ? "rând" : "rânduri"}, ${products} ${products === 1 ? "produs" : "produse"}`,
+          longDescriptions: (count: number) =>
+            `${count} ${count === 1 ? "descriere peste" : "descrieri peste"} limita unei celule Excel (32.767 de caractere)`,
         },
       },
       title: "Import de produse",
@@ -2466,10 +2468,10 @@ export const ro = {
           confirmNote: "Crearea lor se face la aplicare, înaintea produselor, doar dacă confirmi.",
           statsHeading: "Alte constatări",
           stats: {
-            descriptionsSanitized: "Descrieri reduse la text simplu",
-            descriptionTables: "Tabele reduse la linii",
-            descriptionLinks: "Linkuri reduse la text",
-            descriptionImages: "Imagini scoase din descrieri",
+            descriptionsSanitized: "Descrieri curățate (cu elemente eliminate)",
+            descriptionTables: "Tabele păstrate în descrieri",
+            descriptionLinks: "Linkuri păstrate în descrieri",
+            descriptionImages: "Imagini externe eliminate din descrieri",
             descriptionShortcodes: "Shortcode-uri WordPress scoase",
             unknownShippingClasses: "Rânduri cu clasă de livrare necunoscută",
             variations: "Variații",

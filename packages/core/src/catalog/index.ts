@@ -406,6 +406,7 @@ export {
   looksLikeHtml,
   prepareDescription,
   sanitizeDescription,
+  summarizeDescriptionLosses,
   syncDescriptionMedia,
   type PreparedDescription,
 } from "./rich-text/description";

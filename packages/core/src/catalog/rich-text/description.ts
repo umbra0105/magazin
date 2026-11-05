@@ -1,7 +1,12 @@
 import type { PrismaClient } from "@ecom/db";
 import { ValidationError } from "@ecom/shared";
 import { plainTextToHtml } from "./plain-text";
-import { sanitizeRichHtml, type RichTextOptions, type RichTextResult } from "./sanitize";
+import {
+  sanitizeRichHtml,
+  type RichTextOptions,
+  type RichTextResult,
+  type RichTextStats,
+} from "./sanitize";
 
 /**
  * Descrierea produsului la scriere (15c, pasul 4): punctul comun prin care trece ORICE valoare scrisă în
@@ -85,4 +90,35 @@ export async function syncDescriptionMedia(
       skipDuplicates: true,
     });
   }
+}
+
+/**
+ * Ce a PIERDUT o descriere la curățare, într-o frază scurtă pentru raportul de import (dry-run): imaginile externe (importul de
+ * imagini din descrieri e un punct separat), elementele nepermise (script, iframe, stil…) și shortcode-urile WordPress scoase
+ * înainte de sanitizare. Tabelele și linkurile păstrate NU sunt pierderi. `null` când nu s-a pierdut nimic.
+ */
+export function summarizeDescriptionLosses(
+  stats: Pick<RichTextStats, "removedImages" | "removedBlocks" | "failedClosed">,
+  shortcodes = 0,
+): string | null {
+  const parts: string[] = [];
+  if (stats.removedImages > 0) {
+    parts.push(
+      stats.removedImages === 1 ? "1 imagine externă" : `${stats.removedImages} imagini externe`,
+    );
+  }
+  if (stats.removedBlocks > 0) {
+    parts.push(
+      stats.removedBlocks === 1
+        ? "1 element nepermis (script, iframe, stil…)"
+        : `${stats.removedBlocks} elemente nepermise (script, iframe, stil…)`,
+    );
+  }
+  if (shortcodes > 0) {
+    parts.push(
+      shortcodes === 1 ? "1 shortcode WordPress" : `${shortcodes} shortcode-uri WordPress`,
+    );
+  }
+  if (stats.failedClosed) parts.push("conținut nesigur redus la text");
+  return parts.length > 0 ? parts.join(", ") : null;
 }
