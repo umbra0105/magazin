@@ -524,6 +524,45 @@ describe("planImport: produse existente", () => {
   });
 });
 
+describe("planImport: descrierea e comparată în forma în care ar fi salvată (15c)", () => {
+  const m = mapping("sku", "description");
+  const headers = ["SKU", "Descriere"];
+  const stored = existing({
+    sku: "D1",
+    product: {
+      title: "Produs D1",
+      slug: "produs-d1",
+      subtitle: null,
+      description: "<p>Prima linie<br />A doua linie</p><p>Alt paragraf</p>",
+      status: "draft",
+      deleted: false,
+      brandId: null,
+      shippingClass: "standard",
+      categoryIds: [],
+    },
+  });
+  const planFor = (cell: string) =>
+    planImport(table(headers, [["D1", cell]]), m, snapshot([stored]));
+
+  it("aceeași descriere, ca text simplu sau ca HTML necurățat, e «neschimbat» (nu «actualizat»)", () => {
+    expect(planFor("Prima linie\nA doua linie\n\nAlt paragraf").rows[0]?.outcome).toBe("unchanged");
+    expect(
+      planFor(
+        '<p onclick="x">Prima linie<br>A doua linie</p><p>Alt paragraf</p><script>alert(1)</script>',
+      ).rows[0]?.outcome,
+    ).toBe("unchanged");
+  });
+
+  it("o descriere diferită e «actualizat», iar patch-ul poartă forma curățată (nu textul brut)", () => {
+    const row = planFor("Altceva <b>aldin</b> și <script>alert(1)</script>").rows[0];
+    expect(row?.outcome).toBe("updated");
+    expect(row?.op).toMatchObject({
+      kind: "update",
+      productPatch: { description: "Altceva <strong>aldin</strong> și" },
+    });
+  });
+});
+
 describe("planImport: maparea, avertismentele și amprenta", () => {
   it("refuză maparea fără SKU, cu câmp dublat sau cu o coloană de cost mapată pe orice câmp", () => {
     const t = table(["SKU", "Preț achiziție", "Preț"], [["A1", "5", "10"]]);

@@ -272,7 +272,8 @@ describe("import WooCommerce pe baza reală", () => {
       expect(v101.product.categories).toHaveLength(2);
       expect(v101.product.categories.find((c) => c.isPrimary)?.categoryId).toBe(circulatie.id);
       expect(v101.product.description).toContain("Putere: 0,75 kW");
-      expect(v101.product.description).not.toMatch(/<\/?[a-z]/i);
+      // textul simplu din import devine paragrafe: nicio altă etichetă nu a rămas
+      expect(v101.product.description?.replace(/<\/?p>|<br \/>/g, "")).not.toMatch(/<\/?[a-z]/i);
       // Omnibus: un singur punct de istoric, la data importului, cu prețul efectiv (promoția e în viitor)
       const history = await tx.priceHistory.findMany({ where: { variantId: v101.id } });
       expect(history).toHaveLength(1);
@@ -285,7 +286,7 @@ describe("import WooCommerce pe baza reală", () => {
         where: { sku: "WC-103" },
         include: { product: true },
       });
-      expect(noScript.product.description).toBe("Text normal & sigur.\n\nFinal");
+      expect(noScript.product.description).toBe("<p>Text normal &amp; sigur.</p><p>Final</p>");
 
       // produsul variabil: opțiune, valori, variante cu alegerea lor, atribut simplu
       const variable = await tx.product.findFirstOrThrow({

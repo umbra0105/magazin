@@ -6,6 +6,7 @@ import {
   variantUpdateSchema,
 } from "../product-schemas";
 import { PRODUCT_STATUSES, SHIPPING_CLASSES } from "../constants";
+import { normalizeDescriptionForCompare } from "../rich-text/description";
 import { isValidSlug } from "../slug";
 import {
   CATEGORY_PATH_SEPARATOR,
@@ -589,7 +590,12 @@ function planUpdate(
   if (fields.subtitle !== undefined)
     setProduct("subtitle", "subtitle", fields.subtitle, product.subtitle);
   if (fields.description !== undefined) {
-    setProduct("description", "description", fields.description, product.description);
+    setProduct(
+      "description",
+      "description",
+      normalizeDescriptionForCompare(fields.description),
+      product.description,
+    );
   }
   if (fields.status !== undefined) setProduct("status", "status", fields.status, product.status);
   if (fields.shippingClass !== undefined) {

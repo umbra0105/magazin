@@ -33,6 +33,7 @@ import {
   type PlannedRow,
   type RowOutcome,
 } from "../import-plan";
+import { normalizeDescriptionForCompare } from "../../rich-text/description";
 import { htmlToPlainText } from "./html-to-text";
 import { detectWooColumns, looksLikeWooExport, type WooRole } from "./woo-columns";
 import type {
@@ -879,7 +880,12 @@ export function planWoo(
     if (level.subtitle !== undefined)
       set("Subtitlu", "subtitle", level.subtitle, existing.subtitle);
     if (level.description !== undefined)
-      set("Descriere", "description", level.description, existing.description);
+      set(
+        "Descriere",
+        "description",
+        normalizeDescriptionForCompare(level.description),
+        existing.description,
+      );
     if (level.shippingClass !== undefined)
       set("Clasă de livrare", "shippingClass", level.shippingClass, existing.shippingClass);
     if (level.status !== undefined) set("Stare", "status", level.status, existing.status);

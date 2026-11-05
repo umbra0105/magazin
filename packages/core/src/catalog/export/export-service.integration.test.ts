@@ -9,6 +9,7 @@ import { AuditService } from "../../audit/audit-service";
 import { createPrismaAuditStore } from "../../audit/prisma-store";
 import { PermissionService } from "../../rbac/permission-service";
 import { runBaseSeed } from "../../seed/base-seed";
+import { plainTextToHtml } from "../rich-text/plain-text";
 import { decodeUtf16le } from "../../../test/utf-16le";
 import { inRolledBackTransaction, type TestTx } from "../../test-utils/rollback";
 import { toCsv } from "../import/import-csv";
@@ -217,7 +218,10 @@ async function catalog(tx: TestTx, tag: string) {
   const a = await make("A", {
     title: `Pompă „Aqua” 100 – ț, ș, ă, â, î ${tag}`,
     subtitle: 'Silențioasă; clasa "A"',
-    description: `Linia întâi, cu virgulă, punct și virgulă; și ghilimele "duble".\nLinia a doua.\n\nPaginile a treia: 100% eficient.`,
+    // descrierile sunt HTML în bază (15c): fixture-ul folosește aceeași conversie ca migrarea
+    description: plainTextToHtml(
+      `Linia întâi, cu virgulă, punct și virgulă; și ghilimele "duble".\nLinia a doua.\n\nPaginile a treia: 100% eficient.`,
+    ),
     brandId: brand.id,
     categories: [child.id, other.id],
     variants: [
@@ -666,7 +670,7 @@ describe("exportul de produse pe baza reală", () => {
           slug: `exp-trap-${tag}`,
           title: `=HYPERLINK("http://exemplu.invalid";"click") ${tag}`,
           subtitle: "-5°C până la +40°C",
-          description: "@utilizator a scris: -1 + 1 = 0",
+          description: "<p>@utilizator a scris: -1 + 1 = 0</p>",
           status: "active",
           brandId: base.brand.id,
         },
@@ -706,7 +710,8 @@ describe("exportul de produse pe baza reală", () => {
           // în fișier textele periculoase au apostrof în față (nu încep cu = + - @)
           expect(text).toContain(`'=HYPERLINK`);
           expect(text).toContain(`'-5°C`);
-          expect(text).toContain(`'@utilizator`);
+          // descrierea e HTML (începe cu «<p>»): nu cere neutralizare, dar trebuie să se întoarcă neschimbată
+          expect(text).toContain("<p>@utilizator");
           expect(text).toContain(`''=deja-cu-apostrof`);
           expect(text).not.toMatch(/(^|;|\r\n)=HYPERLINK/);
         } else {

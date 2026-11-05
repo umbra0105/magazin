@@ -21,6 +21,7 @@ import {
   type VariantInput,
   type VariantUpdateInput,
 } from "./product-schemas";
+import { sanitizeDescription } from "./rich-text/description";
 import { SaleSetupValidator } from "./sale-setup";
 import { ProductUpdateGuard } from "./product-write";
 import type {
@@ -458,12 +459,18 @@ export class ProductService {
         await this.assertProductSaleSetup(before, patch);
       }
 
-      const diff = changedFields(before as unknown as Record<string, unknown>, patch);
+      // descrierea se normalizează ÎNAINTE de diferență și audit: o salvare care nu schimbă nimic după curățare nu
+      // scrie nimic, iar auditul nu conține niciodată HTML-ul ostil trimis (15c)
+      const effective: typeof patch =
+        patch.description === undefined
+          ? patch
+          : { ...patch, description: sanitizeDescription(patch.description).html };
+      const diff = changedFields(before as unknown as Record<string, unknown>, effective);
       if (Object.keys(diff.after).length === 0) return before;
 
       const after = await this.deps.store.updateProduct(
         productId,
-        patch as Partial<ProductFieldsData>,
+        effective as Partial<ProductFieldsData>,
       );
       await this.deps.audit.record({
         actorId: subject?.userId ?? null,

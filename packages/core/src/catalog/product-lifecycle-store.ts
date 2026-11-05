@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@ecom/db";
 import { effectivePrice } from "./catalog-support";
+import { prepareDescription, syncDescriptionMedia } from "./rich-text/description";
 
 /**
  * Accesul la date pentru ciclul de viață al produsului (duplicare, arhivare, ștergere soft și
@@ -228,6 +229,8 @@ export function createPrismaProductLifecycleStore(db: Db): ProductLifecycleStore
         });
         if (!source) return null;
 
+        // copia primește descrierea sursei RE-SANITIZATĂ (o valoare veche rămasă în bază nu se copiază ca atare)
+        const description = await prepareDescription(tx, source.description);
         const created = await tx.product.create({
           data: {
             title: command.title,
@@ -235,7 +238,7 @@ export function createPrismaProductLifecycleStore(db: Db): ProductLifecycleStore
             status: "draft",
             type: source.type,
             subtitle: source.subtitle,
-            description: source.description,
+            description: description.html,
             brandId: source.brandId,
             taxClassId: source.taxClassId,
             shippingClass: source.shippingClass,
@@ -262,6 +265,9 @@ export function createPrismaProductLifecycleStore(db: Db): ProductLifecycleStore
           },
           select: { id: true, slug: true, title: true },
         });
+
+        // legăturile cu fișierele media din descriere (copia le referă și ea: fișierul rămâne protejat de ambele)
+        await syncDescriptionMedia(tx, created.id, description.mediaIds);
 
         for (const category of source.categories) {
           await tx.productCategory.create({

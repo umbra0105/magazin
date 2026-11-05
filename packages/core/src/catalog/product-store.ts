@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@ecom/db";
 import { DEFAULT_MEASURE_UNIT_CODE } from "../inventory/constants";
+import { prepareDescription, syncDescriptionMedia } from "./rich-text/description";
 import type { OptionInput } from "./variant-generator";
 import { combinationKey } from "./variant-generator";
 
@@ -337,7 +338,18 @@ export function createPrismaProductStore(db: Db): ProductStore {
 
     async createProduct(data, variants, at, categoryIds = [], options = []) {
       return inTransaction(db, async (tx) => {
-        const product = await tx.product.create({ data, select: productSelect });
+        // descrierea trece mereu prin sanitizator (15c); legăturile cu media se fac în aceeași tranzacție
+        let productData = data;
+        let descriptionMedia: string[] = [];
+        if (data.description !== undefined) {
+          const prepared = await prepareDescription(tx, data.description);
+          productData = { ...data, description: prepared.html };
+          descriptionMedia = prepared.mediaIds;
+        }
+        const product = await tx.product.create({ data: productData, select: productSelect });
+        if (descriptionMedia.length > 0) {
+          await syncDescriptionMedia(tx, product.id, descriptionMedia);
+        }
         for (const [index, categoryId] of categoryIds.entries()) {
           await tx.productCategory.create({
             data: { productId: product.id, categoryId, isPrimary: index === 0 },
@@ -393,7 +405,25 @@ export function createPrismaProductStore(db: Db): ProductStore {
       });
     },
 
-    updateProduct: (id, data) => db.product.update({ where: { id }, data, select: productSelect }),
+    async updateProduct(id, data) {
+      return inTransaction(db, async (tx) => {
+        // descrierea trece mereu prin sanitizator (15c); legăturile cu media se fac în aceeași tranzacție
+        let payload = data;
+        let descriptionMedia: string[] | null = null;
+        if (data.description !== undefined) {
+          const prepared = await prepareDescription(tx, data.description);
+          payload = { ...data, description: prepared.html };
+          descriptionMedia = prepared.mediaIds;
+        }
+        const row = await tx.product.update({
+          where: { id },
+          data: payload,
+          select: productSelect,
+        });
+        if (descriptionMedia) await syncDescriptionMedia(tx, id, descriptionMedia);
+        return row;
+      });
+    },
 
     async updateVariant(id, data, priceRecord) {
       return inTransaction(db, async (tx) => {

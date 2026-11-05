@@ -210,7 +210,8 @@ test.describe("import WooCommerce", () => {
     ]);
     expect(state.brands).toEqual(["Marca Fixture A", "Marca Fixture B"]);
     expect(state.firstDescription).toContain("Putere: 0,75 kW");
-    expect(state.firstDescription).not.toMatch(/<\/?[a-z]/i);
+    // textul simplu din import devine paragrafe (15c): nicio altă etichetă nu a rămas
+    expect(state.firstDescription.replace(/<\/?p>|<br \/>/g, "")).not.toMatch(/<\/?[a-z]/i);
 
     // un singur eveniment de audit al importului
     const href = await page.locator("[data-import-download]").getAttribute("href");

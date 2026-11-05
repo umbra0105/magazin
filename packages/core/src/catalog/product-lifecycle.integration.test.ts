@@ -287,9 +287,9 @@ describe("duplicare pe baza reală", () => {
         legacyUrl: null,
         energyClass: null,
         eprelUrl: null,
-        // se copiază: conținutul, structura și datele GPSR
+        // se copiază: conținutul, structura și datele GPSR (descrierea veche, text simplu, devine HTML sigur)
         subtitle: "Subtitlu",
-        description: "Descriere lungă",
+        description: "<p>Descriere lungă</p>",
         brandId: f.brand.id,
         shippingClass: "pallet",
         requiresInstallation: true,

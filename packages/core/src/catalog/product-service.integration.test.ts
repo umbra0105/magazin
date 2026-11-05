@@ -129,7 +129,7 @@ describe("ProductService pe baza reală", () => {
         description: "nou",
         seoTitle: "Liner piscină",
       });
-      expect(updated).toMatchObject({ description: "nou", seoTitle: "Liner piscină" });
+      expect(updated).toMatchObject({ description: "<p>nou</p>", seoTitle: "Liner piscină" });
 
       await expect(
         service.update(editor, created.product.id, { description: "x", status: "active" }),
@@ -147,7 +147,7 @@ describe("ProductService pe baza reală", () => {
       expect(JSON.stringify(rows[2])).not.toContain('"x"');
       const stored = await tx.product.findUniqueOrThrow({ where: { id: created.product.id } });
       expect(stored.status).toBe("draft");
-      expect(stored.description).toBe("nou");
+      expect(stored.description).toBe("<p>nou</p>");
     });
   });
 

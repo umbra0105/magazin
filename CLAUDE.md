@@ -253,6 +253,20 @@ există `tenantId`. În schimb:
   iar legăturile interne, testele și ghidurile de verificare se actualizează în același commit (testul de arhitectură
   `admin-navigation` pică la orice legătură spre o adresă veche).
 
+### Descrierea produsului: HTML doar prin `sanitizeRichHtml` — regulă permanentă
+
+- `Product.description` este HTML sanitizat (sau `NULL`, niciodată șir gol). **HTML din descrieri ajunge în baza de date
+  doar prin sanitizatorul comun** din `packages/core/src/catalog/rich-text` (`sanitizeRichHtml`; la scriere, prin
+  `prepareDescription`, care verifică și fișierele media din bază și ține la zi `ProductDescriptionMedia`). Magazinele
+  `product-store.ts` și `product-lifecycle-store.ts` sunt singurele care scriu descrierea; orice cale nouă (import, script,
+  SQL) trece prin aceleași funcții. `sanitize-html` se importă doar în `rich-text/html-engine.ts`. Testul de arhitectură
+  `description-writes` pică la orice ocolire.
+- Lista albă (etichete, atribute, scheme de link) și limitele stau în `rich-text/rules.ts`, un singur loc. Imaginile din
+  descriere sunt doar `<img data-media-id>` din biblioteca media proprie (fără `src` din HTML); linkurile externe primesc
+  `target="_blank"` și `rel="noopener noreferrer"` de la server. Serverul e sursa de adevăr: editorul din admin e comoditate.
+- La randare, HTML-ul se re-sanitizează (nu se are încredere în ce e în bază), iar `dangerouslySetInnerHTML` apare doar în
+  componenta de randare a descrierii (aceeași regulă o impune testul de arhitectură).
+
 ### Teste E2E — aserțiuni de succes — regulă permanentă
 
 - O aserțiune care dovedește că o acțiune s-a terminat trebuie să verifice o stare care apare DOAR după

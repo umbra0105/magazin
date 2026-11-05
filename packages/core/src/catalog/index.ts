@@ -402,3 +402,10 @@ export {
   type RichTextResult,
   type RichTextStats,
 } from "./rich-text";
+export {
+  looksLikeHtml,
+  prepareDescription,
+  sanitizeDescription,
+  syncDescriptionMedia,
+  type PreparedDescription,
+} from "./rich-text/description";

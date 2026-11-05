@@ -501,13 +501,14 @@ describe("modificare produs", () => {
       description: longText,
       seoTitle: "Pompă de căldură",
     });
-    expect(after.description).toBe(longText);
+    // textul simplu devine paragraf HTML (15c): 500 + <p></p> = 507 de caractere
+    expect(after.description).toBe(`<p>${longText}</p>`);
     expect(auditRows).toHaveLength(1);
     expect(auditRows[0]).toMatchObject({
       action: "product.update",
       entityId: p.id,
       before: { description: "vechi", seoTitle: null },
-      after: { description: "[text de 500 caractere]", seoTitle: "Pompă de căldură" },
+      after: { description: "[text de 507 caractere]", seoTitle: "Pompă de căldură" },
     });
     expect(JSON.stringify(auditRows)).not.toContain("x".repeat(100));
     expect(invalidated).toHaveLength(1);

@@ -31,6 +31,7 @@ import { PrismaClient } from "@ecom/db";
 import { LocalStorageDriver, deriveSigningKey } from "@ecom/integrations";
 import { createLogger } from "@ecom/shared";
 import { assertTestDatabase, deriveTestDatabaseUrl } from "../../../test/support/test-env";
+import { plainTextToHtml } from "../src/catalog/rich-text/plain-text";
 import { AuditService } from "../src/audit/audit-service";
 import { createPrismaProductExportStore } from "../src/catalog/export/export-store";
 import { cellToCsvText, type ExportRow } from "../src/catalog/export/export-rows";
@@ -372,7 +373,8 @@ async function generate(): Promise<Dataset> {
       slug: `${SLUG}produs-${i}`,
       title: `Perf produs ${i} ${pick(["pompă", "filtru", "robot", "cartuș", "dozator", "încălzitor"], i)}`,
       subtitle: i % 3 === 0 ? `Subtitlu ${i}` : null,
-      description: `Descriere sintetică a produsului ${i}. `.repeat(8),
+      // inserare în masă, ocolind serviciul: descrierea se scrie totuși ca HTML (aceeași conversie ca în produs)
+      description: plainTextToHtml(`Descriere sintetică a produsului ${i}. `.repeat(8)),
       status,
       brandId: i % 7 === 0 ? null : pick(brands, i).id,
       shippingClass: pick(shipping, i),
