@@ -390,3 +390,13 @@ export { createProductExportService, type ProductExportRuntimeDeps } from "./exp
 export { csvStreamResponse } from "./import/import-csv";
 export type { WooAnalysis } from "./import/woo/woo-analysis";
 export type { WooOptions, WooReportSection, WooStats } from "./import/woo/woo-types";
+export {
+  RICH_TEXT_LIMITS,
+  findRichHtmlViolations,
+  plainTextToHtml,
+  richTextToPlain,
+  sanitizeRichHtml,
+  type RichTextOptions,
+  type RichTextResult,
+  type RichTextStats,
+} from "./rich-text";
