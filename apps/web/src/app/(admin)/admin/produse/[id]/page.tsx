@@ -28,6 +28,7 @@ import {
   getProductService,
 } from "@/lib/catalog";
 import { getMeasureUnitService, getStockOverviewService } from "@/lib/inventory";
+import { RichText } from "@/components/rich-text/rich-text-server";
 import { getProductDocumentsService } from "@/lib/product-documents";
 import { getFeatureFlags, getSettings } from "@/lib/services";
 import { formatZonedLocal } from "@/lib/zoned-time";
@@ -237,6 +238,9 @@ export default async function ProductEditorPage({
         </p>
       )}
       <ProductEditor
+        descriptionPreviewSlot={
+          product.description ? <RichText html={product.description} /> : undefined
+        }
         product={{
           id: product.id,
           slug: product.slug,

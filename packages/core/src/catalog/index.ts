@@ -409,3 +409,10 @@ export {
   syncDescriptionMedia,
   type PreparedDescription,
 } from "./rich-text/description";
+export {
+  renderRichText,
+  type MediaResolver,
+  type RenderedMedia,
+  type RenderOptions,
+} from "./rich-text/render";
+export { createDbMediaResolver } from "./rich-text/media-resolver";

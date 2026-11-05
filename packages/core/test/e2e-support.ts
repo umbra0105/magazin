@@ -302,6 +302,39 @@ export async function seedE2eProducts(tag: string, count: number): Promise<strin
 }
 
 /**
+ * Scrie DIRECT în bază descrierea unui produs de probă (ocolind serviciul, ca să simuleze o valoare veche sau ostilă rămasă) și,
+ * opțional, legăturile ei cu fișiere media. Folosit de testele care verifică ce ajunge în pagină, nu cum se salvează.
+ */
+export async function setE2eProductDescription(
+  slug: string,
+  html: string,
+  mediaIds: readonly string[] = [],
+): Promise<void> {
+  await withClient(async (db) => {
+    const product = await db.query(
+      `update product set description = $1 where slug = $2 returning id`,
+      [html, slug],
+    );
+    const id = product.rows[0]?.id as string | undefined;
+    if (!id) throw new Error(`Produsul de test ${slug} nu există`);
+    for (const mediaId of mediaIds) {
+      await db.query(
+        `insert into product_description_media ("productId", "mediaId") values ($1, $2) on conflict do nothing`,
+        [id, mediaId],
+      );
+    }
+  });
+}
+
+/** Descrierea salvată a unui produs de probă, citită direct din bază. */
+export async function readE2eProductDescription(slug: string): Promise<string | null> {
+  return withClient(async (db) => {
+    const result = await db.query(`select description from product where slug = $1`, [slug]);
+    return (result.rows[0]?.description as string | null | undefined) ?? null;
+  });
+}
+
+/**
  * Creează o categorie și un brand de probă (adresa `e2e-…`), pentru testele editorului de produs.
  * Se șterg cu `removeE2eCatalogRefs` (după produse). Întoarce numele afișate.
  */

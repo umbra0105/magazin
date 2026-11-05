@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { Button, Input, Select, Textarea } from "@ecom/ui";
 import { checkProductSlug, saveProductFields } from "@/app/(admin)/admin/produse/editor-actions";
 import { getMessages } from "@/messages";
@@ -24,10 +24,13 @@ export function GeneralTab({
   product,
   brands,
   caps,
+  preview,
 }: {
   product: EditorProduct;
   brands: readonly PickOption[];
   caps: EditorCaps;
+  /** Descrierea salvată, randată pe server; lipsește când produsul nu are descriere. */
+  preview?: ReactNode;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -219,6 +222,20 @@ export function GeneralTab({
           />
         )}
       </Field>
+
+      {preview ? (
+        <section
+          aria-labelledby="description-preview-title"
+          data-description-preview
+          className="space-y-3 rounded-md border border-border p-4"
+        >
+          <h3 id="description-preview-title" className="text-sm font-medium">
+            {e.general.preview.title}
+          </h3>
+          <p className="text-sm text-muted-foreground">{e.general.preview.help}</p>
+          {preview}
+        </section>
+      ) : null}
 
       <fieldset className="grid gap-4 rounded-md border border-border p-4 sm:grid-cols-2">
         <legend className="px-1 text-sm font-medium">{m.table.status}</legend>

@@ -1650,7 +1650,12 @@ export const ro = {
           slugChecking: "Se verifică…",
           slugInvalid: "Adresa poate conține doar litere mici, cifre și cratime.",
           description: "Descriere",
-          descriptionHelp: "Text simplu. Se afișează pe pagina produsului.",
+          descriptionHelp:
+            "Text sau HTML simplu (paragrafe, titluri, liste, tabele, linkuri). Orice cod periculos se elimină automat la salvare.",
+          preview: {
+            title: "Previzualizare",
+            help: "Așa se vede descrierea salvată pe pagina produsului din magazin. Se actualizează după „Salvează”.",
+          },
           status: "Stare",
           statusHelp: "Doar produsele „Activ” apar în magazin.",
           brand: "Brand",
@@ -2827,6 +2832,10 @@ export const ro = {
       title: "Secțiune în construire",
       description: "Această secțiune va fi disponibilă într-o etapă următoare.",
     },
+  },
+  /** Descrierea bogată a produsului (randare). */
+  richText: {
+    tableLabel: "Tabel derulabil",
   },
 } as const;
 

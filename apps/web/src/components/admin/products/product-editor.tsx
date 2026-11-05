@@ -70,6 +70,8 @@ export interface ProductEditorProps {
   stockLeadTime: LeadTimeContext;
   /** Cantitățile pe variante (componentă de server, cu «Ajustează» și «Istoric»). */
   stockSlot: ReactNode;
+  /** Descrierea salvată, randată pe server (`RichText`), pentru previzualizarea din tabul General. */
+  descriptionPreviewSlot?: ReactNode;
   defaultTab: string;
   /** Panoul prețului de achiziție, randat pe server; `null` fără permisiunea de vizualizare. */
   purchaseSlot: ReactNode;
@@ -107,6 +109,7 @@ function EditorBody({
   storeManagesStock,
   stockLeadTime,
   stockSlot,
+  descriptionPreviewSlot,
   defaultTab,
   purchaseSlot,
 }: ProductEditorProps) {
@@ -126,7 +129,14 @@ function EditorBody({
       id: "general",
       label: e.tabs.general,
       badge: badge("general"),
-      panel: <GeneralTab product={product} brands={brands} caps={caps} />,
+      panel: (
+        <GeneralTab
+          product={product}
+          brands={brands}
+          caps={caps}
+          preview={descriptionPreviewSlot}
+        />
+      ),
     },
     {
       id: "preturi",
