@@ -362,6 +362,13 @@ Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
   utilizatorului înainte; punctele deschise rămase le decid cu recomandarea din plan și le notez
   în `docs/PROGRESS.md`.
 
+## Jurnalul de audit — imuabil — regulă permanentă
+
+- Triggerul de imuabilitate de pe `audit_log` nu se oprește niciodată în operații manuale, pe nicio bază (nici `ecom_test`).
+  Orice curățare de rânduri de audit se cere ÎNTÂI utilizatorului, cu rândurile exacte și motivul. Excepțiile din cod rămân
+  doar cele două existente, pentru triggerul `stock_movement_no_update_delete` (`e2e-support.ts` și `stock-fixtures.ts`),
+  păzite de `append-only.test.ts`. Un test nu comite rânduri în `audit_log`: folosește tranzacție anulată sau un proces fără audit.
+
 ## Procese, porturi și build-uri — regulă permanentă
 
 Mașina utilizatorului rulează în paralel servere pornite de el (dev server, Docker). Greșelile aici
