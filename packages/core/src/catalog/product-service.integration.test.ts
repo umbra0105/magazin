@@ -173,7 +173,12 @@ describe("ProductService pe baza reală", () => {
 
       const row = await tx.productVariant.findUniqueOrThrow({ where: { id: variantId } });
       expect(row).toMatchObject({ price: 18000, costPrice: 12000 });
-      const audit = await tx.auditLog.findMany({ where: { action: "product.variant.update" } });
+      // doar auditul ACESTEI variante: tabela `audit_log` păstrează rândurile comise de alte teste (E2E), iar un « 12000 »
+      // întâmplător dintr-un id sau o dată din ele făcea testul intermitent
+      const audit = await tx.auditLog.findMany({
+        where: { action: "product.variant.update", entityId: variantId },
+      });
+      expect(audit).toHaveLength(1);
       expect(JSON.stringify(audit)).not.toContain("12000");
     });
   });
