@@ -1714,7 +1714,7 @@ export async function readE2eStockImports(): Promise<
   });
 }
 
-/** Șterge pozele importului de test (și mișcările lor) și alegerea gestiunilor făcută de test. */
+/** Șterge pozele importului de test (și mișcările lor) și alegerea gestiunilor făcută de test (și invalidează cache-ul setărilor). */
 export async function removeE2eStockImports(): Promise<void> {
   await withClient(async (db) => {
     await db.query("BEGIN");
@@ -1727,6 +1727,9 @@ export async function removeE2eStockImports(): Promise<void> {
       throw error;
     }
   });
+  // Serverul citește setările din cache-ul Redis (TTL 300 s): fără invalidare ar servi gestiunea încercării anterioare
+  // (cheia `SETTINGS_CACHE_KEY`; literal aici, ca `setE2eFeatureFlag`, fiindcă fișierul nu importă din `src`).
+  await withRedis((redis) => redis.del("ecom:settings:v1"));
 }
 
 /** Șterge rolurile `e2e-…` și poza de test (comune); folosită de fișierul care le creează, după curățarea pe tag. */

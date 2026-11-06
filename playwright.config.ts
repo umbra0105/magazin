@@ -10,6 +10,7 @@ import {
   deriveTestDatabaseUrl,
   deriveTestRedisUrl,
 } from "./test/support/test-env";
+import { globalStateSpecPattern } from "./test/support/e2e-projects";
 
 const port = 3100;
 // Al doilea server E2E, cu driverul S3 (MinIO), pentru `e2e/media-s3.spec.ts` (proiectul `chromium-s3`).
@@ -137,7 +138,16 @@ export default defineConfig({
     : [
         {
           name: "chromium",
-          testIgnore: /media-s3.spec.ts/,
+          testIgnore: [/media-s3.spec.ts/, globalStateSpecPattern],
+          use: { ...devices["Desktop Chrome"] },
+        },
+        {
+          // Specurile cu plan pe tot catalogul (import «stoc la zi», pornirea gestionării): amprenta planului cuprinde toate
+          // variantele gestionate, deci rulează singure, după proiectul principal (vezi
+          // test/architecture/e2e-global-state.architecture.test.ts).
+          name: "chromium-global-state",
+          testMatch: globalStateSpecPattern,
+          dependencies: ["chromium"],
           use: { ...devices["Desktop Chrome"] },
         },
       ],
