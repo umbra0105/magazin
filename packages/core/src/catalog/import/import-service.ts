@@ -38,6 +38,7 @@ import {
 import { WooApplier, type WooApplyDeps } from "./woo/woo-apply";
 import { describeWoo, type WooAnalysis } from "./woo/woo-analysis";
 import { detectWooColumns, looksLikeWooExport } from "./woo/woo-columns";
+import { planWooDescriptions } from "./woo/woo-descriptions-plan";
 import { collectWooLookups, planWoo } from "./woo/woo-plan";
 import { imageFailureMessage, type ImageImportPolicy } from "./woo/image-importer";
 import type { ImageFailure, ImageProgress } from "./woo/image-store";
@@ -248,6 +249,8 @@ const wooOptionsSchema = z.strictObject({
   shippingClassMap: z.record(z.string().min(1).max(100), z.enum(SHIPPING_CLASSES)),
   attributeTargets: z.record(z.string().min(1).max(100), z.string().min(1).max(60)),
   importImages: z.boolean().default(false),
+  mode: z.enum(["full", "descriptionsOnly"]).default("full"),
+  overwriteEditedDescriptions: z.boolean().default(false),
 });
 const wooValidateSchema = z.strictObject({
   importId: z.string().min(1).max(40),
@@ -267,6 +270,8 @@ function normalizeWooOptions(options: z.output<typeof wooOptionsSchema>): WooOpt
     shippingClassMap: fold(options.shippingClassMap) as WooOptions["shippingClassMap"],
     attributeTargets: fold(options.attributeTargets),
     importImages: options.importImages,
+    mode: options.mode,
+    overwriteEditedDescriptions: options.overwriteEditedDescriptions,
   };
 }
 
@@ -640,6 +645,14 @@ export class ProductImportService {
           "IMPORT_PROFILE_UNAVAILABLE",
           "Profilul WooCommerce nu este disponibil",
         );
+      }
+      // mapările salvate înainte de pasul 8 din 15c nu au `mode`: lipsa înseamnă importul obișnuit
+      if (mapping.options.mode === "descriptionsOnly") {
+        const snapshot = await this.deps.store.loadWooSnapshot({
+          ...collectWooLookups(table),
+          descriptionInfo: true,
+        });
+        return { table, plan: planWooDescriptions(table, mapping.options, snapshot) };
       }
       const snapshot = await this.deps.store.loadWooSnapshot(collectWooLookups(table));
       const imageSettings =

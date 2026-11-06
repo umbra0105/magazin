@@ -326,6 +326,20 @@ export async function setE2eProductDescription(
   });
 }
 
+/**
+ * Scrie direct, în baza de test, descrierea produsului cu varianta `sku` (FĂRĂ eveniment de audit: simulează o descriere
+ * schimbată în afara aplicației, deci ultimul eveniment rămâne cel al importului). Doar pentru fixture-urile Woo.
+ */
+export async function setE2eDescriptionBySku(sku: string, html: string): Promise<void> {
+  await withClient(async (db) => {
+    const result = await db.query(
+      `update product set description = $1 where id = (select "productId" from product_variant where sku = $2)`,
+      [html, sku],
+    );
+    if (result.rowCount !== 1) throw new Error(`Produsul de test cu SKU ${sku} nu există`);
+  });
+}
+
 /** Id-urile fișierelor media legate de descrierea unui produs de probă (`product_description_media`), sortate. */
 export async function readE2eDescriptionMediaIds(slug: string): Promise<string[]> {
   return withClient(async (db) => {

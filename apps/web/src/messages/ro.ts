@@ -2404,6 +2404,16 @@ export const ro = {
           grouped: "grupate (ignorate)",
           external: "externe (ignorate)",
         } as Record<string, string>,
+        mode: {
+          heading: "Ce se importă",
+          full: "Importul obișnuit (produse noi și actualizarea celor existente)",
+          descriptionsOnly: "Doar descrierile produselor existente",
+          descriptionsOnlyHelp:
+            "Se schimbă numai descrierea produselor care există deja în magazin (găsite după ID-ul din magazinul vechi, apoi după SKU). Nu se creează produse, categorii, branduri sau atribute și nu se schimbă prețuri, titluri sau imagini. O celulă goală nu șterge o descriere. La pasul următor vezi exact ce se schimbă, fără nicio modificare în catalog.",
+          overwrite: "Suprascrie și descrierile editate manual",
+          overwriteHelp:
+            "Implicit, o descriere pe care ai editat-o în administrare după import se păstrează. Bifează doar dacă vrei s-o înlocuiești cu cea din fișier.",
+        },
         status: {
           label: "Păstrează starea din fișier (publicat → activ)",
           help: "Dezactivat (recomandat): toate produsele NOI intră ca ciornă, oricare ar fi starea din WooCommerce. Activat: produsele publicate devin active (și primesc garanția implicită). Produsele existente nu își schimbă starea decât dacă bifezi.",
@@ -2478,6 +2488,8 @@ export const ro = {
             unresolvedRelations: "Relații nerezolvate (omise)",
             skuFallbacks: "Produse fără SKU (primesc WC-<ID>)",
             legacyNotSaved: "ID-uri din magazinul vechi nesalvate",
+            productsNotFound: "Rânduri al căror produs nu există în magazin (ignorate)",
+            descriptionsKeptEdited: "Descrieri editate manual, păstrate",
           } as Record<string, string>,
           rowTypes: "Tipuri de rânduri în fișier",
           images: {

@@ -1,7 +1,7 @@
 import { Prisma, type PrismaClient } from "@ecom/db";
 import { parseDecimalInput } from "@ecom/shared/decimal";
 import type { ImportSnapshot } from "../import-plan";
-import type { WooAttributeDef, WooSnapshotExtras } from "./woo-types";
+import type { WooAttributeDef, WooDescriptionInfo, WooSnapshotExtras } from "./woo-types";
 
 /**
  * Interogările profilului WooCommerce: ce există deja (pentru comparare) și scrierile care nu trec prin
@@ -24,6 +24,8 @@ export interface WooLookups {
   legacyIds: readonly string[];
   /** Hash-urile adreselor de imagini din fișier (pentru fișierele deja aduse din aceleași adrese). */
   imageHashes: readonly string[];
+  /** Modul «doar descrieri»: se încarcă și descrierea curentă, coșul de gunoi și «editată manual» (din audit). */
+  descriptionInfo?: boolean;
 }
 
 export interface WooQueries {
@@ -82,6 +84,43 @@ export function createWooQueries(db: Db): WooQueries {
       type: a.type as WooAttributeDef["type"],
       options: a.options,
     }));
+  }
+
+  /**
+   * Descrierea curentă a produselor și dacă a fost editată manual (15c, pasul 8, D4). Regula: se ia ULTIMUL eveniment de
+   * audit care a scris descrierea (`product.update` cu cheia `description`, sau crearea produsului) și descrierea e «editată manual»
+   * dacă acel eveniment nu vine dintr-un import (`after.importId` lipsește). Fără niciun eveniment (produs anterior auditului,
+   * descriere adusă de migrarea 15c) sau fără descriere, nu se consideră editată: nu e nimic de protejat.
+   */
+  async function loadDescriptionInfo(
+    productIds: readonly string[],
+  ): Promise<Map<string, WooDescriptionInfo>> {
+    const out = new Map<string, WooDescriptionInfo>();
+    for (const part of chunks(productIds, LOOKUP_CHUNK)) {
+      const products = await db.product.findMany({
+        where: { id: { in: part } },
+        select: { id: true, description: true, deletedAt: true },
+      });
+      const lastWriter = await db.$queryRaw<{ entityId: string; fromImport: boolean }[]>(Prisma.sql`
+        SELECT DISTINCT ON ("entityId") "entityId",
+               COALESCE(jsonb_exists(after, 'importId'), false) AS "fromImport"
+        FROM audit_log
+        WHERE entity = 'product'
+          AND outcome = 'success'
+          AND "entityId" = ANY(${part}::text[])
+          AND (action = 'product.create' OR (action = 'product.update' AND jsonb_exists(after, 'description')))
+        ORDER BY "entityId", "createdAt" DESC, id DESC
+      `);
+      const manualById = new Map(lastWriter.map((row) => [row.entityId, !row.fromImport]));
+      for (const row of products) {
+        out.set(row.id, {
+          description: row.description,
+          deleted: row.deletedAt !== null,
+          manuallyEdited: row.description !== null && (manualById.get(row.id) ?? false),
+        });
+      }
+    }
+    return out;
   }
 
   return {
@@ -217,6 +256,11 @@ export function createWooQueries(db: Db): WooQueries {
         variantIdByLegacyId,
         mediaBySourceHash,
         productMedia,
+        ...(lookups.descriptionInfo && {
+          descriptionInfo: await loadDescriptionInfo([
+            ...new Set([...productIdBySku.values(), ...productIdByLegacyId.values()]),
+          ]),
+        }),
       };
     },
 

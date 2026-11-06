@@ -11,6 +11,7 @@ import {
   readE2eWooFixtureState,
   removeE2eImports,
   removeE2eWooFixtureData,
+  setE2eDescriptionBySku,
   trackE2eImportFile,
 } from "../packages/core/test/e2e-support";
 import { uniqueClientIp } from "./support/client-ip";
@@ -288,6 +289,68 @@ test.describe("import WooCommerce", () => {
     await page.locator("[data-import-confirm]").click();
     await expect(page.locator("[data-import-done]")).toBeVisible();
     expect((await readE2eWooFixtureState()).firstStatus).toBe("active");
+  });
+
+  test("reimport «doar descrierile produselor existente»: verificare fără scrieri, aplicare care schimbă doar descrierea", async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const owner = await createAccount(request, baseURL as string, "owner");
+    const tag = randomBytes(3).toString("hex");
+    const bytes = Buffer.from(wooCsv(syntheticWooRows(new Date())));
+    await login(page, owner, "/admin/produse/import");
+    await upload(page, `e2e-${tag}-woo.csv`, bytes, true);
+    await page.locator("[data-import-check]").click();
+    await page.locator("[data-import-apply]").click();
+    await page.locator("[data-import-confirm]").click();
+    await expect(page.locator("[data-import-done]")).toBeVisible();
+    const original = (await readE2eWooFixtureState()).firstDescription;
+    expect(original).toContain("<td>Putere</td>");
+    // descrierea s-a schimbat în afara aplicației (fără eveniment de audit): importul o poate restabili
+    await setE2eDescriptionBySku("FIX-101", "<p>Altceva</p>");
+
+    await page.getByRole("button", { name: "Import nou" }).click();
+    await upload(page, `e2e-${tag}-woo-desc.csv`, bytes, true);
+    await expect(page.getByRole("heading", { name: "Profil WooCommerce" })).toBeVisible();
+    // implicit: importul obișnuit; suprascrierea nu se vede
+    await expect(page.locator('[data-woo-mode-option="full"]')).toBeChecked();
+    await expect(page.locator("[data-woo-overwrite-edited]")).toHaveCount(0);
+    await page.locator('[data-woo-mode-option="descriptionsOnly"]').check();
+    // în modul «doar descrieri» opțiunile care nu au efect dispar, iar suprascrierea apare nebifată
+    await expect(page.locator("[data-woo-descriptions-only]")).toContainText(
+      "Nu se creează produse, categorii, branduri sau atribute",
+    );
+    await expect(page.locator("[data-woo-overwrite-edited]")).not.toBeChecked();
+    await page.locator("[data-woo-overwrite-edited]").check();
+    await expect(page.locator("[data-woo-overwrite-edited]")).toBeChecked();
+    await expect(page.locator("[data-woo-keep-status]")).toHaveCount(0);
+    await expect(page.locator("[data-woo-shipping]")).toHaveCount(0);
+    // înapoi la importul obișnuit: opțiunile lui reapar, suprascrierea dispare
+    await page.locator('[data-woo-mode-option="full"]').check();
+    await expect(page.locator("[data-woo-keep-status]")).toBeVisible();
+    await expect(page.locator("[data-woo-overwrite-edited]")).toHaveCount(0);
+    await page.locator('[data-woo-mode-option="descriptionsOnly"]').check();
+    await expect(page.locator("[data-woo-descriptions-only]")).toBeVisible();
+
+    await page.locator("[data-import-check]").click();
+    await expect(page.getByRole("heading", { name: "Rezultatul verificării" })).toBeVisible();
+    await expect(count(page, "updated")).toHaveText("1");
+    await expect(count(page, "new")).toHaveText("0");
+    await expect(count(page, "errors")).toHaveText("0");
+    await expect(reportRow(page, 2)).toContainText("Descriere");
+    await expect(page.locator("[data-file-warnings]")).toContainText(
+      "doar descrierile produselor existente",
+    );
+    await expect(page.locator("[data-woo-report]")).toContainText("Nimic de creat");
+    // verificarea nu scrie nimic
+    expect((await readE2eWooFixtureState()).firstDescription).toBe("<p>Altceva</p>");
+
+    await page.locator("[data-import-apply]").click();
+    await page.locator("[data-import-confirm]").click();
+    await expect(page.locator("[data-import-done]")).toBeVisible();
+    expect((await readE2eWooFixtureState()).firstDescription).toBe(original);
+    expect((await readE2eWooFixtureState()).products).toBe(5);
   });
 
   test("un fișier care nu e export WooCommerce se refuză la profilul WooCommerce, cu mesaj clar", async ({

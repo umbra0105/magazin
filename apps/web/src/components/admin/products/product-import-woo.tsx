@@ -39,6 +39,61 @@ export function WooOptionsPanel({
         {m.rowTypes(describeRowTypes(analysis.rowTypes))}
       </p>
 
+      <fieldset className="flex flex-col gap-2" data-woo-mode>
+        <legend className="mb-1 text-sm font-semibold">{m.mode.heading}</legend>
+        {(["full", "descriptionsOnly"] as const).map((value) => (
+          <label key={value} className="flex items-start gap-2 text-sm">
+            <input
+              type="radio"
+              name="woo-mode"
+              className="mt-1 size-4 shrink-0 accent-primary"
+              checked={options.mode === value}
+              onChange={() => update({ mode: value })}
+              data-woo-mode-option={value}
+            />
+            <span>{m.mode[value]}</span>
+          </label>
+        ))}
+        {options.mode === "descriptionsOnly" && (
+          <div className="flex flex-col gap-2 pl-6" data-woo-descriptions-only>
+            <p className="text-xs text-muted-foreground">{m.mode.descriptionsOnlyHelp}</p>
+            <label className="flex items-start gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                className="mt-1 size-4 shrink-0 accent-primary"
+                checked={options.overwriteEditedDescriptions}
+                onChange={(event) => update({ overwriteEditedDescriptions: event.target.checked })}
+                aria-describedby="woo-overwrite-help"
+                data-woo-overwrite-edited
+              />
+              <span>{m.mode.overwrite}</span>
+            </label>
+            <p id="woo-overwrite-help" className="pl-6 text-xs text-muted-foreground">
+              {m.mode.overwriteHelp}
+            </p>
+          </div>
+        )}
+      </fieldset>
+
+      {options.mode === "full" && (
+        <WooFullOptions analysis={analysis} options={options} update={update} />
+      )}
+    </div>
+  );
+}
+
+/** Opțiunile importului obișnuit (nu se arată în modul «doar descrieri», unde nu au efect). */
+function WooFullOptions({
+  analysis,
+  options,
+  update,
+}: {
+  analysis: WooAnalysis;
+  options: WooOptions;
+  update: (patch: Partial<WooOptions>) => void;
+}) {
+  return (
+    <>
       <fieldset className="flex flex-col gap-1">
         <label className="flex items-start gap-2 text-sm font-medium">
           <input
@@ -302,7 +357,7 @@ export function WooOptionsPanel({
           </ul>
         </details>
       )}
-    </div>
+    </>
   );
 }
 

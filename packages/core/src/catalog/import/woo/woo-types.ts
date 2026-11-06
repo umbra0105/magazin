@@ -18,6 +18,16 @@ export interface WooOptions {
   attributeTargets: Record<string, string>;
   /** Imaginile din coloana «Imagini» se descarcă în fundal, după produse (cere `media.write`). */
   importImages: boolean;
+  /**
+   * «full» = importul obișnuit (creează și actualizează tot); «descriptionsOnly» = reimport al descrierilor: schimbă DOAR
+   * descrierea produselor care există deja (15c, pasul 8). Mapările salvate înainte de pasul 8 nu au câmpul: lipsa = «full».
+   */
+  mode: "full" | "descriptionsOnly";
+  /**
+   * Doar în modul «descriptionsOnly»: o descriere editată manual după import se păstrează, în afară de cazul în care
+   * administratorul cere explicit suprascrierea. Lipsa câmpului = `false`.
+   */
+  overwriteEditedDescriptions: boolean;
 }
 
 export const REPORT_IMAGE_ISSUES = 200;
@@ -74,6 +84,17 @@ export interface WooSnapshotExtras {
   mediaBySourceHash: Map<string, string>;
   /** Fișierele media deja atașate fiecărui produs existent. */
   productMedia: Map<string, Set<string>>;
+  /**
+   * Doar pentru modul «descriptionsOnly»: descrierea curentă a produselor găsite, dacă produsul e în coșul de gunoi și dacă
+   * descrierea a fost editată manual după ultimul import (ultimul eveniment de audit care a scris descrierea nu vine dintr-un import).
+   */
+  descriptionInfo?: Map<string, WooDescriptionInfo>;
+}
+
+export interface WooDescriptionInfo {
+  description: string | null;
+  deleted: boolean;
+  manuallyEdited: boolean;
 }
 
 export interface WooAttributeDraft {
@@ -168,6 +189,10 @@ export interface WooStats {
   skuFallbacks: number;
   /** Rânduri cu ID din magazinul vechi care nu se salvează (lipsește `catalog.legacy.edit` sau există deja). */
   legacyNotSaved: number;
+  /** Modul «doar descrieri»: rânduri al căror produs nu există în magazin (nu se creează). */
+  productsNotFound: number;
+  /** Modul «doar descrieri»: descrieri editate manual, păstrate (nu s-au înlocuit). */
+  descriptionsKeptEdited: number;
 }
 
 export interface WooCreations {

@@ -88,7 +88,7 @@ import {
 
 export type WooSnapshot = ImportSnapshot & { woo: WooSnapshotExtras };
 
-const zeroStats = (): WooStats => ({
+export const zeroStats = (): WooStats => ({
   categoriesToCreate: 0,
   brandsToCreate: 0,
   attributesToCreate: 0,
@@ -102,6 +102,8 @@ const zeroStats = (): WooStats => ({
   unresolvedRelations: 0,
   skuFallbacks: 0,
   legacyNotSaved: 0,
+  productsNotFound: 0,
+  descriptionsKeptEdited: 0,
 });
 
 export const DEFAULT_WOO_OPTIONS: WooOptions = {
@@ -117,6 +119,8 @@ export const DEFAULT_WOO_OPTIONS: WooOptions = {
   },
   attributeTargets: {},
   importImages: false,
+  mode: "full",
+  overwriteEditedDescriptions: false,
 };
 
 /** Motivele respingerii unei imagini la verificare (fără rețea), în română. */
