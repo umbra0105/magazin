@@ -25,6 +25,9 @@ import { StockTransferService, TRANSFER_REF_TYPE } from "./stock-transfer";
  *   4. registrul de mișcări explică exact stocul fizic (inițial + suma mișcărilor = fizic), iar transferul conservă totalul.
  */
 const db = createDbClient({ max: 40 });
+// Spațiul de nume al fișierului (date comise): curățarea resturilor șterge doar ce are acest prefix, nu și datele altui fișier
+// rulat în paralel (15e; unic pe fișier, păzit de testul de arhitectură `stock-fixtures-namespace`).
+const STOCK_NAMESPACE = "sfin";
 const stock = new StockService({ db });
 const transfers = new StockTransferService({
   db,
@@ -42,11 +45,11 @@ let ctx: StockContext;
 let other: string;
 
 beforeAll(async () => {
-  await purgeStockLeftovers(db);
+  await purgeStockLeftovers(db, STOCK_NAMESPACE);
 });
 
 beforeEach(async () => {
-  ctx = await createStockContext(db);
+  ctx = await createStockContext(db, { namespace: STOCK_NAMESPACE });
   other = (
     await db.warehouse.create({ data: { code: `w_${ctx.tag}f`, name: `Al doilea ${ctx.tag}` } })
   ).id;
@@ -58,7 +61,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await purgeStockLeftovers(db);
+  await purgeStockLeftovers(db, STOCK_NAMESPACE);
   await db.$disconnect();
 });
 

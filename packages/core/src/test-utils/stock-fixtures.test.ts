@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@ecom/db";
 import {
+  assertStockNamespace,
+  createStockContext,
   assertStockTestDatabase,
   purgeStockContext,
   purgeStockLeftovers,
@@ -55,7 +57,7 @@ describe("curățarea fixture-ului de stoc refuză bazele fără «test» în nu
     "«%s»: purgeStockLeftovers refuză, fără căutare și fără tranzacție",
     async (name) => {
       const { client, calls } = fakeClient(name);
-      await expect(purgeStockLeftovers(client)).rejects.toThrow(/REFUZ/);
+      await expect(purgeStockLeftovers(client, "abcd")).rejects.toThrow(/REFUZ/);
       expect(calls.find).not.toHaveBeenCalled();
       expect(calls.transaction).not.toHaveBeenCalled();
     },
@@ -73,4 +75,48 @@ describe("curățarea fixture-ului de stoc refuză bazele fără «test» în nu
       await expect(assertStockTestDatabase(client)).resolves.toBeUndefined();
     },
   );
+});
+
+describe("spațiul de nume al curățării resturilor (15e)", () => {
+  it.each(["", "a", "Abc", "abc1", "ab_c", "ab-c", "a".repeat(13), "ab cd", "../x"])(
+    "«%s» nu e un spațiu de nume valid: refuz înainte de orice acces la bază",
+    async (namespace) => {
+      expect(() => assertStockNamespace(namespace)).toThrow(/Spațiul de nume/);
+      const { client, calls } = fakeClient("ecom_test");
+      await expect(purgeStockLeftovers(client, namespace)).rejects.toThrow(/Spațiul de nume/);
+      expect(client.$queryRaw).not.toHaveBeenCalled();
+      expect(calls.find).not.toHaveBeenCalled();
+      expect(calls.transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["", "Abc", "ab_c", "a"])(
+    "createStockContext refuză «%s» înainte de orice acces la bază",
+    async (namespace) => {
+      const { client, calls } = fakeClient("ecom_test");
+      await expect(createStockContext(client, { namespace })).rejects.toThrow(/Spațiul de nume/);
+      expect(calls.find).not.toHaveBeenCalled();
+      expect(calls.transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["ab", "sact", "a".repeat(12)])("«%s» e acceptat", (namespace) => {
+    expect(() => assertStockNamespace(namespace)).not.toThrow();
+  });
+
+  it("caută doar produsele, depozitele și unitățile cu prefixul spațiului de nume (niciodată «st-», «w_», «u_» goale)", async () => {
+    const { client, calls } = fakeClient("ecom_test");
+    calls.find.mockResolvedValue([]);
+    await expect(purgeStockLeftovers(client, "sact")).resolves.toBe(0);
+    const wheres = calls.find.mock.calls.map((call) =>
+      JSON.stringify((call[0] as { where: unknown }).where),
+    );
+    expect(wheres).toHaveLength(3);
+    expect(wheres.some((w) => w.includes('"startsWith":"st-sact_"'))).toBe(true);
+    expect(wheres.some((w) => w.includes('"startsWith":"w_sact_"'))).toBe(true);
+    expect(wheres.some((w) => w.includes('"startsWith":"u_sact_"'))).toBe(true);
+    for (const where of wheres) {
+      expect(where).not.toMatch(/"startsWith":"(st-|w_|u_)"/);
+    }
+  });
 });

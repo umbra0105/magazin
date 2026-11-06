@@ -28,6 +28,9 @@ import { StockService } from "./stock-service";
  * depozit propriu). Scrise înaintea serviciului. Într-un fișier propriu, ca la `stock-concurrency`.
  */
 const db = getDb();
+// Spațiul de nume al fișierului (date comise): curățarea resturilor șterge doar ce are acest prefix, nu și datele altui fișier
+// rulat în paralel (15e; unic pe fișier, păzit de testul de arhitectură `stock-fixtures-namespace`).
+const STOCK_NAMESPACE = "sact";
 
 afterAll(async () => {
   await db.$disconnect();
@@ -46,12 +49,12 @@ const TAKEN = new Date("2099-01-01T11:00:00Z");
 
 describe("pornirea gestionării pe date comise", () => {
   afterAll(async () => {
-    await purgeStockLeftovers(db);
+    await purgeStockLeftovers(db, STOCK_NAMESPACE);
   });
 
   async function withCommitted<T>(fn: (ctx: StockContext) => Promise<T>): Promise<T> {
-    await purgeStockLeftovers(db);
-    const ctx = await createStockContext(db);
+    await purgeStockLeftovers(db, STOCK_NAMESPACE);
+    const ctx = await createStockContext(db, { namespace: STOCK_NAMESPACE });
     try {
       return await fn(ctx);
     } finally {

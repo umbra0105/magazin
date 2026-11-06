@@ -21,6 +21,9 @@ import { StockTransferService, TRANSFER_REF_TYPE } from "./stock-transfer";
  * eroare de deadlock nu ajunge la apelant), iar contoarele rămân egale cu rândurile care le justifică.
  */
 const db = createDbClient({ max: 40 });
+// Spațiul de nume al fișierului (date comise): curățarea resturilor șterge doar ce are acest prefix, nu și datele altui fișier
+// rulat în paralel (15e; unic pe fișier, păzit de testul de arhitectură `stock-fixtures-namespace`).
+const STOCK_NAMESPACE = "strf";
 const stock = new StockService({ db });
 const audit = new MemoryAudit();
 const service = new StockTransferService({
@@ -39,11 +42,11 @@ let ctx: StockContext;
 let other: string;
 
 beforeAll(async () => {
-  await purgeStockLeftovers(db);
+  await purgeStockLeftovers(db, STOCK_NAMESPACE);
 });
 
 beforeEach(async () => {
-  ctx = await createStockContext(db);
+  ctx = await createStockContext(db, { namespace: STOCK_NAMESPACE });
   other = (
     await db.warehouse.create({ data: { code: `w_${ctx.tag}b`, name: `Destinație ${ctx.tag}` } })
   ).id;
@@ -55,7 +58,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await purgeStockLeftovers(db);
+  await purgeStockLeftovers(db, STOCK_NAMESPACE);
   await db.$disconnect();
 });
 

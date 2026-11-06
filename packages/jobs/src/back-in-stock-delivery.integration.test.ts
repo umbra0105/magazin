@@ -57,13 +57,16 @@ const SETTINGS: BackInStockSettings = {
 const ADDRESS = "ana.cerere@exemplu.test";
 
 const pool = getDb();
+// Spațiul de nume al fișierului (date comise): curățarea resturilor șterge doar ce are acest prefix, nu și datele altui fișier
+// rulat în paralel (15e; unic pe fișier, păzit de testul de arhitectură `stock-fixtures-namespace`).
+const STOCK_NAMESPACE = "bisd";
 
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
   while (cleanups.length) await cleanups.pop()?.();
 });
 afterAll(async () => {
-  await purgeStockLeftovers(pool);
+  await purgeStockLeftovers(pool, STOCK_NAMESPACE);
   await pool.$disconnect();
 });
 
@@ -94,8 +97,8 @@ async function withEnv(
   options: { sendMail?: (message: OutgoingMessage, attempt: number) => Promise<void> },
   fn: (env: Env) => Promise<void>,
 ): Promise<void> {
-  await purgeStockLeftovers(pool);
-  const ctx = await createStockContext(pool);
+  await purgeStockLeftovers(pool, STOCK_NAMESPACE);
+  const ctx = await createStockContext(pool, { namespace: STOCK_NAMESPACE });
   const queueName = `emails-test-${randomBytes(4).toString("hex")}`;
   const queue = createEmailQueue(REDIS_URL, { queueName, backoffDelayMs: 40 });
   const workers: Worker[] = [];

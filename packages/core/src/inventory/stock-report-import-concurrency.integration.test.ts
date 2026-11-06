@@ -24,6 +24,9 @@ import { StockService } from "./stock-service";
  * rândurile în aceeași ordine ca rezervarea, deci nu apare deadlock, iar contoarele rămân coerente.
  */
 const db = getDb();
+// Spațiul de nume al fișierului (date comise): curățarea resturilor șterge doar ce are acest prefix, nu și datele altui fișier
+// rulat în paralel (15e; unic pe fișier, păzit de testul de arhitectură `stock-fixtures-namespace`).
+const STOCK_NAMESPACE = "simp";
 
 afterAll(async () => {
   await db.$disconnect();
@@ -42,12 +45,12 @@ const TAKEN = new Date("2099-01-01T11:00:00Z");
 
 describe("import în timp ce se rezervă stoc (date comise)", () => {
   afterAll(async () => {
-    await purgeStockLeftovers(db);
+    await purgeStockLeftovers(db, STOCK_NAMESPACE);
   });
 
   async function withCommitted<T>(fn: (ctx: StockContext) => Promise<T>): Promise<T> {
-    await purgeStockLeftovers(db);
-    const ctx = await createStockContext(db);
+    await purgeStockLeftovers(db, STOCK_NAMESPACE);
+    const ctx = await createStockContext(db, { namespace: STOCK_NAMESPACE });
     try {
       return await fn(ctx);
     } finally {

@@ -22,11 +22,28 @@ export interface StockContext {
   snapshotIds: string[];
 }
 
+/**
+ * Spațiul de nume al unui fișier de teste cu date COMISE: litere mici, 2–12, unic pe fișier (păzit de testul de arhitectură
+ * `stock-fixtures-namespace`). Tag-ul contextului, deci slug-ul produselor, codul depozitului și al unității, începe cu el; așa
+ * `purgeStockLeftovers` șterge doar ce a creat fișierul apelant, nu și datele aflate în lucru ale altui fișier din paralel.
+ */
+const NAMESPACE = /^[a-z]{2,12}$/;
+
+export function assertStockNamespace(namespace: string): void {
+  if (!NAMESPACE.test(namespace)) {
+    throw new Error(
+      `Spațiul de nume al fixture-urilor de stoc trebuie să aibă 2–12 litere mici (primit «${namespace}»)`,
+    );
+  }
+}
+
 export async function createStockContext(
   db: Client,
-  options: { useDefaultWarehouse?: boolean } = {},
+  options: { useDefaultWarehouse?: boolean; namespace?: string } = {},
 ): Promise<StockContext> {
-  const tag = randomUUID().replaceAll("-", "").slice(0, 10);
+  if (options.namespace !== undefined) assertStockNamespace(options.namespace);
+  const random = randomUUID().replaceAll("-", "").slice(0, 10);
+  const tag = options.namespace === undefined ? random : `${options.namespace}_${random}`;
   const unit = await db.measureUnit.create({
     data: { code: `u_${tag}`, name: `Unitate ${tag}`, symbol: "u", decimals: 4 },
   });
@@ -182,24 +199,38 @@ export async function purgeStockContext(db: PrismaClient, ctx: StockContext): Pr
 }
 
 /**
- * Șterge ce au lăsat în urmă contexte rămase la jumătate (test întrerupt, probă de mutație cu tranzacții blocate): produsele
- * `st-…`, depozitele `w_…` și unitățile `u_…`. Testele de concurență lucrează cu date COMISE, iar testele altor fișiere (de
- * exemplu exportul de produse) numără tot ce e în bază: un rest ar strica rezultatul lor. Se apelează la începutul fișierului.
+ * Șterge ce au lăsat în urmă contexte rămase la jumătate (test întrerupt, probă de mutație cu tranzacții blocate), DOAR din
+ * spațiul de nume dat: produsele `st-<spațiu>_…`, depozitele `w_<spațiu>_…` și unitățile `u_<spațiu>_…`. Testele de concurență
+ * lucrează cu date COMISE, iar testele altor fișiere (de exemplu exportul de produse) numără tot ce e în bază: un rest ar
+ * strica rezultatul lor. Se apelează la începutul și la finalul fișierului, cu spațiul de nume al fișierului. O curățare globală
+ * (toate `st-…`) ar șterge datele aflate în lucru ale altui fișier rulat în paralel (incidentul #2, 15e).
  */
-export async function purgeStockLeftovers(db: PrismaClient): Promise<number> {
+export async function purgeStockLeftovers(db: PrismaClient, namespace: string): Promise<number> {
+  assertStockNamespace(namespace);
   await assertStockTestDatabase(db);
-  const products = await db.product.findMany({
-    where: { slug: { startsWith: "st-" }, title: { startsWith: "Produs stoc " } },
-    select: { id: true, variants: { select: { id: true } } },
-  });
-  const warehouses = await db.warehouse.findMany({
-    where: { code: { startsWith: "w_" }, isDefault: false },
-    select: { id: true },
-  });
-  const units = await db.measureUnit.findMany({
-    where: { code: { startsWith: "u_" }, isSystem: false },
-    select: { id: true },
-  });
+  // `_` e metacaracter în LIKE (`fxone_%` ar potrivi și `fxonex…`): interogarea aduce un superset, iar prefixul exact se
+  // verifică în cod, ca spațiile de nume care sunt prefix unul altuia să nu se atingă.
+  const slugPrefix = `st-${namespace}_`;
+  const warehousePrefix = `w_${namespace}_`;
+  const unitPrefix = `u_${namespace}_`;
+  const products = (
+    await db.product.findMany({
+      where: { slug: { startsWith: slugPrefix }, title: { startsWith: "Produs stoc " } },
+      select: { id: true, slug: true, variants: { select: { id: true } } },
+    })
+  ).filter((product) => product.slug.startsWith(slugPrefix));
+  const warehouses = (
+    await db.warehouse.findMany({
+      where: { code: { startsWith: warehousePrefix }, isDefault: false },
+      select: { id: true, code: true },
+    })
+  ).filter((warehouse) => warehouse.code.startsWith(warehousePrefix));
+  const units = (
+    await db.measureUnit.findMany({
+      where: { code: { startsWith: unitPrefix }, isSystem: false },
+      select: { id: true, code: true },
+    })
+  ).filter((unit) => unit.code.startsWith(unitPrefix));
   if (products.length + warehouses.length + units.length === 0) return 0;
   await purgeRows(db, {
     variantIds: products.flatMap((p) => p.variants.map((v) => v.id)),

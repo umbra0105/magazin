@@ -17,9 +17,12 @@ import { BackInStockService, type BackInStockSettings } from "./back-in-stock";
  * fiecărui test; resturile unei rulări întrerupte, la începutul lui.
  */
 const pool = getDb();
+// Spațiul de nume al fișierului (date comise): curățarea resturilor șterge doar ce are acest prefix, nu și datele altui fișier
+// rulat în paralel (15e; unic pe fișier, păzit de testul de arhitectură `stock-fixtures-namespace`).
+const STOCK_NAMESPACE = "bisc";
 
 afterAll(async () => {
-  await purgeStockLeftovers(pool);
+  await purgeStockLeftovers(pool, STOCK_NAMESPACE);
   await pool.$disconnect();
 });
 
@@ -37,8 +40,8 @@ async function withCommitted<T>(
     variant: (spec?: ProductSpec) => Promise<string>;
   }) => Promise<T>,
 ): Promise<T> {
-  await purgeStockLeftovers(pool);
-  const ctx = await createStockContext(pool);
+  await purgeStockLeftovers(pool, STOCK_NAMESPACE);
+  const ctx = await createStockContext(pool, { namespace: STOCK_NAMESPACE });
   try {
     const service = new BackInStockService({
       db: pool,

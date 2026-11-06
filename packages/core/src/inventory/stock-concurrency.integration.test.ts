@@ -16,17 +16,20 @@ import { StockService, type LineOutcome } from "./stock-service";
  * `reserved`/`committed` sunt egale cu sumele rândurilor care le justifică; nimic negativ).
  */
 const db = createDbClient({ max: 40 });
+// Spațiul de nume al fișierului (date comise): curățarea resturilor șterge doar ce are acest prefix, nu și datele altui fișier
+// rulat în paralel (15e; unic pe fișier, păzit de testul de arhitectură `stock-fixtures-namespace`).
+const STOCK_NAMESPACE = "sconc";
 const service = new StockService({ db });
 
 let ctx: StockContext;
 
 // Datele sunt comise: un rest al unei rulări întrerupte ar fi văzut de testele altor fișiere (ex. exportul numără produsele).
 beforeAll(async () => {
-  await purgeStockLeftovers(db);
+  await purgeStockLeftovers(db, STOCK_NAMESPACE);
 });
 
 beforeEach(async () => {
-  ctx = await createStockContext(db);
+  ctx = await createStockContext(db, { namespace: STOCK_NAMESPACE });
 });
 
 afterEach(async () => {
@@ -34,7 +37,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await purgeStockLeftovers(db);
+  await purgeStockLeftovers(db, STOCK_NAMESPACE);
   await db.$disconnect();
 });
 
@@ -482,7 +485,7 @@ describe("poza SmartBill față de rezervări și facturi", () => {
 
 describe("igiena datelor comise", () => {
   it("un context rămas la jumătate (test întrerupt) este șters complet de purgeStockLeftovers", async () => {
-    const orphan = await createStockContext(db);
+    const orphan = await createStockContext(db, { namespace: STOCK_NAMESPACE });
     const added = await addStockProduct(db, orphan, { variants: [{ physical: "5" }] });
     await service.reserve(
       { refType: "order", refId: `${orphan.tag}-rest` },
@@ -490,23 +493,29 @@ describe("igiena datelor comise", () => {
       soon(),
     );
     const traces = async () => ({
-      products: await db.product.count({ where: { slug: { startsWith: "st-" } } }),
+      products: await db.product.count({
+        where: { slug: { startsWith: `st-${STOCK_NAMESPACE}_` } },
+      }),
       reservations: await db.stockReservation.count({
         where: { refId: { startsWith: orphan.tag } },
       }),
-      warehouses: await db.warehouse.count({ where: { code: { startsWith: "w_" } } }),
-      units: await db.measureUnit.count({ where: { code: { startsWith: "u_" } } }),
+      warehouses: await db.warehouse.count({
+        where: { code: { startsWith: `w_${STOCK_NAMESPACE}_` } },
+      }),
+      units: await db.measureUnit.count({
+        where: { code: { startsWith: `u_${STOCK_NAMESPACE}_` } },
+      }),
     });
     const protectedBefore = await protectedCounts();
     expect((await traces()).products).toBeGreaterThan(0);
-    await purgeStockLeftovers(db);
+    await purgeStockLeftovers(db, STOCK_NAMESPACE);
     expect(await traces()).toEqual({ products: 0, reservations: 0, warehouses: 0, units: 0 });
     // depozitul implicit și unitățile de sistem (câte or fi: baza poate fi seed-uită sau doar migrată) nu se ating
     expect(await protectedCounts()).toEqual(protectedBefore);
   });
 
   it("purgeStockLeftovers nu șterge un depozit implicit sau o unitate de sistem, nici când codurile lor seamănă cu ale fixture-ului", async () => {
-    // Sentinele cu prefixele pe care curăță funcția (w_, u_). Doar filtrele (isDefault = false, isSystem = false) le
+    // Sentinele cu prefixele pe care curăță funcția (w_<spațiu>_, u_<spațiu>_). Doar filtrele (isDefault = false, isSystem = false) le
     // salvează: fără ele, triggerele din bază resping ștergerea și curățarea aruncă. Independent de seed: dacă baza
     // are deja un depozit implicit (indexul unic permite unul singur), îl scoatem TEMPORAR din rol și îl repunem la final.
     const seededDefault = await db.warehouse.findFirst({ where: { isDefault: true } });
@@ -519,13 +528,13 @@ describe("igiena datelor comise", () => {
     try {
       warehouseId = (
         await db.warehouse.create({
-          data: { code: `w_sentinela${ctx.tag}`, name: "Sentinelă implicit", isDefault: true },
+          data: { code: `w_${ctx.tag}_sentinela`, name: "Sentinelă implicit", isDefault: true },
         })
       ).id;
       unitId = (
         await db.measureUnit.create({
           data: {
-            code: `u_sentinela${ctx.tag}`,
+            code: `u_${ctx.tag}_sentinela`,
             name: "Sentinelă sistem",
             symbol: "s",
             decimals: 0,
@@ -533,7 +542,7 @@ describe("igiena datelor comise", () => {
           },
         })
       ).id;
-      await purgeStockLeftovers(db);
+      await purgeStockLeftovers(db, STOCK_NAMESPACE);
       expect(await db.warehouse.findUnique({ where: { id: warehouseId } })).not.toBeNull();
       expect(await db.measureUnit.findUnique({ where: { id: unitId } })).not.toBeNull();
     } finally {

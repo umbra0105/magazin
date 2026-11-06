@@ -19,6 +19,9 @@ import { StockService } from "./stock-service";
  * Datele create se șterg la sfârșitul fiecărui test; resturile unei rulări întrerupte, la începutul lui.
  */
 const db = getDb();
+// Spațiul de nume al fișierului (date comise): curățarea resturilor șterge doar ce are acest prefix, nu și datele altui fișier
+// rulat în paralel (15e; unic pe fișier, păzit de testul de arhitectură `stock-fixtures-namespace`).
+const STOCK_NAMESPACE = "smnt";
 
 afterAll(async () => {
   await db.$disconnect();
@@ -30,12 +33,12 @@ const days = (base: Date, n: number): Date => new Date(base.getTime() + n * 86_4
 describe("două instanțe deodată (date comise, conexiuni separate)", () => {
   const pool = db;
   afterAll(async () => {
-    await purgeStockLeftovers(pool);
+    await purgeStockLeftovers(pool, STOCK_NAMESPACE);
   });
 
   async function withCommitted<T>(fn: (ctx: StockContext) => Promise<T>): Promise<T> {
-    await purgeStockLeftovers(pool);
-    const ctx = await createStockContext(pool);
+    await purgeStockLeftovers(pool, STOCK_NAMESPACE);
+    const ctx = await createStockContext(pool, { namespace: STOCK_NAMESPACE });
     try {
       return await fn(ctx);
     } finally {
