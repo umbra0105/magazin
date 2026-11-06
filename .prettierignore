@@ -6,3 +6,4 @@ coverage
 pnpm-lock.yaml
 docs
 THIRD-PARTY-NOTICES.md
+.claude/skills/
