@@ -9,6 +9,14 @@ const m = getMessages().admin.productImport.woo;
 
 const SHIPPING_CLASSES = ["standard", "oversized", "pallet"] as const;
 
+/** Contoarele modului «doar descrieri» se arată într-un bloc propriu, nu în lista de constatări. */
+const DESCRIPTION_COUNTER_STATS = [
+  "productsNotFound",
+  "descriptionsKeptEdited",
+  "descriptionsKeptNoHistory",
+  "descriptionsOverLimit",
+];
+
 /** Tipurile de rânduri din fișier, într-o propoziție: «9 simple, 1 variabile, 3 variații». */
 export function describeRowTypes(rowTypes: Record<string, number>): string {
   return Object.entries(rowTypes)
@@ -467,13 +475,39 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
 export function WooReportExtras({ woo }: { woo: WooReportSection }) {
   const nothing =
     woo.categoriesToCreate.length + woo.brandsToCreate.length + woo.attributesToCreate.length === 0;
+  const hiddenStats = woo.descriptionsOnly
+    ? [...DESCRIPTION_COUNTER_STATS, "categoriesToCreate", "brandsToCreate", "attributesToCreate"]
+    : ["categoriesToCreate", "brandsToCreate", "attributesToCreate"];
   const stats = Object.entries(woo.stats).filter(
-    ([key, value]) =>
-      value > 0 && !["categoriesToCreate", "brandsToCreate", "attributesToCreate"].includes(key),
+    ([key, value]) => value > 0 && !hiddenStats.includes(key),
   );
+  const counters = woo.descriptionsOnly
+    ? ([
+        ["updated", woo.descriptionsOnly.updated],
+        ["keptEdited", woo.stats.descriptionsKeptEdited],
+        ["keptNoHistory", woo.stats.descriptionsKeptNoHistory],
+        ["notFound", woo.stats.productsNotFound],
+        ["overLimit", woo.stats.descriptionsOverLimit],
+      ] as const)
+    : null;
   return (
     <div className="flex flex-col gap-4 rounded-md border border-border p-3" data-woo-report>
       <h3 className="text-sm font-semibold">{m.report.heading}</h3>
+      {counters && (
+        <div data-woo-desc-counters>
+          <h4 className="text-sm font-medium">{m.report.descriptions.heading}</h4>
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+            {counters.map(([key, value]) => (
+              <div key={key} className="flex justify-between gap-2 border-b border-border py-0.5">
+                <dt className="text-muted-foreground">{m.report.descriptions[key]}</dt>
+                <dd className="font-medium" data-woo-desc-counter={key}>
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
       {nothing ? (
         <p className="text-sm text-muted-foreground">{m.report.none}</p>
       ) : (

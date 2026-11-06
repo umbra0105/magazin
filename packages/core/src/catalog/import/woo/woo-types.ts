@@ -94,7 +94,10 @@ export interface WooSnapshotExtras {
 export interface WooDescriptionInfo {
   description: string | null;
   deleted: boolean;
+  /** Ultimul eveniment de audit care a scris descrierea NU vine dintr-un import. */
   manuallyEdited: boolean;
+  /** Are descriere, dar niciun eveniment de audit nu a scris-o (produs anterior auditului pe entitate): protejată. */
+  noHistory: boolean;
 }
 
 export interface WooAttributeDraft {
@@ -193,6 +196,10 @@ export interface WooStats {
   productsNotFound: number;
   /** Modul «doar descrieri»: descrieri editate manual, păstrate (nu s-au înlocuit). */
   descriptionsKeptEdited: number;
+  /** Modul «doar descrieri»: descrieri fără niciun eveniment de audit, protejate (nu s-au înlocuit). */
+  descriptionsKeptNoHistory: number;
+  /** Modul «doar descrieri»: descrieri peste limită, rând ignorat. */
+  descriptionsOverLimit: number;
 }
 
 export interface WooCreations {
@@ -259,6 +266,8 @@ export interface WooPlanExtras {
   rowTypes: Record<string, number>;
   ignoredColumns: { header: string; reason: string }[];
   blockedColumns: string[];
+  /** Planul modului «doar descrieri» (raportul arată cele cinci contoare ale lui). */
+  descriptionsOnly?: true;
 }
 
 /** Secțiunea raportului specifică profilului WooCommerce. */
@@ -278,4 +287,6 @@ export interface WooReportSection {
   rowTypes: Record<string, number>;
   ignoredColumns: { header: string; reason: string }[];
   blockedColumns: string[];
+  /** Doar în modul «doar descrieri»: câte descrieri s-au actualizat (celelalte contoare sunt în `stats`). */
+  descriptionsOnly?: { updated: number };
 }

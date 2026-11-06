@@ -89,8 +89,8 @@ export function createWooQueries(db: Db): WooQueries {
   /**
    * Descrierea curentă a produselor și dacă a fost editată manual (15c, pasul 8, D4). Regula: se ia ULTIMUL eveniment de
    * audit care a scris descrierea (`product.update` cu cheia `description`, sau crearea produsului) și descrierea e «editată manual»
-   * dacă acel eveniment nu vine dintr-un import (`after.importId` lipsește). Fără niciun eveniment (produs anterior auditului,
-   * descriere adusă de migrarea 15c) sau fără descriere, nu se consideră editată: nu e nimic de protejat.
+   * dacă acel eveniment nu vine dintr-un import (`after.importId` lipsește). O descriere FĂRĂ niciun astfel de eveniment
+   * (produs anterior auditului pe entitate, C-12) e «fără istoric» și e protejată la fel; fără descriere (NULL) nu e nimic de proteja.
    */
   async function loadDescriptionInfo(
     productIds: readonly string[],
@@ -117,6 +117,8 @@ export function createWooQueries(db: Db): WooQueries {
           description: row.description,
           deleted: row.deletedAt !== null,
           manuallyEdited: row.description !== null && (manualById.get(row.id) ?? false),
+          // descriere fără niciun eveniment care a scris-o: nu se știe de unde vine, deci e protejată
+          noHistory: row.description !== null && !manualById.has(row.id),
         });
       }
     }

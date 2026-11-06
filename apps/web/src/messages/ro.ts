@@ -2410,9 +2410,9 @@ export const ro = {
           descriptionsOnly: "Doar descrierile produselor existente",
           descriptionsOnlyHelp:
             "Se schimbă numai descrierea produselor care există deja în magazin (găsite după ID-ul din magazinul vechi, apoi după SKU). Nu se creează produse, categorii, branduri sau atribute și nu se schimbă prețuri, titluri sau imagini. O celulă goală nu șterge o descriere. La pasul următor vezi exact ce se schimbă, fără nicio modificare în catalog.",
-          overwrite: "Suprascrie și descrierile editate manual",
+          overwrite: "Suprascrie și descrierile editate manual sau fără istoric",
           overwriteHelp:
-            "Implicit, o descriere pe care ai editat-o în administrare după import se păstrează. Bifează doar dacă vrei s-o înlocuiești cu cea din fișier.",
+            "Implicit, se păstrează o descriere pe care ai editat-o în administrare după import și una pentru care nu există niciun istoric (cine a scris-o nu se știe). Bifează doar dacă vrei să le înlocuiești cu cea din fișier. Produsele fără descriere se completează oricum.",
         },
         status: {
           label: "Păstrează starea din fișier (publicat → activ)",
@@ -2490,7 +2490,17 @@ export const ro = {
             legacyNotSaved: "ID-uri din magazinul vechi nesalvate",
             productsNotFound: "Rânduri al căror produs nu există în magazin (ignorate)",
             descriptionsKeptEdited: "Descrieri editate manual, păstrate",
+            descriptionsKeptNoHistory: "Descrieri fără istoric, protejate",
+            descriptionsOverLimit: "Descrieri peste limită (rând ignorat)",
           } as Record<string, string>,
+          descriptions: {
+            heading: "Descrieri",
+            updated: "Actualizate",
+            keptEdited: "Ignorate (editate manual)",
+            keptNoHistory: "Ignorate (fără istoric, protejate)",
+            notFound: "Produs inexistent (ignorate)",
+            overLimit: "Peste limită (ignorate)",
+          },
           rowTypes: "Tipuri de rânduri în fișier",
           images: {
             heading: "Imagini din fișier",

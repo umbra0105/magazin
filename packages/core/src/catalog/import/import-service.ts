@@ -345,6 +345,7 @@ export function buildReport(
           issuesTruncated: plan.woo.images.issues.length > REPORT_IMAGE_ISSUES,
         },
         stats: plan.woo.stats,
+        ...(plan.woo.descriptionsOnly && { descriptionsOnly: { updated: counts.updated } }),
         rowTypes: plan.woo.rowTypes,
         ignoredColumns: plan.woo.ignoredColumns,
         blockedColumns: plan.woo.blockedColumns,

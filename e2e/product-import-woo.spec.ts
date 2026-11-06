@@ -339,6 +339,13 @@ test.describe("import WooCommerce", () => {
     await expect(count(page, "new")).toHaveText("0");
     await expect(count(page, "errors")).toHaveText("0");
     await expect(reportRow(page, 2)).toContainText("Descriere");
+    // cele cinci contoare ale modului, separate
+    const counter = (key: string) => page.locator(`[data-woo-desc-counter="${key}"]`);
+    await expect(counter("updated")).toHaveText("1");
+    await expect(counter("keptEdited")).toHaveText("0");
+    await expect(counter("keptNoHistory")).toHaveText("0");
+    await expect(counter("overLimit")).toHaveText("0");
+    await expect(counter("notFound")).not.toHaveText("0");
     await expect(page.locator("[data-file-warnings]")).toContainText(
       "doar descrierile produselor existente",
     );

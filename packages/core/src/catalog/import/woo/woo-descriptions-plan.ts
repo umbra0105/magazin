@@ -234,6 +234,7 @@ export function planWooDescriptions(
     } catch (error) {
       // peste limită: nu se taie (HTML tăiat ar fi stricat); descrierea din magazin rămâne
       if (!(error instanceof ValidationError)) throw error;
+      stats.descriptionsOverLimit += 1;
       emit(r, display, "skipped", [
         warning(`Descriere: ${error.message}; descrierea nu a fost importată`),
       ]);
@@ -257,6 +258,16 @@ export function planWooDescriptions(
       messages.push(
         warning(
           "Descriere: editată manual după import; se păstrează descrierea din magazin (bifează suprascrierea ca s-o înlocuiești)",
+        ),
+      );
+      emit(r, display, "skipped", messages);
+      continue;
+    }
+    if (info?.noHistory && !options.overwriteEditedDescriptions) {
+      stats.descriptionsKeptNoHistory += 1;
+      messages.push(
+        warning(
+          "Descriere: fără istoric, protejat; nu se știe cine a scris descrierea din magazin, deci se păstrează (bifează suprascrierea ca s-o înlocuiești)",
         ),
       );
       emit(r, display, "skipped", messages);
@@ -328,6 +339,7 @@ export function planWooDescriptions(
       rowTypes,
       ignoredColumns: [],
       blockedColumns: [],
+      descriptionsOnly: true,
     },
   };
 }

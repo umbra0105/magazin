@@ -552,6 +552,103 @@ Stare „Descărcat”), **doar numere**, nicio valoare din catalog.
 
 ---
 
+## 15a. Descrierea bogată (15c): editor, atacuri, media, import Woo, reimport „doar descrieri”, export
+
+Verifici punctul 15c cap-coadă. Ai nevoie de contul Owner, de un produs de probă (de exemplu cel creat la secțiunea 2) și
+de câteva imagini în Biblioteca media (secțiunea 8). **Repornește dev serverul** și rulează `pnpm install` înainte (Tiptap și
+sanitizatorul sunt pachete noi). Nu e nicio migrație nouă de aplicat față de pasul 3 al lui 15c.
+
+**A. Editorul (tab-ul General al produsului)**
+
+15a.1 **Faci:** deschide un produs → tab-ul **General**. **Vezi:** câmpul „Descriere” este un editor cu bară de formatare
+(„Formatarea descrierii”), nu o casetă simplă; sub el, „Previzualizare”.
+
+15a.2 **Titlu și aldin.** **Faci:** scrie o linie, alege din „Format text” → „Titlu 2”; pe linia următoare scrie un cuvânt
+și apasă „Aldin”. **Vezi:** linia devine titlu, cuvântul apare îngroșat.
+
+15a.3 **Listă.** **Faci:** scrie trei rânduri și apasă „Listă cu buline”. **Vezi:** trei buline; „Listă numerotată” le
+numerotează.
+
+15a.4 **Link valid.** **Faci:** selectează un cuvânt → „Link” → `https://exemplu.ro` → „Aplică”. **Vezi:** cuvântul devine link.
+
+15a.5 **Link periculos refuzat.** **Faci:** selectează alt cuvânt → „Link” → scrie `javascript:alert(1)` → „Aplică”.
+**Vezi:** mesajul „Adresa nu e acceptată. Folosește http(s), mailto:, tel: sau o cale care începe cu /.” și linkul NU se aplică.
+
+15a.6 **Tabel.** **Faci:** „Tabel” → 2 rânduri, 2 coloane, „Primul rând e antet” → „Inserează”; completează celulele; încearcă
+„Adaugă rând dedesubt” din „Unelte tabel”. **Vezi:** tabelul se formează, rândul nou apare.
+
+15a.7 **Imagine din bibliotecă.** **Faci:** „Imagine din bibliotecă” → alege o imagine → completează „Text alternativ al imaginii”.
+**Vezi:** imaginea apare în editor.
+
+15a.8 **Salvare și storefront.** **Faci:** apasă „Salvează”. **Vezi:** „Previzualizarea” arată titlul, aldinul, lista,
+linkul (cel valid), tabelul și imaginea. Deschide produsul în magazin (dacă e „Activ”): aceeași descriere; tabelul se derulează
+orizontal pe ecran îngust; linkul extern se deschide într-o filă nouă.
+**Dacă nu:** orice element lipsă sau imagine ruptă în magazin e problemă.
+
+**B. Atacuri lipite și descriere goală**
+
+15a.9 **Lipire ostilă.** **Faci:** într-un editor de text simplu (Notepad) scrie
+`<p>ok</p><img src=x onerror=alert(1)><script>alert(2)</script>` și copiază-l; lipește-l în editorul descrierii și salvează.
+**Vezi:** NU apare nicio fereastră de alertă, nici la lipire, nici după salvare, nici în „Previzualizare”, nici în magazin;
+rămâne doar textul „ok”. Redeschide produsul: nimic ostil nu s-a păstrat.
+
+15a.10 **Descriere goală.** **Faci:** șterge tot textul din editor și salvează. **Vezi:** salvarea reușește, iar descrierea e
+goală (în magazin nu apare nicio secțiune de descriere). (În baza de date devine `NULL`, nu un șir gol; Prisma Studio →
+tabela **Product** → câmpul `description` arată `null`.)
+
+**C. Ștergerea unei imagini folosite într-o descriere**
+
+15a.11 **Faci:** pune din nou o imagine în descriere (15a.7) și salvează. Mergi la **Media**, găsește acea imagine și încearcă
+să o ștergi. **Vezi:** ștergerea e REFUZATĂ, cu „Fișierul este folosit” și, în listă, un link către produsul respectiv.
+**Faci:** scoate imaginea din descriere, salvează, apoi șterge din nou imaginea din Media. **Vezi:** acum se șterge.
+
+**D. Import WooCommerce în verificare (fără aplicare)**
+
+15a.12 **Faci:** **Produse → Import** → profilul „WooCommerce” → fișierul tău → „Încarcă și analizează” → lasă „Importul obișnuit” →
+„Verifică (fără modificări)”. **Vezi:** la „Alte constatări”, „Descrieri curățate”, „Tabele păstrate în descrieri”, „Linkuri
+păstrate” și „Imagini externe eliminate din descrieri”; pe rândurile cu descriere curățată, mesajul „Descriere: HTML curățat,
+eliminat: …”. **NU apasă „Aplică”.** Verifică în lista de produse că nimic nu s-a schimbat.
+
+**E. Reimport „doar descrieri” (întâi verificare, apoi aplicare pe un produs)**
+
+15a.13 **Faci:** la același import alege „Doar descrierile produselor existente”. **Vezi:** dispar opțiunile fără efect (stare,
+imagini, unități, clase de livrare, atribute) și apare bifa „Suprascrie și descrierile editate manual sau fără istoric”,
+**nebifată**. Apasă „Verifică (fără modificări)”.
+
+15a.14 **Contoarele.** **Vezi:** blocul „Descrieri” cu cinci contoare separate: **Actualizate**, **Ignorate (editate manual)**,
+**Ignorate (fără istoric, protejate)**, **Produs inexistent (ignorate)**, **Peste limită (ignorate)**. Mesajul „Nimic de
+creat”: modul nu creează produse, categorii, branduri sau atribute. Produsele care nu există în magazin NU se creează.
+**Atenție:** produsele aduse de importuri făcute înainte de 21 octombrie 2026 (înainte de auditul pe entitate, C-12) nu au niciun
+eveniment de audit, deci apar la „fără istoric, protejate” și NU se înlocuiesc decât cu bifa de suprascriere. Asta e voit.
+
+15a.15 **Dry-run fără scriere.** **Vezi:** după verificare, deschide un produs din cele „Actualizate”: descrierea e încă
+cea veche. Nimic nu s-a scris.
+
+15a.16 **Protecția.** **Faci:** editează tu o descriere de produs în editor (15a.2), salvează, apoi refă verificarea
+„doar descrieri” cu fișierul care ar înlocui-o. **Vezi:** produsul apare la „Ignorate (editate manual)”, cu motivul
+„editată manual după import; se păstrează”. Cu bifa de suprascriere pusă, apare la „Actualizate”.
+
+15a.17 **Aplicare pe un produs.** **Faci:** pregătește un fișier cu UN singur produs (rândul unui produs existent, cu altă
+descriere), încarcă-l cu „Doar descrierile…”, verifică, apoi „Aplică importul…” → „Confirm și aplic”. **Vezi:** „Import
+terminat”; produsul are noua descriere, iar titlul, prețul, categoriile și imaginile sunt neschimbate. A doua rulare cu același
+fișier: „Neschimbat”, „Nu există nimic de aplicat”.
+**Audit:** în Prisma Studio → **AuditLog** → `action` = `product.update` pentru acel produs: în `after` sunt doar `description`
+și `importId`.
+
+**F. Export XLSX/CSV și limita Excel**
+
+15a.18 **Faci:** în lista de produse apasă „Exportă…” → „Tot catalogul” → XLSX, apoi CSV. **Vezi:** descrierile sunt HTML. Dacă vreo descriere depășește 32.767
+de caractere, în XLSX celula rămâne goală, iar foaia „Despre export” are rândul „Descrieri prea lungi pentru o celulă Excel” cu SKU-urile
+afectate; în CSV descrierea rămâne întreagă. Reimportul XLSX-ului lasă acele descrieri „Neschimbate”.
+
+15a.19 **CSV în Excel (obligatoriu).** **Faci:** deschide CSV-ul cu **dublu-click în Excel**. **Vezi:** coloanele separate ȘI
+diacriticele corecte (de exemplu „Adresă”, „Preț”, „Șurub”, nu „AdresÄƒ”).
+
+15a.20 **Reimport „neschimbat”.** **Faci:** importă înapoi CSV-ul exportat (profilul „Generic”, verificare). **Vezi:** toate
+rândurile „Neschimbate” (descrierile HTML se recunosc ca aceleași), „Nu există nimic de aplicat”.
+
+---
+
 ## 16. Securitate vizibilă: roluri, blocare, mesaje
 
 Folosește o **fereastră privată** pentru conturile de test; Owner-ul rămâne în fereastra normală.
@@ -655,6 +752,7 @@ Pune **OK** sau **Problemă** și, la problemă, un cuvânt în „Observații�
 | 13 | Import WooCommerce (fișierul real): verificare, aplicare, a doua rulare, audit pe produs |ok | |
 | 14 | Imagini din adrese: domenii permise/nepermise, progres, a doua rulare |ok | |
 | 15 | Istoric importuri/exporturi, raport CSV în Excel |ok | |
+| 15a (15c) | Descriere bogată: editor, link `javascript:` refuzat, lipire ostilă, descriere goală, media folosită, import Woo în verificare, reimport „doar descrieri” (contoare, protecție, aplicare), export și CSV în Excel, reimport „neschimbat” | | |
 | 16.1 | Editor: fără cost, fără butoane de import/export, refuz pe pagini |ok | |
 | 16.2 | Suport: fără Produse, „Acces interzis” |ok | |
 | 16.3 | Manager: vede costul, nu îl poate modifica |ok | |

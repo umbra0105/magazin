@@ -104,6 +104,8 @@ export const zeroStats = (): WooStats => ({
   legacyNotSaved: 0,
   productsNotFound: 0,
   descriptionsKeptEdited: 0,
+  descriptionsKeptNoHistory: 0,
+  descriptionsOverLimit: 0,
 });
 
 export const DEFAULT_WOO_OPTIONS: WooOptions = {

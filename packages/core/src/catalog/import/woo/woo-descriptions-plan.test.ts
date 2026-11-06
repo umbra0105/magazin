@@ -21,7 +21,12 @@ import type { WooOptions, WooSnapshotExtras, WooUpdateOp } from "./woo-types";
 
 const OPTIONS: WooOptions = { ...DEFAULT_WOO_OPTIONS, mode: "descriptionsOnly" };
 
-type Info = { description: string | null; deleted: boolean; manuallyEdited: boolean };
+type Info = {
+  description: string | null;
+  deleted: boolean;
+  manuallyEdited: boolean;
+  noHistory: boolean;
+};
 
 const table = (rows: WooFixtureRow[]): Promise<ParsedTable> =>
   parseImportFile(wooCsv(rows), DEFAULT_IMPORT_LIMITS);
@@ -61,8 +66,8 @@ function variant(
 
 const info = (
   description: string | null,
-  over: Partial<Pick<Info, "deleted" | "manuallyEdited">> = {},
-): Info => ({ description, deleted: false, manuallyEdited: false, ...over });
+  over: Partial<Pick<Info, "deleted" | "manuallyEdited" | "noHistory">> = {},
+): Info => ({ description, deleted: false, manuallyEdited: false, noHistory: false, ...over });
 
 function snapshotOf(over: {
   variants?: ExistingVariant[];
@@ -438,6 +443,97 @@ describe("planWooDescriptions: ce se ignoră", () => {
     expect(op.brandKey).toBeUndefined();
     expect(op.categoryKeys).toBeUndefined();
     expect(p.fileWarnings.join(" ")).toMatch(/doar descrierile/);
+  });
+});
+
+describe("planWooDescriptions: descrieri fără istoric (protejate)", () => {
+  const protectedOne = snapshotOf({
+    variants: [variant("A-1", "p1", "<p>Veche, fără istoric</p>")],
+    info: { p1: info("<p>Veche, fără istoric</p>", { noHistory: true }) },
+  });
+
+  it("o descriere fără niciun eveniment de audit se păstrează, cu motiv propriu și contor propriu", async () => {
+    const p = await plan([simple("11", "A-1", "<p>Din Woo</p>")], protectedOne);
+    expect(p.rows[0]).toMatchObject({ outcome: "skipped", op: null, changed: [] });
+    expect(textOf(p)).toMatch(/fără istoric, protejat/);
+    expect(textOf(p)).not.toMatch(/editată manual/);
+    expect(p.woo?.stats.descriptionsKeptNoHistory).toBe(1);
+    expect(p.woo?.stats.descriptionsKeptEdited).toBe(0);
+    expect(p.counts).toMatchObject({ updated: 0, skipped: 1 });
+  });
+
+  it("cu suprascrierea cerută explicit, se înlocuiește", async () => {
+    const p = await plan([simple("11", "A-1", "<p>Din Woo</p>")], protectedOne, {
+      overwriteEditedDescriptions: true,
+    });
+    expect(p.rows[0]).toMatchObject({ outcome: "updated" });
+    expect(p.woo?.stats.descriptionsKeptNoHistory).toBe(0);
+  });
+
+  it("dacă fișierul are chiar descrierea din magazin, e «neschimbat», nu «protejat»", async () => {
+    const p = await plan([simple("11", "A-1", "<p>Veche, fără istoric</p>")], protectedOne);
+    expect(p.rows[0]).toMatchObject({ outcome: "unchanged" });
+    expect(p.woo?.stats.descriptionsKeptNoHistory).toBe(0);
+  });
+
+  it("un produs FĂRĂ descriere (NULL) rămâne completabil", async () => {
+    const p = await plan(
+      [simple("11", "A-1", "<p>Din Woo</p>")],
+      snapshotOf({
+        variants: [variant("A-1", "p1", null)],
+        info: { p1: info(null) },
+      }),
+    );
+    expect(p.rows[0]).toMatchObject({ outcome: "updated" });
+  });
+
+  it("un produs editat manual rămâne «editat manual» (nu «fără istoric»), chiar dacă ambele steaguri ar fi puse", async () => {
+    const p = await plan(
+      [simple("11", "A-1", "<p>Din Woo</p>")],
+      snapshotOf({
+        variants: [variant("A-1", "p1", "<p>Om</p>")],
+        info: { p1: info("<p>Om</p>", { manuallyEdited: true, noHistory: true }) },
+      }),
+    );
+    expect(textOf(p)).toMatch(/editată manual/);
+    expect(p.woo?.stats.descriptionsKeptEdited).toBe(1);
+    expect(p.woo?.stats.descriptionsKeptNoHistory).toBe(0);
+  });
+});
+
+describe("planWooDescriptions: contoarele raportului", () => {
+  it("cinci contoare separate: actualizate, editate manual, fără istoric, inexistente, peste limită", async () => {
+    const p = await plan(
+      [
+        simple("1", "UPD", "<p>Nou</p>"),
+        simple("2", "EDIT", "<p>Nou</p>"),
+        simple("3", "NOHIST", "<p>Nou</p>"),
+        simple("4", "LIPSA", "<p>Nou</p>"),
+        simple("5", "BIG", "&".repeat(25_000)),
+      ],
+      snapshotOf({
+        variants: [
+          variant("UPD", "p1", "<p>Veche</p>"),
+          variant("EDIT", "p2", "<p>Om</p>"),
+          variant("NOHIST", "p3", "<p>Veche</p>"),
+          variant("BIG", "p5", "<p>Veche</p>"),
+        ],
+        info: {
+          p1: info("<p>Veche</p>"),
+          p2: info("<p>Om</p>", { manuallyEdited: true }),
+          p3: info("<p>Veche</p>", { noHistory: true }),
+          p5: info("<p>Veche</p>"),
+        },
+      }),
+    );
+    expect(p.counts).toMatchObject({ updated: 1, skipped: 4, errors: 0 });
+    expect(p.woo?.stats).toMatchObject({
+      descriptionsKeptEdited: 1,
+      descriptionsKeptNoHistory: 1,
+      productsNotFound: 1,
+      descriptionsOverLimit: 1,
+    });
+    expect(p.woo?.descriptionsOnly).toBe(true);
   });
 });
 

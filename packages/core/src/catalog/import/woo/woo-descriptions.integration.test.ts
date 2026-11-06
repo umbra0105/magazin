@@ -394,6 +394,49 @@ describe("reimport «doar descrieri» pe baza reală", () => {
     });
   });
 
+  it("fără istoric de audit: descrierea e protejată (cu contor propriu) și se suprascrie doar la cerere; fără descriere se completează", async () => {
+    await withWoo(async ({ tx, service, as }) => {
+      const owner = await as("owner");
+      // două produse scrise direct în bază, fără niciun eveniment de audit (cum sunt cele aduse de importuri anterioare auditului pe entitate)
+      const withText = await tx.product.create({
+        data: { slug: "fara-istoric-1", title: "Fără istoric", description: "<p>Veche</p>" },
+      });
+      await tx.productVariant.create({
+        data: { productId: withText.id, sku: "00123", price: 1000 },
+      });
+      const noText = await tx.product.create({
+        data: { slug: "fara-istoric-2", title: "Fără text" },
+      });
+      await tx.productVariant.create({
+        data: { productId: noText.id, sku: "WC-103", price: 1000 },
+      });
+
+      const kept = await validate(service, owner, ONLY);
+      const stats = kept.validation.report.woo?.stats;
+      expect(stats?.descriptionsKeptNoHistory).toBe(1);
+      expect(stats?.descriptionsKeptEdited).toBe(0);
+      // cel fără descriere (NULL) se completează
+      expect(kept.validation.report.counts.updated).toBe(1);
+      const row = kept.validation.report.entries.find((r) => r.sku === "00123");
+      expect(row).toMatchObject({ outcome: "skipped" });
+      expect(row?.messages.join(" ")).toMatch(/fără istoric, protejat/);
+      expect(kept.validation.report.woo?.descriptionsOnly).toEqual({ updated: 1 });
+      await apply(service, owner, kept.validation);
+      expect(await descriptionOf(tx, "00123")).toBe("<p>Veche</p>");
+      expect(await descriptionOf(tx, "WC-103")).toBe("<p>Text normal &amp; sigur.</p><p>Final</p>");
+
+      // cu suprascrierea cerută explicit, se înlocuiește
+      const overwrite = await validate(service, owner, {
+        ...ONLY,
+        overwriteEditedDescriptions: true,
+      });
+      expect(overwrite.validation.report.woo?.stats.descriptionsKeptNoHistory).toBe(0);
+      expect(overwrite.validation.report.counts.updated).toBe(1);
+      await apply(service, owner, overwrite.validation);
+      expect(await descriptionOf(tx, "00123")).toContain("Filtru pentru piscine");
+    });
+  });
+
   it("produsul din coșul de gunoi se ignoră; o celulă goală în fișier nu șterge descrierea", async () => {
     await withWoo(async ({ tx, service, as }) => {
       const owner = await as("owner");
