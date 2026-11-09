@@ -27,7 +27,7 @@ export function FormAlert({
       role={tone === "error" ? "alert" : "status"}
       tabIndex={-1}
       className={cn(
-        "rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        "rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
         tone === "error" ? "border-danger text-danger" : "border-success text-foreground",
       )}
     >

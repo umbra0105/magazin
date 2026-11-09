@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
-import { can } from "@ecom/core";
+import type { CSSProperties, ReactNode } from "react";
+import { adminBrandStyle, can, resolveAdminBrand } from "@ecom/core";
 import {
   Card,
   CardContent,
@@ -15,8 +15,8 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import type { SidebarNavItem } from "@/components/admin/sidebar-nav";
 import { ADMIN_NAV, visibleNav } from "@/lib/admin-nav";
 import { getAdminAccess } from "@/lib/admin-page";
-import { getFeatureFlags, getSettings } from "@/lib/services";
-import { THEME_INIT_SCRIPT, THEME_DARK_LINK_ID, THEME_LIGHT_LINK_ID } from "@/lib/theme-choice";
+import { getBranding, getFeatureFlags, getSettings } from "@/lib/services";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-choice";
 import { getMessages } from "@/messages";
 
 const m = getMessages().admin;
@@ -35,6 +35,29 @@ export const metadata: Metadata = {
 };
 
 /**
+ * Suprafața adminului (docs/17): `data-surface="admin"` activează fișierul de tokeni al adminului (culori deschise și închise,
+ * dimensiuni, Inter fix). Adminul nu urmează paleta magazinului: din `Branding` vine doar brandul (`accent`, cu gardă de
+ * contrast, pus inline ca `--brand-light` / `--brand-dark`), sigla și numele. Fiecare ecran de sub el moștenește suprafața.
+ */
+function AdminSurface({
+  brandStyle,
+  children,
+}: {
+  brandStyle: CSSProperties;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      data-surface="admin"
+      style={brandStyle}
+      className="min-h-dvh bg-surface-page font-sans text-body text-ink"
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
  * Paza zonei de admin. Layout-ul NU se re-rulează la navigarea între pagini, deci fiecare pagină își
  * cere singură `requireAdmin()`; aici se tratează încărcarea inițială: redirect la autentificare
  * (fără sesiune sau sesiune expirată), „acces interzis” (fără `admin.access`), altfel cadrul.
@@ -43,23 +66,29 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const decision = await getAdminAccess();
   if (decision.kind === "redirect") redirect(decision.location);
 
+  // Brandul magazinului (doar `accent`, cu garda de contrast) și sigla vin din Branding; cache-ul serviciului îl face ieftin.
+  const branding = await getBranding().getConfig();
+  const brandStyle = adminBrandStyle(resolveAdminBrand(branding.colors)) as CSSProperties;
+
   if (decision.kind === "denied") {
     return (
-      <div className="flex min-h-dvh items-center justify-center px-4 py-8">
-        <main className="w-full max-w-md">
-          <Card>
-            <CardHeader>
-              <CardTitle as="h1">{m.forbidden.title}</CardTitle>
-              <CardDescription>{m.forbidden.noAdminAccess}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/cont" className={buttonVariants({ className: "w-full" })}>
-                {m.forbidden.toAccount}
-              </Link>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
+      <AdminSurface brandStyle={brandStyle}>
+        <div className="flex min-h-dvh items-center justify-center px-4 py-8">
+          <main className="w-full max-w-md">
+            <Card>
+              <CardHeader>
+                <CardTitle as="h1">{m.forbidden.title}</CardTitle>
+                <CardDescription>{m.forbidden.noAdminAccess}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href="/cont" className={buttonVariants({ className: "w-full" })}>
+                  {m.forbidden.toAccount}
+                </Link>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
+      </AdminSurface>
     );
   }
 
@@ -89,29 +118,17 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }));
 
   return (
-    <>
-      {/* Paletele pentru alegerea Luminos/Întunecat/Sistem; vin după /theme.css din <head>. */}
-      {/* eslint-disable @next/next/no-css-tags -- foi generate dinamic de rute, nu fișiere din bundle */}
-      {/* suppressHydrationWarning: scriptul de mai jos le schimbă `media` ÎNAINTE de hidratare, intenționat. */}
-      <link
-        id={THEME_LIGHT_LINK_ID}
-        rel="stylesheet"
-        href="/theme-light.css"
-        media="not all"
-        suppressHydrationWarning
-      />
-      <link
-        id={THEME_DARK_LINK_ID}
-        rel="stylesheet"
-        href="/theme-dark.css"
-        media="(prefers-color-scheme: dark)"
-        suppressHydrationWarning
-      />
-      {/* eslint-enable @next/next/no-css-tags */}
+    <AdminSurface brandStyle={brandStyle}>
+      {/* Aplică tema și starea barei laterale salvate înainte de primul paint (fără flash); vezi lib/theme-choice.ts. */}
       <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      <AdminShell storeName={storeName} email={subject.email} navItems={navItems}>
+      <AdminShell
+        storeName={storeName}
+        logoUrl={branding.logoUrl}
+        email={subject.email}
+        navItems={navItems}
+      >
         {children}
       </AdminShell>
-    </>
+    </AdminSurface>
   );
 }

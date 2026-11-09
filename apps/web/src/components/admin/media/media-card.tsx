@@ -53,8 +53,8 @@ export function MediaCard({
         })}
         className={cn(
           "group relative flex w-full flex-col overflow-hidden rounded-lg border border-border bg-background text-left " +
-            "hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-          selection && selection.order !== null && "border-primary ring-2 ring-primary",
+            "hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          selection && selection.order !== null && "border-primary ring-2 ring-brand",
           selection && selection.order === null && selection.blocked && "opacity-60",
         )}
       >

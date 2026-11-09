@@ -296,7 +296,7 @@ export function MediaDetailDialog({
             {usages.map((u, i) => (
               <li key={`${u.kind}-${i}`} className="rounded-md border border-border p-2">
                 {u.href ? (
-                  <a href={u.href} className="text-primary underline">
+                  <a href={u.href} className="text-link underline">
                     {u.label}
                   </a>
                 ) : (

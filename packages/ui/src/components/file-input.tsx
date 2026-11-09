@@ -84,7 +84,7 @@ export function FileInput({
         htmlFor={id}
         className={cn(
           buttonVariants({ variant, size }),
-          "cursor-pointer peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-disabled:pointer-events-none peer-disabled:opacity-60",
+          "cursor-pointer peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface-page peer-disabled:pointer-events-none peer-disabled:opacity-60",
         )}
       >
         {children ?? label}
@@ -94,7 +94,7 @@ export function FileInput({
           id={statusId}
           role="status"
           aria-live="polite"
-          className="min-w-0 break-all text-sm text-muted-foreground"
+          className="min-w-0 break-all text-body text-ink-secondary"
         >
           {describeFiles(files, {
             empty: emptyLabel,

@@ -665,7 +665,7 @@ export function ProductImportWizard({
               )}
               <Link
                 href={`/admin/produse/import/istoric/${importId}`}
-                className="text-sm text-primary underline-offset-2 hover:underline"
+                className="text-sm text-link underline-offset-2 hover:underline"
               >
                 {m.images.failuresHeading}
               </Link>

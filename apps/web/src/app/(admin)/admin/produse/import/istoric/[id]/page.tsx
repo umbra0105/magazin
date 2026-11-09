@@ -81,7 +81,7 @@ export default async function ImportHistoryDetailPage({
       <header className="flex flex-col gap-2">
         <Link
           href="/admin/produse/import/istoric"
-          className="text-sm text-primary underline-offset-2 hover:underline"
+          className="text-sm text-link underline-offset-2 hover:underline"
         >
           {m.detail.back}
         </Link>

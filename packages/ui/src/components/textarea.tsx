@@ -11,10 +11,10 @@ export function Textarea({ className, rows = 3, ref, ...props }: TextareaProps) 
       ref={ref}
       rows={rows}
       className={cn(
-        "flex w-full rounded-md border border-border bg-background px-3 py-2 text-base text-foreground " +
-          "placeholder:text-muted-foreground " +
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background " +
-          "disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-danger",
+        "flex w-full rounded-md border border-line-input bg-surface-page px-3 py-2 text-(length:--control-text) text-ink " +
+          "placeholder:text-ink-placeholder transition-colors duration-(--motion) " +
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page " +
+          "disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-ink-disabled aria-[invalid=true]:border-tone-problem-fg",
         className,
       )}
       {...props}

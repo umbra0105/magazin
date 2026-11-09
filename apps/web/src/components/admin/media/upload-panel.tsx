@@ -133,7 +133,7 @@ export function UploadPanel({
                         type="button"
                         onClick={() => onRemove(item.id)}
                         aria-label={`${m.upload.remove}: ${item.file.name}`}
-                        className="inline-flex size-9 items-center justify-center rounded-md hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="inline-flex size-9 items-center justify-center rounded-md hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                       >
                         <X aria-hidden="true" className="size-4" />
                       </button>

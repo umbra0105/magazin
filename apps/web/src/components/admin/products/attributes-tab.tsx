@@ -133,7 +133,7 @@ export function AttributesTab({
         {a.help}{" "}
         <Link
           href="/admin/produse/atribute"
-          className="text-primary underline-offset-2 hover:underline"
+          className="text-link underline-offset-2 hover:underline"
         >
           {a.manage}
         </Link>

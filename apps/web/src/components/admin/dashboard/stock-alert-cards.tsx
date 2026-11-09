@@ -9,7 +9,7 @@ const m = getMessages().admin.dashboard.stock;
 
 const CARD =
   "relative flex h-full flex-col gap-1 rounded-md border p-4 hover:bg-border/30 " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 
 /**
  * Cardurile de stoc din Panou: «Stoc mic», «Doar rest nevandabil» și «Sincronizare SmartBill». Fiecare e o legătură spre vederea

@@ -322,7 +322,7 @@ function Editor({ diagram, canWrite }: { diagram: DiagramEditorData; canWrite: b
       <header className="flex flex-col gap-2">
         <Link
           href="/admin/produse/fise-explodate"
-          className="text-sm text-primary underline-offset-2 hover:underline"
+          className="text-sm text-link underline-offset-2 hover:underline"
         >
           {e.back}
         </Link>
@@ -415,7 +415,7 @@ function Editor({ diagram, canWrite }: { diagram: DiagramEditorData; canWrite: b
                   }}
                   onKeyDown={(ev) => onMarkerKey(ev, row)}
                   className={
-                    "absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary " +
+                    "absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand " +
                     (isSelected
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-primary bg-background text-foreground")
@@ -730,7 +730,7 @@ function HotspotRow({
                         setHits(null);
                         setQuery("");
                       }}
-                      className="w-full rounded-md px-2 py-1 text-left text-sm hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="w-full rounded-md px-2 py-1 text-left text-sm hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                     >
                       {hit.title}
                       <span className="text-muted-foreground">
@@ -844,7 +844,7 @@ function ProductsSection({
               <span className="min-w-0 flex-1 text-sm">
                 <Link
                   href={`/admin/produse/${p.id}`}
-                  className="font-medium text-primary underline-offset-2 hover:underline"
+                  className="font-medium text-link underline-offset-2 hover:underline"
                 >
                   {p.title}
                 </Link>
@@ -933,7 +933,7 @@ function ProductsSection({
                         setHits(null);
                         setQuery("");
                       }}
-                      className="w-full rounded-md px-2 py-1 text-left text-sm hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="w-full rounded-md px-2 py-1 text-left text-sm hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                     >
                       {hit.title}
                       <span className="text-muted-foreground">

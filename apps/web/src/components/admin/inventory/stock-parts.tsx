@@ -239,7 +239,7 @@ export function LowStockSummary({
                   href={href}
                   aria-current={selected ? "page" : undefined}
                   data-reason-filter={item.reason}
-                  className="after:absolute after:inset-0 after:rounded-md focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary"
+                  className="after:absolute after:inset-0 after:rounded-md focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand"
                 >
                   {v.summary[item.reason]}
                 </Link>

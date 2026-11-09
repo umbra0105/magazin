@@ -92,6 +92,8 @@ describe('niciun <input type="file"> direct (sursa reală)', () => {
       .map((f) => f.path)
       .sort();
     expect(users).toEqual([
+      // pagina de exemplu a componentelor (doar dezvoltare, docs/17 §7) arată FileInput în starea lui implicită
+      "apps/web/src/app/(admin)/admin/galerie-componente/gallery.e2e.tsx",
       "apps/web/src/components/admin/inventory/stock-activation-panel.tsx",
       "apps/web/src/components/admin/inventory/stock-import-panel.tsx",
       "apps/web/src/components/admin/media/upload-panel.tsx",

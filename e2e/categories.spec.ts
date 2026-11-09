@@ -80,7 +80,7 @@ async function dragOnto(page: Page, sourceName: string, targetName: string): Pro
   await page.mouse.move(from.x + 45, from.y + from.height / 2 + 6);
   await page.mouse.move(to.x + 40, to.y + to.height / 2, { steps: 5 });
   await page.mouse.move(to.x + 42, to.y + to.height / 2 + 1);
-  await expect(target).toHaveClass(/border-primary/);
+  await expect(target).toHaveAttribute("data-drop-target", "inside");
   await page.mouse.up();
 }
 

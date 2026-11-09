@@ -16,7 +16,7 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-8">
       <Link
         href="/"
-        className="rounded-md text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="rounded-md text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         {storeName}
       </Link>

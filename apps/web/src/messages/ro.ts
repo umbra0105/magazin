@@ -115,6 +115,8 @@ export const ro = {
     sidebarLabel: "Navigare principală",
     openMenu: "Deschide meniul",
     closeMenu: "Închide meniul",
+    collapseMenu: "Restrânge meniul",
+    expandMenu: "Extinde meniul",
     breadcrumbLabel: "Poziția în pagină",
     home: "Panou",
     dashboard: {

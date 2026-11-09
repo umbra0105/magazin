@@ -31,21 +31,21 @@ export function Breadcrumbs() {
   if (crumbs.length === 0) return null;
   return (
     <nav aria-label={m.breadcrumbLabel} className="min-w-0">
-      <ol className="flex min-w-0 items-center gap-1 text-sm">
+      <ol className="flex min-w-0 items-center gap-1 text-body">
         {crumbs.map((crumb, index) => (
           <li key={`${index}-${crumb.label}`} className="flex min-w-0 items-center gap-1">
             {index > 0 ? (
-              <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+              <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-ink-secondary" />
             ) : null}
             {crumb.href ? (
               <Link
                 href={crumb.href}
-                className="truncate rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="truncate rounded text-ink-secondary transition-colors duration-(--motion) hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 {crumb.label}
               </Link>
             ) : (
-              <span aria-current="page" className="truncate font-medium">
+              <span aria-current="page" className="truncate font-medium text-ink">
                 {crumb.label}
               </span>
             )}

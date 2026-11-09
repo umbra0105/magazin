@@ -99,7 +99,7 @@ export function FolderPanel({
   const itemClass = (active: boolean) =>
     cn(
       "flex min-h-11 flex-1 items-center gap-2 rounded-md px-2 text-sm hover:bg-border/50 " +
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
       active && "bg-border/60 font-semibold",
     );
 

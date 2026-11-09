@@ -188,7 +188,7 @@ export function DescriptionEditor({
   return (
     <div
       data-description-editor
-      className="rounded-md border border-border bg-background focus-within:ring-2 focus-within:ring-primary"
+      className="rounded-md border border-border bg-background focus-within:ring-2 focus-within:ring-brand"
     >
       {editor && editable ? <Toolbar editor={editor} /> : null}
       <div className="overflow-x-auto">

@@ -132,12 +132,12 @@ export function LoginForm({
       </Button>
 
       <div className="flex flex-col gap-2 text-sm">
-        <Link href="/recuperare-parola" className="text-primary underline-offset-4 hover:underline">
+        <Link href="/recuperare-parola" className="text-link underline-offset-4 hover:underline">
           {m.login.forgot}
         </Link>
         <p className="text-muted-foreground">
           {m.login.noAccount}{" "}
-          <Link href={registerHref} className="text-primary underline-offset-4 hover:underline">
+          <Link href={registerHref} className="text-link underline-offset-4 hover:underline">
             {m.login.register}
           </Link>
         </p>

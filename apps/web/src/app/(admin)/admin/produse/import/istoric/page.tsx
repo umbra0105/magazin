@@ -62,7 +62,7 @@ export default async function ImportHistoryPage({
       <header className="flex flex-col gap-2">
         <Link
           href="/admin/produse/import"
-          className="text-sm text-primary underline-offset-2 hover:underline"
+          className="text-sm text-link underline-offset-2 hover:underline"
         >
           {m.back}
         </Link>
@@ -200,7 +200,7 @@ export default async function ImportHistoryPage({
                       <td className="p-3">
                         <Link
                           href={`/admin/produse/import/istoric/${item.id}`}
-                          className="text-primary underline-offset-2 hover:underline"
+                          className="text-link underline-offset-2 hover:underline"
                           data-history-details
                         >
                           {m.details}

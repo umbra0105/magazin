@@ -211,17 +211,23 @@ test.describe("zona de admin", () => {
     const owner = await createAccount(request, baseURL as string, "owner");
     await login(page, owner);
 
-    const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    // suprafața adminului (`data-surface="admin"`) poartă tokenii; <body> rămâne al paginii publice
+    const bg = () =>
+      page.evaluate(
+        () =>
+          getComputedStyle(document.querySelector('[data-surface="admin"]') as Element)
+            .backgroundColor,
+      );
     const light = await bg();
 
     await page.getByRole("button", { name: "Meniul utilizatorului" }).click();
     await page.getByRole("button", { name: "Întunecat" }).click();
-    await expect(page.locator("#admin-theme-dark")).toHaveAttribute("media", "all");
+    await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
     await expect.poll(bg).not.toBe(light);
     const dark = await bg();
 
     await page.reload();
-    await expect(page.locator("#admin-theme-dark")).toHaveAttribute("media", "all");
+    await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
     expect(await bg()).toBe(dark);
 
     await page.getByRole("button", { name: "Meniul utilizatorului" }).click();
@@ -249,12 +255,12 @@ test.describe("zona de admin", () => {
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Meniul utilizatorului" }).click();
     await page.getByRole("button", { name: "Întunecat" }).click();
-    await expect(page.locator("#admin-theme-dark")).toHaveAttribute("media", "all");
+    await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
 
     problems.length = 0; // ne interesează doar încărcarea de după alegere
     await page.reload();
     await page.waitForLoadState("networkidle");
-    await expect(page.locator("#admin-theme-dark")).toHaveAttribute("media", "all");
+    await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
     await expect(page.getByRole("heading", { level: 1, name: "Panou de control" })).toBeVisible();
 
     const hydration = problems.filter((text) => /hydrat|didn't match|did not match/i.test(text));
@@ -279,7 +285,7 @@ test.describe("zona de admin", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Panou de control" })).toBeVisible();
     await page.getByRole("button", { name: "Meniul utilizatorului" }).click();
     await page.getByRole("button", { name: "Întunecat" }).click();
-    await expect(page.locator("#admin-theme-dark")).toHaveAttribute("media", "all");
+    await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
   });
 
   test("telefon: sidebar-ul e ascuns și se deschide din buton; Escape îl închide", async ({

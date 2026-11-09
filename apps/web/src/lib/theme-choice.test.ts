@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  MEDIA_FOR_CHOICE,
-  THEME_DARK_LINK_ID,
+  SIDEBAR_ATTRIBUTE,
+  SIDEBAR_STORAGE_KEY,
+  applySidebarChoice,
+  readSidebarChoice,
+  writeSidebarChoice,
+} from "./sidebar-choice";
+import {
   THEME_INIT_SCRIPT,
-  THEME_LIGHT_LINK_ID,
   THEME_STORAGE_KEY,
   applyThemeChoice,
   isThemeChoice,
@@ -30,7 +34,7 @@ const throwingStorage = {
   },
 };
 
-describe("citirea și scrierea alegerii (în try/catch)", () => {
+describe("citirea și scrierea alegerii de temă (în try/catch)", () => {
   it("citește o alegere salvată validă", () => {
     expect(readThemeChoice(memoryStorage({ [THEME_STORAGE_KEY]: "dark" }))).toBe("dark");
     expect(readThemeChoice(memoryStorage({ [THEME_STORAGE_KEY]: "light" }))).toBe("light");
@@ -56,47 +60,63 @@ describe("citirea și scrierea alegerii (în try/catch)", () => {
   });
 });
 
+/** Un <html> de mână: stilul `color-scheme` și atributele. */
 function fakeDocument() {
-  const attrs: Record<string, Record<string, string>> = {
-    [THEME_LIGHT_LINK_ID]: { media: "not all" },
-    [THEME_DARK_LINK_ID]: { media: "(prefers-color-scheme: dark)" },
-  };
+  const attributes: Record<string, string> = {};
   const doc = {
-    getElementById: (id: string) =>
-      attrs[id]
-        ? {
-            setAttribute: (name: string, value: string) => {
-              (attrs[id] as Record<string, string>)[name] = value;
-            },
-          }
-        : null,
-    documentElement: { style: { colorScheme: "" } },
+    documentElement: {
+      style: { colorScheme: "" },
+      setAttribute: (name: string, value: string) => {
+        attributes[name] = value;
+      },
+      removeAttribute: (name: string) => {
+        delete attributes[name];
+      },
+    },
   };
-  return { doc, attrs };
+  return { doc, attributes };
 }
 
-describe("applyThemeChoice", () => {
-  it("fiecare alegere comută media pe cele două foi de stil", () => {
-    for (const choice of ["system", "light", "dark"] as const) {
-      const { doc, attrs } = fakeDocument();
-      applyThemeChoice(choice, doc as unknown as Document);
-      expect(attrs[THEME_LIGHT_LINK_ID]?.["media"]).toBe(MEDIA_FOR_CHOICE[choice].light);
-      expect(attrs[THEME_DARK_LINK_ID]?.["media"]).toBe(MEDIA_FOR_CHOICE[choice].dark);
-    }
-  });
-
-  it("luminos forțează paleta luminoasă; întunecat o forțează pe cea întunecată; sistem urmează sistemul", () => {
-    expect(MEDIA_FOR_CHOICE.light).toEqual({ light: "all", dark: "not all" });
-    expect(MEDIA_FOR_CHOICE.dark).toEqual({ light: "not all", dark: "all" });
-    expect(MEDIA_FOR_CHOICE.system.dark).toBe("(prefers-color-scheme: dark)");
-  });
-
-  it("setează color-scheme pe <html> pentru luminos/întunecat și îl curăță la sistem", () => {
+describe("applyThemeChoice (tema se comută prin color-scheme: tokenii folosesc light-dark())", () => {
+  it("luminos și întunecat forțează schema pe <html>; sistem o curăță, ca browserul să urmeze sistemul", () => {
     const { doc } = fakeDocument();
     applyThemeChoice("dark", doc as unknown as Document);
     expect(doc.documentElement.style.colorScheme).toBe("dark");
+    applyThemeChoice("light", doc as unknown as Document);
+    expect(doc.documentElement.style.colorScheme).toBe("light");
     applyThemeChoice("system", doc as unknown as Document);
     expect(doc.documentElement.style.colorScheme).toBe("");
+  });
+});
+
+describe("bara laterală pliată (alegere reținută)", () => {
+  it("citește «collapsed», orice altceva (sau lipsa) înseamnă desfăcută", () => {
+    expect(readSidebarChoice(memoryStorage({ [SIDEBAR_STORAGE_KEY]: "collapsed" }))).toBe(
+      "collapsed",
+    );
+    expect(readSidebarChoice(memoryStorage({ [SIDEBAR_STORAGE_KEY]: "altceva" }))).toBe("expanded");
+    expect(readSidebarChoice(memoryStorage())).toBe("expanded");
+  });
+
+  it("fără stocare (aruncă sau lipsește): desfăcută, scrierea întoarce false, nu aruncă", () => {
+    expect(readSidebarChoice(throwingStorage)).toBe("expanded");
+    expect(readSidebarChoice(null)).toBe("expanded");
+    expect(writeSidebarChoice("collapsed", throwingStorage)).toBe(false);
+    expect(writeSidebarChoice("collapsed", null)).toBe(false);
+  });
+
+  it("scrie și reciteste alegerea", () => {
+    const storage = memoryStorage();
+    expect(writeSidebarChoice("collapsed", storage)).toBe(true);
+    expect(readSidebarChoice(storage)).toBe("collapsed");
+  });
+
+  it("applySidebarChoice pune sau scoate atributul de pe <html>", () => {
+    const { doc, attributes } = fakeDocument();
+    applySidebarChoice("collapsed", doc as unknown as Document);
+    expect(attributes[SIDEBAR_ATTRIBUTE]).toBe("collapsed");
+    applySidebarChoice("expanded", doc as unknown as Document);
+    expect(attributes[SIDEBAR_ATTRIBUTE]).toBeUndefined();
   });
 });
 
@@ -104,28 +124,60 @@ describe("THEME_INIT_SCRIPT (rulează înainte de primul paint)", () => {
   const run = (windowStub: unknown, documentStub: unknown) =>
     new Function("window", "document", THEME_INIT_SCRIPT)(windowStub, documentStub);
 
-  it("aplică alegerea salvată pe cele două foi de stil", () => {
-    const { doc, attrs } = fakeDocument();
+  it("aplică tema salvată pe color-scheme", () => {
+    const { doc } = fakeDocument();
     run({ localStorage: memoryStorage({ [THEME_STORAGE_KEY]: "dark" }) }, doc);
-    expect(attrs[THEME_DARK_LINK_ID]?.["media"]).toBe("all");
-    expect(attrs[THEME_LIGHT_LINK_ID]?.["media"]).toBe("not all");
     expect(doc.documentElement.style.colorScheme).toBe("dark");
   });
 
-  it("fără alegere salvată nu schimbă nimic (sistem)", () => {
-    const { doc, attrs } = fakeDocument();
+  it("aplică bara laterală pliată înainte de primul paint (fără un cadru cu bara desfăcută)", () => {
+    const { doc, attributes } = fakeDocument();
+    run({ localStorage: memoryStorage({ [SIDEBAR_STORAGE_KEY]: "collapsed" }) }, doc);
+    expect(attributes[SIDEBAR_ATTRIBUTE]).toBe("collapsed");
+  });
+
+  it("fără alegeri salvate nu schimbă nimic (sistem, bara desfăcută)", () => {
+    const { doc, attributes } = fakeDocument();
     run({ localStorage: memoryStorage() }, doc);
-    expect(attrs[THEME_DARK_LINK_ID]?.["media"]).toBe("(prefers-color-scheme: dark)");
+    expect(doc.documentElement.style.colorScheme).toBe("");
+    expect(attributes).toEqual({});
+  });
+
+  it("o valoare necunoscută nu se aplică", () => {
+    const { doc, attributes } = fakeDocument();
+    run(
+      {
+        localStorage: memoryStorage({ [THEME_STORAGE_KEY]: "violet", [SIDEBAR_STORAGE_KEY]: "x" }),
+      },
+      doc,
+    );
+    expect(doc.documentElement.style.colorScheme).toBe("");
+    expect(attributes).toEqual({});
   });
 
   it("dacă accesul la localStorage aruncă (mod privat), scriptul nu aruncă și nu schimbă nimic", () => {
-    const { doc, attrs } = fakeDocument();
+    const { doc, attributes } = fakeDocument();
     const blocked = {
       get localStorage(): never {
         throw new Error("SecurityError");
       },
     };
     expect(() => run(blocked, doc)).not.toThrow();
-    expect(attrs[THEME_LIGHT_LINK_ID]?.["media"]).toBe("not all");
+    expect(doc.documentElement.style.colorScheme).toBe("");
+    expect(attributes).toEqual({});
+  });
+
+  it("o singură alegere ilizibilă nu o împiedică pe cealaltă", () => {
+    const { doc, attributes } = fakeDocument();
+    const half = {
+      localStorage: {
+        getItem: (key: string) => {
+          if (key === THEME_STORAGE_KEY) throw new Error("SecurityError");
+          return key === SIDEBAR_STORAGE_KEY ? "collapsed" : null;
+        },
+      },
+    };
+    run(half, doc);
+    expect(attributes[SIDEBAR_ATTRIBUTE]).toBe("collapsed");
   });
 });

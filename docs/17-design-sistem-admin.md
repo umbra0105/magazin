@@ -93,7 +93,7 @@ Fără alte umbre. Nicio textură, imagine de fundal sau zgomot.
 
 ### 2.7 Spațiere (pas de 4 px)
 
-`4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 56`. Margine de conținut: 24 px pe desktop, 16 px pe telefon. Între secțiuni: 24 px. Între câmpuri: 16 px. Înălțimea controalelor: 32 px (compact), 36 px (implicit, de la `md` în sus), 44 px pe telefon. **Textul câmpurilor (Input, Select, Textarea): 16 px pe telefon** (sub 16 px, iOS Safari mărește pagina la focus) **și 14 px de la `md` în sus.** Lățimea conținutului de formular: cel mult 880 px, centrat; tabelele ocupă toată lățimea.
+`4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 56`. Margine de conținut: 24 px pe desktop, 16 px pe telefon. Între secțiuni: 24 px. Între câmpuri: 16 px. Înălțimea controalelor: 32 px (compact), 36 px (implicit, de la `md` în sus), 44 px pe telefon. **Textul câmpurilor (Input, Select, Textarea): 16 px pe telefon** (sub 16 px, iOS Safari mărește pagina la focus) **și 14 px de la `md` în sus.** **Textul butoanelor: 14 px la toate lățimile** (la 16 px, rândurile cu mai multe butoane depășeau ecranul de 375 px; înălțimea de 44 px pe telefon rămâne). Lățimea conținutului de formular: cel mult 880 px, centrat; tabelele ocupă toată lățimea.
 
 ### 2.8 Tipografie
 

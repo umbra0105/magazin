@@ -17,13 +17,13 @@ export function Progress({ value, label, className, ...props }: ProgressProps) {
       aria-valuemin={0}
       aria-valuemax={100}
       {...(clamped !== undefined && { "aria-valuenow": clamped })}
-      className={cn("h-2 w-full overflow-hidden rounded-full bg-border/60", className)}
+      className={cn("h-1.5 w-full overflow-hidden rounded-full bg-surface-hover", className)}
       {...props}
     >
       <div
         className={cn(
-          "h-full rounded-full bg-primary transition-[width]",
-          clamped === undefined && "w-1/3 animate-pulse",
+          "h-full rounded-full bg-action transition-[width] duration-(--motion)",
+          clamped === undefined && "w-1/3 motion-safe:animate-pulse",
         )}
         style={clamped === undefined ? undefined : { width: `${clamped}%` }}
       />

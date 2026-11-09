@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Monitor, Moon, Sun, User } from "lucide-react";
+import { LogOut, Monitor, Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -89,29 +89,33 @@ export function UserMenu({ email }: { email: string }) {
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}
         className={
-          "flex h-11 items-center gap-2 rounded-md px-3 text-sm hover:bg-border/50 " +
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          "flex h-(--control-h) items-center gap-2 rounded-full pr-1 text-body transition-colors duration-(--motion) hover:bg-surface-hover " +
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:pr-3"
         }
       >
-        <User aria-hidden="true" className="size-5" />
-        <span className="hidden max-w-[12rem] truncate sm:inline">{email}</span>
+        <span
+          aria-hidden="true"
+          data-user-avatar
+          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-hover text-body font-medium text-ink"
+        >
+          {Array.from(email.trim())[0]?.toUpperCase() ?? ""}
+        </span>
+        <span className="hidden max-w-48 truncate sm:inline">{email}</span>
       </button>
       <div
         id={panelId}
         hidden={!open}
-        className="absolute right-0 z-50 mt-2 w-72 rounded-lg border border-border bg-background p-3 shadow-lg"
+        className="absolute right-0 z-50 mt-2 w-72 rounded-lg bg-surface-page p-3 shadow-popover"
       >
-        <p className="truncate px-2 pb-2 text-sm text-muted-foreground">{email}</p>
+        <p className="truncate px-2 pb-2 text-body text-ink-secondary">{email}</p>
         <Link
           href="/cont"
-          className="flex h-11 items-center rounded-md px-2 text-sm hover:bg-border/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="flex h-(--control-h) items-center rounded-md px-2 text-body transition-colors duration-(--motion) hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           {m.userMenu.account}
         </Link>
         <div role="group" aria-label={m.userMenu.theme} className="mt-2 px-2">
-          <p className="pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {m.userMenu.theme}
-          </p>
+          <p className="pb-1 text-label text-ink-secondary">{m.userMenu.theme}</p>
           <div className="flex gap-1">
             {THEME_CHOICES.map((option) => {
               const Icon = THEME_ICONS[option];
@@ -122,9 +126,9 @@ export function UserMenu({ email }: { email: string }) {
                   aria-pressed={choice === option}
                   onClick={() => chooseTheme(option)}
                   className={cn(
-                    "flex h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-md border border-border text-xs " +
-                      "hover:bg-border/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                    choice === option && "border-primary bg-border/50 font-semibold",
+                    "flex h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-md border border-line-control text-label transition-colors duration-(--motion) " +
+                      "hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                    choice === option && "border-ink bg-surface-hover font-semibold",
                   )}
                 >
                   <Icon aria-hidden="true" className="size-4" />
@@ -135,7 +139,7 @@ export function UserMenu({ email }: { email: string }) {
           </div>
         </div>
         {error ? (
-          <p role="alert" className="mt-2 px-2 text-sm text-danger">
+          <p role="alert" className="mt-2 px-2 text-body text-tone-problem-fg">
             {error}
           </p>
         ) : null}
@@ -144,8 +148,8 @@ export function UserMenu({ email }: { email: string }) {
           onClick={signOut}
           disabled={signingOut}
           className={
-            "mt-2 flex h-11 w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-border/50 disabled:opacity-60 " +
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            "mt-2 flex h-(--control-h) w-full items-center gap-2 rounded-md px-2 text-body transition-colors duration-(--motion) hover:bg-surface-hover disabled:opacity-60 " +
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           }
         >
           <LogOut aria-hidden="true" className="size-4" />

@@ -114,3 +114,13 @@ export function configFromPreset(key: PresetKey): BrandingConfig {
     ogImageUrl: null,
   };
 }
+
+/**
+ * Oglinda valorilor din `packages/ui/src/styles/admin-tokens.css` de care are nevoie garda de contrast a brandului din admin
+ * (`admin-brand.ts`): fundalul paginii pe fiecare temă (textul de pe brand, `--on-brand`, are aceeași culoare). Stau aici pentru că hex-urile sunt permise doar
+ * în fișierul de tokeni și în acest fișier; `admin-brand.test.ts` citește fișierul de tokeni și pică dacă valorile diverg.
+ */
+export const ADMIN_BRAND_REFERENCE = {
+  light: { page: "#ffffff" },
+  dark: { page: "#121315" },
+} as const;

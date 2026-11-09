@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Tokenii adminului (singurul loc cu valori hex ale interfeței), activi doar sub [data-surface="admin"]. */
+@import "../../../../packages/ui/src/styles/admin-tokens.css";
 
 /* Clasele Tailwind folosite în componentele din @ecom/ui. */
 @source "../../../../packages/ui/src";
@@ -22,9 +24,101 @@
   --font-heading: ui-sans-serif, system-ui, sans-serif;
   --font-body: ui-sans-serif, system-ui, sans-serif;
   --container-width: 80rem;
+
+  /*
+   * Numele semantice din docs/17, cu valorile vitrinei și ale paginilor publice: derivate din cele 9 culori din Branding.
+   * Componentele din @ecom/ui folosesc DOAR aceste nume; adminul le redefinește sub [data-surface="admin"] (fișierul de
+   * tokeni), vitrina le va rafina sub propria suprafață (Faza 6).
+   */
+  --surface-page: var(--color-bg);
+  --surface-canvas: var(--color-bg);
+  --surface-subtle: color-mix(in oklab, var(--color-border) 30%, transparent);
+  --surface-hover: color-mix(in oklab, var(--color-border) 50%, transparent);
+  --border-subtle: var(--color-border);
+  --border-control: var(--color-border);
+  --border-input: var(--color-border);
+  --text-primary: var(--color-fg);
+  --text-secondary: var(--color-muted);
+  --text-placeholder: var(--color-muted);
+  --text-disabled: var(--color-muted);
+  --action: var(--color-primary);
+  --action-hover: color-mix(in oklab, var(--color-primary) 90%, transparent);
+  --action-pressed: var(--color-primary);
+  --action-fg: var(--color-primary-fg);
+  --link: var(--color-primary);
+  --brand: var(--color-primary);
+  --on-brand: var(--color-primary-fg);
+  --scrim: color-mix(in oklab, var(--color-fg) 40%, transparent);
+  --tone-neutral-bg: color-mix(in oklab, var(--color-border) 40%, transparent);
+  --tone-neutral-fg: var(--color-fg);
+  --tone-info-bg: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  --tone-info-fg: var(--color-fg);
+  --tone-success-bg: color-mix(in oklab, var(--color-success) 10%, transparent);
+  --tone-success-fg: var(--color-fg);
+  --tone-warning-bg: color-mix(in oklab, var(--color-accent) 10%, transparent);
+  --tone-warning-fg: var(--color-fg);
+  --tone-problem-bg: color-mix(in oklab, var(--color-danger) 10%, transparent);
+  --tone-problem-fg: var(--color-danger);
+  --chart-1: var(--color-success);
+  --chart-2: var(--color-accent);
+  --chart-3: var(--color-danger);
+  --chart-4: var(--color-primary);
+  --chart-5: var(--color-muted);
+  --shadow-popover: 0 4px 16px color-mix(in oklab, var(--color-fg) 15%, transparent);
+  --shadow-drawer: -8px 0 24px color-mix(in oklab, var(--color-fg) 10%, transparent);
+  --shadow-dialog: 0 8px 32px color-mix(in oklab, var(--color-fg) 20%, transparent);
+  --control-h: 2.75rem;
+  --control-h-compact: 2.25rem;
+  --control-text: 1rem;
+  --control-text-line: 1.5rem;
+  --button-text: 1rem;
+  --row-h: 3rem;
+  --row-h-compact: 2.5rem;
+  --drawer-w: 35rem;
+  --motion: 150ms;
 }
 
 @theme inline {
+  /* Numele semantice din docs/17 (valorile vin din fișierul de tokeni al adminului sau din valorile implicite de mai sus). */
+  --color-surface-page: var(--surface-page);
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-hover: var(--surface-hover);
+  --color-line-subtle: var(--border-subtle);
+  --color-line-control: var(--border-control);
+  --color-line-input: var(--border-input);
+  --color-ink: var(--text-primary);
+  --color-ink-secondary: var(--text-secondary);
+  --color-ink-placeholder: var(--text-placeholder);
+  --color-ink-disabled: var(--text-disabled);
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-action-pressed: var(--action-pressed);
+  --color-action-fg: var(--action-fg);
+  --color-link: var(--link);
+  --color-brand: var(--brand);
+  --color-on-brand: var(--on-brand);
+  --color-scrim: var(--scrim);
+  --color-tone-neutral-bg: var(--tone-neutral-bg);
+  --color-tone-neutral-fg: var(--tone-neutral-fg);
+  --color-tone-info-bg: var(--tone-info-bg);
+  --color-tone-info-fg: var(--tone-info-fg);
+  --color-tone-success-bg: var(--tone-success-bg);
+  --color-tone-success-fg: var(--tone-success-fg);
+  --color-tone-warning-bg: var(--tone-warning-bg);
+  --color-tone-warning-fg: var(--tone-warning-fg);
+  --color-tone-problem-bg: var(--tone-problem-bg);
+  --color-tone-problem-fg: var(--tone-problem-fg);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-kpi-cyan: var(--kpi-cyan);
+  --color-kpi-green: var(--kpi-green);
+  --color-kpi-indigo: var(--kpi-indigo);
+  --color-kpi-peach: var(--kpi-peach);
+
   --color-background: var(--color-bg);
   --color-foreground: var(--color-fg);
   --color-muted-foreground: var(--color-muted);
@@ -36,6 +130,72 @@
   --color-danger: var(--color-danger);
   --radius-md: var(--radius);
   --font-sans: var(--font-body);
+}
+
+/* Scara tipografică din docs/17 §2.8 (mărime / înălțime de linie / grosime). */
+@theme {
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.75rem;
+  --text-title--font-weight: 600;
+  --text-section: 1rem;
+  --text-section--line-height: 1.5rem;
+  --text-section--font-weight: 600;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.25rem;
+  --text-compact: 0.8125rem;
+  --text-compact--line-height: 1.125rem;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1rem;
+  --text-label--font-weight: 500;
+  --text-kpi: 1.75rem;
+  --text-kpi--line-height: 2rem;
+  --text-kpi--font-weight: 600;
+}
+
+/* Umbrele sunt tokeni (docs/17 §2.6): clasele nu aduc valori proprii. */
+@utility shadow-popover {
+  box-shadow: var(--shadow-popover);
+}
+@utility shadow-drawer {
+  box-shadow: var(--shadow-drawer);
+}
+@utility shadow-dialog {
+  box-shadow: var(--shadow-dialog);
+}
+
+/*
+ * Panoul lateral (drawer): intră din dreapta. Tranziția folosește --motion (0 la prefers-reduced-motion, vezi fișierul de
+ * tokeni); `@starting-style` dă starea de plecare când dialogul se deschide.
+ */
+.drawer-panel {
+  transition: transform var(--motion) ease-out;
+  transform: translateX(0);
+}
+@starting-style {
+  .drawer-panel[open] {
+    transform: translateX(100%);
+  }
+}
+
+/*
+ * Bara laterală pliată (≥ lg): starea o ține atributul de pe <html> (scriptul din <head> și butonul de pliere), ca să nu
+ * existe un cadru cu bara desfăcută. Etichetele rămân în arborele de accesibilitate (doar se ascund vizual).
+ */
+@media (min-width: 64rem) {
+  html[data-admin-sidebar="collapsed"] [data-surface="admin"] {
+    --sidebar-w: var(--sidebar-w-collapsed);
+  }
+  html[data-admin-sidebar="collapsed"] [data-sidebar-label] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  html[data-admin-sidebar="collapsed"] [data-sidebar-hide] {
+    display: none;
+  }
 }
 
 body {

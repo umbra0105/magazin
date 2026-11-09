@@ -387,7 +387,7 @@ export function ProductTable({
       type="button"
       onClick={() => startEdit(row, field)}
       aria-label={m.inline.edit(what, row.title)}
-      className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
     >
       <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
     </button>
@@ -685,7 +685,7 @@ export function ProductTable({
                           <Link
                             href={`/admin/produse/${row.id}`}
                             aria-label={m.editor.editLink(row.title)}
-                            className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline"
+                            className="ml-3 text-xs font-normal text-link underline-offset-2 hover:underline"
                           >
                             {m.editor.open}
                           </Link>
@@ -697,7 +697,7 @@ export function ProductTable({
                             onClick={() => duplicate(row)}
                             aria-label={m.lifecycle.duplicateFor(row.title)}
                             data-duplicate={row.id}
-                            className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline disabled:opacity-60"
+                            className="ml-3 text-xs font-normal text-link underline-offset-2 hover:underline disabled:opacity-60"
                           >
                             {m.lifecycle.duplicate}
                           </button>
@@ -710,7 +710,7 @@ export function ProductTable({
                               onClick={() => setLifecycle({ operation: "restore", ids: [row.id] })}
                               aria-label={`${m.lifecycle.actions.restore}: ${row.title}`}
                               data-restore={row.id}
-                              className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline disabled:opacity-60"
+                              className="ml-3 text-xs font-normal text-link underline-offset-2 hover:underline disabled:opacity-60"
                             >
                               {m.lifecycle.actions.restore}
                             </button>
@@ -720,7 +720,7 @@ export function ProductTable({
                               onClick={() => setPurging({ id: row.id, title: row.title })}
                               aria-label={`${m.lifecycle.actions.purge} ${row.title}`}
                               data-purge={row.id}
-                              className="ml-3 text-xs font-normal text-primary underline-offset-2 hover:underline disabled:opacity-60"
+                              className="ml-3 text-xs font-normal text-link underline-offset-2 hover:underline disabled:opacity-60"
                             >
                               {m.lifecycle.actions.purge}
                             </button>

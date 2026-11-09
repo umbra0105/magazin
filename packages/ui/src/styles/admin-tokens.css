@@ -1,0 +1,147 @@
+/*
+ * FIȘIERUL DE TOKENI AL ADMINULUI: singurul loc din `apps/web` și `packages/ui` în care se scriu valori de design
+ * (culori hex, mărimi, umbre). Regulă permanentă în CLAUDE.md («Design admin»); sursa valorilor și rolurilor e
+ * docs/17-design-sistem-admin.md. Testul de arhitectură `admin-design-tokens` pică la orice hex, `[…px]` sau `shadow-*`
+ * scris în afara lui.
+ *
+ * Tot ce e aici se aplică DOAR sub `[data-surface="admin"]` (pus de layout-ul de admin); vitrina și paginile publice
+ * își iau valorile din `Branding`, prin valorile implicite din globals.css. Adminul e independent de paleta magazinului:
+ * din `Branding` vin doar `--brand-light` / `--brand-dark` (puse inline de layout, cu gardă de contrast), sigla și numele.
+ *
+ * Tema deschisă și cea închisă stau pe aceeași linie, în `light-dark(deschis, închis)`. Alegerea Sistem / Luminos /
+ * Întunecat comută `color-scheme` pe <html> (scriptul din <head>, vezi apps/web/src/lib/theme-choice.ts); fără alegere,
+ * `color-scheme: light dark` urmează sistemul. Fiecare pereche text/fundal are contrast AA în ambele teme, verificat de
+ * `admin-tokens.test.ts` care citește acest fișier.
+ */
+
+html:has([data-surface="admin"]) {
+  color-scheme: light dark;
+}
+
+[data-surface="admin"] {
+  /* ── Suprafețe ── */
+  --surface-page: light-dark(#ffffff, #121315);
+  --surface-canvas: light-dark(#ffffff, #121315);
+  --surface-subtle: light-dark(#f9f9f9, #1a1b1e);
+  --surface-hover: light-dark(#f2f2f2, #242529);
+
+  /* ── Borduri ── */
+  --border-subtle: light-dark(#ebebeb, #2b2c30);
+  --border-control: light-dark(#d4d4d4, #3e3f45);
+  --border-input: light-dark(#8a8a8a, #8b8d94);
+
+  /* ── Text ── */
+  --text-primary: light-dark(#1a1a1a, #f2f2f3);
+  --text-secondary: light-dark(#616161, #a8a9af);
+  --text-placeholder: light-dark(#6e6e6e, #92939a);
+  --text-disabled: light-dark(#b5b5b5, #5c5d63);
+
+  /* ── Acțiunea principală (neutră: nu urmează culoarea magazinului) ── */
+  --action: light-dark(#303236, #ececee);
+  --action-hover: light-dark(#1f2023, #ffffff);
+  --action-pressed: light-dark(#121315, #d2d2d6);
+  --action-fg: light-dark(#ffffff, #121315);
+
+  /* ── Legătură, brand și inel de focus ── */
+  --link: light-dark(#2a5bd7, #8db0ff);
+  /* Valorile implicite ale brandului; layout-ul le suprascrie inline cu `accent` din Branding când trece garda de contrast. */
+  --brand-light: #2a5bd7;
+  --brand-dark: #8db0ff;
+  --brand: light-dark(var(--brand-light), var(--brand-dark));
+  --on-brand: light-dark(#ffffff, #121315);
+
+  --scrim: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.6));
+
+  /* ── Culori de stare: perechi fundal + text ── */
+  --tone-neutral-bg: light-dark(#f2f2f2, #26272b);
+  --tone-neutral-fg: light-dark(#4a4a4a, #c9cace);
+  --tone-info-bg: light-dark(#eff3ff, #1c2742);
+  --tone-info-fg: light-dark(#2a4fa8, #afc6ff);
+  --tone-success-bg: light-dark(#e8f7ee, #12301f);
+  --tone-success-fg: light-dark(#1b6b43, #8ee0b0);
+  --tone-warning-bg: light-dark(#fff3e0, #3a2a0f);
+  --tone-warning-fg: light-dark(#8a5300, #f2c070);
+  --tone-problem-bg: light-dark(#fdecec, #3b1717);
+  --tone-problem-fg: light-dark(#a62b2b, #ffa3a3);
+
+  /* ── Grafice și bara de stoc (cel puțin 3:1 pe --surface-page) ── */
+  --chart-1: light-dark(#089b94, #2dd4c8);
+  --chart-2: light-dark(#c27400, #f2a93b);
+  --chart-3: light-dark(#d93a3a, #ff6b6b);
+  --chart-4: light-dark(#2a5bd7, #8db0ff);
+  --chart-5: light-dark(#8a8a8a, #8b8d94);
+  /* Fundaluri de carduri de indicatori; textul de pe ele rămâne --text-primary. */
+  --kpi-cyan: light-dark(#ecfbff, #10282e);
+  --kpi-green: light-dark(#f1fff1, #12281a);
+  --kpi-indigo: light-dark(#f4f7ff, #181e36);
+  --kpi-peach: light-dark(#fef6f0, #33211a);
+
+  /* ── Raze ── */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-pill: 999px;
+  --radius: var(--radius-md);
+
+  /* ── Umbre (practic inexistente; carduri, tabele și bare nu au) ── */
+  /* light-dark() primește doar culori: umbra se compune dintr-o culoare pe temă și geometria ei. */
+  --shadow-tone-popover: light-dark(rgb(0 0 0 / 0.12), rgb(0 0 0 / 0.5));
+  --shadow-tone-ring: light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.08));
+  --shadow-tone-drawer: light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.45));
+  --shadow-tone-dialog: light-dark(rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.55));
+  --shadow-popover: 0 4px 16px var(--shadow-tone-popover), 0 0 0 1px var(--shadow-tone-ring);
+  --shadow-drawer: -8px 0 24px var(--shadow-tone-drawer);
+  --shadow-dialog: 0 8px 32px var(--shadow-tone-dialog);
+
+  /* ── Dimensiuni: telefon întâi (44 px, 16 px), de la `md` în sus compact (36 px, 14 px) ── */
+  --control-h: 2.75rem;
+  --control-h-compact: 2.75rem;
+  --control-text: 1rem;
+  --control-text-line: 1.5rem;
+  /* Butoanele: 14 px peste tot (doar câmpurile de formular au 16 px pe telefon, contra zoom-ului iOS). */
+  --button-text: 0.875rem;
+  --row-h: 3rem;
+  --row-h-compact: 2.5rem;
+  --sidebar-w: 15rem;
+  --sidebar-w-collapsed: 4rem;
+  --topbar-h: 4rem;
+  --content-max: 55rem;
+  --drawer-w: 35rem;
+  --motion: 150ms;
+
+  /* ── Familie: Inter fix pentru admin (variabila vine din next/font, vezi apps/web/src/lib/fonts.ts) ── */
+  --font-body: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-body);
+
+  /*
+   * Punte către numele de culori existente (bg-background, text-foreground, border-border, text-muted-foreground,
+   * bg-primary, text-danger …), folosite încă de ecranele nemigrate: în admin ele arată valorile de mai sus, fără ca
+   * vreun ecran să fie atins. Pe măsură ce ecranele trec pe tokenii noi (Loturile 1–3), puntea rămâne pentru restul.
+   */
+  --color-bg: var(--surface-page);
+  --color-fg: var(--text-primary);
+  --color-muted: var(--text-secondary);
+  --color-border: var(--border-subtle);
+  --color-primary: var(--action);
+  --color-primary-fg: var(--action-fg);
+  --color-accent: var(--brand);
+  --color-success: var(--tone-success-fg);
+  --color-danger: var(--tone-problem-fg);
+}
+
+/* De la `md` în sus: controale de 36 px și text de 14 px (compact 32 px). */
+@media (min-width: 48rem) {
+  [data-surface="admin"] {
+    --control-h: 2.25rem;
+    --control-h-compact: 2rem;
+    --control-text: 0.875rem;
+    --control-text-line: 1.25rem;
+  }
+}
+
+/* Mișcare redusă: fără alunecare și fără tranziții. */
+@media (prefers-reduced-motion: reduce) {
+  [data-surface="admin"] {
+    --motion: 0ms;
+  }
+}

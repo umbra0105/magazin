@@ -91,7 +91,7 @@ export function DiagramList({
                     <Link
                       href={`/admin/produse/fise-explodate/${d.id}`}
                       aria-label={m.open(d.title)}
-                      className="text-primary underline-offset-2 hover:underline"
+                      className="text-link underline-offset-2 hover:underline"
                     >
                       {d.title}
                     </Link>

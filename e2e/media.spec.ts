@@ -301,11 +301,20 @@ test.describe("biblioteca media", () => {
 
     await page.emulateMedia({ colorScheme: "light" });
     await page.reload();
-    const light = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    // suprafața adminului (`data-surface="admin"`) poartă tokenii; <body> rămâne al paginii publice
+    const light = await page.evaluate(
+      () =>
+        getComputedStyle(document.querySelector('[data-surface="admin"]') as Element)
+          .backgroundColor,
+    );
 
     await page.emulateMedia({ colorScheme: "dark" });
     await page.reload();
-    const dark = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    const dark = await page.evaluate(
+      () =>
+        getComputedStyle(document.querySelector('[data-surface="admin"]') as Element)
+          .backgroundColor,
+    );
     expect(dark).not.toBe(light);
 
     await page.setViewportSize({ width: 375, height: 812 });

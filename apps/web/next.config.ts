@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 import { legacyAdminRedirects } from "./src/lib/admin-redirects";
+import { pageExtensionsFor } from "./src/lib/page-extensions";
 
 // Next citește .env doar din folderul aplicației; .env-ul proiectului e în rădăcina repo-ului.
 try {
@@ -14,12 +15,12 @@ const nextConfig: NextConfig = {
   // generarea lui eșuează fără drepturi de symlink.
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   reactStrictMode: true,
-  // Harness-urile pentru teste (`*.e2e.tsx`) devin rute doar cu E2E_HARNESS=1 (setat de Playwright);
-  // într-un build normal fișierele nu sunt nici rute, nici compilate.
-  pageExtensions:
-    process.env["E2E_HARNESS"] === "1"
-      ? ["tsx", "ts", "jsx", "js", "e2e.tsx"]
-      : ["tsx", "ts", "jsx", "js"],
+  // Harness-urile pentru teste și pagina de exemplu a componentelor (`*.e2e.tsx`) devin rute doar în dezvoltare sau cu
+  // E2E_HARNESS=1 (setat de Playwright); într-un build de producție obișnuit fișierele nu sunt nici rute, nici compilate.
+  pageExtensions: pageExtensionsFor({
+    NODE_ENV: process.env.NODE_ENV,
+    E2E_HARNESS: process.env["E2E_HARNESS"],
+  }),
   // Directorul de build. Implicit `.next`; pentru probe (build/start în paralel cu un server de dev
   // pornit) se setează NEXT_DIST_DIR=.next-probe ca să nu scrie peste `.next` (vezi CLAUDE.md).
   distDir: process.env["NEXT_DIST_DIR"] || ".next",

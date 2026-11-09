@@ -24,7 +24,7 @@ export default async function ProductImportPage() {
       <header className="flex flex-col gap-2">
         <Link
           href="/admin/produse"
-          className="text-sm text-primary underline-offset-2 hover:underline"
+          className="text-sm text-link underline-offset-2 hover:underline"
         >
           {m.back}
         </Link>

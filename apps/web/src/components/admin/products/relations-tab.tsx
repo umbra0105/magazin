@@ -134,7 +134,7 @@ export function RelationsTab({
         <Link
           href={`/admin/produse/${rel.product.id}`}
           aria-label={r.open(rel.product.title)}
-          className="truncate text-sm font-medium text-primary underline-offset-2 hover:underline"
+          className="truncate text-sm font-medium text-link underline-offset-2 hover:underline"
         >
           {rel.product.title}
         </Link>

@@ -41,7 +41,7 @@ export function ResetPanel({ minPasswordLength }: { minPasswordLength: number })
         <FormAlert tone="error">{m.reset.missingToken}</FormAlert>
         <Link
           href="/recuperare-parola"
-          className="text-sm text-primary underline-offset-4 hover:underline"
+          className="text-sm text-link underline-offset-4 hover:underline"
         >
           {m.reset.requestNew}
         </Link>

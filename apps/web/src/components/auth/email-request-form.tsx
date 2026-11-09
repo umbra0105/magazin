@@ -66,7 +66,7 @@ export function EmailRequestForm({
         <FormAlert tone="success">{successMessage}</FormAlert>
         <Link
           href="/autentificare"
-          className="text-sm text-primary underline-offset-4 hover:underline"
+          className="text-sm text-link underline-offset-4 hover:underline"
         >
           {m.common.backToLogin}
         </Link>
@@ -100,10 +100,7 @@ export function EmailRequestForm({
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? m.common.submitting : submitLabel}
       </Button>
-      <Link
-        href="/autentificare"
-        className="text-sm text-primary underline-offset-4 hover:underline"
-      >
+      <Link href="/autentificare" className="text-sm text-link underline-offset-4 hover:underline">
         {m.common.backToLogin}
       </Link>
     </form>

@@ -1,19 +1,20 @@
+import { SIDEBAR_ATTRIBUTE, SIDEBAR_STORAGE_KEY } from "./sidebar-choice";
+
 /**
  * Alegerea temei în admin: Sistem / Luminos / Întunecat, păstrată în `localStorage`. Orice acces la
  * stocare (inclusiv obținerea lui `window.localStorage`) poate arunca — mod privat, cookie-uri
  * blocate, iframe sandbox — deci totul e în try/catch, iar pagina funcționează corect fără stocare.
  *
- * Mecanismul: două foi de stil cu paleta luminoasă și cea întunecată (`/theme-light.css`,
- * `/theme-dark.css`), a căror atribut `media` se comută:
- *   sistem  → light: "not all",  dark: "(prefers-color-scheme: dark)"
- *   luminos → light: "all",      dark: "not all"
- *   întunecat → light: "not all", dark: "all"
- * Ambele vin DUPĂ `/theme.css`, deci câștigă la aceeași specificitate.
+ * Mecanismul: tokenii adminului (`packages/ui/src/styles/admin-tokens.css`) au valorile ambelor teme în
+ * `light-dark(deschis, închis)`, iar tema activă e `color-scheme` de pe <html>:
+ *   sistem    → neatins (CSS-ul pune `color-scheme: light dark`: browserul urmează sistemul)
+ *   luminos   → `color-scheme: light`
+ *   întunecat → `color-scheme: dark`
+ * Paleta magazinului din `Branding` nu mai intră în admin (docs/17 §2.4); foile `/theme-light.css` și `/theme-dark.css`
+ * nu mai sunt încărcate aici.
  */
 
 export const THEME_STORAGE_KEY = "ecom-admin-theme";
-export const THEME_LIGHT_LINK_ID = "admin-theme-light";
-export const THEME_DARK_LINK_ID = "admin-theme-dark";
 
 export const THEME_CHOICES = ["system", "light", "dark"] as const;
 export type ThemeChoice = (typeof THEME_CHOICES)[number];
@@ -54,19 +55,8 @@ export function writeThemeChoice(
   }
 }
 
-export const MEDIA_FOR_CHOICE: Record<ThemeChoice, { light: string; dark: string }> = {
-  system: { light: "not all", dark: "(prefers-color-scheme: dark)" },
-  light: { light: "all", dark: "not all" },
-  dark: { light: "not all", dark: "all" },
-};
-
-/** Aplică alegerea pe documentul curent (comută `media` pe cele două foi de stil). */
+/** Aplică alegerea pe documentul curent: `color-scheme` pe <html> (sistem îl curăță). */
 export function applyThemeChoice(choice: ThemeChoice, doc: Document = document): void {
-  const media = MEDIA_FOR_CHOICE[choice];
-  const light = doc.getElementById(THEME_LIGHT_LINK_ID);
-  const dark = doc.getElementById(THEME_DARK_LINK_ID);
-  light?.setAttribute("media", media.light);
-  dark?.setAttribute("media", media.dark);
   try {
     doc.documentElement.style.colorScheme = choice === "system" ? "" : choice;
   } catch {
@@ -75,13 +65,13 @@ export function applyThemeChoice(choice: ThemeChoice, doc: Document = document):
 }
 
 /**
- * Script inline pus în layout-ul de admin, înainte de conținut: aplică alegerea salvată înainte de
- * primul paint (fără flash). Autonom: nu depinde de bundle. Totul în try/catch.
+ * Script inline pus în layout-ul de admin, înaintea conținutului (blochează randarea: nu există un cadru cu tema greșită): aplică tema și starea barei laterale salvate
+ * înainte de primul paint (fără flash). Autonom: nu depinde de bundle. Fiecare citire e în propriul try/catch, ca o alegere
+ * ilizibilă să n-o împiedice pe cealaltă. Singura injectare de HTML brut permisă în aplicație, alături de `RichText` (testul `description-writes` o păzește).
  */
 export const THEME_INIT_SCRIPT =
-  `(function(){try{var c=null;try{c=window.localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})}catch(e){}` +
-  `if(c!=="light"&&c!=="dark")return;` +
-  `var l=document.getElementById(${JSON.stringify(THEME_LIGHT_LINK_ID)}),d=document.getElementById(${JSON.stringify(THEME_DARK_LINK_ID)});` +
-  `if(l)l.setAttribute("media",c==="light"?"all":"not all");` +
-  `if(d)d.setAttribute("media",c==="dark"?"all":"not all");` +
-  `document.documentElement.style.colorScheme=c;}catch(e){}})();`;
+  `(function(){var s=null;try{s=window.localStorage}catch(e){}if(!s)return;` +
+  `try{var c=s.getItem(${JSON.stringify(THEME_STORAGE_KEY)});` +
+  `if(c==="light"||c==="dark")document.documentElement.style.colorScheme=c}catch(e){}` +
+  `try{if(s.getItem(${JSON.stringify(SIDEBAR_STORAGE_KEY)})==="collapsed")` +
+  `document.documentElement.setAttribute(${JSON.stringify(SIDEBAR_ATTRIBUTE)},"collapsed")}catch(e){}})();`;

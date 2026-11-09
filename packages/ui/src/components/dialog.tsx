@@ -12,12 +12,15 @@ export interface DialogProps {
   /** Eticheta butonului de închidere (obligatorie, pentru cititoare de ecran). */
   closeLabel: string;
   children: ReactNode;
+  /** Lățimea maximă a dialogului (ex. `max-w-lg`); implicit `max-w-2xl`. */
   className?: string;
 }
 
 /**
- * Dialog modal pe elementul nativ `<dialog>`: captura focusului, Escape și restaurarea focusului
- * vin de la browser. Click pe fundal îl închide. Pe telefon ocupă lățimea ecranului.
+ * Dialog modal pe elementul nativ `<dialog>` (docs/17 §3): captura focusului, Escape și restaurarea focusului vin de la
+ * browser; fundal `--scrim`, rază 12 px, `shadow-dialog`. Click pe fundal îl închide. Elementul `<dialog>` e doar un cadru
+ * transparent (pe telefon cu un chenar de 12 px în jur, ca panoul să nu atingă marginea ecranului); panoul vizibil e
+ * `div`-ul dinăuntru, care și derulează când conținutul e înalt.
  */
 export function Dialog({
   open,
@@ -52,24 +55,23 @@ export function Dialog({
         if (openRef.current) onClose();
       }}
       onClick={(event) => {
-        // click pe fundal (elementul <dialog> în sine, nu conținutul)
+        // click pe fundal (elementul <dialog> în sine, nu panoul)
         if (event.target === ref.current) onClose();
       }}
       className={cn(
-        "m-auto max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-2xl overflow-y-auto rounded-lg border border-border " +
-          "bg-background p-0 text-foreground shadow-lg backdrop:bg-foreground/40",
+        "m-auto w-full max-w-2xl overflow-visible bg-transparent p-3 text-ink backdrop:bg-scrim sm:p-0",
         className,
       )}
     >
       {open && (
-        <div className="flex flex-col gap-4 p-4 sm:p-6">
+        <div className="flex max-h-[92dvh] flex-col gap-4 overflow-y-auto rounded-lg bg-surface-page p-4 shadow-dialog sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <h2 id={titleId} className="text-lg font-semibold leading-tight">
+              <h2 id={titleId} className="text-section">
                 {title}
               </h2>
               {description && (
-                <p id={descriptionId} className="text-sm text-muted-foreground">
+                <p id={descriptionId} className="text-body text-ink-secondary">
                   {description}
                 </p>
               )}
@@ -78,7 +80,7 @@ export function Dialog({
               type="button"
               onClick={onClose}
               aria-label={closeLabel}
-              className="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="inline-flex size-(--control-h) shrink-0 items-center justify-center rounded-md text-ink transition-colors duration-(--motion) hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               <X aria-hidden="true" className="size-5" />
             </button>

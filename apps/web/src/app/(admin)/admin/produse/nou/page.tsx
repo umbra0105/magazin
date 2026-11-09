@@ -44,7 +44,7 @@ export default async function NewProductPage() {
       <header className="flex flex-col gap-1">
         <Link
           href="/admin/produse"
-          className="text-sm text-primary underline-offset-2 hover:underline"
+          className="text-sm text-link underline-offset-2 hover:underline"
         >
           {m.editor.back}
         </Link>

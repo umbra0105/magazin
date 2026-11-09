@@ -68,8 +68,8 @@ export interface SidebarNavItem {
 }
 
 const ROW =
-  "flex h-11 items-center gap-3 rounded-md px-3 text-sm text-foreground hover:bg-border/50 " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "flex h-(--control-h) items-center gap-3 rounded-md px-2.5 text-body text-ink transition-colors duration-(--motion) hover:bg-surface-hover " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 
 /**
  * Meniul din stânga. O intrare cu `children` e un GRUP: un buton cu săgeată (`aria-expanded`) care deschide sau închide lista
@@ -77,14 +77,32 @@ const ROW =
  * evidențiat (`aria-current="page"`); închis manual pe una din paginile lui, titlul rămâne marcat activ. Logica nu știe de
  * «Catalog»: orice intrare cu `children` din `ADMIN_NAV` se desenează la fel (Comenzi, Clienți etc. vor folosi același cod).
  */
-export function SidebarNav({ items, label }: { items: SidebarNavItem[]; label: string }) {
+export function SidebarNav({
+  items,
+  label,
+  collapsed = false,
+  onExpand,
+}: {
+  items: SidebarNavItem[];
+  label: string;
+  /** Bara e pliată la 64 px (doar pe desktop): etichetele sunt ascunse vizual, grupurile desfac bara la click. */
+  collapsed?: boolean;
+  onExpand?: () => void;
+}) {
   const pathname = usePathname();
   return (
     <nav aria-label={label}>
       <ul className="flex flex-col gap-1">
         {items.map((item) =>
           item.children ? (
-            <SidebarGroup key={item.id} item={item} children={item.children} pathname={pathname} />
+            <SidebarGroup
+              key={item.id}
+              item={item}
+              children={item.children}
+              pathname={pathname}
+              collapsed={collapsed}
+              onExpand={onExpand}
+            />
           ) : (
             <SidebarLink key={item.id} item={item} pathname={pathname} />
           ),
@@ -105,10 +123,13 @@ function SidebarLink({ item, pathname }: { item: SidebarNavItem; pathname: strin
       <Link
         href={item.href}
         aria-current={active ? "page" : undefined}
-        className={cn(ROW, active && "bg-border/60 font-semibold")}
+        title={item.label}
+        className={cn(ROW, active && "bg-surface-hover font-semibold")}
       >
         <Icon aria-hidden="true" className="size-5 shrink-0" />
-        <span className="truncate">{item.label}</span>
+        <span data-sidebar-label className="truncate">
+          {item.label}
+        </span>
       </Link>
     </li>
   );
@@ -118,10 +139,14 @@ function SidebarGroup({
   item,
   children,
   pathname,
+  collapsed,
+  onExpand,
 }: {
   item: SidebarNavItem;
   children: SidebarNavChild[];
   pathname: string;
+  collapsed: boolean;
+  onExpand: (() => void) | undefined;
 }) {
   const searchParams = useSearchParams();
   const Icon = ICONS[item.id];
@@ -144,18 +169,38 @@ function SidebarGroup({
         aria-expanded={open}
         aria-controls={listId}
         data-active={inGroup ? "true" : undefined}
-        onClick={() => setOpen((value) => !value)}
+        title={item.label}
+        onClick={() => {
+          // pliată (doar ≥ lg): primul click desface bara și deschide grupul, ca să se vadă elementele
+          if (collapsed && onExpand && window.matchMedia("(min-width: 64rem)").matches) {
+            onExpand();
+            setOpen(true);
+            return;
+          }
+          setOpen((value) => !value);
+        }}
         className={cn(ROW, "w-full text-left", inGroup && "font-semibold")}
       >
         <Icon aria-hidden="true" className="size-5 shrink-0" />
-        <span className="flex-1 truncate">{item.label}</span>
+        <span data-sidebar-label className="flex-1 truncate">
+          {item.label}
+        </span>
         <ChevronDown
           aria-hidden="true"
-          className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")}
+          data-sidebar-hide
+          className={cn(
+            "size-4 shrink-0 transition-transform duration-(--motion)",
+            open && "rotate-180",
+          )}
         />
       </button>
       {/* `hidden` scoate lista din ordinea de tab și din arborele de accesibilitate cât e închisă */}
-      <ul id={listId} hidden={!open} className="ml-5 mt-1 space-y-1 border-l border-border pl-2">
+      <ul
+        id={listId}
+        hidden={!open}
+        data-sidebar-hide
+        className="ml-5 mt-1 space-y-1 border-l border-line-subtle pl-2"
+      >
         {children.map((child) => {
           const active = child.id === activeId;
           return (
@@ -163,7 +208,7 @@ function SidebarGroup({
               <Link
                 href={active ? child.href : itemHref(child, current, searchParams)}
                 aria-current={active ? "page" : undefined}
-                className={cn(ROW, "h-11 gap-0", active && "bg-border/60 font-semibold")}
+                className={cn(ROW, "gap-0 px-3", active && "bg-surface-hover font-semibold")}
               >
                 <span className="truncate">{child.label}</span>
               </Link>

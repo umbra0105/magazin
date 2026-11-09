@@ -342,7 +342,7 @@ export function MediaPicker({
                       type="button"
                       onClick={() => toggle(id)}
                       aria-label={m.picker.removeFromSelection(name)}
-                      className="inline-flex size-8 items-center justify-center rounded-md hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="inline-flex size-8 items-center justify-center rounded-md hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                     >
                       <X aria-hidden="true" className="size-4" />
                     </button>

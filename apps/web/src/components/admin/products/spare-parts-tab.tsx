@@ -122,7 +122,7 @@ export function SparePartsTab({
                   <Link
                     href={`/admin/produse/fise-explodate/${d.id}`}
                     aria-label={s.open(d.title)}
-                    className="truncate text-sm font-medium text-primary underline-offset-2 hover:underline"
+                    className="truncate text-sm font-medium text-link underline-offset-2 hover:underline"
                   >
                     {d.title}
                   </Link>
@@ -212,7 +212,7 @@ export function SparePartsTab({
           <p className="text-sm">
             <Link
               href="/admin/produse/fise-explodate"
-              className="text-primary underline-offset-2 hover:underline"
+              className="text-link underline-offset-2 hover:underline"
             >
               {s.manage}
             </Link>

@@ -202,13 +202,14 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                 onDragLeave={() => setOver((current) => (current?.id === row.id ? null : current))}
                 onDrop={(e) => onDrop(e, row)}
                 style={{ marginInlineStart: `${row.depth * 1.5}rem` }}
+                // zona țintă se citește din atribut (stilul și testele nu depind de numele claselor)
+                data-drop-target={isOver ? over?.zone : undefined}
                 className={cn(
-                  "flex flex-wrap items-center gap-2 rounded-md border bg-background p-2",
+                  "flex flex-wrap items-center gap-2 rounded-md border border-line-subtle bg-surface-page p-2",
                   dragging === row.id && "opacity-50",
-                  isOver && over?.zone === "inside" && "border-primary bg-primary/10",
-                  isOver && over?.zone === "before" && "border-t-4 border-t-primary",
-                  isOver && over?.zone === "after" && "border-b-4 border-b-primary",
-                  !isOver && "border-border",
+                  "data-[drop-target=inside]:border-brand data-[drop-target=inside]:bg-brand/10",
+                  "data-[drop-target=before]:border-t-4 data-[drop-target=before]:border-t-brand",
+                  "data-[drop-target=after]:border-b-4 data-[drop-target=after]:border-b-brand",
                 )}
               >
                 {structure && (
