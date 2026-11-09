@@ -17,3 +17,6 @@ generated
 
 # Date locale ale utilizatorului (export WooCommerce etc.): nu se comit
 /local-data
+
+# Skill-uri locale ale asistentului (.claude/skills/); restul din .claude/ nu e ignorat
+.claude/skills/
