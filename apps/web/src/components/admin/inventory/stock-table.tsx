@@ -177,6 +177,7 @@ function StockRow({
       : null;
   const availability = availabilityView(row);
   const name = displayName(row);
+  const subtitle = row.variantLabel ?? (first ? "" : row.productTitle);
   const transferData =
     canWrite && transfer
       ? transferTarget(row, {
@@ -197,8 +198,9 @@ function StockRow({
           </Link>
         )}
         <span className="block text-label text-ink-secondary">
-          {row.variantLabel ?? (first ? "" : row.productTitle)}
-          <span className="ml-1">{row.sku}</span>
+          {subtitle}
+          {/* spațiu doar după o etichetă; singur pe linie, SKU-ul începe sub prima literă a numelui */}
+          <span className={subtitle ? "ml-1" : undefined}>{row.sku}</span>
         </span>
       </RowHeader>
       <Td priority="detail" className="whitespace-nowrap text-ink-secondary" data-cell="unit">

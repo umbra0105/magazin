@@ -118,6 +118,25 @@ async function expectNoHorizontalScroll(page: Page, table: Locator) {
   expect(pageOverflow, "derulare orizontală a paginii (px)").toBeLessThanOrEqual(0);
 }
 
+/**
+ * SKU-ul de sub numele produsului începe exact sub prima literă a numelui (fără decalaj). Verificat pe rândurile fără
+ * etichetă de variantă (SKU-ul e singur pe linie); cu etichetă, SKU-ul urmează eticheta pe aceeași linie.
+ */
+async function expectSkuAlignedWithName(row: Locator, sku: string) {
+  const name = row.locator('th[scope="row"] a');
+  const skuText = row.locator('th[scope="row"] > span > span');
+  await expect(skuText).toHaveText(sku);
+  const label = ((await row.locator('th[scope="row"] > span').textContent()) ?? "")
+    .replace(sku, "")
+    .trim();
+  expect(label, `rândul ${sku} are etichetă de variantă: testul de aliniere nu se aplică`).toBe("");
+  const [nameBox, skuBox] = await Promise.all([name.boundingBox(), skuText.boundingBox()]);
+  expect(
+    Math.abs((skuBox?.x ?? 999) - (nameBox?.x ?? 0)),
+    `SKU-ul ${sku} începe la același x cu numele (px)`,
+  ).toBeLessThanOrEqual(0.5);
+}
+
 /** Cifrele din legenda barei de stoc: «În stoc 26», «Sub prag 2» … din numele accesibil al imaginii. */
 async function barNumbers(scope: Locator): Promise<Record<string, number>> {
   const label = (await scope.locator('[role="img"]').getAttribute("aria-label")) ?? "";
@@ -355,6 +374,13 @@ test.describe("ecranul Stoc, pe componentele din docs/17", () => {
     await expect(asOf).toHaveAttribute("title", /^valabilă la \d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}$/);
     expect(await css(asOf, "font-size")).toBe("12px");
     expect((await asOf.boundingBox())?.height ?? 99).toBeLessThanOrEqual(16);
+    // SKU-ul stă sub numele produsului, fără decalaj spre dreapta
+    for (const index of [ALGE, ACCESORIU]) {
+      await expectSkuAlignedWithName(
+        page.locator(`[data-variant-row="${skus[index]}"]`),
+        skus[index] as string,
+      );
+    }
     // «= N de pași» pe o singură linie
     const steps = alge.locator('[data-cell="available"] span').nth(1);
     expect((await steps.boundingBox())?.height ?? 99).toBeLessThanOrEqual(16);
@@ -504,6 +530,7 @@ test.describe("ecranul Stoc, pe componentele din docs/17", () => {
         const skuText = row.locator('th[scope="row"] > span > span');
         await expect(skuText).toHaveText(sku);
         expect((await skuText.boundingBox())?.height ?? 99).toBeLessThanOrEqual(20);
+        await expectSkuAlignedWithName(row, sku);
 
         // Disponibil și pastila de stare pe aceeași linie, Disponibil primul
         const available = await row.locator('[data-cell="available"]').boundingBox();

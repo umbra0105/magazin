@@ -1,5 +1,10 @@
 # Jurnal de progres
 
+## 2026-11-09 · Sesiunea 8 · Redesign admin, Lot 1 CONFIRMAT de utilizator; SKU aliniat sub nume
+**Lot 1 confirmat în browser** (telefon, 1440, 1024, 1280, tema închisă, regresie): marcat `[x]` în TODO. Comisuri: `21363b5`, `5d479ac`, `b37c7f8` și cel de față.
+**SKU aliniat.** Linia de sub numele produsului avea `ml-1` pe SKU chiar și fără etichetă de variantă, deci SKU-ul era decalat cu 4 px la dreapta față de nume (desktop și telefon). Marginea se pune acum doar după o etichetă; SKU-ul singur pe linie începe sub prima literă a numelui. Test E2E (1440 și 390 px, x-ul SKU-ului = x-ul numelui, ±0,5 px): roșu pe codul vechi (4 px), verde după reparație.
+**Pastila roșie «Stoc epuizat» pe rândul Negestionat: comportament existent din Faza 5, nu efect al redesignului.** Pentru produsele negestionate pastila arată `stockStatus` setat pe produs (dropdown «În stoc / Stoc epuizat / La comandă», `stateView` din `stock-view.ts`, neschimbat din 23.10 și identic în `84663b8`, înainte de redesign); coloana «Negestionat» spune doar că cantitatea nu e urmărită. Nu am schimbat nimic.
+
 ## 2026-11-09 · Sesiunea 8 · Redesign admin, Lot 1, corecții a doua rundă (telefon, rânduri Negestionat/Digital, praguri) — GATA (comis; în verificarea utilizatorului)
 **1. Telefon: card în loc de tabel.** `Table` din `@ecom/ui` are modul stivuit opțional (`stacked`), reutilizabil în loturile 2–3: sub 42rem de tabel fiecare rând e un card (`RowHeader`/`Td` cu `stack="title|inline|actions"`), antetul rămâne doar pentru cititoare de ecran, cu roluri ARIA explicite; celelalte tabele nu se schimbă. Stoc: numele pe toată lățimea cu SKU-ul sub el, Disponibil + pastila de stare pe aceeași linie, apoi acțiunile («Ajustează» cu text, «Prag» și «Istoric» de 44 px). Card de ≈128 px; fără derulare orizontală.
 **2. Rânduri Negestionat/Digital:** celule separate (fără `colSpan`), textul «Negestionat până la inventar» pe cel mult două linii (rând ≤ 56 px la 1440 și 1024 px, ≤ 132 px la 390); sugestia «Pornește gestionarea…» e doar în tooltip. Capturi la 1440/1024/390, ambele teme, în `lot1-dupa` (`stoc-negestionat-*`, `stoc-digital-*`).
