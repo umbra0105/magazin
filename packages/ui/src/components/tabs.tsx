@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { cn } from "../lib/cn";
+import { TAB_LIST_CLASS, tabClass } from "./tab-styles";
 
 export interface TabItem {
   id: string;
@@ -54,11 +54,7 @@ export function Tabs({ label, tabs, defaultTab, className, onChange }: TabsProps
 
   return (
     <div className={className}>
-      <div
-        role="tablist"
-        aria-label={label}
-        className="flex flex-wrap gap-1 border-b border-line-subtle"
-      >
+      <div role="tablist" aria-label={label} className={TAB_LIST_CLASS}>
         {tabs.map((tab, index) => {
           const selected = tab.id === active;
           return (
@@ -76,13 +72,7 @@ export function Tabs({ label, tabs, defaultTab, className, onChange }: TabsProps
               tabIndex={selected ? 0 : -1}
               onClick={() => select(tab.id)}
               onKeyDown={(event) => onKeyDown(event, index)}
-              className={cn(
-                "-mb-px inline-flex min-h-(--control-h) items-center gap-1.5 border-b-2 px-4 text-body transition-colors duration-(--motion)",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset",
-                selected
-                  ? "border-ink font-medium text-ink"
-                  : "border-transparent text-ink-secondary hover:text-ink",
-              )}
+              className={tabClass(selected)}
             >
               {tab.label}
               {tab.badge}

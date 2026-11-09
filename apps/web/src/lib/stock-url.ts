@@ -1,13 +1,16 @@
 import type { LowStockReason, StockOverviewQuery } from "@ecom/core";
 
 /**
- * Adresa paginii Stoc, cu filtrele în adresă (`?q=&tip=&stare=&filtru=stoc-mic&pagina=`), deci pagina se poate partaja și
+ * Adresa paginii Stoc, cu filtrele în adresă (`?q=&tip=&stare=&filtru=stoc-mic&pe-pagina=&pagina=`), deci pagina se poate partaja și
  * reîncărca. Fișier pur, fără componente: se folosește din server și din client, iar nucleul citește aceeași adresă
  * (`parseStockOverviewQuery`).
  */
 
 /** Valoarea din adresă care pornește vederea «Stoc mic»; oglindește `LOW_STOCK_FILTER` din nucleu (un test le ține la fel). */
 export const LOW_STOCK_FILTER = "stoc-mic";
+
+/** Rândurile pe pagină implicite (nu se scriu în adresă); oglindește `STOCK_LIST_PAGE_SIZE` din nucleu (un test le ține la fel). */
+export const DEFAULT_PAGE_SIZE = 25;
 
 /** Valoarea din adresă (`?motiv=…`) pentru fiecare motiv; oglindește `LOW_STOCK_REASON_PARAMS` din nucleu (un test le ține la fel). */
 export const LOW_STOCK_REASON_PARAMS: Readonly<Record<LowStockReason, string>> = {
@@ -32,6 +35,10 @@ export function stockHref(query: StockUrlQuery, overrides: { page?: number } = {
   if (query.lowStockOnly || query.reason) params.set("filtru", LOW_STOCK_FILTER);
   if (query.reason) params.set("motiv", LOW_STOCK_REASON_PARAMS[query.reason]);
   if (query.warehouseCode) params.set("depozit", query.warehouseCode);
+  // 25 e valoarea implicită: nu se scrie în adresă
+  if (query.pageSize && query.pageSize !== DEFAULT_PAGE_SIZE) {
+    params.set("pe-pagina", String(query.pageSize));
+  }
   const page = overrides.page ?? query.page;
   if (page && page > 1) params.set("pagina", String(page));
   const text = params.toString();

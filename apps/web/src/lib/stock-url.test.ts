@@ -2,9 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   LOW_STOCK_FILTER as CORE_LOW_STOCK_FILTER,
   LOW_STOCK_REASON_PARAMS as CORE_REASON_PARAMS,
+  STOCK_LIST_PAGE_SIZE,
   parseStockOverviewQuery,
 } from "@ecom/core";
-import { LOW_STOCK_FILTER, LOW_STOCK_REASON_PARAMS, historyHref, stockHref } from "./stock-url";
+import {
+  DEFAULT_PAGE_SIZE,
+  LOW_STOCK_FILTER,
+  LOW_STOCK_REASON_PARAMS,
+  historyHref,
+  stockHref,
+} from "./stock-url";
 
 /** Adresa paginii Stoc: filtrele în adresă (`?q=&tip=&stare=&filtru=stoc-mic&pagina=`), identice cu ce citește nucleul. */
 
@@ -153,5 +160,30 @@ describe("stockHref: filtrul pe motiv (?motiv=…)", () => {
         page: 3,
       });
     }
+  });
+});
+
+describe("rânduri pe pagină în adresă (?pe-pagina=)", () => {
+  it("valoarea implicită oglindește nucleul (adresa nu importă nucleul în client)", () => {
+    expect(DEFAULT_PAGE_SIZE).toBe(STOCK_LIST_PAGE_SIZE);
+  });
+
+  it("25 e valoarea implicită și nu se scrie; 50 și 100 se scriu, după depozit și înaintea paginii", () => {
+    expect(stockHref({ pageSize: 25 })).toBe("/admin/produse/stoc");
+    expect(stockHref({ pageSize: 50 })).toBe("/admin/produse/stoc?pe-pagina=50");
+    expect(stockHref({ search: "a", warehouseCode: "w", pageSize: 100, page: 2 })).toBe(
+      "/admin/produse/stoc?q=a&depozit=w&pe-pagina=100&pagina=2",
+    );
+  });
+
+  it("adresa scrisă se citește la fel de nucleu (dus-întors)", () => {
+    const href = stockHref({ search: "liner", lowStockOnly: true, pageSize: 50, page: 3 });
+    const params = Object.fromEntries(new URL(href, "http://x").searchParams);
+    expect(parseStockOverviewQuery(params)).toMatchObject({
+      search: "liner",
+      lowStockOnly: true,
+      pageSize: 50,
+      page: 3,
+    });
   });
 });

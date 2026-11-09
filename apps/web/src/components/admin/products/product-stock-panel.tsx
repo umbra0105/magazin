@@ -2,9 +2,8 @@ import Link from "next/link";
 import { groupStockRows, type ProductStockView } from "@ecom/core";
 import { Badge, buttonVariants } from "@ecom/ui";
 import type { ReasonOption } from "@/components/admin/inventory/adjust-stock-dialog";
-import { badgeVariant } from "@/components/admin/inventory/stock-parts";
 import { StockTable } from "@/components/admin/inventory/stock-table";
-import { kindLabel, stateView } from "@/lib/stock-view";
+import { badgeVariant, kindLabel, stateView } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 
 const t = getMessages().admin.products.editor.stock.quantities;

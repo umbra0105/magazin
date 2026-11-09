@@ -3,13 +3,19 @@ import { formatQuantity, parseQuantity, saleStepToInt, type Quantity } from "@ec
 import {
   buildStockOverviewRow,
   countLowStock,
+  countManaged,
   groupStockRows,
   lowStockReason,
   sortLowStock,
   type StockOverviewSource,
   type StockOverviewSettings,
 } from "./stock-overview";
-import { LOW_STOCK_REASON_PARAMS, parseStockOverviewQuery } from "./stock-overview-service";
+import {
+  LOW_STOCK_REASON_PARAMS,
+  STOCK_LIST_PAGE_SIZE,
+  STOCK_PAGE_SIZES,
+  parseStockOverviewQuery,
+} from "./stock-overview-service";
 
 /**
  * Faza 5, punctul 8: modelul de afișare al ecranului de stoc (funcții PURE). Cele 6 produse-model din plan sunt cazurile
@@ -521,5 +527,48 @@ describe("adresa vederii «Stoc mic»: filtrul pe motiv (?motiv=…)", () => {
     expect(parseStockOverviewQuery({ filtru: "stoc-mic", motiv: "x" })).toEqual({
       lowStockOnly: true,
     });
+  });
+});
+
+describe("variantele gestionate: baza bării de stoc din Panou și Stoc", () => {
+  it("numără doar variantele gestionate (și cele încă neinventariate), nu negestionatul și digitalul", () => {
+    const rows = [
+      buildStockOverviewRow(source({ physical: "50" }), settings),
+      buildStockOverviewRow(source({ physical: "0" }), settings),
+      buildStockOverviewRow(source({ physical: null }), settings), // gestionat, fără rând de stoc
+      buildStockOverviewRow(source({ manageStock: false }), settings),
+      buildStockOverviewRow(source({ productType: "digital", manageStock: false }), settings),
+    ];
+    expect(countManaged(rows)).toBe(3);
+    expect(countManaged([])).toBe(0);
+  });
+
+  it("«în stoc» = gestionate minus cele de la «Stoc mic»: nicio variantă nu e numărată de două ori", () => {
+    const rows = [
+      buildStockOverviewRow(source({ physical: "50" }), settings),
+      buildStockOverviewRow(source({ physical: "0" }), settings),
+      buildStockOverviewRow(source({ physical: "1" }), settings),
+      buildStockOverviewRow(source({ manageStock: false }), settings),
+    ];
+    const low = countLowStock(rows);
+    expect(countManaged(rows) - low.total).toBe(1);
+    expect(low.total).toBeLessThanOrEqual(countManaged(rows));
+  });
+});
+
+describe("rânduri pe pagină în adresa paginii Stoc (?pe-pagina=)", () => {
+  it("valorile permise sunt 25, 50 și 100, iar cea implicită e prima", () => {
+    expect(STOCK_PAGE_SIZES).toEqual([25, 50, 100]);
+    expect(STOCK_PAGE_SIZES[0]).toBe(STOCK_LIST_PAGE_SIZE);
+  });
+
+  it("o valoare permisă se citește; una nepermisă sau greșită se ignoră (adresa veche nu dă eroare)", () => {
+    expect(parseStockOverviewQuery({ "pe-pagina": "50" }).pageSize).toBe(50);
+    expect(parseStockOverviewQuery({ "pe-pagina": "100" }).pageSize).toBe(100);
+    for (const bad of ["7", "500", "0", "-25", "25.5", "abc", "", "050"]) {
+      expect(parseStockOverviewQuery({ "pe-pagina": bad }), bad).not.toHaveProperty("pageSize");
+    }
+    expect(parseStockOverviewQuery({})).not.toHaveProperty("pageSize");
+    expect(parseStockOverviewQuery({ "pe-pagina": ["50", "100"] }).pageSize).toBe(50);
   });
 });

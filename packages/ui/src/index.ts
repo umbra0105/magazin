@@ -18,6 +18,21 @@ export { Select, type SelectProps } from "./components/select";
 export { Textarea, type TextareaProps } from "./components/textarea";
 export { Dialog, type DialogProps } from "./components/dialog";
 export { Tabs, type TabItem, type TabsProps } from "./components/tabs";
+export { filterChipClass } from "./components/filter-chip";
+export { TAB_LIST_CLASS, tabClass } from "./components/tab-styles";
+export {
+  Pagination,
+  pageWindow,
+  type PaginationLinkProps,
+  type PaginationProps,
+} from "./components/pagination";
+export {
+  KpiCard,
+  KpiContent,
+  kpiCardVariants,
+  type KpiCardProps,
+  type KpiContentProps,
+} from "./components/kpi-card";
 export { FileInput, type FileInputProps } from "./components/file-input";
 export { describeFiles, formatFileSize } from "./lib/file-size";
 export { Table, TableCaption, TBody, Td, Th, THead, Tr } from "./components/table";

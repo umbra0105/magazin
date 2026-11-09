@@ -12,6 +12,7 @@ import { StockError } from "./stock-errors";
 import {
   buildStockOverviewRow,
   countLowStock,
+  countManaged,
   groupStockRows,
   sortLowStock,
   type LowStockCounts,
@@ -36,6 +37,8 @@ import type {
  */
 
 export const STOCK_LIST_PAGE_SIZE = 25;
+/** Rândurile pe pagină care se pot alege în pagina Stoc (`?pe-pagina=`); prima e cea implicită. */
+export const STOCK_PAGE_SIZES: readonly number[] = [STOCK_LIST_PAGE_SIZE, 50, 100];
 export const STOCK_MOVEMENTS_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_MAX_ROWS = 5000;
@@ -100,6 +103,8 @@ export interface StockOverviewPage {
   settings: StockOverviewServiceSettings;
   /** Câte variante sunt la «Stoc mic», pe motiv, din TOT ce a găsit căutarea (independent de filtre și de pagină) */
   lowStock: LowStockCounts;
+  /** Câte variante gestionate a găsit căutarea (baza bării de stoc: «în stoc» = gestionate − la stoc mic) */
+  managedVariants: number;
 }
 
 /** Ce arată Panoul despre stoc: câte variante sunt la stoc mic, pe motiv, și cât de proaspătă e poza SmartBill. */
@@ -108,6 +113,8 @@ export interface StockAlerts {
   freshness: WarehouseFreshness | null;
   /** Aceleași numere ca în vederea «Stoc mic» a paginii Stoc */
   lowStock: LowStockCounts;
+  /** Câte variante gestionate are depozitul (baza bării de stoc); aceeași regulă ca în pagina Stoc */
+  managedVariants: number;
   /** Depozitul are mai multe variante decât plafonul; numărătorile sunt pe primele */
   truncated: boolean;
   settings: StockOverviewServiceSettings;
@@ -192,6 +199,11 @@ export function parseStockOverviewQuery(
   }
   const page = firstOf(raw["pagina"]);
   if (page && /^[1-9][0-9]{0,6}$/.test(page)) query.page = Number.parseInt(page, 10);
+  // doar valorile din listă (adresa nu poate cere o pagină de 5000 de rânduri)
+  const size = STOCK_PAGE_SIZES.find(
+    (candidate) => String(candidate) === firstOf(raw["pe-pagina"]),
+  );
+  if (size !== undefined) query.pageSize = size;
   return query;
 }
 
@@ -279,6 +291,7 @@ export class StockOverviewService {
       truncated,
       settings,
       lowStock: countLowStock(all),
+      managedVariants: countManaged(all),
     };
   }
 
@@ -308,6 +321,7 @@ export class StockOverviewService {
       warehouse,
       freshness: await this.freshnessOf(warehouse.id, settings),
       lowStock: countLowStock(rows),
+      managedVariants: countManaged(rows),
       truncated: sources.length > this.maxRows,
       settings,
     };

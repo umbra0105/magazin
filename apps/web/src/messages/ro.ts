@@ -144,12 +144,6 @@ export const ro = {
         },
         snapshot: {
           title: "Sincronizare SmartBill",
-          status: {
-            fresh: "La zi",
-            stale: "Neactualizat",
-            never: "Neimportat",
-            none: "Fără stoc",
-          },
           aria: "Sincronizare SmartBill: vezi starea în pagina Stoc",
         },
       },
@@ -1028,8 +1022,33 @@ export const ro = {
       pagination: {
         label: "Paginare",
         page: (page: number, count: number) => `Pagina ${page} din ${count}`,
-        previous: "Înapoi",
-        next: "Înainte",
+        previous: "Pagina anterioară",
+        next: "Pagina următoare",
+        pageNumber: (page: number) => `Pagina ${page}`,
+        rowsPerPage: "Rânduri pe pagină",
+      },
+      /** Bara de stoc segmentată din Panou și din pagina Stoc: variantele gestionate, pe stare. */
+      health: {
+        label: "Starea stocului",
+        inStock: "În stoc",
+        low: "Stoc mic",
+        out: "Epuizat",
+        /** Legenda de sub bară: baza numărătorii (doar variantele cu stoc gestionat). */
+        managed: (n: number) => {
+          const count = n.toLocaleString("ro-RO");
+          if (n === 1) return `${count} variantă gestionată`;
+          return n % 100 >= 1 && n % 100 <= 19
+            ? `${count} variante gestionate`
+            : `${count} de variante gestionate`;
+        },
+      },
+      /** Etichetele eliminabile de sub bara de filtre. */
+      activeFilters: {
+        label: "Filtre active",
+        search: "Căutare",
+        kind: "Tip",
+        state: "Stare",
+        remove: (what: string) => `Elimină filtrul ${what}`,
       },
       filters: {
         label: "Filtre",
@@ -1041,6 +1060,8 @@ export const ro = {
         lowOnly: "Doar stoc mic",
         apply: "Filtrează",
         reset: "Resetează",
+        /** Acțiunea din starea goală (altă formulare decât «Resetează» din bară, ca numele legăturilor să rămână unice). */
+        clearAll: "Șterge filtrele",
         kinds: { managed: "Gestionat", unmanaged: "Negestionat", digital: "Digital" },
       },
       warehouse: {
@@ -1171,6 +1192,8 @@ export const ro = {
       },
       banner: {
         label: "Prospețimea stocului",
+        /** Pastila de stare (La zi / Neactualizat / Neimportat): aceleași cuvinte în banner și în cardul din Panou. */
+        status: { fresh: "La zi", stale: "Neactualizat", never: "Neimportat", none: "Fără stoc" },
         fresh: (age: string) => `Actualizat ${age}.`,
         stale: (age: string) => `Ultima actualizare: ${age}. Cantitățile pot fi depășite.`,
         never:

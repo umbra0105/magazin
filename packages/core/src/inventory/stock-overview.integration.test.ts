@@ -814,6 +814,24 @@ describe("alertele din Panou: StockOverviewService.alerts (punctul 10b)", () => 
     });
   });
 
+  it("variantele gestionate cresc cu exact ce se adaugă (negestionatul nu se numără), la alerte și în listă", async () => {
+    await withStock(async (h) => {
+      const before = await h.service.alerts(h.manager);
+      await h.add("Capac", { variants: [{ physical: "50" }] });
+      await h.add("Alge", { variants: [{ physical: "0" }] });
+      await h.add("Cartuș", {
+        manageStock: false,
+        stockStatus: "outofstock",
+        variants: [{ physical: null }],
+      });
+      const after = await h.service.alerts(h.manager);
+      expect(after.managedVariants - before.managedVariants).toBe(2);
+      // aceeași bază în listă: bara din Panou și cea din pagina Stoc nu pot ajunge să arate cifre diferite
+      const view = await h.service.list(h.manager, {});
+      expect(view.managedVariants).toBe(after.managedVariants);
+    });
+  });
+
   it("un prag propriu mută o variantă în/din numărătoare", async () => {
     await withStock(async (h) => {
       const filtru = await h.add("Filtru", { variants: [{ physical: "3" }] });

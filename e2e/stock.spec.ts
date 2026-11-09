@@ -221,19 +221,34 @@ test.describe("ecranul de stoc", () => {
     const manager = await createAccount(request, baseURL as string, "manager");
     await login(page, manager, `/admin/produse/stoc?q=${encodeURIComponent(search)}`);
     await expect(page.locator('[data-banner="fresh"]')).toBeVisible();
+    // starea e o pastilă cu cuvântul scris, în tonul ei (docs/17 §2.2): Succes, Atenție, Problemă
+    const pillColor = (state: string) =>
+      page
+        .locator(`[data-banner="${state}"] span`)
+        .first()
+        .evaluate((el) => getComputedStyle(el).backgroundColor);
+    await expect(page.locator('[data-banner="fresh"] span').first()).toHaveText("La zi");
+    const freshColor = await pillColor("fresh");
 
     await setE2eStockSnapshot(null);
     await page.reload();
     const never = page.locator('[data-banner="never"]');
     await expect(never).toContainText("Stocul nu a fost încă importat din SmartBill");
     await expect(never).toHaveAttribute("role", "alert");
+    await expect(never.locator("span").first()).toHaveText("Neimportat");
+    const neverColor = await pillColor("never");
 
     await setE2eStockSnapshot(30);
     await page.reload();
     const stale = page.locator('[data-banner="stale"]');
     await expect(stale).toContainText("Ultima actualizare: acum 30 de ore");
     await expect(stale).toContainText("Cantitățile pot fi depășite");
-    await expect(stale).toHaveAttribute("data-tone", "danger");
+    await expect(stale).toHaveAttribute("data-tone", "warn");
+    await expect(stale.locator("span").first()).toHaveText("Neactualizat");
+    // neactualizat e «Atenție» (nu alertă): nu e roșu ca neimportatul
+    await expect(stale).toHaveAttribute("role", "status");
+    const staleColor = await pillColor("stale");
+    expect(new Set([freshColor, staleColor, neverColor]).size).toBe(3);
 
     await setE2eStockSnapshot(3);
     await page.reload();
@@ -270,7 +285,7 @@ test.describe("Panoul: cardul «Sincronizare SmartBill»", () => {
       await setE2eStockSnapshot(30);
       await page.reload();
       await expect(card).toHaveAttribute("data-status", "stale");
-      await expect(card).toHaveAttribute("data-tone", "danger");
+      await expect(card).toHaveAttribute("data-tone", "warn");
       await expect(card).toContainText("Neactualizat");
       await expect(card).toContainText("Ultima actualizare: acum 30 de ore");
       await expect(card).toContainText("Cantitățile pot fi depășite");

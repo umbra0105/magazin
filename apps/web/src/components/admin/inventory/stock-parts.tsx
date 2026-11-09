@@ -1,22 +1,30 @@
 import Link from "next/link";
 import type { LowStockCounts, WarehouseFreshness } from "@ecom/core";
-import { Button, Input, Label, Select, buttonVariants, cn } from "@ecom/ui";
-import { snapshotView, type Tone } from "@/lib/stock-view";
+import {
+  Badge,
+  Button,
+  Input,
+  Label,
+  Pagination,
+  SegmentedBar,
+  Select,
+  TAB_LIST_CLASS,
+  buttonVariants,
+  cn,
+  filterChipClass,
+  tabClass,
+} from "@ecom/ui";
+import { X } from "lucide-react";
+import { activeStockFilters } from "@/lib/stock-filters";
+import { stockHealthView } from "@/lib/stock-health";
 import { LOW_STOCK_FILTER, stockHref, type StockUrlQuery } from "@/lib/stock-url";
-
+import { badgeVariant, snapshotView } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
+import { PageSizeSelect } from "./page-size-select";
 
 const m = getMessages().admin.inventory;
 
-/** Varianta de `Badge` pentru un ton (nu există un ton «atenție» în temă: textul spune oricum starea). */
-export function badgeVariant(tone: Tone): "success" | "neutral" | "danger" | "info" {
-  if (tone === "ok") return "success";
-  if (tone === "danger") return "danger";
-  if (tone === "info") return "info";
-  return "neutral";
-}
-
-/** Banner-ul «Sincronizare SmartBill». Roșu când stocul e neactualizat sau neimportat. */
+/** Banner-ul «Sincronizare SmartBill»: pastila stării (La zi / Neactualizat / Neimportat) și explicația. Alertă când nu s-a importat nimic. */
 export function FreshnessBanner({ freshness }: { freshness: WarehouseFreshness | null }) {
   const view = snapshotView(freshness);
   return (
@@ -25,15 +33,37 @@ export function FreshnessBanner({ freshness }: { freshness: WarehouseFreshness |
       aria-label={m.banner.label}
       data-banner={freshness?.status ?? "none"}
       data-tone={view.tone}
-      className={cn(
-        "rounded-md border p-3 text-sm",
-        view.tone === "danger" && "border-danger bg-danger/10",
-        view.tone === "ok" && "border-success/50 bg-success/10",
-        view.tone === "info" && "border-border bg-border/30",
-      )}
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-surface-subtle px-4 py-3 text-body"
     >
-      {view.text}
+      <Badge variant={badgeVariant(view.tone)} dot>
+        {view.label}
+      </Badge>
+      <span>{view.text}</span>
     </div>
+  );
+}
+
+/**
+ * Starea stocului în bara segmentată (în stoc / stoc mic / epuizat), din variantele gestionate, cu legenda dedesubt. Fără variante
+ * gestionate nu se desenează nimic. În Panou are titlu vizibil (`heading`); în pagina Stoc, bara stă sub banner, fără titlu.
+ */
+export function StockHealth({
+  lowStock,
+  managedVariants,
+  heading = false,
+}: {
+  lowStock: LowStockCounts;
+  managedVariants: number;
+  heading?: boolean;
+}) {
+  const view = stockHealthView(lowStock, managedVariants);
+  if (!view) return null;
+  return (
+    <section aria-label={view.label} data-stock-health className="flex flex-col gap-3">
+      {heading && <h3 className="text-section">{view.label}</h3>}
+      <SegmentedBar segments={view.segments} label={view.label} />
+      <p className="text-label text-ink-secondary">{view.caption}</p>
+    </section>
   );
 }
 
@@ -54,7 +84,11 @@ export function StockFilters({ query }: { query: StockUrlQuery }) {
     >
       {/* depozitul ales rămâne la căutare (13d); fără el formularul GET ar duce înapoi la depozitul implicit */}
       {query.warehouseCode && <input type="hidden" name="depozit" value={query.warehouseCode} />}
-      <div className="flex min-w-[14rem] flex-1 flex-col gap-1.5">
+      {/* rândurile pe pagină alese rămân la căutare; 25 (implicit) nu se scrie în adresă */}
+      {query.pageSize && query.pageSize !== 25 && (
+        <input type="hidden" name="pe-pagina" value={query.pageSize} />
+      )}
+      <div className="flex min-w-56 flex-1 flex-col gap-1.5">
         <Label htmlFor="stock-search">{f.search}</Label>
         <Input
           id="stock-search"
@@ -87,19 +121,23 @@ export function StockFilters({ query }: { query: StockUrlQuery }) {
           ))}
         </Select>
       </div>
-      <label className="flex h-10 items-center gap-2 text-sm">
+      <label className="flex min-h-(--control-h) items-center gap-2 text-body">
         <input
           type="checkbox"
           name="filtru"
           value={LOW_STOCK_FILTER}
           defaultChecked={query.lowStockOnly === true}
+          className="size-4 accent-brand"
         />
         {f.lowOnly}
       </label>
       <div className="flex gap-2">
         <Button type="submit">{f.apply}</Button>
         <Link
-          href={stockHref(query.warehouseCode ? { warehouseCode: query.warehouseCode } : {})}
+          href={stockHref({
+            ...(query.warehouseCode && { warehouseCode: query.warehouseCode }),
+            ...(query.pageSize && { pageSize: query.pageSize }),
+          })}
           className={buttonVariants({ variant: "outline" })}
         >
           {f.reset}
@@ -109,51 +147,77 @@ export function StockFilters({ query }: { query: StockUrlQuery }) {
   );
 }
 
-/** Paginarea: înapoi / înainte, cu adresa păstrând filtrele. */
-export function Pager({
-  page,
-  pageCount,
-  hrefFor,
-}: {
-  page: number;
-  pageCount: number;
-  hrefFor: (page: number) => string;
-}) {
-  if (pageCount <= 1) return null;
-  const p = m.pagination;
+/** Filtrele active ca etichete eliminabile, sub bara de filtre. Fără filtre active nu se desenează nimic. */
+export function ActiveFilters({ query }: { query: StockUrlQuery }) {
+  const filters = activeStockFilters(query);
+  if (filters.length === 0) return null;
   return (
-    <nav aria-label={p.label} className="flex items-center justify-between gap-3 text-sm">
-      {page > 1 ? (
-        <Link
-          href={hrefFor(page - 1)}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-          rel="prev"
-        >
-          {p.previous}
-        </Link>
-      ) : (
-        <span />
-      )}
-      <span aria-current="page">{p.page(page, pageCount)}</span>
-      {page < pageCount ? (
-        <Link
-          href={hrefFor(page + 1)}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-          rel="next"
-        >
-          {p.next}
-        </Link>
-      ) : (
-        <span />
-      )}
-    </nav>
+    <ul aria-label={m.activeFilters.label} data-active-filters className="flex flex-wrap gap-2">
+      {filters.map((filter) => (
+        <li key={filter.key}>
+          <Link
+            href={filter.href}
+            aria-label={filter.removeLabel}
+            data-filter={filter.key}
+            className={filterChipClass}
+          >
+            {filter.label}
+            <X aria-hidden="true" className="size-3.5" />
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 /**
- * Comutatorul de vedere al paginii Stoc: «Toate variantele» / «Stoc mic (N)». Sunt legături (nu taburi ARIA), cu `aria-current`
- * pe cea activă; păstrează căutarea și filtrele de tip și stare, dar nu pagina. «Stoc mic» e filtrul existent «Doar stoc mic»,
- * pornit din adresă (`?filtru=stoc-mic`), nu o pagină separată.
+ * Paginarea (docs/17 §3). Legăturile păstrează filtrele din adresă. Cu `sizes` (doar pagina Stoc), în stânga apare selectorul
+ * «Rânduri pe pagină», iar bara rămâne și la o singură pagină, ca să te poți întoarce la mai puține rânduri.
+ */
+export function Pager({
+  page,
+  pageCount,
+  hrefFor,
+  sizes,
+  query,
+  pageSize,
+}: {
+  page: number;
+  pageCount: number;
+  hrefFor: (page: number) => string;
+  sizes?: readonly number[];
+  query?: StockUrlQuery;
+  pageSize?: number;
+}) {
+  const p = m.pagination;
+  return (
+    <Pagination
+      label={p.label}
+      page={page}
+      pageCount={pageCount}
+      hrefFor={hrefFor}
+      previousLabel={p.previous}
+      nextLabel={p.next}
+      pageLabel={p.pageNumber}
+      summary={p.page}
+      renderLink={({ href, children, ...rest }) => (
+        <Link href={href} {...rest}>
+          {children}
+        </Link>
+      )}
+      {...(sizes &&
+        query &&
+        pageSize !== undefined && {
+          start: <PageSizeSelect query={query} sizes={sizes} value={pageSize} />,
+        })}
+    />
+  );
+}
+
+/**
+ * Vederile paginii Stoc ca tab-uri (docs/17 §3): «Toate variantele» / «Stoc mic (N)». Fiecare vedere are adresa ei, deci sunt
+ * legături (nu taburi ARIA cu panouri), cu `aria-current` pe cea activă; păstrează căutarea și filtrele de tip și stare, dar nu pagina.
+ * «Stoc mic» e filtrul existent «Doar stoc mic», pornit din adresă (`?filtru=stoc-mic`), nu o pagină separată.
  */
 export function ViewSwitch({
   query,
@@ -176,16 +240,14 @@ export function ViewSwitch({
     },
   ] as const;
   return (
-    <nav aria-label={v.switchLabel} className="flex gap-2" data-view-switch>
+    <nav aria-label={v.switchLabel} className={TAB_LIST_CLASS} data-view-switch>
       {items.map((item) => (
         <Link
           key={item.id}
           href={item.href}
           data-view={item.id}
           aria-current={active === item.id ? "page" : undefined}
-          className={cn(
-            buttonVariants({ variant: active === item.id ? "default" : "outline", size: "sm" }),
-          )}
+          className={tabClass(active === item.id)}
         >
           {item.label}
         </Link>
@@ -230,26 +292,26 @@ export function LowStockSummary({
               key={item.reason}
               data-count={item.reason}
               className={cn(
-                "relative rounded-md border p-3 hover:bg-border/30",
-                selected ? "border-primary bg-border/30" : "border-border",
+                "relative flex flex-col gap-1 rounded-lg border p-4 transition-colors duration-(--motion) hover:bg-surface-hover",
+                selected ? "border-ink bg-surface-hover" : "border-line-subtle",
               )}
             >
-              <dt className="text-sm text-muted-foreground">
+              <dt className="text-label text-ink-secondary">
                 <Link
                   href={href}
                   aria-current={selected ? "page" : undefined}
                   data-reason-filter={item.reason}
-                  className="after:absolute after:inset-0 after:rounded-md focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand"
+                  className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand"
                 >
                   {v.summary[item.reason]}
                 </Link>
               </dt>
-              <dd className="text-2xl font-semibold">{item.count}</dd>
+              <dd className="text-kpi tabular-nums">{item.count}</dd>
             </div>
           );
         })}
       </dl>
-      <p className="text-xs text-muted-foreground">{v.filterHint}</p>
+      <p className="text-label text-ink-secondary">{v.filterHint}</p>
     </div>
   );
 }

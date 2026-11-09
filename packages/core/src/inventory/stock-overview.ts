@@ -238,6 +238,14 @@ export function countLowStock(rows: readonly StockOverviewRow[]): LowStockCounts
   return counts;
 }
 
+/**
+ * Câte variante sunt gestionate (inclusiv cele încă neinventariate): baza bării de stoc din Panou și Stoc. «În stoc» = gestionate
+ * minus cele de la «Stoc mic»; negestionatul și digitalul nu au cantități, deci nu intră.
+ */
+export function countManaged(rows: readonly StockOverviewRow[]): number {
+  return rows.filter((row) => row.kind === "managed").length;
+}
+
 export interface StockProductTotal {
   unit: StockOverviewUnit;
   physical: Quantity;

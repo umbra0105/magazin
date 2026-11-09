@@ -12,7 +12,9 @@ import {
   DrawerSection,
   EmptyState,
   Input,
+  KpiCard,
   Label,
+  Pagination,
   Progress,
   SegmentedBar,
   Select,
@@ -25,10 +27,15 @@ import {
   Th,
   THead,
   Tr,
+  TAB_LIST_CLASS,
   addToast,
   autoDismisses,
+  filterChipClass,
+  kpiCardVariants,
+  pageWindow,
   removeToast,
   segmentShares,
+  tabClass,
   TOAST_LIMIT,
   useToast,
   type Segment,
@@ -389,5 +396,193 @@ describe("starea notificărilor (pură)", () => {
       return null;
     };
     expect(() => html(h(Probe))).toThrow(/ToastProvider/);
+  });
+});
+
+describe("Tab-uri ca legături (vederi ale unei pagini)", () => {
+  it("activ: text principal și linie de 2 px; celelalte: text secundar; aceleași clase ca Tabs", () => {
+    const active = tabClass(true);
+    expect(active).toContain("border-ink");
+    expect(active).toContain("font-medium");
+    expect(active).toContain("text-ink");
+    expect(active).toContain("border-b-2");
+    const inactive = tabClass(false);
+    expect(inactive).toContain("border-transparent");
+    expect(inactive).toContain("text-ink-secondary");
+    expect(inactive).not.toContain("border-ink");
+    expect(TAB_LIST_CLASS).toContain("border-line-subtle");
+  });
+
+  it("țintă de 44 px pe telefon (înălțimea controlului) și focus vizibil", () => {
+    expect(tabClass(false)).toContain("min-h-(--control-h)");
+    expect(tabClass(true)).toContain("focus-visible:ring-brand");
+  });
+});
+
+describe("pageWindow: ce numere de pagină se arată", () => {
+  it("până la 7 pagini se arată toate", () => {
+    expect(pageWindow(1, 1)).toEqual([1]);
+    expect(pageWindow(3, 7)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it("la început, la mijloc și la sfârșit: prima, ultima și vecinii paginii curente, cu «…» între ele", () => {
+    expect(pageWindow(1, 10)).toEqual([1, 2, 3, 4, 5, "gap", 10]);
+    expect(pageWindow(4, 10)).toEqual([1, 2, 3, 4, 5, "gap", 10]);
+    expect(pageWindow(5, 10)).toEqual([1, "gap", 4, 5, 6, "gap", 10]);
+    expect(pageWindow(6, 10)).toEqual([1, "gap", 5, 6, 7, "gap", 10]);
+    expect(pageWindow(7, 10)).toEqual([1, "gap", 6, 7, 8, 9, 10]);
+    expect(pageWindow(8, 10)).toEqual([1, "gap", 6, 7, 8, 9, 10]);
+    expect(pageWindow(10, 10)).toEqual([1, "gap", 6, 7, 8, 9, 10]);
+  });
+
+  it("valori în afara intervalului sunt aduse în interval; niciodată un număr de două ori", () => {
+    expect(pageWindow(0, 3)).toEqual([1, 2, 3]);
+    expect(pageWindow(99, 3)).toEqual([1, 2, 3]);
+    expect(pageWindow(1, 0)).toEqual([1]);
+    for (let count = 1; count <= 30; count += 1) {
+      for (let page = 1; page <= count; page += 1) {
+        const numbers = pageWindow(page, count).filter((x): x is number => x !== "gap");
+        expect(new Set(numbers).size).toBe(numbers.length);
+        expect(numbers).toContain(page);
+        expect(numbers).toContain(1);
+        expect(numbers).toContain(count);
+        expect(numbers).toEqual([...numbers].sort((a, b) => a - b));
+      }
+    }
+  });
+});
+
+describe("Pagination (docs/17 §3)", () => {
+  const props = {
+    label: "Paginare",
+    previousLabel: "Pagina anterioară",
+    nextLabel: "Pagina următoare",
+    pageLabel: (n: number) => `Pagina ${n}`,
+    summary: (page: number, count: number) => `Pagina ${page} din ${count}`,
+    hrefFor: (n: number) => `/lista?pagina=${n}`,
+  };
+
+  it("o singură pagină și nimic în stânga: nu se desenează nimic", () => {
+    expect(html(h(Pagination, { ...props, page: 1, pageCount: 1 }))).toBe("");
+  });
+
+  it("o singură pagină, dar cu selectorul de rânduri pe pagină: bara rămâne (altfel nu te poți întoarce la 25)", () => {
+    const out = html(
+      h(Pagination, { ...props, page: 1, pageCount: 1, start: h("span", null, "Rânduri") }),
+    );
+    expect(out).toContain("Rânduri");
+    expect(out).not.toContain("<a");
+  });
+
+  it("pagina curentă are aria-current și bordură; celelalte sunt legături cu adresa lor", () => {
+    const out = html(h(Pagination, { ...props, page: 2, pageCount: 5 }));
+    expect(out).toContain('aria-label="Paginare"');
+    expect(out.match(/aria-current="page"/g)).toHaveLength(1);
+    expect(out).toMatch(/aria-current="page"[^>]*>2</);
+    expect(out).toContain('href="/lista?pagina=1"');
+    expect(out).toContain('href="/lista?pagina=3"');
+    expect(out).toContain("border-ink");
+    expect(out).toContain('aria-label="Pagina 3"');
+  });
+
+  it("înapoi / înainte cu rel și nume accesibil; la capăt, butonul e dezactivat (fără adresă)", () => {
+    const first = html(h(Pagination, { ...props, page: 1, pageCount: 4 }));
+    expect(first).toContain('rel="next"');
+    expect(first).not.toContain('rel="prev"');
+    expect(first).toMatch(/<span[^>]*aria-disabled="true"[^>]*aria-label="Pagina anterioară"/);
+    const last = html(h(Pagination, { ...props, page: 4, pageCount: 4 }));
+    expect(last).toContain('rel="prev"');
+    expect(last).not.toContain('rel="next"');
+    expect(last).toMatch(/<span[^>]*aria-disabled="true"[^>]*aria-label="Pagina următoare"/);
+  });
+
+  it("rezumatul «Pagina 2 din 5» e text real (telefonul nu are numerele)", () => {
+    expect(html(h(Pagination, { ...props, page: 2, pageCount: 5 }))).toContain("Pagina 2 din 5");
+  });
+
+  it("butoane de 32 px cu rază mică de la md; 44 px pe telefon", () => {
+    const out = html(h(Pagination, { ...props, page: 2, pageCount: 5 }));
+    expect(out).toContain("md:size-8");
+    expect(out).toContain("size-11");
+    expect(out).toContain("rounded-sm");
+  });
+
+  it("legăturile se pot desena cu componenta aplicației (renderLink), cu aceleași clase și atribute", () => {
+    const out = html(
+      h(Pagination, {
+        ...props,
+        page: 1,
+        pageCount: 3,
+        renderLink: ({ children, ...rest }) => h("a", { ...rest, "data-custom": "da" }, children),
+      }),
+    );
+    expect(out).toContain('data-custom="da"');
+  });
+});
+
+describe("KpiCard (card de indicator)", () => {
+  it("fundal pastelat din tokeni, rază 12 px, fără bordură și fără umbră; textul rămâne principal", () => {
+    for (const [tone, token] of [
+      ["cyan", "bg-kpi-cyan"],
+      ["green", "bg-kpi-green"],
+      ["indigo", "bg-kpi-indigo"],
+      ["peach", "bg-kpi-peach"],
+    ] as const) {
+      const out = kpiCardVariants({ tone });
+      expect(out).toContain(token);
+      expect(out).toContain("rounded-lg");
+      expect(out).toContain("text-ink");
+      expect(out).not.toMatch(/border|shadow/);
+    }
+  });
+
+  it("eticheta (12 px), cifra mare (28 px, tabulară) și detaliul; cifra poartă data-value", () => {
+    const out = html(
+      h(KpiCard, { tone: "green", label: "Stoc mic", value: "12", detail: "din care 3 epuizate" }),
+    );
+    expect(out).toContain("text-label");
+    expect(out).toContain("text-kpi");
+    expect(out).toContain("tabular-nums");
+    expect(out).toContain("Stoc mic");
+    expect(out).toMatch(/data-value[^>]*>12</);
+    expect(out).toContain("din care 3 epuizate");
+  });
+
+  it("cifra poate fi și număr (nu doar text): același aspect de cifră mare", () => {
+    const out = html(h(KpiCard, { tone: "peach", label: "Stoc mic", value: 5 }));
+    expect(out).toContain("text-kpi");
+    expect(out).toMatch(/data-value[^>]*>5</);
+    expect(html(h(KpiCard, { tone: "peach", label: "Stoc mic", value: 0 }))).toMatch(
+      /data-value[^>]*>0</,
+    );
+  });
+
+  it("valoarea poate fi o pastilă (starea sincronizării) în loc de cifră", () => {
+    const out = html(
+      h(KpiCard, {
+        tone: "cyan",
+        label: "Sincronizare SmartBill",
+        value: h(Badge, { variant: "success" }, "La zi"),
+      }),
+    );
+    expect(out).toContain("La zi");
+    expect(out).not.toContain("text-kpi");
+  });
+
+  it("varianta interactivă (card-legătură) are inel de focus și cursor deasupra", () => {
+    const out = kpiCardVariants({ tone: "peach", interactive: true });
+    expect(out).toContain("focus-visible:ring-brand");
+    expect(out).toContain("hover:");
+  });
+});
+
+describe("etichetă de filtru eliminabilă", () => {
+  it("pastilă neutră de 12 px cu focus vizibil și țintă de cel puțin 32 px", () => {
+    expect(filterChipClass).toContain("rounded-full");
+    expect(filterChipClass).toContain("bg-tone-neutral-bg");
+    expect(filterChipClass).toContain("text-tone-neutral-fg");
+    expect(filterChipClass).toContain("text-label");
+    expect(filterChipClass).toContain("min-h-8");
+    expect(filterChipClass).toContain("focus-visible:ring-brand");
   });
 });

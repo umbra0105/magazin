@@ -25,8 +25,8 @@ export default async function AdminHomePage() {
   const subject = await requireAdmin();
   const alerts = await loadStockAlerts(subject);
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">{m.title}</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-title">{m.title}</h1>
       {alerts && <StockAlertCards alerts={alerts} />}
       <Card>
         <CardHeader>

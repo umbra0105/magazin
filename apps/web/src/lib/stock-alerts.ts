@@ -14,6 +14,8 @@ export interface AlertCardsView {
   snapshot: {
     status: "fresh" | "stale" | "never" | "none";
     tone: Tone;
+    /** Cuvântul din pastilă: La zi / Neactualizat / Neimportat / Fără stoc */
+    label: string;
     text: string;
     href: string;
   };
@@ -37,6 +39,7 @@ export function alertCardsView(
     snapshot: {
       status: freshness?.status ?? "none",
       tone: snapshot.tone,
+      label: snapshot.label,
       text: snapshot.text,
       href: stockHref({}),
     },

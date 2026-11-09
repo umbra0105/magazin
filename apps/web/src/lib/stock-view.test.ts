@@ -12,6 +12,7 @@ import {
   deltaText,
   kindLabel,
   quantityText,
+  badgeVariant,
   snapshotView,
   stateView,
   lowStockReasonView,
@@ -215,19 +216,28 @@ describe("banner-ul «Sincronizare SmartBill»", () => {
   };
 
   it("la zi: «Actualizat acum …», ton liniștit", () => {
-    expect(snapshotView(base)).toEqual({ tone: "ok", text: "Actualizat acum 3 ore." });
+    expect(snapshotView(base)).toEqual({
+      tone: "ok",
+      status: "fresh",
+      label: "La zi",
+      text: "Actualizat acum 3 ore.",
+    });
   });
 
-  it("neactualizat: roșu, cu vârsta și avertismentul", () => {
+  it("neactualizat: ton «Atenție» (docs/17 §2.2), nu «Problemă»; cu vârsta și avertismentul", () => {
     const view = snapshotView({ ...base, status: "stale", ageHours: 54 });
-    expect(view.tone).toBe("danger");
+    expect(view.tone).toBe("warn");
+    expect(view.status).toBe("stale");
+    expect(view.label).toBe("Neactualizat");
     expect(view.text).toBe("Ultima actualizare: acum 2 zile. Cantitățile pot fi depășite.");
   });
 
-  it("neimportat: roșu", () => {
+  it("neimportat: ton «Problemă»", () => {
     const view = snapshotView({ ...base, status: "never", takenAt: null, ageHours: null });
     expect(view).toEqual({
       tone: "danger",
+      status: "never",
+      label: "Neimportat",
       text: "Stocul nu a fost încă importat din SmartBill. Cantitățile afișate sunt cele introduse manual.",
     });
   });
@@ -235,6 +245,8 @@ describe("banner-ul «Sincronizare SmartBill»", () => {
   it("depozit fără stoc gestionat: doar o informare", () => {
     expect(snapshotView(null)).toEqual({
       tone: "info",
+      status: "none",
+      label: "Fără stoc",
       text: "Nu există încă stoc gestionat în acest depozit.",
     });
   });
@@ -487,5 +499,14 @@ describe("ținta dialogului «Transferă» (13d)", () => {
   it("negestionat și digital nu au țintă (nu există stoc de mutat)", () => {
     expect(transferTarget(row({ manageStock: false }), context)).toBeNull();
     expect(transferTarget(row({ productType: "digital" }), context)).toBeNull();
+  });
+});
+
+describe("badgeVariant: tonul stării → pastila din docs/17 §2.2", () => {
+  it("în stoc = Succes, stoc mic / neactualizat = Atenție, epuizat / neimportat = Problemă, la comandă = Informație", () => {
+    expect(badgeVariant("ok")).toBe("success");
+    expect(badgeVariant("warn")).toBe("warning");
+    expect(badgeVariant("danger")).toBe("danger");
+    expect(badgeVariant("info")).toBe("info");
   });
 });

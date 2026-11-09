@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, PackageOpen } from "lucide-react";
+import { Loader2, PackageOpen, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import {
   Badge,
@@ -17,7 +17,9 @@ import {
   EmptyState,
   FileInput,
   Input,
+  KpiCard,
   Label,
+  Pagination,
   Progress,
   SegmentedBar,
   Select,
@@ -29,9 +31,13 @@ import {
   Textarea,
   Th,
   THead,
+  TAB_LIST_CLASS,
   Tabs,
   ToastProvider,
   Tr,
+  filterChipClass,
+  kpiCardVariants,
+  tabClass,
   useToast,
 } from "@ecom/ui";
 
@@ -369,6 +375,102 @@ export function Gallery() {
               { key: "out", label: "Epuizat", value: 24, tone: "out" },
             ]}
           />
+        </Section>
+
+        <Section id="pagination" title="Paginare">
+          <Pagination
+            label="Paginare"
+            page={4}
+            pageCount={12}
+            hrefFor={(n) => `#pagina-${n}`}
+            previousLabel="Pagina anterioară"
+            nextLabel="Pagina următoare"
+            pageLabel={(n) => `Pagina ${n}`}
+            summary={(page, count) => `Pagina ${page} din ${count}`}
+            start={
+              <label className="flex items-center gap-2 text-compact text-ink-secondary">
+                <span>Rânduri pe pagină</span>
+                <Select className="w-20" defaultValue="25" aria-label="Rânduri pe pagină">
+                  <option>25</option>
+                  <option>50</option>
+                  <option>100</option>
+                </Select>
+              </label>
+            }
+          />
+          <Pagination
+            label="Paginare, prima pagină"
+            page={1}
+            pageCount={3}
+            hrefFor={(n) => `#pagina-${n}`}
+            previousLabel="Pagina anterioară"
+            nextLabel="Pagina următoare"
+            pageLabel={(n) => `Pagina ${n}`}
+            summary={(page, count) => `Pagina ${page} din ${count}`}
+          />
+        </Section>
+
+        <Section id="tabnav" title="Tab-uri ca legături (vederi ale unei pagini)">
+          <nav aria-label="Vedere" className={TAB_LIST_CLASS}>
+            <a href="#toate" aria-current="page" className={tabClass(true)}>
+              Toate variantele
+            </a>
+            <a href="#stoc-mic" className={tabClass(false)}>
+              Stoc mic (5)
+            </a>
+          </nav>
+        </Section>
+
+        <Section id="kpi" title="Carduri de indicator">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard tone="peach" label="Stoc mic" value={5} detail="din care 2 epuizate" />
+            <KpiCard
+              tone="green"
+              label="Comenzi noi"
+              value="1.234"
+              detail="în ultimele 24 de ore"
+            />
+            <KpiCard
+              tone="cyan"
+              label="Sincronizare SmartBill"
+              value={
+                <Badge variant="success" dot>
+                  La zi
+                </Badge>
+              }
+              detail="Actualizat acum 3 ore."
+            />
+            <a href="#kpi" className={kpiCardVariants({ tone: "indigo", interactive: true })}>
+              <span className="text-label text-ink-secondary">Card-legătură</span>
+              <span className="text-kpi tabular-nums">12</span>
+              <span className="text-label text-ink-secondary">cu inel de focus la tastatură</span>
+            </a>
+          </div>
+        </Section>
+
+        <Section id="filterchip" title="Etichete de filtru eliminabile">
+          <ul className="flex flex-wrap gap-2">
+            <li>
+              <a
+                href="#fara-cautare"
+                aria-label="Elimină filtrul Căutare: liner"
+                className={filterChipClass}
+              >
+                Căutare: liner
+                <X aria-hidden="true" className="size-3.5" />
+              </a>
+            </li>
+            <li>
+              <a
+                href="#fara-tip"
+                aria-label="Elimină filtrul Tip: Gestionat"
+                className={filterChipClass}
+              >
+                Tip: Gestionat
+                <X aria-hidden="true" className="size-3.5" />
+              </a>
+            </li>
+          </ul>
         </Section>
 
         <Section id="progress" title="Progres, schelet, stare goală">

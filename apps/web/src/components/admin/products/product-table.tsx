@@ -9,10 +9,9 @@ import { QUANTITY_FACTOR, quantityFromTicks } from "@ecom/shared/quantity";
 import { Badge, Button, Dialog, Input, Label, Select } from "@ecom/ui";
 import { bulkUpdateProducts, updateProductInline } from "@/app/(admin)/admin/produse/actions";
 import { duplicateProduct } from "@/app/(admin)/admin/produse/lifecycle-actions";
-import { badgeVariant } from "@/components/admin/inventory/stock-parts";
 import { formatMoney, formatMoneyInput, parseMoneyInput } from "@/lib/money-input";
 import { priceLines, type PriceLines } from "@/lib/price-view";
-import type { SummaryView } from "@/lib/stock-view";
+import { badgeVariant, type SummaryView } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 import { ProductExportDialog } from "./product-export-dialog";
 import {

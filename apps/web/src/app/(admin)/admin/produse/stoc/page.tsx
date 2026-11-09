@@ -6,17 +6,20 @@ import {
   ADJUSTMENT_REASON_LABELS,
   ADJUSTMENT_SIGN_RULES,
   LOW_STOCK_STEPS_MAX,
+  STOCK_PAGE_SIZES,
   can,
   parseStockOverviewQuery,
 } from "@ecom/core";
-import { buttonVariants } from "@ecom/ui";
+import { EmptyState, buttonVariants } from "@ecom/ui";
 import type { ReasonOption } from "@/components/admin/inventory/adjust-stock-dialog";
 import { LowStockTable } from "@/components/admin/inventory/low-stock-table";
 import {
+  ActiveFilters,
   FreshnessBanner,
   LowStockSummary,
   Pager,
   StockFilters,
+  StockHealth,
   ViewSwitch,
 } from "@/components/admin/inventory/stock-parts";
 import { StockTable, type TransferContext } from "@/components/admin/inventory/stock-table";
@@ -44,6 +47,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   const query = parseStockOverviewQuery(rawParams);
   const canWrite = can(subject, "inventory.write");
   const lowView = query.lowStockOnly === true;
+  const filtersActive = Boolean(query.search ?? query.kind ?? query.state);
   // depozitul ales (13d): doar cu steagul pornit și cel puțin două depozite active; altfel `?depozit=` se ignoră și pagina
   // rămâne exact ca până acum (depozitul implicit, fără selector și fără buton de transfer)
   const choice = await getWarehouseChoice(subject, rawParams["depozit"]);
@@ -62,8 +66,11 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
     if ((error as { code?: string } | null)?.code === "STOCK_NO_WAREHOUSE") {
       return (
         <div className="flex flex-col gap-4">
-          <h1 className="text-2xl font-semibold">{m.title}</h1>
-          <p role="alert" className="rounded-md border border-danger p-3 text-sm">
+          <h1 className="text-title">{m.title}</h1>
+          <p
+            role="alert"
+            className="rounded-lg bg-tone-problem-bg p-4 text-body text-tone-problem-fg"
+          >
             {m.noWarehouse}
           </p>
         </div>
@@ -90,7 +97,12 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="text-2xl font-semibold">{m.title}</h1>
+          <h1 className="text-title">
+            {m.title}{" "}
+            <span className="font-normal text-ink-secondary">
+              ({page.total.toLocaleString("ro-RO")})
+            </span>
+          </h1>
           {/* importul «stoc la zi» lucrează pe depozitul implicit: într-un alt depozit ales nu se arată */}
           {!choice.urlCode && (
             <Link
@@ -102,9 +114,9 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
             </Link>
           )}
         </div>
-        <p className="text-sm text-muted-foreground">{m.description}</p>
+        <p className="text-body text-ink-secondary">{m.description}</p>
         {!canWrite && (
-          <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
+          <p role="note" className="mt-2 rounded-lg bg-surface-subtle p-3 text-body">
             {m.readOnly}
           </p>
         )}
@@ -118,31 +130,47 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
         />
       )}
       <FreshnessBanner freshness={page.freshness} />
+      <StockHealth lowStock={page.lowStock} managedVariants={page.managedVariants} />
       <ViewSwitch query={urlQuery} lowStockTotal={page.lowStock.total} />
       {lowView && (
         <section aria-labelledby="low-stock-heading" className="flex flex-col gap-3">
-          <h2 id="low-stock-heading" className="text-lg font-semibold">
+          <h2 id="low-stock-heading" className="text-section">
             {m.lowStock.heading}
           </h2>
-          <p className="text-sm text-muted-foreground">{m.lowStock.hint}</p>
+          <p className="text-body text-ink-secondary">{m.lowStock.hint}</p>
           <LowStockSummary counts={page.lowStock} query={urlQuery} />
         </section>
       )}
       <StockFilters query={urlQuery} />
+      <ActiveFilters query={urlQuery} />
 
-      <p role="status" className="text-sm text-muted-foreground" data-result-count={page.total}>
+      {/* numărul se vede în titlu; aici rămâne pentru cititoarele de ecran și pentru teste */}
+      <p role="status" className="sr-only" data-result-count={page.total}>
         {m.resultCount(page.total)}
       </p>
       {page.truncated && (
-        <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+        <p role="note" className="rounded-lg bg-surface-subtle p-3 text-body">
           {m.truncated(5000)}
         </p>
       )}
 
       {page.rows.length === 0 ? (
-        <p className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-          {lowView ? m.lowStock.empty : m.empty}
-        </p>
+        <EmptyState
+          title={lowView ? m.lowStock.empty : m.empty}
+          {...(filtersActive && {
+            action: (
+              <Link
+                href={stockHref({
+                  ...(urlQuery.warehouseCode && { warehouseCode: urlQuery.warehouseCode }),
+                  ...(urlQuery.lowStockOnly && { lowStockOnly: true }),
+                })}
+                className={buttonVariants({ variant: "outline" })}
+              >
+                {m.filters.clearAll}
+              </Link>
+            ),
+          })}
+        />
       ) : lowView ? (
         <LowStockTable
           rows={page.rows}
@@ -169,11 +197,16 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           warehouseCode={choice.urlCode}
         />
       )}
-      <Pager
-        page={page.page}
-        pageCount={page.pageCount}
-        hrefFor={(target) => stockHref(urlQuery, { page: target })}
-      />
+      {page.total > (STOCK_PAGE_SIZES[0] ?? 25) && (
+        <Pager
+          page={page.page}
+          pageCount={page.pageCount}
+          hrefFor={(target) => stockHref(urlQuery, { page: target })}
+          sizes={STOCK_PAGE_SIZES}
+          query={urlQuery}
+          pageSize={page.pageSize}
+        />
+      )}
     </div>
   );
 }

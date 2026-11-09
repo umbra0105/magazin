@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { StockOverviewRow, StockProductGroup } from "@ecom/core";
 import { formatQuantity } from "@ecom/shared/quantity";
-import { Badge, buttonVariants } from "@ecom/ui";
+import { Badge, TBody, Table, TableCaption, Td, Th, THead, Tr, buttonVariants } from "@ecom/ui";
 import { History } from "lucide-react";
 import { formatLocalDateTime } from "@/lib/stock-time";
 import { historyHref } from "@/lib/stock-url";
 import {
   availabilityView,
+  badgeVariant,
   kindLabel,
   quantityText,
   stateView,
@@ -15,7 +16,6 @@ import {
 } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 import { AdjustStockButton, type ReasonOption } from "./adjust-stock-dialog";
-import { badgeVariant } from "./stock-parts";
 import { SetThresholdButton } from "./threshold-dialog";
 import { TransferStockButton, type TransferDestination } from "./transfer-stock-dialog";
 
@@ -74,60 +74,54 @@ export function StockTable({
 }) {
   const c = m.columns;
   return (
-    <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full min-w-[64rem] text-left text-sm" aria-label={m.listLabel}>
-        <thead className="border-b border-border bg-border/30">
-          <tr>
-            {(
-              [
-                "product",
-                "unit",
-                "physical",
-                "committed",
-                "reserved",
-                "available",
-                "remainder",
-                "state",
-              ] as const
-            ).map((column) => (
-              <th key={column} scope="col" className="p-3 font-medium">
+    <Table className="min-w-256" aria-label={m.listLabel}>
+      <TableCaption>{m.listLabel}</TableCaption>
+      <THead>
+        <Tr className="h-auto">
+          <Th className={STICKY_HEAD}>{c.product}</Th>
+          <Th>{c.unit}</Th>
+          {(["physical", "committed", "reserved", "available", "remainder"] as const).map(
+            (column) => (
+              <Th key={column} numeric>
                 {c[column]}
-              </th>
-            ))}
-            <th scope="col" className="p-3 text-right font-medium">
-              {c.actions}
-            </th>
-          </tr>
-        </thead>
-        {groups.map((group) => (
-          <tbody
-            key={group.productId}
-            data-product={group.productSlug}
-            className="border-b border-border last:border-0"
-          >
-            {group.rows.map((row, index) => (
-              <StockRow
-                key={row.variantId}
-                row={row}
-                first={index === 0}
-                canWrite={canWrite}
-                reasons={reasons}
-                warehouseId={warehouseId}
-                timeZone={timeZone}
-                noteMax={noteMax}
-                {...(threshold && { threshold })}
-                {...(transfer && { transfer })}
-                warehouseCode={warehouseCode ?? null}
-                rowAttribute={rowAttribute}
-              />
-            ))}
-            <GroupTotal group={group} />
-          </tbody>
-        ))}
-      </table>
-    </div>
+              </Th>
+            ),
+          )}
+          <Th>{c.state}</Th>
+          <Th numeric>{c.actions}</Th>
+        </Tr>
+      </THead>
+      {groups.map((group) => (
+        <TBody key={group.productId} data-product={group.productSlug}>
+          {group.rows.map((row, index) => (
+            <StockRow
+              key={row.variantId}
+              row={row}
+              first={index === 0}
+              canWrite={canWrite}
+              reasons={reasons}
+              warehouseId={warehouseId}
+              timeZone={timeZone}
+              noteMax={noteMax}
+              {...(threshold && { threshold })}
+              {...(transfer && { transfer })}
+              warehouseCode={warehouseCode ?? null}
+              rowAttribute={rowAttribute}
+            />
+          ))}
+          <GroupTotal group={group} />
+        </TBody>
+      ))}
+    </Table>
   );
 }
+
+/**
+ * Prima coloană (produsul) rămâne pe loc la derulare orizontală pe telefon (docs/17 §3), cu fundal propriu ca să nu se vadă
+ * celulele din spate; de la `md` în sus tabelul încape sau derulează normal.
+ */
+const STICKY_HEAD = "sticky left-0 z-10 bg-surface-subtle md:static";
+const STICKY_CELL = "sticky left-0 z-10 min-w-40 max-w-56 md:static md:max-w-none";
 
 function StockRow({
   row,
@@ -174,79 +168,77 @@ function StockRow({
         })
       : null;
   return (
-    <tr
-      {...{ [rowAttribute]: row.sku }}
-      data-kind={row.kind}
-      data-state={row.state}
-      className={first ? "" : "border-t border-border/60"}
-    >
-      <th scope="row" className="p-3 align-top font-normal">
+    <Tr {...{ [rowAttribute]: row.sku }} data-kind={row.kind} data-state={row.state}>
+      <th
+        scope="row"
+        className={`${STICKY_CELL} bg-surface-page px-3 py-2 text-left align-middle font-normal`}
+      >
         {first && (
           <Link
             href={`/admin/produse/${row.productId}`}
-            className="font-medium underline-offset-2 hover:underline"
+            className="font-medium text-ink underline-offset-2 hover:underline"
           >
             {row.productTitle}
           </Link>
         )}
-        <span className="block text-muted-foreground">
+        <span className="block text-ink-secondary">
           {row.variantLabel ?? (first ? "" : row.productTitle)}
-          <span className="ml-1 text-xs">{row.sku}</span>
+          <span className="ml-1 text-label">{row.sku}</span>
         </span>
       </th>
-      <td className="p-3 align-top whitespace-nowrap text-muted-foreground" data-cell="unit">
+      <Td className="whitespace-nowrap text-ink-secondary" data-cell="unit">
         {m.details.stepUnit(row.unit.symbol, formatQuantity(row.step))}
-      </td>
+      </Td>
       {row.kind === "managed" &&
       row.physical !== null &&
       row.committed !== null &&
       row.reserved !== null ? (
         <>
-          <td className="p-3 align-top" data-cell="physical">
+          <Td numeric data-cell="physical">
             <span className="font-medium">{quantityText(row.physical, row.unit)}</span>
-            <span className="block text-xs text-muted-foreground">
+            <span className="block text-label text-ink-secondary">
               {!row.inventoried
                 ? m.cell.notInventoried
                 : row.physicalAsOf
                   ? m.cell.asOf(formatLocalDateTime(row.physicalAsOf, timeZone))
                   : m.cell.noSnapshot}
             </span>
-          </td>
-          <td className="p-3 align-top" data-cell="committed">
+          </Td>
+          <Td numeric data-cell="committed">
             {quantityText(row.committed, row.unit)}
-          </td>
-          <td className="p-3 align-top" data-cell="reserved">
+          </Td>
+          <Td numeric data-cell="reserved">
             {quantityText(row.reserved, row.unit)}
-          </td>
-          <td className="p-3 align-top" data-cell="available">
+          </Td>
+          <Td numeric data-cell="available">
             {availability && (
               <>
                 <span className="font-medium">{availability.quantity}</span>
-                <span className="block text-xs text-muted-foreground">= {availability.steps}</span>
+                <span className="block text-label text-ink-secondary">= {availability.steps}</span>
               </>
             )}
-          </td>
-          <td className="p-3 align-top" data-cell="remainder">
+          </Td>
+          <Td numeric data-cell="remainder">
             {availability?.remainder ?? m.cell.remainderNone}
-          </td>
+          </Td>
         </>
       ) : (
-        <td colSpan={5} className="p-3 align-top text-muted-foreground" data-cell="kind">
+        <Td colSpan={5} className="text-ink-secondary" data-cell="kind">
           {kindLabel(row)}
           {canWrite && row.kind === "unmanaged" && (
-            <span className="block text-xs">{m.cell.manageHint}</span>
+            <span className="block text-label">{m.cell.manageHint}</span>
           )}
-        </td>
+        </Td>
       )}
-      <td className="p-3 align-top" data-cell="state">
-        <Badge variant={badgeVariant(state.tone)} className="whitespace-nowrap">
+      <Td data-cell="state">
+        <Badge variant={badgeVariant(state.tone)} dot>
           {state.label}
         </Badge>
         {state.detail && (
-          <span className="mt-1 block text-xs text-muted-foreground">{state.detail}</span>
+          <span className="mt-1 block text-label text-ink-secondary">{state.detail}</span>
         )}
-      </td>
-      <td className="p-3 align-top">
+      </Td>
+      <Td>
         <div className="flex justify-end gap-1">
           {thresholdData && threshold && (
             <SetThresholdButton target={thresholdData} max={threshold.max} />
@@ -284,43 +276,43 @@ function StockRow({
             </Link>
           )}
         </div>
-      </td>
-    </tr>
+      </Td>
+    </Tr>
   );
 }
 
 function GroupTotal({ group }: { group: StockProductGroup }) {
   if (!group.total && !group.totalProblem) return null;
   return (
-    <tr
-      data-product-total={group.productSlug}
-      className="border-t border-border bg-border/20 text-sm"
-    >
-      <th scope="row" className="p-3 font-medium">
+    <Tr data-product-total={group.productSlug} className="bg-surface-subtle">
+      <th
+        scope="row"
+        className={`${STICKY_CELL} bg-surface-subtle px-3 py-2 text-left align-middle font-medium`}
+      >
         {m.total.label}
       </th>
-      <td />
+      <Td />
       {group.total ? (
         <>
-          <td className="p-3 font-medium" data-cell="total-physical">
+          <Td numeric className="font-medium" data-cell="total-physical">
             {quantityText(group.total.physical, group.total.unit)}
-          </td>
-          <td className="p-3" data-cell="total-committed">
+          </Td>
+          <Td numeric data-cell="total-committed">
             {quantityText(group.total.committed, group.total.unit)}
-          </td>
-          <td className="p-3" data-cell="total-reserved">
+          </Td>
+          <Td numeric data-cell="total-reserved">
             {quantityText(group.total.reserved, group.total.unit)}
-          </td>
-          <td className="p-3 font-medium" data-cell="total-available">
+          </Td>
+          <Td numeric className="font-medium" data-cell="total-available">
             {quantityText(group.total.available, group.total.unit)}
-          </td>
-          <td colSpan={3} />
+          </Td>
+          <Td colSpan={3} />
         </>
       ) : (
-        <td colSpan={7} className="p-3 text-muted-foreground" data-cell="total-problem">
+        <Td colSpan={7} className="text-ink-secondary" data-cell="total-problem">
           {group.totalProblem ? m.total[group.totalProblem] : ""}
-        </td>
+        </Td>
       )}
-    </tr>
+    </Tr>
   );
 }

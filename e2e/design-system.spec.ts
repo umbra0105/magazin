@@ -261,6 +261,87 @@ test.describe("sistemul de design al adminului", () => {
     await expect(trigger).toBeFocused();
   });
 
+  test("paginare: pagina curentă cu bordură, butoane de 32 px la desktop și de 44 px pe telefon, doar rezumatul pe telefon", async ({
+    page,
+  }) => {
+    await login(page, account, GALLERY);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const nav = page.locator('[data-gallery="pagination"]').getByRole("navigation", {
+      name: "Paginare",
+      exact: true,
+    });
+    await expect(nav).toBeVisible();
+    const current = nav.locator('[aria-current="page"]');
+    await expect(current).toHaveText("4");
+    const box = await current.boundingBox();
+    expect(box?.width).toBe(32);
+    expect(box?.height).toBe(32);
+    expect(await current.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)).toBe("6px");
+    // numerele cu «…» între ele; pagina 12 e ultima
+    await expect(nav.getByRole("link", { name: "Pagina 12" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Pagina anterioară" })).toBeVisible();
+    // pe prima pagină butonul «înapoi» e dezactivat (nu e legătură)
+    const first = page.getByRole("navigation", { name: "Paginare, prima pagină" });
+    await expect(first.getByRole("link", { name: "Pagina anterioară" })).toHaveCount(0);
+    await expect(first.locator('[aria-disabled="true"]')).toHaveAttribute(
+      "aria-label",
+      "Pagina anterioară",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(nav.getByText("Pagina 4 din 12")).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Pagina 12" })).toBeHidden();
+    const next = nav.getByRole("link", { name: "Pagina următoare" });
+    const nextBox = await next.boundingBox();
+    expect(nextBox?.width).toBe(44);
+    expect(nextBox?.height).toBe(44);
+  });
+
+  test("tab-uri ca legături, carduri de indicator și etichete de filtru: aspect din tokeni și focus vizibil", async ({
+    page,
+  }) => {
+    await login(page, account, GALLERY);
+    const tabs = page.getByRole("navigation", { name: "Vedere" });
+    const active = tabs.getByRole("link", { name: "Toate variantele" });
+    const inactive = tabs.getByRole("link", { name: /^Stoc mic/ });
+    await expect(active).toHaveAttribute("aria-current", "page");
+    expect(await active.evaluate((el) => getComputedStyle(el).borderBottomWidth)).toBe("2px");
+    expect(await inactive.evaluate((el) => getComputedStyle(el).borderBottomColor)).toBe(
+      "rgba(0, 0, 0, 0)",
+    );
+    expect(await active.evaluate((el) => getComputedStyle(el).borderBottomColor)).not.toBe(
+      "rgba(0, 0, 0, 0)",
+    );
+
+    const kpi = page.locator('[data-gallery="kpi"]');
+    const card = kpi.locator("div", { hasText: "Comenzi noi" }).last();
+    expect(await card.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)).toBe("12px");
+    expect(await card.evaluate((el) => getComputedStyle(el).boxShadow)).toBe("none");
+    expect(await card.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe("0px");
+    const figure = card.locator("[data-value]");
+    expect(await figure.evaluate((el) => getComputedStyle(el).fontSize)).toBe("28px");
+    expect(await figure.evaluate((el) => getComputedStyle(el).fontVariantNumeric)).toContain(
+      "tabular-nums",
+    );
+
+    // legăturile au inel de focus la tastatură (card-legătură, etichetă de filtru)
+    for (const name of ["Card-legătură", "Elimină filtrul Tip: Gestionat"]) {
+      const target =
+        name === "Card-legătură"
+          ? kpi.getByRole("link", { name: /Card-legătură/ })
+          : page.getByRole("link", { name });
+      // Shift+Tab apoi Tab: modalitate de tastatură, ca inelul `focus-visible` să se aplice
+      await target.focus();
+      await page.keyboard.press("Shift+Tab");
+      await page.keyboard.press("Tab");
+      await expect(target).toBeFocused();
+      expect(
+        await target.evaluate((el) => getComputedStyle(el).boxShadow),
+        `inel de focus la «${name}»`,
+      ).not.toBe("none");
+    }
+  });
+
   test("notificări: cele reușite dispar singure după 4 secunde, erorile rămân până sunt închise", async ({
     page,
   }) => {

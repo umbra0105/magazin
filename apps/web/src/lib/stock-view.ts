@@ -24,6 +24,17 @@ const m = () => getMessages().admin.inventory;
 
 export type Tone = "ok" | "warn" | "danger" | "info";
 
+/**
+ * Pastila (`Badge`) pentru un ton, după docs/17 §2.2: în stoc = Succes, stoc mic și neactualizat = Atenție, epuizat și
+ * neimportat = Problemă, la comandă și informări = Informație.
+ */
+export function badgeVariant(tone: Tone): "success" | "warning" | "danger" | "info" {
+  if (tone === "ok") return "success";
+  if (tone === "warn") return "warning";
+  if (tone === "danger") return "danger";
+  return "info";
+}
+
 interface PluralForms {
   one: string;
   few: string;
@@ -257,23 +268,29 @@ function ageText(ageHours: number): string {
 
 export interface SnapshotView {
   tone: Tone;
+  /** Starea sincronizării: la zi, neactualizat, neimportat sau depozit fără stoc gestionat */
+  status: "fresh" | "stale" | "never" | "none";
+  /** Cuvântul din pastilă: «La zi», «Neactualizat», «Neimportat», «Fără stoc» */
+  label: string;
   text: string;
 }
 
 /**
- * Starea sincronizării cu SmartBill, în cuvinte simple (banner și card): la zi, neactualizat (roșu), neimportat (roșu)
+ * Starea sincronizării cu SmartBill, în cuvinte simple (banner și card): la zi, neactualizat (Atenție), neimportat (Problemă)
  * sau depozit fără stoc gestionat.
  */
 export function snapshotView(freshness: WarehouseFreshness | null): SnapshotView {
   const banner = m().banner;
-  if (freshness === null) return { tone: "info", text: banner.none };
+  if (freshness === null) {
+    return { tone: "info", status: "none", label: banner.status.none, text: banner.none };
+  }
   if (freshness.status === "never" || freshness.takenAt === null) {
-    return { tone: "danger", text: banner.never };
+    return { tone: "danger", status: "never", label: banner.status.never, text: banner.never };
   }
   const age = ageText(freshness.ageHours ?? 0);
   return freshness.status === "stale"
-    ? { tone: "danger", text: banner.stale(age) }
-    : { tone: "ok", text: banner.fresh(age) };
+    ? { tone: "warn", status: "stale", label: banner.status.stale, text: banner.stale(age) }
+    : { tone: "ok", status: "fresh", label: banner.status.fresh, text: banner.fresh(age) };
 }
 
 export function warningText(

@@ -1,25 +1,23 @@
 import Link from "next/link";
 import type { StockAlerts } from "@ecom/core";
-import { Badge, cn } from "@ecom/ui";
+import { Badge, KpiContent, cn, kpiCardVariants } from "@ecom/ui";
 import { alertCardsView } from "@/lib/stock-alerts";
+import { badgeVariant } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
-import { badgeVariant } from "../inventory/stock-parts";
+import { StockHealth } from "../inventory/stock-parts";
 
 const m = getMessages().admin.dashboard.stock;
 
-const CARD =
-  "relative flex h-full flex-col gap-1 rounded-md border p-4 hover:bg-border/30 " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
-
 /**
- * Cardurile de stoc din Panou: «Stoc mic», «Doar rest nevandabil» și «Sincronizare SmartBill». Fiecare e o legătură spre vederea
- * «Stoc mic» (sau spre pagina Stoc, pentru poză). Se afișează doar cu `inventory.read`: pagina Panou nici nu citește stocul fără
- * acest drept.
+ * Cardurile de stoc din Panou (docs/17 §4.4): «Stoc mic», «Doar rest nevandabil» și «Sincronizare SmartBill» ca carduri de
+ * indicator, fiecare o legătură spre vederea «Stoc mic» (sau spre pagina Stoc, pentru sincronizare), și dedesubt bara de stoc
+ * segmentată. Se afișează doar cu `inventory.read`: pagina Panou nici nu citește stocul fără acest drept. Starea nu stă în culoarea
+ * fundalului: «Sincronizare» are pastilă cu cuvântul (La zi / Neactualizat / Neimportat), «Stoc mic» are cifra și explicația.
  */
 export function StockAlertCards({
   alerts,
 }: {
-  alerts: Pick<StockAlerts, "lowStock" | "freshness" | "settings">;
+  alerts: Pick<StockAlerts, "lowStock" | "freshness" | "settings" | "managedVariants">;
 }) {
   const view = alertCardsView(alerts);
   const attention = view.lowStock.total > 0;
@@ -27,9 +25,9 @@ export function StockAlertCards({
     <section
       aria-labelledby="stock-alerts-heading"
       data-stock-alerts
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-4"
     >
-      <h2 id="stock-alerts-heading" className="text-lg font-semibold">
+      <h2 id="stock-alerts-heading" className="text-section">
         {m.heading}
       </h2>
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -38,15 +36,16 @@ export function StockAlertCards({
             href={view.lowStock.href}
             aria-label={m.lowStock.aria(view.lowStock.total)}
             data-alert="low-stock"
-            className={cn(CARD, attention ? "border-border" : "border-success/50")}
+            className={cn(
+              kpiCardVariants({ tone: attention ? "peach" : "green", interactive: true }),
+              "h-full",
+            )}
           >
-            <span className="text-sm text-muted-foreground">{m.lowStock.title}</span>
-            <span className="text-3xl font-semibold" data-value>
-              {view.lowStock.total}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {m.lowStock.detail(view.lowStock.outOfStock)}
-            </span>
+            <KpiContent
+              label={m.lowStock.title}
+              value={view.lowStock.total}
+              detail={m.lowStock.detail(view.lowStock.outOfStock)}
+            />
           </Link>
         </li>
         <li>
@@ -54,13 +53,13 @@ export function StockAlertCards({
             href={view.remainder.href}
             aria-label={m.remainder.aria(view.remainder.count)}
             data-alert="remainder"
-            className={cn(CARD, "border-border")}
+            className={cn(kpiCardVariants({ tone: "indigo", interactive: true }), "h-full")}
           >
-            <span className="text-sm text-muted-foreground">{m.remainder.title}</span>
-            <span className="text-3xl font-semibold" data-value>
-              {view.remainder.count}
-            </span>
-            <span className="text-xs text-muted-foreground">{m.remainder.detail}</span>
+            <KpiContent
+              label={m.remainder.title}
+              value={view.remainder.count}
+              detail={m.remainder.detail}
+            />
           </Link>
         </li>
         <li>
@@ -71,20 +70,26 @@ export function StockAlertCards({
             data-status={view.snapshot.status}
             data-tone={view.snapshot.tone}
             className={cn(
-              CARD,
-              view.snapshot.tone === "danger" ? "border-danger bg-danger/10" : "border-border",
+              kpiCardVariants({
+                tone: view.snapshot.status === "fresh" ? "green" : "peach",
+                interactive: true,
+              }),
+              "h-full",
             )}
           >
-            <span className="text-sm text-muted-foreground">{m.snapshot.title}</span>
-            <span>
-              <Badge variant={badgeVariant(view.snapshot.tone)} className="whitespace-nowrap">
-                {m.snapshot.status[view.snapshot.status]}
-              </Badge>
-            </span>
-            <span className="text-xs text-muted-foreground">{view.snapshot.text}</span>
+            <KpiContent
+              label={m.snapshot.title}
+              value={
+                <Badge variant={badgeVariant(view.snapshot.tone)} dot>
+                  {view.snapshot.label}
+                </Badge>
+              }
+              detail={view.snapshot.text}
+            />
           </Link>
         </li>
       </ul>
+      <StockHealth lowStock={alerts.lowStock} managedVariants={alerts.managedVariants} heading />
     </section>
   );
 }
