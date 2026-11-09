@@ -64,3 +64,14 @@ export function formatLocalTime(date: Date, timeZone: string): string {
 export function formatLocalDateTime(date: Date, timeZone: string): string {
   return `${formatLocalDate(date, timeZone)}, ${formatLocalTime(date, timeZone)}`;
 }
+
+/**
+ * Data pe scurt, pentru celulele de tabel: `zz.ll, hh:mm` în anul curent și `zz.ll.aaaa, hh:mm` în alt an (altfel ar fi ambiguă).
+ * Anul se compară în ora magazinului, la fel ca data; `now` se poate injecta (testele nu depind de ceasul real).
+ */
+export function formatShortDateTime(date: Date, timeZone: string, now: Date = new Date()): string {
+  const l = localDateTime(date, timeZone);
+  const sameYear = l.year === localDateTime(now, timeZone).year;
+  const day = `${pad(l.day)}.${pad(l.month)}${sameYear ? "" : `.${pad(l.year, 4)}`}`;
+  return `${day}, ${pad(l.hour)}:${pad(l.minute)}`;
+}

@@ -39,12 +39,12 @@ export function SetThresholdButton({ target, max }: { target: ThresholdTarget; m
     <>
       <Button
         variant="outline"
-        size="sm"
+        size="icon"
         aria-label={m.threshold.aria(target.name)}
+        title={m.threshold.button}
         onClick={() => setOpen(true)}
       >
         <Gauge aria-hidden="true" className="h-4 w-4" />
-        <span className="ml-1 hidden sm:inline">{m.threshold.button}</span>
       </Button>
       {open && <ThresholdForm target={target} max={max} onClose={() => setOpen(false)} />}
     </>

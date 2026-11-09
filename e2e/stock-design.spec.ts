@@ -105,11 +105,26 @@ test.afterAll(async () => {
 const css = (locator: Locator, property: string) =>
   locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
 
-/** Cifrele din legenda barei de stoc: «În stoc 2», «Stoc mic 2» … din numele accesibil al imaginii. */
+/** Nici regiunea tabelului, nici pagina nu derulează pe orizontală (scrollWidth ≤ clientWidth). */
+async function expectNoHorizontalScroll(page: Page, table: Locator) {
+  const scroller = table.locator("xpath=..");
+  const [tableOverflow, pageOverflow] = await Promise.all([
+    scroller.evaluate((el) => el.scrollWidth - el.clientWidth),
+    page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    ),
+  ]);
+  expect(tableOverflow, "derulare orizontală în regiunea tabelului (px)").toBeLessThanOrEqual(0);
+  expect(pageOverflow, "derulare orizontală a paginii (px)").toBeLessThanOrEqual(0);
+}
+
+/** Cifrele din legenda barei de stoc: «În stoc 26», «Sub prag 2» … din numele accesibil al imaginii. */
 async function barNumbers(scope: Locator): Promise<Record<string, number>> {
   const label = (await scope.locator('[role="img"]').getAttribute("aria-label")) ?? "";
   const numbers: Record<string, number> = {};
-  for (const [, name, value] of label.matchAll(/(În stoc|Stoc mic|Epuizat) ([\d.]+)/g)) {
+  for (const [, name, value] of label.matchAll(
+    /(În stoc|Sub prag|Doar rest nevandabil|Epuizat) ([\d.]+)/g,
+  )) {
     numbers[name as string] = Number((value as string).replaceAll(".", ""));
   }
   return numbers;
@@ -153,7 +168,7 @@ test.describe("ecranul Stoc, pe componentele din docs/17", () => {
     expect(await css(pill, "color")).not.toBe(await css(inStock, "color"));
   });
 
-  test("bara de stoc segmentată: în stoc, stoc mic și epuizat din variantele gestionate; însumează baza din legendă", async ({
+  test("bara de stoc segmentată: În stoc, Sub prag, Doar rest nevandabil, Epuizat; aceleași cifre ca cardurile și tab-ul «Stoc mic»", async ({
     page,
   }) => {
     await login(page, account, LIST);
@@ -161,16 +176,45 @@ test.describe("ecranul Stoc, pe componentele din docs/17", () => {
     await expect(health).toBeVisible();
     const numbers = await barNumbers(health);
     // 6 + 24 variante gestionate (negestionatul și digitalul nu intră); la stoc mic: 4 (Alge, Liner, Bec, Pompă)
-    expect(numbers["Epuizat"]).toBe(2); // Alge + Liner (doar rest nevandabil)
-    expect(numbers["Stoc mic"]).toBe(2); // Bec + Pompă
+    expect(numbers["Epuizat"]).toBe(1); // Alge
+    expect(numbers["Doar rest nevandabil"]).toBe(1); // Liner
+    expect(numbers["Sub prag"]).toBe(2); // Bec + Pompă
     expect(numbers["În stoc"]).toBe(SIMPLE + 2); // Filtru + Capac + accesoriile
     await expect(health).toContainText(`${SIMPLE + 6} de variante gestionate`);
+    // eticheta «Stoc mic» nu mai e în legendă (e numele tab-ului), iar cuvintele sunt ale cardurilor
+    await expect(health.locator("ul")).not.toContainText("Stoc mic");
+    for (const word of ["În stoc", "Sub prag", "Doar rest nevandabil", "Epuizat"]) {
+      await expect(health.locator("ul").getByText(word, { exact: true })).toBeVisible();
+    }
     // bara are 6 px și rază mare; segmentele nu sunt doar culoare: legenda are cuvinte și numere
     const bar = health.locator('[role="img"]');
     expect((await bar.boundingBox())?.height).toBe(6);
-    await expect(health.getByText("Epuizat")).toBeVisible();
-    // trei segmente, în proporție cu numerele
-    await expect(health.locator("[data-segment]")).toHaveCount(3);
+    // patru segmente, în proporție cu numerele
+    await expect(health.locator("[data-segment]")).toHaveCount(4);
+
+    // invariantul: Sub prag + Doar rest nevandabil + Epuizat = numărul din tab-ul «Stoc mic (N)»
+    const tab = await page
+      .getByRole("navigation", { name: "Vedere" })
+      .getByRole("link", { name: /^Stoc mic \(\d+\)$/ })
+      .innerText();
+    const tabTotal = Number(tab.replace(/\D/g, ""));
+    expect(
+      (numbers["Sub prag"] ?? 0) +
+        (numbers["Doar rest nevandabil"] ?? 0) +
+        (numbers["Epuizat"] ?? 0),
+    ).toBe(tabTotal);
+    // și fiecare cifră e cea a cardului din vederea «Stoc mic»
+    await page
+      .getByRole("navigation", { name: "Vedere" })
+      .getByRole("link", { name: /^Stoc mic/ })
+      .click();
+    await expect(page).toHaveURL(/filtru=stoc-mic/);
+    const cards = page.locator("[data-low-stock-summary]");
+    await expect(cards.locator('[data-count="below_threshold"] dd')).toHaveText("2");
+    await expect(cards.locator('[data-count="remainder_only"] dd')).toHaveText("1");
+    await expect(cards.locator('[data-count="out_of_stock"] dd')).toHaveText("1");
+    await expect(cards.locator('[data-count="out_of_stock"] dt')).toHaveText("Epuizat");
+    await expect(page.locator("[data-stock-health]")).toHaveCount(1);
   });
 
   test("vederile ca tab-uri: cel activ are linie de 2 px și aria-current; «Stoc mic» filtrează vederea", async ({
@@ -268,32 +312,142 @@ test.describe("ecranul Stoc, pe componentele din docs/17", () => {
     ).toHaveCount(0);
   });
 
-  test("telefon: pagina nu derulează pe orizontală; tabelul da, iar prima coloană rămâne pe loc", async ({
+  test("1440 px: toate cele 9 coloane, rând de cel mult 56 px cu numele pe un singur rând, celule numerice fără rupere", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 1440, height: 900 });
     await login(page, account, LIST);
-    await expect(page.locator("[data-variant-row]").first()).toBeVisible();
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-      ),
-    ).toBe(false);
     const table = page.getByRole("table", { name: "Stocul variantelor" });
-    const scroller = table.locator("xpath=..");
-    expect(await scroller.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
-    const firstCell = page.locator('[data-variant-row] th[scope="row"]').first();
-    const before = (await firstCell.boundingBox())?.x ?? -1;
-    await scroller.evaluate((el) => {
-      el.scrollLeft = 300;
-    });
-    await expect.poll(async () => scroller.evaluate((el) => el.scrollLeft)).toBeGreaterThan(100);
-    const after = (await firstCell.boundingBox())?.x ?? -2;
-    expect(after).toBeCloseTo(before, 0);
-    // butoanele au 44 px înălțime pe telefon (țintă tactilă)
-    const button = page.getByRole("button", { name: /^Ajustează stocul:/ }).first();
-    await button.scrollIntoViewIfNeeded();
-    expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    for (const name of [
+      "Produs",
+      "Unitate și pas",
+      "Fizică",
+      "Angajat",
+      "Rezervat",
+      "Disponibil",
+      "Rest nevandabil",
+      "Stare",
+      "Acțiuni",
+    ]) {
+      await expect(table.getByRole("columnheader", { name, exact: true }), name).toBeVisible();
+    }
+    // fără derulare orizontală: nici în regiunea tabelului, nici în pagină
+    await expectNoHorizontalScroll(page, table);
+
+    // Alge și Accesoriu 01 au numele pe un singur rând: rândul are 48–56 px (docs/17: 48 px)
+    for (const index of [ALGE, ACCESORIU]) {
+      const row = page.locator(`[data-variant-row="${skus[index]}"]`);
+      const height = (await row.boundingBox())?.height ?? 0;
+      expect(height, `rândul ${skus[index]}`).toBeGreaterThanOrEqual(48);
+      expect(height, `rândul ${skus[index]}`).toBeLessThanOrEqual(56);
+    }
+
+    // celulele numerice nu se rup pe mai multe rânduri și au cifre tabulare
+    const alge = page.locator(`[data-variant-row="${skus[ALGE]}"]`);
+    for (const cell of ["physical", "committed", "reserved", "available", "remainder"]) {
+      const locator = alge.locator(`[data-cell="${cell}"]`);
+      expect(await css(locator, "white-space"), cell).toBe("nowrap");
+      expect(await css(locator, "font-variant-numeric"), cell).toContain("tabular-nums");
+    }
+    // «valabilă la …»: o singură linie scurtă de 12 px, cu data întreagă în title
+    const asOf = alge.locator('[data-cell="physical"] [title]');
+    await expect(asOf).toHaveText(/^valabilă la \d{2}\.\d{2}, \d{2}:\d{2}$/);
+    await expect(asOf).toHaveAttribute("title", /^valabilă la \d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}$/);
+    expect(await css(asOf, "font-size")).toBe("12px");
+    expect((await asOf.boundingBox())?.height ?? 99).toBeLessThanOrEqual(16);
+    // «= N de pași» pe o singură linie
+    const steps = alge.locator('[data-cell="available"] span').nth(1);
+    expect((await steps.boundingBox())?.height ?? 99).toBeLessThanOrEqual(16);
+  });
+
+  test("acțiunile: «Ajustează» cu text; «Prag» și «Istoric» doar cu pictogramă, cu nume accesibil și tooltip", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, account, LIST);
+    const row = page.locator(`[data-variant-row="${skus[ALGE]}"]`);
+    const adjust = row.getByRole("button", { name: /^Ajustează stocul:/ });
+    await expect(adjust).toHaveText("Ajustează");
+    const threshold = row.getByRole("button", { name: /^Setează pragul de stoc mic:/ });
+    const history = row.getByRole("link", { name: /^Istoricul stocului:/ });
+    await expect(threshold).toBeVisible();
+    await expect(history).toBeVisible();
+    // fără text vizibil: doar pictograma (un pătrat), cu tooltip
+    await expect(threshold).toHaveText("");
+    await expect(history).toHaveText("");
+    await expect(threshold).toHaveAttribute("title", "Prag");
+    await expect(history).toHaveAttribute("title", "Istoric");
+    for (const control of [threshold, history]) {
+      const box = await control.boundingBox();
+      expect(box?.width).toBeCloseTo(box?.height ?? -1, 0);
+    }
+    // pe rând, cele trei acțiuni stau pe aceeași linie
+    const [a, t, h] = await Promise.all([adjust, threshold, history].map((c) => c.boundingBox()));
+    expect(Math.round(a?.y ?? -1)).toBe(Math.round(t?.y ?? -2));
+    expect(Math.round(a?.y ?? -1)).toBe(Math.round(h?.y ?? -3));
+    // butoanele rămân accesibile pe rol și nume: «Prag» deschide dialogul lui
+    await threshold.click();
+    await expect(page.getByRole("dialog", { name: /^Prag stoc mic:/ })).toBeVisible();
+  });
+
+  test("1280 px: apare Fizică, detaliile se ascund, fără derulare orizontală", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await login(page, account, LIST);
+    const table = page.getByRole("table", { name: "Stocul variantelor" });
+    await expect(table.getByRole("columnheader", { name: "Fizică", exact: true })).toBeVisible();
+    for (const hidden of ["Unitate și pas", "Angajat", "Rezervat", "Rest nevandabil"]) {
+      await expect(
+        table.getByRole("columnheader", { name: hidden, exact: true }),
+        hidden,
+      ).toBeHidden();
+    }
+    await expectNoHorizontalScroll(page, table);
+  });
+
+  test.describe("coloanele rămase pe ecrane înguste", () => {
+    for (const [label, width] of [
+      ["1024", 1024],
+      ["390", 390],
+    ] as const) {
+      test(`${label} px: Produs (cu SKU), Disponibil, Stare și Acțiuni; fără derulare orizontală; detaliile ascunse rămân în «Istoric»`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 844 });
+        await login(page, account, LIST);
+        const table = page.getByRole("table", { name: "Stocul variantelor" });
+        await expect(page.locator("[data-variant-row]").first()).toBeVisible();
+        for (const name of ["Produs", "Disponibil", "Stare", "Acțiuni"]) {
+          await expect(table.getByRole("columnheader", { name, exact: true }), name).toBeVisible();
+        }
+        for (const hidden of [
+          "Fizică",
+          "Unitate și pas",
+          "Angajat",
+          "Rezervat",
+          "Rest nevandabil",
+        ]) {
+          await expect(
+            table.getByRole("columnheader", { name: hidden, exact: true }),
+            hidden,
+          ).toBeHidden();
+        }
+        // SKU-ul stă sub numele produsului, în prima coloană
+        const row = page.locator(`[data-variant-row="${skus[ALGE]}"]`);
+        await expect(row.locator('th[scope="row"]')).toContainText(skus[ALGE] as string);
+        // pe orice rând, nicio celulă nu iese din regiunea tabelului
+        await expectNoHorizontalScroll(page, table);
+        // detaliile ascunse rămân la un clic distanță: «Istoric» e vizibil și are nume accesibil
+        await expect(row.getByRole("link", { name: /^Istoricul stocului:/ })).toBeVisible();
+        // țintele tactile pe telefon
+        if (width < 640) {
+          const button = row.getByRole("button", { name: /^Ajustează stocul:/ });
+          await button.scrollIntoViewIfNeeded();
+          expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+          const history = row.getByRole("link", { name: /^Istoricul stocului:/ });
+          expect((await history.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+        }
+      });
+    }
   });
 });
 
@@ -310,10 +464,14 @@ test.describe("Panou: carduri de indicator și bara de stoc", () => {
     expect(await css(card, "background-color")).not.toBe("rgba(0, 0, 0, 0)");
     expect(await css(card.locator("[data-value]"), "font-size")).toBe("28px");
 
-    // bara: «Stoc mic» (cardul) = sub prag + epuizat (bara), din aceeași citire a paginii
+    // bara: «Stoc mic» (cardul) = sub prag + doar rest nevandabil + epuizat (bara), din aceeași citire a paginii
     const numbers = await barNumbers(region.locator("[data-stock-health]"));
     const cardTotal = Number(await card.locator("[data-value]").innerText());
-    expect((numbers["Stoc mic"] ?? 0) + (numbers["Epuizat"] ?? 0)).toBe(cardTotal);
+    expect(
+      (numbers["Sub prag"] ?? 0) +
+        (numbers["Doar rest nevandabil"] ?? 0) +
+        (numbers["Epuizat"] ?? 0),
+    ).toBe(cardTotal);
     const caption = await region.locator("[data-stock-health] p").innerText();
     const base = Number(caption.replace(/\D/g, ""));
     expect((numbers["În stoc"] ?? 0) + cardTotal).toBe(base);

@@ -44,7 +44,7 @@ export function FreshnessBanner({ freshness }: { freshness: WarehouseFreshness |
 }
 
 /**
- * Starea stocului în bara segmentată (în stoc / stoc mic / epuizat), din variantele gestionate, cu legenda dedesubt. Fără variante
+ * Starea stocului în bara segmentată (în stoc / sub prag / doar rest nevandabil / epuizat), din variantele gestionate, cu legenda dedesubt. Fără variante
  * gestionate nu se desenează nimic. În Panou are titlu vizibil (`heading`); în pagina Stoc, bara stă sub banner, fără titlu.
  */
 export function StockHealth({

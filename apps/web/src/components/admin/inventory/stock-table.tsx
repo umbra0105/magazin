@@ -3,7 +3,7 @@ import type { StockOverviewRow, StockProductGroup } from "@ecom/core";
 import { formatQuantity } from "@ecom/shared/quantity";
 import { Badge, TBody, Table, TableCaption, Td, Th, THead, Tr, buttonVariants } from "@ecom/ui";
 import { History } from "lucide-react";
-import { formatLocalDateTime } from "@/lib/stock-time";
+import { formatLocalDateTime, formatShortDateTime } from "@/lib/stock-time";
 import { historyHref } from "@/lib/stock-url";
 import {
   availabilityView,
@@ -44,6 +44,11 @@ function displayName(row: StockOverviewRow): string {
  * Tabelul stocului, grupat pe produs: pentru fiecare variantă Fizică (valabilă la …), Angajat, Rezervat, Disponibil în
  * unitate și în pași, Rest nevandabil și starea vizibilă. Negestionatul și digitalul nu au cantități. Acțiunile cer
  * `inventory.write` pentru «Ajustează»; «Istoric» cere doar `inventory.read`.
+ *
+ * Prioritatea coloanelor (docs/17 §3): mereu Produs (cu SKU dedesubt), Disponibil, Stare și Acțiuni; de la 48rem lățime
+ * de tabel apare Fizică; de la 64rem și detaliile (Unitate și pas, Angajat, Rezervat, Rest nevandabil). Detaliile ascunse se
+ * găsesc în «Istoric». Rândul are o linie de valoare plus una de explicație (≈52 px), cu celule numerice pe un singur
+ * rând; «Prag» și «Istoric» sunt butoane doar cu pictogramă (nume accesibil și tooltip), «Ajustează» rămâne cu text.
  */
 export function StockTable({
   groups,
@@ -74,19 +79,25 @@ export function StockTable({
 }) {
   const c = m.columns;
   return (
-    <Table className="min-w-256" aria-label={m.listLabel}>
+    <Table aria-label={m.listLabel}>
       <TableCaption>{m.listLabel}</TableCaption>
       <THead>
         <Tr className="h-auto">
-          <Th className={STICKY_HEAD}>{c.product}</Th>
-          <Th>{c.unit}</Th>
-          {(["physical", "committed", "reserved", "available", "remainder"] as const).map(
-            (column) => (
-              <Th key={column} numeric>
-                {c[column]}
-              </Th>
-            ),
-          )}
+          <Th>{c.product}</Th>
+          <Th priority="detail">{c.unit}</Th>
+          <Th numeric priority="secondary">
+            {c.physical}
+          </Th>
+          <Th numeric priority="detail">
+            {c.committed}
+          </Th>
+          <Th numeric priority="detail">
+            {c.reserved}
+          </Th>
+          <Th numeric>{c.available}</Th>
+          <Th numeric priority="detail">
+            {c.remainder}
+          </Th>
           <Th>{c.state}</Th>
           <Th numeric>{c.actions}</Th>
         </Tr>
@@ -116,12 +127,8 @@ export function StockTable({
   );
 }
 
-/**
- * Prima coloană (produsul) rămâne pe loc la derulare orizontală pe telefon (docs/17 §3), cu fundal propriu ca să nu se vadă
- * celulele din spate; de la `md` în sus tabelul încape sau derulează normal.
- */
-const STICKY_HEAD = "sticky left-0 z-10 bg-surface-subtle md:static";
-const STICKY_CELL = "sticky left-0 z-10 min-w-40 max-w-56 md:static md:max-w-none";
+/** Celula-antet a rândului (produsul): textul lung se rupe oriunde (SKU-uri lungi pe telefon), nu lărgește tabelul. */
+const ROW_HEAD = "px-3 py-2 text-left align-middle font-normal wrap-anywhere @max-2xl/table:px-2";
 
 function StockRow({
   row,
@@ -169,10 +176,7 @@ function StockRow({
       : null;
   return (
     <Tr {...{ [rowAttribute]: row.sku }} data-kind={row.kind} data-state={row.state}>
-      <th
-        scope="row"
-        className={`${STICKY_CELL} bg-surface-page px-3 py-2 text-left align-middle font-normal`}
-      >
+      <th scope="row" className={ROW_HEAD}>
         {first && (
           <Link
             href={`/admin/produse/${row.productId}`}
@@ -181,12 +185,12 @@ function StockRow({
             {row.productTitle}
           </Link>
         )}
-        <span className="block text-ink-secondary">
+        <span className="block text-label text-ink-secondary">
           {row.variantLabel ?? (first ? "" : row.productTitle)}
-          <span className="ml-1 text-label">{row.sku}</span>
+          <span className="ml-1">{row.sku}</span>
         </span>
       </th>
-      <Td className="whitespace-nowrap text-ink-secondary" data-cell="unit">
+      <Td priority="detail" className="whitespace-nowrap text-ink-secondary" data-cell="unit">
         {m.details.stepUnit(row.unit.symbol, formatQuantity(row.step))}
       </Td>
       {row.kind === "managed" &&
@@ -194,23 +198,28 @@ function StockRow({
       row.committed !== null &&
       row.reserved !== null ? (
         <>
-          <Td numeric data-cell="physical">
+          <Td numeric priority="secondary" className="whitespace-nowrap" data-cell="physical">
             <span className="font-medium">{quantityText(row.physical, row.unit)}</span>
             <span className="block text-label text-ink-secondary">
-              {!row.inventoried
-                ? m.cell.notInventoried
-                : row.physicalAsOf
-                  ? m.cell.asOf(formatLocalDateTime(row.physicalAsOf, timeZone))
-                  : m.cell.noSnapshot}
+              {!row.inventoried ? (
+                m.cell.notInventoried
+              ) : row.physicalAsOf ? (
+                <span title={m.cell.asOf(formatLocalDateTime(row.physicalAsOf, timeZone))}>
+                  <span className="sr-only">{m.cell.asOfPrefix} </span>
+                  {m.cell.asOfShort(formatShortDateTime(row.physicalAsOf, timeZone))}
+                </span>
+              ) : (
+                <span title={m.cell.noSnapshot}>{m.cell.noSnapshotShort}</span>
+              )}
             </span>
           </Td>
-          <Td numeric data-cell="committed">
+          <Td numeric priority="detail" className="whitespace-nowrap" data-cell="committed">
             {quantityText(row.committed, row.unit)}
           </Td>
-          <Td numeric data-cell="reserved">
+          <Td numeric priority="detail" className="whitespace-nowrap" data-cell="reserved">
             {quantityText(row.reserved, row.unit)}
           </Td>
-          <Td numeric data-cell="available">
+          <Td numeric className="whitespace-nowrap" data-cell="available">
             {availability && (
               <>
                 <span className="font-medium">{availability.quantity}</span>
@@ -218,20 +227,28 @@ function StockRow({
               </>
             )}
           </Td>
-          <Td numeric data-cell="remainder">
+          <Td numeric priority="detail" className="whitespace-nowrap" data-cell="remainder">
             {availability?.remainder ?? m.cell.remainderNone}
           </Td>
         </>
       ) : (
-        <Td colSpan={5} className="text-ink-secondary" data-cell="kind">
-          {kindLabel(row)}
-          {canWrite && row.kind === "unmanaged" && (
-            <span className="block text-label">{m.cell.manageHint}</span>
-          )}
-        </Td>
+        <>
+          <Td priority="secondary" />
+          <Td priority="detail" />
+          <Td priority="detail" />
+          <Td className="text-right text-label text-ink-secondary" data-cell="kind">
+            {kindLabel(row)}
+            {canWrite && row.kind === "unmanaged" && (
+              <span className="mt-1 hidden @5xl/table:block" title={m.cell.manageHint}>
+                {m.cell.manageHint}
+              </span>
+            )}
+          </Td>
+          <Td priority="detail" />
+        </>
       )}
       <Td data-cell="state">
-        <Badge variant={badgeVariant(state.tone)} dot>
+        <Badge variant={badgeVariant(state.tone)} dot className="whitespace-nowrap">
           {state.label}
         </Badge>
         {state.detail && (
@@ -239,7 +256,7 @@ function StockRow({
         )}
       </Td>
       <Td>
-        <div className="flex justify-end gap-1">
+        <div className="flex justify-end gap-1 @max-2xl/table:max-w-24 @max-2xl/table:flex-wrap">
           {thresholdData && threshold && (
             <SetThresholdButton target={thresholdData} max={threshold.max} />
           )}
@@ -269,10 +286,10 @@ function StockRow({
             <Link
               href={historyHref(row.variantId, warehouseCode)}
               aria-label={m.actions.historyAria(name)}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
+              title={m.actions.history}
+              className={buttonVariants({ variant: "outline", size: "icon" })}
             >
               <History aria-hidden="true" className="h-4 w-4" />
-              <span className="ml-1 hidden sm:inline">{m.actions.history}</span>
             </Link>
           )}
         </div>
@@ -283,36 +300,41 @@ function StockRow({
 
 function GroupTotal({ group }: { group: StockProductGroup }) {
   if (!group.total && !group.totalProblem) return null;
+  const total = group.total;
   return (
     <Tr data-product-total={group.productSlug} className="bg-surface-subtle">
-      <th
-        scope="row"
-        className={`${STICKY_CELL} bg-surface-subtle px-3 py-2 text-left align-middle font-medium`}
-      >
+      <th scope="row" className={`${ROW_HEAD} bg-surface-subtle font-medium`}>
         {m.total.label}
+        {group.totalProblem && (
+          <span
+            className="block text-label font-normal text-ink-secondary"
+            data-cell="total-problem"
+          >
+            {m.total[group.totalProblem]}
+          </span>
+        )}
       </th>
+      <Td priority="detail" />
+      <Td
+        numeric
+        priority="secondary"
+        className="whitespace-nowrap font-medium"
+        data-cell="total-physical"
+      >
+        {total ? quantityText(total.physical, total.unit) : null}
+      </Td>
+      <Td numeric priority="detail" className="whitespace-nowrap" data-cell="total-committed">
+        {total ? quantityText(total.committed, total.unit) : null}
+      </Td>
+      <Td numeric priority="detail" className="whitespace-nowrap" data-cell="total-reserved">
+        {total ? quantityText(total.reserved, total.unit) : null}
+      </Td>
+      <Td numeric className="whitespace-nowrap font-medium" data-cell="total-available">
+        {total ? quantityText(total.available, total.unit) : null}
+      </Td>
+      <Td priority="detail" />
       <Td />
-      {group.total ? (
-        <>
-          <Td numeric className="font-medium" data-cell="total-physical">
-            {quantityText(group.total.physical, group.total.unit)}
-          </Td>
-          <Td numeric data-cell="total-committed">
-            {quantityText(group.total.committed, group.total.unit)}
-          </Td>
-          <Td numeric data-cell="total-reserved">
-            {quantityText(group.total.reserved, group.total.unit)}
-          </Td>
-          <Td numeric className="font-medium" data-cell="total-available">
-            {quantityText(group.total.available, group.total.unit)}
-          </Td>
-          <Td colSpan={3} />
-        </>
-      ) : (
-        <Td colSpan={7} className="text-ink-secondary" data-cell="total-problem">
-          {group.totalProblem ? m.total[group.totalProblem] : ""}
-        </Td>
-      )}
+      <Td />
     </Tr>
   );
 }

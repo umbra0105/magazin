@@ -158,10 +158,10 @@ export function LowStockTable({
                   <Link
                     href={historyHref(row.variantId, warehouseCode)}
                     aria-label={m.actions.historyAria(name)}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                    title={m.actions.history}
+                    className={buttonVariants({ variant: "outline", size: "icon" })}
                   >
                     <History aria-hidden="true" className="h-4 w-4" />
-                    <span className="ml-1 hidden sm:inline">{m.actions.history}</span>
                   </Link>
                 </div>
               </Td>

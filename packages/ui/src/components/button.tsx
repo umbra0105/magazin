@@ -27,6 +27,8 @@ export const buttonVariants = cva(
       size: {
         default: "h-(--control-h) px-4 text-(length:--button-text)",
         sm: "h-(--control-h-compact) px-3 text-body",
+        /** Doar pictogramă: pătrat cât înălțimea compactă (44 px pe telefon, 32 px de la `md`); cere `aria-label` și `title`. */
+        icon: "size-(--control-h-compact) px-0 text-body",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

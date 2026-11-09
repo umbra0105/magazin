@@ -3,9 +3,11 @@ import type { Segment } from "@ecom/ui";
 import { getMessages } from "@/messages";
 
 /**
- * Bara de stoc segmentată din Panou și din pagina Stoc (funcție PURĂ): variantele gestionate, împărțite în «În stoc», «Stoc mic»
- * (sub prag) și «Epuizat» (epuizate și cele cu doar un rest nevandabil: nu se pot vinde). Segmentele însumează exact numărul de
- * variante gestionate; negestionatul și digitalul nu au cantități și nu intră.
+ * Bara de stoc segmentată din Panou și din pagina Stoc (funcție PURĂ): variantele gestionate, în patru segmente care folosesc
+ * EXACT cuvintele și cifrele cardurilor din vederea «Stoc mic»: «În stoc», «Sub prag», «Doar rest nevandabil» (ton neutru) și
+ * «Epuizat». Cele trei de la urmă sunt chiar motivele din «Stoc mic (N)», deci însumează acel N; împreună cu «În stoc»
+ * însumează exact numărul de variante gestionate (fiecare variantă e într-un singur segment). Negestionatul și digitalul nu
+ * au cantități și nu intră. «Stoc mic» e numele tab-ului și al cardului din Panou, nu al unui segment.
  */
 export interface StockHealthView {
   label: string;
@@ -20,8 +22,8 @@ export function stockHealthView(
 ): StockHealthView | null {
   if (managedVariants <= 0) return null;
   const text = getMessages().admin.inventory.health;
-  const out = lowStock.outOfStock + lowStock.remainderOnly;
-  const low = lowStock.belowThreshold;
+  const reasons = getMessages().admin.inventory.lowStock.summary;
+  const { belowThreshold, remainderOnly, outOfStock } = lowStock;
   return {
     label: text.label,
     caption: text.managed(managedVariants),
@@ -29,11 +31,22 @@ export function stockHealthView(
       {
         key: "in-stock",
         label: text.inStock,
-        value: Math.max(0, managedVariants - low - out),
+        value: Math.max(0, managedVariants - belowThreshold - remainderOnly - outOfStock),
         tone: "ok",
       },
-      { key: "low", label: text.low, value: low, tone: "low" },
-      { key: "out", label: text.out, value: out, tone: "out" },
+      {
+        key: "below_threshold",
+        label: reasons.below_threshold,
+        value: belowThreshold,
+        tone: "low",
+      },
+      {
+        key: "remainder_only",
+        label: reasons.remainder_only,
+        value: remainderOnly,
+        tone: "neutral",
+      },
+      { key: "out_of_stock", label: reasons.out_of_stock, value: outOfStock, tone: "out" },
     ],
   };
 }

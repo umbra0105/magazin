@@ -814,6 +814,43 @@ describe("alertele din Panou: StockOverviewService.alerts (punctul 10b)", () => 
     });
   });
 
+  it("invarianții barei de stoc, pe Postgres real: sub prag + doar rest + epuizat = numărul din tab și din Panou; împreună cu «în stoc» = variantele gestionate", async () => {
+    await withStock(async (h) => {
+      await addLowStockSet(h);
+      await h.add("Capac", { variants: [{ physical: "50" }] });
+      await h.add("Cartuș", {
+        manageStock: false,
+        stockStatus: "outofstock",
+        variants: [{ physical: null }],
+      });
+      const alerts = await h.service.alerts(h.manager);
+      const low = await h.service.list(h.manager, { lowStockOnly: true, pageSize: 100 });
+      const all = await h.service.list(h.manager, { pageSize: 100 });
+      for (const counts of [alerts.lowStock, low.lowStock, all.lowStock]) {
+        // cele trei motive însumează totalul din cardul Panoului
+        expect(counts.belowThreshold + counts.remainderOnly + counts.outOfStock).toBe(counts.total);
+      }
+      // totalul din Panou = rândurile din tab-ul «Stoc mic (N)» (N = total al vederii filtrate)
+      expect(alerts.lowStock.total).toBe(low.total);
+      expect(low.rows).toHaveLength(low.total);
+      // fiecare variantă din vedere are exact un motiv, iar motivele se numără la fel ca în cifre
+      const byReason = (reason: string) =>
+        low.rows.filter((row) => row.lowStockReason === reason).length;
+      expect(byReason("below_threshold")).toBe(alerts.lowStock.belowThreshold);
+      expect(byReason("remainder_only")).toBe(alerts.lowStock.remainderOnly);
+      expect(byReason("out_of_stock")).toBe(alerts.lowStock.outOfStock);
+      // baza barei: «în stoc» = gestionate − total, niciodată negativ, iar variantele negestionate nu intră în bază
+      expect(alerts.managedVariants).toBe(all.managedVariants);
+      // Capac (50) e în stoc, deci «în stoc» e cel puțin 1; negestionatul (Cartuș) nu e în bază
+      expect(alerts.managedVariants - alerts.lowStock.total).toBeGreaterThanOrEqual(1);
+      // dacă toate rândurile încap pe o pagină, cele gestionate fără motiv sunt exact «în stoc»
+      if (all.pageCount === 1) {
+        const inStock = all.rows.filter((row) => row.kind === "managed" && !row.lowStockReason);
+        expect(inStock).toHaveLength(alerts.managedVariants - alerts.lowStock.total);
+      }
+    });
+  });
+
   it("variantele gestionate cresc cu exact ce se adaugă (negestionatul nu se numără), la alerte și în listă", async () => {
     await withStock(async (h) => {
       const before = await h.service.alerts(h.manager);

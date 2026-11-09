@@ -36,6 +36,7 @@ import {
   removeToast,
   segmentShares,
   tabClass,
+  tablePriorityClass,
   TOAST_LIMIT,
   useToast,
   type Segment,
@@ -64,6 +65,14 @@ describe("Button", () => {
     const danger = html(h(Button, { variant: "destructive" }, "x"));
     expect(danger).toContain("text-tone-problem-fg");
     expect(danger).toContain("border-line-control");
+  });
+
+  it("mărimea «icon» e un pătrat cât înălțimea compactă, fără umplutură (butoane doar cu pictogramă și nume accesibil)", () => {
+    const out = html(h(Button, { size: "icon", "aria-label": "Prag stoc mic: Alge" }, "x"));
+    expect(out).toContain("size-(--control-h-compact)");
+    expect(out).toContain("px-0");
+    expect(out).not.toContain("h-(--control-h-compact) px-3");
+    expect(out).toContain('aria-label="Prag stoc mic: Alge"');
   });
 
   it("înălțimea și mărimea textului vin din variabile (44/16 pe telefon, 36/14 de la md în sus)", () => {
@@ -210,6 +219,46 @@ describe("Table", () => {
 
   it("se derulează orizontal în propria regiune", () => {
     expect(table([])).toMatch(/^<div class="[^"]*overflow-x-auto/);
+  });
+
+  describe("prioritatea coloanelor (docs/17 §3): după lățimea tabelului, nu a ferestrei", () => {
+    it("regiunea tabelului e container numit «table»: coloanele secundare și de detaliu se ascund după ea", () => {
+      expect(table([])).toContain("@container/table");
+      expect(table([])).toMatch(/^<div class="[^"]*overflow-x-auto/);
+    });
+
+    it("clasele fiecărei priorități: principala mereu, secundară de la 48rem, de detaliu de la 64rem", () => {
+      expect(tablePriorityClass("primary")).toBe("");
+      expect(tablePriorityClass("secondary")).toBe("hidden @3xl/table:table-cell");
+      expect(tablePriorityClass("detail")).toBe("hidden @5xl/table:table-cell");
+    });
+
+    it("Th și Td poartă prioritatea; fără prioritate rămân mereu vizibile", () => {
+      const out = html(
+        h(
+          "table",
+          null,
+          h(
+            "thead",
+            null,
+            h("tr", null, h(Th, null, "Produs"), h(Th, { priority: "secondary" }, "Fizică")),
+          ),
+          h("tbody", null, h("tr", null, h(Td, null, "a"), h(Td, { priority: "detail" }, "b"))),
+        ),
+      );
+      expect(out).toMatch(/<th[^>]*>Produs/);
+      expect(out).not.toMatch(/<th(?![^>]*hidden)[^>]*>Fizică/);
+      expect(out).toMatch(/<th[^>]*hidden @3xl[^>]*>Fizică/);
+      expect(out).toMatch(/<td[^>]*hidden @5xl[^>]*>b/);
+      expect(out).not.toMatch(/<td[^>]*hidden[^>]*>a</);
+      expect(out).not.toMatch(/<th[^>]*hidden[^>]*>Produs/);
+    });
+
+    it("celulele au umplutură mai mică pe tabel îngust", () => {
+      const out = html(h("table", null, h("tbody", null, h("tr", null, h(Td, null, "x")))));
+      expect(out).toContain("px-3");
+      expect(out).toContain("@max-2xl/table:px-2");
+    });
   });
 });
 

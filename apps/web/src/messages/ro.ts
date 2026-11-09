@@ -1031,9 +1031,10 @@ export const ro = {
       health: {
         label: "Starea stocului",
         inStock: "În stoc",
-        low: "Stoc mic",
-        out: "Epuizat",
-        /** Legenda de sub bară: baza numărătorii (doar variantele cu stoc gestionat). */
+        /**
+         * Restul segmentelor (Sub prag, Doar rest nevandabil, Epuizat) au cuvintele cardurilor din `lowStock.summary`.
+         * Legenda de sub bară: baza numărătorii (doar variantele cu stoc gestionat).
+         */
         managed: (n: number) => {
           const count = n.toLocaleString("ro-RO");
           if (n === 1) return `${count} variantă gestionată`;
@@ -1113,8 +1114,13 @@ export const ro = {
       },
       cell: {
         none: "—",
+        /** Data întreagă, pentru `title` (tooltip) și cititoare de ecran */
         asOf: (at: string) => `valabilă la ${at}`,
+        /** Rândul scurt din celulă: «la 09.11, 09:43»; cuvântul «valabilă» e doar pentru cititoare de ecran */
+        asOfShort: (at: string) => `la ${at}`,
+        asOfPrefix: "valabilă",
         noSnapshot: "neimportat din SmartBill",
+        noSnapshotShort: "neimportat",
         notInventoried: "neinventariat",
         manageHint: "Pornește gestionarea stocului din editorul produsului.",
         digitalHint: "Fără stoc",
@@ -1134,7 +1140,7 @@ export const ro = {
         hint: "Cele mai urgente sunt primele: epuizate, apoi cele cu doar un rest nevandabil, apoi cele sub prag.",
         summaryLabel: "Variante la stoc mic, pe motiv",
         summary: {
-          out_of_stock: "Epuizate",
+          out_of_stock: "Epuizat",
           remainder_only: "Doar rest nevandabil",
           below_threshold: "Sub prag",
         },

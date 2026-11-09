@@ -35,7 +35,17 @@ export {
 } from "./components/kpi-card";
 export { FileInput, type FileInputProps } from "./components/file-input";
 export { describeFiles, formatFileSize } from "./lib/file-size";
-export { Table, TableCaption, TBody, Td, Th, THead, Tr } from "./components/table";
+export {
+  Table,
+  TableCaption,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+  tablePriorityClass,
+  type TablePriority,
+} from "./components/table";
 export { Drawer, DrawerSection, type DrawerProps } from "./components/drawer";
 export { Skeleton } from "./components/skeleton";
 export { EmptyState, type EmptyStateProps } from "./components/empty-state";

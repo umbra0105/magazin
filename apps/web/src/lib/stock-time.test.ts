@@ -3,6 +3,7 @@ import {
   formatLocalDate,
   formatLocalDateTime,
   formatLocalTime,
+  formatShortDateTime,
   parseLocalDateTime,
 } from "./stock-time";
 
@@ -152,5 +153,42 @@ describe("afișarea orei în ora magazinului", () => {
       BUCHAREST,
     );
     expect(parsed.ok && parsed.date.toISOString()).toBe(moment.toISOString());
+  });
+});
+
+describe("data scurtă pentru celulele de tabel", () => {
+  const NOW = new Date("2026-11-09T10:00:00Z");
+
+  it("în anul curent: «zz.ll, hh:mm», fără an", () => {
+    expect(formatShortDateTime(new Date("2026-11-09T07:43:00Z"), BUCHAREST, NOW)).toBe(
+      "09.11, 09:43",
+    );
+    expect(formatShortDateTime(new Date("2026-01-05T03:04:00Z"), BUCHAREST, NOW)).toBe(
+      "05.01, 05:04",
+    );
+  });
+
+  it("în alt an: cu anul, ca să nu fie ambiguă", () => {
+    expect(formatShortDateTime(new Date("2025-12-31T10:00:00Z"), BUCHAREST, NOW)).toBe(
+      "31.12.2025, 12:00",
+    );
+    expect(formatShortDateTime(new Date("2027-01-05T03:04:00Z"), BUCHAREST, NOW)).toBe(
+      "05.01.2027, 05:04",
+    );
+  });
+
+  it("anul și ziua sunt cele locale (ora magazinului), nu cele UTC", () => {
+    // 31 dec 23:30 UTC = 1 ian 01:30 la București: alt an decât «acum» (2026) dacă acum e în 2026
+    expect(formatShortDateTime(new Date("2026-12-31T23:30:00Z"), BUCHAREST, NOW)).toBe(
+      "01.01.2027, 01:30",
+    );
+    // «acum» = 31 dec 2026, 23:30 UTC = 1 ian 2027 la București: o dată din 2026 poartă anul
+    expect(
+      formatShortDateTime(
+        new Date("2026-06-30T21:30:00Z"),
+        BUCHAREST,
+        new Date("2026-12-31T23:30:00Z"),
+      ),
+    ).toBe("01.07.2026, 00:30");
   });
 });

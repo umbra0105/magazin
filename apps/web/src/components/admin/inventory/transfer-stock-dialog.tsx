@@ -44,12 +44,12 @@ export function TransferStockButton({
     <>
       <Button
         variant="outline"
-        size="sm"
+        size="icon"
         aria-label={m.transfer.openAria(target.name)}
+        title={m.transfer.open}
         onClick={() => setOpen(true)}
       >
         <ArrowRightLeft aria-hidden="true" className="h-4 w-4" />
-        <span className="ml-1 hidden sm:inline">{m.transfer.open}</span>
       </Button>
       {open && (
         <TransferForm
