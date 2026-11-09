@@ -39,7 +39,8 @@ există `tenantId`. În schimb:
   de TVA, textele legale, expeditorul de email — toate vin din tabelele `Setting`
   și `Branding`, editabile din admin.
 - Dacă scrii o culoare, un text de brand sau o valoare de business direct în cod,
-  e un bug. Culorile vin din CSS variables generate din `Branding`.
+  e un bug. Culorile vitrinei vin din CSS variables generate din `Branding`. **Singura excepție:** paleta ADMINULUI
+  (vezi «Design admin» mai jos) trăiește într-un fișier de tokeni propriu.
 - `.env` conține DOAR secrete și conexiuni (DB, Redis, APP_KEY, APP_URL, storage).
   Restul e în baza de date.
 - Funcționalitățile opționale (blog, recenzii, wishlist, multi-depozit, loialitate,
@@ -191,7 +192,7 @@ există `tenantId`. În schimb:
 - Logica de business în `packages/core`, apelabilă din server action, API, worker și test.
 - Erori tipate (`DomainError`, `ValidationError`, `IntegrationError`) cu cod stabil.
 - Server Components implicit; `"use client"` doar unde e strict necesar.
-- Fără culori hardcodate în componente — doar CSS variables din tokens de temă.
+- Fără culori hardcodate în componente — doar CSS variables din tokens de temă (adminul: fișierul de tokeni, vezi «Design admin»).
 - Toate scrierile din admin trec prin `auditLog()`.
 - Webhook-urile: verificare semnătură + idempotență, întotdeauna.
 - Side-effects (email, AWB, factură) prin queue, niciodată sincron în tranzacție.
@@ -252,6 +253,25 @@ există `tenantId`. În schimb:
 - Când un ecran își schimbă adresa, adresa veche redirecționează permanent (308) la cea nouă, prin `admin-redirects.ts`,
   iar legăturile interne, testele și ghidurile de verificare se actualizează în același commit (testul de arhitectură
   `admin-navigation` pică la orice legătură spre o adresă veche).
+
+### Design admin — `docs/17-design-sistem-admin.md` — regulă permanentă
+
+- **Orice interfață nouă din admin respectă `docs/17`** (document normativ: tokeni, componente, machete, accesibilitate, mișcare).
+  Valorile (culori, mărimi, raze, umbre, fonturi) vin DOAR din tokeni; în componente nu se scrie nicio valoare directă.
+  Dacă o cerință nu are model în `docs/17`, se propune întâi extinderea documentului, cu captură; nu se improvizează local.
+- **Excepție de la «nimic hardcodat» pentru culori (decizia utilizatorului, 2026-11-09):** paleta adminului stă într-UN singur
+  fișier de tokeni, `packages/ui/src/styles/admin-tokens.css`, sub `[data-surface="admin"]`, cu valorile pentru tema deschisă
+  și cea închisă (`light-dark()`). Valori hex se pot scrie DOAR acolo și în `packages/core/src/branding/presets.ts`. Vitrina
+  își definește valorile din `Branding`, sub propria suprafață.
+- **Adminul este independent de paleta magazinului:** butoanele rămân neutre. Din `Branding` vin doar `--brand` (`accent`: focus,
+  legături, contoare), `logoUrl` și `storeName`; brandul care nu dă cel puțin 4,5:1 pe fundalul adminului cade pe valoarea
+  implicită (gardă cu test).
+- Testul de arhitectură `admin-design-tokens` pică la orice culoare hex, la orice valoare arbitrară în px/rem/em (`[…px]`) și la
+  orice `shadow-*` care nu e un token, în `apps/web/src` și `packages/ui/src`, în afara fișierului de tokeni. Excepțiile vechi
+  (ecrane încă nemigrate) sunt într-o listă care doar scade și se golește până la finalul Lotului 3.
+- Pagina de exemplu a componentelor este doar pentru dezvoltare (`*.e2e.tsx`); nu intră în build-ul de producție și nu intră
+  în pachet. Funcționalitățile noi cerute de modelele din `docs/17` (căutare globală, clopoțel, contoare, vederi salvate) nu se
+  desenează ca elemente moarte: apar odată cu datele lor.
 
 ### Descrierea produsului: HTML doar prin `sanitizeRichHtml` — regulă permanentă
 
