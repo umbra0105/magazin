@@ -16,6 +16,7 @@ import {
   Label,
   Pagination,
   Progress,
+  RowHeader,
   SegmentedBar,
   Select,
   Skeleton,
@@ -222,15 +223,16 @@ describe("Table", () => {
   });
 
   describe("prioritatea coloanelor (docs/17 §3): după lățimea tabelului, nu a ferestrei", () => {
-    it("regiunea tabelului e container numit «table»: coloanele secundare și de detaliu se ascund după ea", () => {
+    it("regiunea tabelului e container numit «table»: coloanele se ascund după el", () => {
       expect(table([])).toContain("@container/table");
       expect(table([])).toMatch(/^<div class="[^"]*overflow-x-auto/);
     });
 
-    it("clasele fiecărei priorități: principala mereu, secundară de la 48rem, de detaliu de la 64rem", () => {
-      expect(tablePriorityClass("primary")).toBe("");
+    it("clasele fiecărei priorități: principala mereu, apoi 48rem, 60rem și 68rem de tabel", () => {
+      expect(tablePriorityClass("primary")).toBe("group-data-[stacked]/table:@max-2xl/table:block");
       expect(tablePriorityClass("secondary")).toBe("hidden @3xl/table:table-cell");
-      expect(tablePriorityClass("detail")).toBe("hidden @5xl/table:table-cell");
+      expect(tablePriorityClass("tertiary")).toBe("hidden @tier-3/table:table-cell");
+      expect(tablePriorityClass("detail")).toBe("hidden @tier-4/table:table-cell");
     });
 
     it("Th și Td poartă prioritatea; fără prioritate rămân mereu vizibile", () => {
@@ -243,21 +245,106 @@ describe("Table", () => {
             null,
             h("tr", null, h(Th, null, "Produs"), h(Th, { priority: "secondary" }, "Fizică")),
           ),
-          h("tbody", null, h("tr", null, h(Td, null, "a"), h(Td, { priority: "detail" }, "b"))),
+          h(
+            "tbody",
+            null,
+            h(
+              "tr",
+              null,
+              h(Td, null, "a"),
+              h(Td, { priority: "tertiary" }, "t"),
+              h(Td, { priority: "detail" }, "b"),
+            ),
+          ),
         ),
       );
       expect(out).toMatch(/<th[^>]*>Produs/);
       expect(out).not.toMatch(/<th(?![^>]*hidden)[^>]*>Fizică/);
       expect(out).toMatch(/<th[^>]*hidden @3xl[^>]*>Fizică/);
-      expect(out).toMatch(/<td[^>]*hidden @5xl[^>]*>b/);
-      expect(out).not.toMatch(/<td[^>]*hidden[^>]*>a</);
-      expect(out).not.toMatch(/<th[^>]*hidden[^>]*>Produs/);
+      expect(out).toMatch(/<td[^>]*hidden @tier-3[^>]*>t/);
+      expect(out).toMatch(/<td[^>]*hidden @tier-4[^>]*>b/);
+      expect(out).not.toMatch(/<td[^>]*[ "]hidden[ "][^>]*>a</);
+      expect(out).not.toMatch(/<th[^>]*[ "]hidden[ "][^>]*>Produs/);
+    });
+  });
+
+  describe("modul stivuit sub 42rem de tabel (telefon): fiecare rând devine un card", () => {
+    const card = () =>
+      html(
+        h(
+          Table,
+          { stacked: true },
+          h(TableCaption, null, "Stoc"),
+          h(
+            THead,
+            null,
+            h(Tr, null, h(Th, null, "Produs"), h(Th, { numeric: true }, "Disponibil")),
+          ),
+          h(
+            TBody,
+            null,
+            h(
+              Tr,
+              null,
+              h(RowHeader, null, "Pompă"),
+              h(Td, { numeric: true }, "40 buc"),
+              h(Td, { stack: "actions" }, h("button", null, "Ajustează")),
+              h(Td, { priority: "detail" }, "detaliu"),
+              h(Td, null),
+            ),
+          ),
+        ),
+      );
+
+    it("modul stivuit se pornește doar cu «stacked»: celelalte tabele rămân neatinse", () => {
+      expect(card()).toContain("data-stacked");
+      expect(table([])).not.toContain("data-stacked");
+      // clasele de card sunt condiționate de atributul de pe tabel, nu aplicate oricărui tabel
+      expect(card()).toContain("group-data-[stacked]/table:@max-2xl/table:flex");
     });
 
-    it("celulele au umplutură mai mică pe tabel îngust", () => {
-      const out = html(h("table", null, h("tbody", null, h("tr", null, h(Td, null, "x")))));
-      expect(out).toContain("px-3");
-      expect(out).toContain("@max-2xl/table:px-2");
+    it("tabelul, corpul și rândurile se așază ca blocuri și carduri flex; antetul rămâne doar pentru cititoare de ecran", () => {
+      const out = card();
+      expect(out).toMatch(/<table[^>]*@max-2xl\/table:block/);
+      expect(out).toMatch(/<tbody[^>]*@max-2xl\/table:block/);
+      expect(out).toMatch(/<thead[^>]*@max-2xl\/table:sr-only/);
+      expect(out).toMatch(/<tr[^>]*@max-2xl\/table:flex[^>]*@max-2xl\/table:flex-wrap/);
+      expect(out).toContain("@max-2xl/table:h-auto");
+    });
+
+    it("rolurile ARIA sunt explicite: tabelul își păstrează semantica și când se schimbă display-ul", () => {
+      const out = card();
+      expect(out).toMatch(/<table[^>]*role="table"/);
+      expect(out).toMatch(/<thead[^>]*role="rowgroup"/);
+      expect(out).toMatch(/<tbody[^>]*role="rowgroup"/);
+      expect(out).toMatch(/<tr[^>]*role="row"/);
+      expect(out).toMatch(/<th[^>]*role="columnheader"/);
+      expect(out).toMatch(/<th[^>]*role="rowheader"[^>]*>Pompă/);
+      expect(out).toMatch(/<td[^>]*role="cell"[^>]*>40 buc/);
+    });
+
+    it("titlul rândului și rândul de acțiuni ocupă toată lățimea cardului; celelalte celule stau pe aceeași linie", () => {
+      const out = card();
+      expect(out).toMatch(/<th[^>]*role="rowheader"[^>]*@max-2xl\/table:basis-full/);
+      expect(out).toMatch(/<td[^>]*@max-2xl\/table:basis-full[^>]*><button/);
+      expect(out).not.toMatch(/<td[^>]*basis-full[^>]*>40 buc/);
+    });
+
+    it("în card cifrele se aliniază la stânga și celulele goale dispar (fără goluri între linii)", () => {
+      const out = card();
+      expect(out).toMatch(/<td[^>]*text-right[^>]*@max-2xl\/table:text-left[^>]*>40 buc/);
+      expect(out).toContain("@max-2xl/table:empty:hidden");
+    });
+
+    it("celulele nu mai au umplutură proprie în card (o dă rândul)", () => {
+      const out = card();
+      expect(out).toMatch(/<td[^>]*@max-2xl\/table:p-0[^>]*>40 buc/);
+    });
+
+    it("coloanele ne-principale rămân ascunse și în card", () => {
+      const out = card();
+      expect(out).toMatch(/<td[^>]*hidden @tier-4[^>]*>detaliu/);
+      expect(out).not.toMatch(/<td[^>]*hidden[^>]*@max-2xl\/table:block[^>]*>detaliu/);
     });
   });
 });

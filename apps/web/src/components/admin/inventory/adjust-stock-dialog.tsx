@@ -71,7 +71,7 @@ export function AdjustStockButton({
         onClick={() => setOpen(true)}
       >
         <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
-        <span className="ml-1 hidden sm:inline">{m.actions.adjust}</span>
+        <span className="ml-1">{m.actions.adjust}</span>
       </Button>
       {open && (
         <AdjustForm

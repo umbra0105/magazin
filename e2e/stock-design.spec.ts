@@ -390,64 +390,197 @@ test.describe("ecranul Stoc, pe componentele din docs/17", () => {
     await expect(page.getByRole("dialog", { name: /^Prag stoc mic:/ })).toBeVisible();
   });
 
-  test("1280 px: apare Fizică, detaliile se ascund, fără derulare orizontală", async ({ page }) => {
+  test("1280 px: Fizică, Angajat și Rezervat se văd, Unitate și Rest se ascund; rânduri ≤ 56 px, fără derulare orizontală", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await login(page, account, LIST);
     const table = page.getByRole("table", { name: "Stocul variantelor" });
-    await expect(table.getByRole("columnheader", { name: "Fizică", exact: true })).toBeVisible();
-    for (const hidden of ["Unitate și pas", "Angajat", "Rezervat", "Rest nevandabil"]) {
+    for (const shown of ["Fizică", "Angajat", "Rezervat", "Disponibil"]) {
+      await expect(
+        table.getByRole("columnheader", { name: shown, exact: true }),
+        shown,
+      ).toBeVisible();
+    }
+    for (const hidden of ["Unitate și pas", "Rest nevandabil"]) {
       await expect(
         table.getByRole("columnheader", { name: hidden, exact: true }),
         hidden,
       ).toBeHidden();
     }
     await expectNoHorizontalScroll(page, table);
+    for (const index of [ALGE, ACCESORIU]) {
+      const height =
+        (await page.locator(`[data-variant-row="${skus[index]}"]`).boundingBox())?.height ?? 0;
+      expect(height, `rândul ${skus[index]}`).toBeLessThanOrEqual(56);
+    }
   });
 
-  test.describe("coloanele rămase pe ecrane înguste", () => {
-    for (const [label, width] of [
-      ["1024", 1024],
-      ["390", 390],
-    ] as const) {
-      test(`${label} px: Produs (cu SKU), Disponibil, Stare și Acțiuni; fără derulare orizontală; detaliile ascunse rămân în «Istoric»`, async ({
-        page,
-      }) => {
-        await page.setViewportSize({ width, height: 844 });
-        await login(page, account, LIST);
-        const table = page.getByRole("table", { name: "Stocul variantelor" });
-        await expect(page.locator("[data-variant-row]").first()).toBeVisible();
-        for (const name of ["Produs", "Disponibil", "Stare", "Acțiuni"]) {
-          await expect(table.getByRole("columnheader", { name, exact: true }), name).toBeVisible();
-        }
-        for (const hidden of [
-          "Fizică",
-          "Unitate și pas",
-          "Angajat",
-          "Rezervat",
-          "Rest nevandabil",
-        ]) {
-          await expect(
-            table.getByRole("columnheader", { name: hidden, exact: true }),
-            hidden,
-          ).toBeHidden();
-        }
-        // SKU-ul stă sub numele produsului, în prima coloană
-        const row = page.locator(`[data-variant-row="${skus[ALGE]}"]`);
-        await expect(row.locator('th[scope="row"]')).toContainText(skus[ALGE] as string);
-        // pe orice rând, nicio celulă nu iese din regiunea tabelului
-        await expectNoHorizontalScroll(page, table);
-        // detaliile ascunse rămân la un clic distanță: «Istoric» e vizibil și are nume accesibil
-        await expect(row.getByRole("link", { name: /^Istoricul stocului:/ })).toBeVisible();
-        // țintele tactile pe telefon
-        if (width < 640) {
-          const button = row.getByRole("button", { name: /^Ajustează stocul:/ });
-          await button.scrollIntoViewIfNeeded();
-          expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-          const history = row.getByRole("link", { name: /^Istoricul stocului:/ });
-          expect((await history.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-        }
-      });
+  test("1024 px: Produs (cu SKU), Disponibil, Stare și Acțiuni; fără derulare orizontală; detaliile ascunse rămân în «Istoric»", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 844 });
+    await login(page, account, LIST);
+    const table = page.getByRole("table", { name: "Stocul variantelor" });
+    await expect(page.locator("[data-variant-row]").first()).toBeVisible();
+    for (const name of ["Produs", "Disponibil", "Stare", "Acțiuni"]) {
+      await expect(table.getByRole("columnheader", { name, exact: true }), name).toBeVisible();
     }
+    for (const hidden of ["Fizică", "Unitate și pas", "Angajat", "Rezervat", "Rest nevandabil"]) {
+      await expect(
+        table.getByRole("columnheader", { name: hidden, exact: true }),
+        hidden,
+      ).toBeHidden();
+    }
+    const row = page.locator(`[data-variant-row="${skus[ALGE]}"]`);
+    await expect(row.locator('th[scope="row"]')).toContainText(skus[ALGE] as string);
+    await expectNoHorizontalScroll(page, table);
+    await expect(row.getByRole("link", { name: /^Istoricul stocului:/ })).toBeVisible();
+
+    // și rândul «Negestionat» (text lung) rămâne pe cel mult două linii în coloana îngustă Disponibil
+    await page.goto(`${LIST}&tip=unmanaged`);
+    const kind = page.locator(`[data-variant-row="${skus[6]}"]`);
+    await expect(kind.locator('[data-cell="kind"]')).toContainText("Negestionat până la inventar");
+    expect((await kind.boundingBox())?.height ?? 999).toBeLessThanOrEqual(56);
+    expect(
+      (await kind.locator('[data-cell="kind"] > span').boundingBox())?.height ?? 999,
+    ).toBeLessThanOrEqual(36);
+    await expectNoHorizontalScroll(page, table);
+  });
+
+  test("rândurile Negestionat și Digital: pe cel mult două linii (1440 px), fără rupere în mijlocul textului", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const rows = [
+      [`${LIST}&tip=unmanaged`, skus[6], "Negestionat până la inventar"],
+      [`${LIST}&tip=digital`, skus[7], "Digital"],
+    ] as const;
+    await login(page, account, rows[0][0]);
+    for (const [url, sku, text] of rows) {
+      await page.goto(url);
+      const row = page.locator(`[data-variant-row="${sku}"]`);
+      await expect(row).toBeVisible();
+      await expect(row.locator('[data-cell="kind"]')).toContainText(text);
+      const height = (await row.boundingBox())?.height ?? 0;
+      expect(height, text).toBeLessThanOrEqual(56);
+      const kind = (await row.locator('[data-cell="kind"] > span').boundingBox())?.height ?? 0;
+      expect(kind, text).toBeLessThanOrEqual(36);
+      await expectNoHorizontalScroll(page, page.getByRole("table", { name: "Stocul variantelor" }));
+    }
+  });
+
+  test.describe("telefon (390 px): tabelul devine listă de carduri", () => {
+    test("fiecare rând e un card: nume pe toată lățimea, Disponibil și Stare pe aceeași linie, apoi acțiunile (ținte de 44 px)", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await login(page, account, LIST);
+      // tabelul își păstrează semantica de tabel și în modul stivuit
+      const table = page.getByRole("table", { name: "Stocul variantelor" });
+      await expect(table).toBeVisible();
+      await expect(page.locator("[data-variant-row]").first()).toBeVisible();
+      await expectNoHorizontalScroll(page, table);
+      // antetul de coloane nu se vede (cardurile au valorile în context), dar rămâne pentru cititoare de ecran
+      await expect(
+        table.getByRole("columnheader", { name: "Disponibil", exact: true }),
+      ).toHaveCount(1);
+      await expect(table.locator("thead")).not.toBeInViewport();
+
+      for (const index of [ALGE, ACCESORIU]) {
+        const sku = skus[index] as string;
+        const row = page.locator(`[data-variant-row="${sku}"]`);
+        await row.scrollIntoViewIfNeeded();
+        const box = await row.boundingBox();
+        expect(box?.height ?? 999, `înălțimea cardului ${sku}`).toBeLessThanOrEqual(132);
+        expect(box?.height ?? 0).toBeGreaterThanOrEqual(100);
+
+        // numele pe toată lățimea cardului
+        const head = await row.locator('th[scope="row"]').boundingBox();
+        expect(head?.width ?? 0, "numele pe toată lățimea").toBeGreaterThanOrEqual(
+          (box?.width ?? 0) - 24,
+        );
+        // SKU-ul sub nume, pe o singură linie (nu rupt în mijlocul codului)
+        const skuText = row.locator('th[scope="row"] > span > span');
+        await expect(skuText).toHaveText(sku);
+        expect((await skuText.boundingBox())?.height ?? 99).toBeLessThanOrEqual(20);
+
+        // Disponibil și pastila de stare pe aceeași linie, Disponibil primul
+        const available = await row.locator('[data-cell="available"]').boundingBox();
+        const state = await row.locator('[data-cell="state"]').boundingBox();
+        expect(Math.abs((available?.y ?? 0) - (state?.y ?? 99))).toBeLessThanOrEqual(8);
+        expect(available?.x ?? 99).toBeLessThan(state?.x ?? 0);
+        expect(available?.x ?? 99, "aliniat la stânga").toBeLessThanOrEqual((box?.x ?? 0) + 24);
+
+        // acțiunile sub ele, cu «Ajustează» cu text și pictograme de 44 px cu nume accesibil
+        const adjust = row.getByRole("button", { name: /^Ajustează stocul:/ });
+        const threshold = row.getByRole("button", { name: /^Setează pragul de stoc mic:/ });
+        const history = row.getByRole("link", { name: /^Istoricul stocului:/ });
+        await expect(adjust).toHaveText("Ajustează");
+        await expect(adjust.getByText("Ajustează")).toBeVisible();
+        await expect(threshold).toHaveText("");
+        await expect(history).toHaveText("");
+        const [a, t, h] = await Promise.all(
+          [adjust, threshold, history].map((c) => c.boundingBox()),
+        );
+        expect(a?.y ?? 0, "acțiunile sub Disponibil").toBeGreaterThan(
+          (available?.y ?? 0) + (available?.height ?? 0) - 4,
+        );
+        for (const control of [a, t, h]) {
+          expect(control?.height ?? 0).toBeGreaterThanOrEqual(44);
+        }
+        for (const icon of [t, h]) expect(icon?.width ?? 0).toBeGreaterThanOrEqual(44);
+        // celula acțiunilor ocupă toată lățimea cardului (linia ei), sub Disponibil și stare
+        const cell = await row.locator('[data-cell="actions"]').boundingBox();
+        expect(cell?.width ?? 0, "linia acțiunilor pe toată lățimea").toBeGreaterThanOrEqual(
+          (box?.width ?? 0) - 24,
+        );
+        expect(cell?.y ?? 0).toBeGreaterThan((state?.y ?? 0) + (state?.height ?? 0) - 4);
+        // toate trei pe aceeași linie, în cardul rândului
+        expect(Math.round(a?.y ?? -1)).toBe(Math.round(t?.y ?? -2));
+        expect(Math.round(a?.y ?? -1)).toBe(Math.round(h?.y ?? -3));
+        expect((h?.x ?? 999) + (h?.width ?? 0)).toBeLessThanOrEqual(
+          (box?.x ?? 0) + (box?.width ?? 0),
+        );
+
+        // coloanele de detaliu nu apar în card
+        for (const cell of ["physical", "unit", "committed", "reserved", "remainder"]) {
+          await expect(row.locator(`[data-cell="${cell}"]`), cell).toBeHidden();
+        }
+      }
+      // butoanele rămân utilizabile: «Prag» deschide dialogul lui
+      await page
+        .locator(`[data-variant-row="${skus[ALGE]}"]`)
+        .getByRole("button", { name: /^Setează pragul de stoc mic:/ })
+        .click();
+      await expect(page.getByRole("dialog", { name: /^Prag stoc mic:/ })).toBeVisible();
+    });
+
+    test("rândurile Negestionat și Digital: card de cel mult 132 px, textul pe cel mult două linii, fără derulare orizontală", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      const rows = [
+        [`${LIST}&tip=unmanaged`, skus[6], "Negestionat până la inventar"],
+        [`${LIST}&tip=digital`, skus[7], "Digital"],
+      ] as const;
+      await login(page, account, rows[0][0]);
+      for (const [url, sku, text] of rows) {
+        await page.goto(url);
+        const row = page.locator(`[data-variant-row="${sku}"]`);
+        await expect(row).toBeVisible();
+        await expect(row.locator('[data-cell="kind"]')).toContainText(text);
+        expect((await row.boundingBox())?.height ?? 999, text).toBeLessThanOrEqual(132);
+        expect(
+          (await row.locator('[data-cell="kind"] > span').boundingBox())?.height ?? 999,
+          text,
+        ).toBeLessThanOrEqual(36);
+        await expectNoHorizontalScroll(
+          page,
+          page.getByRole("table", { name: "Stocul variantelor" }),
+        );
+      }
+    });
   });
 });
 

@@ -36,6 +36,7 @@ export {
 export { FileInput, type FileInputProps } from "./components/file-input";
 export { describeFiles, formatFileSize } from "./lib/file-size";
 export {
+  RowHeader,
   Table,
   TableCaption,
   TBody,
@@ -44,7 +45,9 @@ export {
   THead,
   Tr,
   tablePriorityClass,
+  tableStackClass,
   type TablePriority,
+  type TableStack,
 } from "./components/table";
 export { Drawer, DrawerSection, type DrawerProps } from "./components/drawer";
 export { Skeleton } from "./components/skeleton";

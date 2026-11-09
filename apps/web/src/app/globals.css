@@ -152,6 +152,15 @@
   --text-kpi--font-weight: 600;
 }
 
+/*
+ * Pragurile coloanelor de tabel (docs/17 §3, «Prioritatea coloanelor»): containerul `@tier-3` (de la 60rem de tabel) și `@tier-4`
+ * (de la 68rem), pe lângă cele din Tailwind (`@3xl` = 48rem, folosit pentru coloanele secundare).
+ */
+@theme {
+  --container-tier-3: 60rem;
+  --container-tier-4: 68rem;
+}
+
 /* Umbrele sunt tokeni (docs/17 §2.6): clasele nu aduc valori proprii. */
 @utility shadow-popover {
   box-shadow: var(--shadow-popover);
