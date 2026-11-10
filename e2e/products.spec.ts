@@ -68,7 +68,10 @@ test.describe("lista de produse", () => {
     await page.getByRole("button", { name: "Caută", exact: true }).click();
     await expect(page.locator("[data-product-total]")).toHaveText("30 de produse");
     await expect(page.locator("[data-product-row]")).toHaveCount(25);
-    await expect(page.getByText("Pagina 1 din 2")).toBeVisible();
+    // paginarea din docs/17: de la `md` numere de pagină (pagina curentă are aria-current), «Pagina 1 din 2» doar pe telefon
+    await expect(
+      page.getByRole("navigation", { name: "Paginare" }).locator('[aria-current="page"]'),
+    ).toHaveText("1");
     await page.getByRole("link", { name: "Pagina următoare" }).click();
     await expect(page).toHaveURL(/page=2/);
     await expect(page.locator("[data-product-row]")).toHaveCount(5);

@@ -17,9 +17,10 @@ export type TablePriority = "primary" | "secondary" | "tertiary" | "detail";
 
 /**
  * Locul unei celule în cardul modului stivuit (`Table stacked`, sub 42rem de tabel): `title` = pe toată lățimea, în capul cardului;
+ * `lead` = capul cardului, dar pe aceeași linie cu celulele dinaintea lui (caseta de selecție, imaginea): umple restul liniei;
  * `inline` = pe aceeași linie cu celelalte (implicit); `actions` = pe toată lățimea, ultima linie, cu butoanele.
  */
-export type TableStack = "title" | "inline" | "actions";
+export type TableStack = "title" | "lead" | "inline" | "actions";
 
 // Clasele sunt scrise întregi (nu compuse): Tailwind găsește clasele doar ca text. Modul stivuit e activat doar de `data-stacked`
 // de pe tabel, deci celelalte tabele rămân neatinse; «sub 42rem» = `@max-2xl` pe containerul `table`.
@@ -32,6 +33,7 @@ const PRIORITY_CLASS: Record<TablePriority, string> = {
 
 const STACK_CLASS: Record<TableStack, string> = {
   title: "group-data-[stacked]/table:@max-2xl/table:basis-full",
+  lead: "group-data-[stacked]/table:@max-2xl/table:min-w-48 group-data-[stacked]/table:@max-2xl/table:flex-1",
   inline: "",
   actions: "group-data-[stacked]/table:@max-2xl/table:basis-full",
 };

@@ -38,6 +38,7 @@ import {
   segmentShares,
   tabClass,
   tablePriorityClass,
+  tableStackClass,
   TOAST_LIMIT,
   useToast,
   type Segment,
@@ -339,6 +340,37 @@ describe("Table", () => {
     it("celulele nu mai au umplutură proprie în card (o dă rândul)", () => {
       const out = card();
       expect(out).toMatch(/<td[^>]*@max-2xl\/table:p-0[^>]*>40 buc/);
+    });
+
+    it("«lead»: titlul umple restul primei linii, după casetă și imagine, fără să treacă pe linie nouă (și poate coborî sub lățimea textului)", () => {
+      const out = html(
+        h(
+          Table,
+          { stacked: true },
+          h(
+            TBody,
+            null,
+            h(
+              Tr,
+              null,
+              h(Td, null, "bifă"),
+              h(RowHeader, { stack: "lead" }, "Pompă"),
+              h(Td, { stack: "actions" }, "acțiuni"),
+            ),
+          ),
+        ),
+      );
+      const head = /<th[^>]*role="rowheader"[^>]*>/.exec(out)?.[0] ?? "";
+      expect(head).toContain("@max-2xl/table:flex-1");
+      // lățime minimă (12rem): fără ea baza 0 lasă celulele următoare pe aceeași linie și strânge titlul la câteva litere
+      expect(head).toContain("@max-2xl/table:min-w-48");
+      expect(head).not.toContain("@max-2xl/table:min-w-0");
+      expect(head).not.toContain("basis-full");
+      // celelalte două valori nu se schimbă: «actions» rămâne pe toată lățimea
+      expect(out).toContain("@max-2xl/table:basis-full");
+      expect(/<td[^>]*basis-full[^>]*>acțiuni/.test(out)).toBe(true);
+      expect(tableStackClass("lead")).toContain("flex-1");
+      expect(tableStackClass("inline")).toBe("");
     });
 
     it("coloanele ne-principale rămân ascunse și în card", () => {

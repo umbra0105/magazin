@@ -126,7 +126,6 @@ export function ProductExportDialog({
       </p>
       <Button
         variant="outline"
-        size="sm"
         onClick={() => {
           setError(null);
           setOpen(true);

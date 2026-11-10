@@ -1395,6 +1395,11 @@ export const ro = {
         submit: "Caută",
         reset: "Resetează filtrele",
       },
+      activeFilters: {
+        label: "Filtre active",
+        search: "Căutare",
+        remove: (what: string) => `Elimină filtrul ${what}`,
+      },
       filters: {
         category: "Categorie",
         brand: "Brand",
@@ -1404,6 +1409,7 @@ export const ro = {
         sort: "Sortare",
         perPage: "Pe pagină",
         all: "Toate",
+        clearAll: "Șterge filtrele",
       },
       statuses: { draft: "Ciornă", active: "Activ", archived: "Arhivat" },
       shipping: { standard: "Standard", oversized: "Supradimensionat", pallet: "Paletizat" },
@@ -1430,6 +1436,7 @@ export const ro = {
         shipping: "Livrare",
         brand: "Brand",
         updated: "Modificat",
+        actions: "Acțiuni",
         variants: (n: number) => (n === 1 ? "1 variantă" : `${n} variante`),
         noImage: "Fără imagine",
         noVariants: "Fără variante",
@@ -1440,6 +1447,8 @@ export const ro = {
         previous: "Pagina anterioară",
         next: "Pagina următoare",
         pageOf: (page: number, count: number) => `Pagina ${page} din ${count}`,
+        pageNumber: (page: number) => `Pagina ${page}`,
+        rowsPerPage: "Rânduri pe pagină",
       },
       inline: {
         edit: (what: string, name: string) => `Editează ${what} pentru ${name}`,

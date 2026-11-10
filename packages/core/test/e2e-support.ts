@@ -2052,3 +2052,41 @@ export async function removeE2eRole(key: string): Promise<void> {
     await db.query(`delete from role where key = $1 and "isSystem" = false`, [key]);
   });
 }
+
+/** Mută produsele de probă (după adresă) în coșul de gunoi, ca testele listei să aibă ce arăta în vederea «Coș de gunoi». */
+export async function trashE2eProducts(slugs: readonly string[]): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`update product set "deletedAt" = now() where slug = any($1::text[])`, [
+      [...slugs],
+    ]);
+  });
+}
+
+/** Leagă produsele de probă (după adresă) de brandul și categoria create de `seedE2eCatalogRefs(tag)`: rândul listei are atunci și linia «brand · categorie». */
+export async function linkE2eProductsToCatalogRefs(
+  slugs: readonly string[],
+  tag: string,
+): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `update product set "brandId" = (select id from brand where slug = $1) where slug = any($2::text[])`,
+      [`e2e-brand-${tag}`, [...slugs]],
+    );
+    await db.query(
+      `insert into product_category ("productId", "categoryId", "isPrimary")
+       select p.id, (select id from category where slug = $1), false from product p where p.slug = any($2::text[])`,
+      [`e2e-cat-${tag}`, [...slugs]],
+    );
+  });
+}
+
+/** Lungește SKU-urile produselor de probă (după adresă), ca testele listei să aibă și coloane SKU late, ca în datele reale. */
+export async function lengthenE2eSkus(slugs: readonly string[]): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `update product_variant set sku = sku || '-RAFT-ACCESORIU-LUNG'
+       where "productId" in (select id from product where slug = any($1::text[]))`,
+      [[...slugs]],
+    );
+  });
+}
