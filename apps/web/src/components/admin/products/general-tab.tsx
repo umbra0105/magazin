@@ -8,7 +8,7 @@ import { checkProductSlug, saveProductFields } from "@/app/(admin)/admin/produse
 import { getMessages } from "@/messages";
 import { describeFailure, focusFirstInvalid } from "./editor-support";
 import type { EditorCaps, EditorProduct, PickOption } from "./editor-types";
-import { CheckField, Field, SaveBar } from "./editor-ui";
+import { CheckField, Field, SaveBar, Section } from "./editor-ui";
 import { useTabForm } from "./use-tab-form";
 
 const m = getMessages().admin.products;
@@ -22,7 +22,7 @@ const DescriptionEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <p role="status" className="text-sm text-muted-foreground">
+      <p role="status" className="text-body text-ink-secondary">
         {e.general.editor.loading}
       </p>
     ),
@@ -160,176 +160,181 @@ export function GeneralTab({
   };
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex max-w-3xl flex-col gap-5">
-      <Field id="product-title" label={e.general.title} error={errors["title"]}>
-        {(control) => (
-          <Input
-            {...control}
-            value={values.title}
-            onChange={(ev) => form.set("title", ev.target.value)}
-            maxLength={200}
-            required
-            disabled={!content}
-          />
-        )}
-      </Field>
-
-      <Field id="product-subtitle" label={e.general.subtitle} error={errors["subtitle"]}>
-        {(control) => (
-          <Input
-            {...control}
-            value={values.subtitle}
-            onChange={(ev) => form.set("subtitle", ev.target.value)}
-            maxLength={300}
-            disabled={!content}
-          />
-        )}
-      </Field>
-
-      <div className="flex flex-col gap-2">
-        <Field
-          id="product-slug"
-          label={e.general.slug}
-          help={e.general.slugHelp}
-          error={errors["slug"]}
-        >
+    <form onSubmit={onSubmit} noValidate className="flex max-w-220 flex-col gap-6">
+      <Section id="general-basics" title={e.general.sections.basics}>
+        <Field id="product-title" label={e.general.title} error={errors["title"]}>
           {(control) => (
             <Input
               {...control}
-              value={values.slug}
-              onChange={(ev) => {
-                setSlugNote(null);
-                form.set("slug", ev.target.value);
-              }}
+              value={values.title}
+              onChange={(ev) => form.set("title", ev.target.value)}
               maxLength={200}
+              required
               disabled={!content}
             />
           )}
         </Field>
-        {content && (
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={checking || values.slug.trim() === ""}
-              onClick={() => void checkSlug()}
-            >
-              {checking ? e.general.slugChecking : e.general.slugCheck}
-            </Button>
-            <span role="status" className="text-sm text-muted-foreground">
-              {slugNote}
-            </span>
-          </div>
-        )}
-      </div>
 
-      <Field
-        id="product-description"
-        label={e.general.description}
-        help={e.general.descriptionHelp}
-        error={errors["description"]}
-      >
-        {(control) => (
-          <DescriptionEditor
-            id={control.id}
-            initialHtml={editorHtml}
-            editable={content}
-            invalid={control["aria-invalid"] === true}
-            describedBy={control["aria-describedby"]}
-            onChange={(html) => form.set("description", html)}
-          />
-        )}
-      </Field>
-
-      {preview ? (
-        <section
-          aria-labelledby="description-preview-title"
-          data-description-preview
-          className="space-y-3 rounded-md border border-border p-4"
-        >
-          <h3 id="description-preview-title" className="text-sm font-medium">
-            {e.general.preview.title}
-          </h3>
-          <p className="text-sm text-muted-foreground">{e.general.preview.help}</p>
-          {preview}
-        </section>
-      ) : null}
-
-      <fieldset className="grid gap-4 rounded-md border border-border p-4 sm:grid-cols-2">
-        <legend className="px-1 text-sm font-medium">{m.table.status}</legend>
-        <Field
-          id="product-status"
-          label={e.general.status}
-          help={e.general.statusHelp}
-          error={errors["status"]}
-        >
+        <Field id="product-subtitle" label={e.general.subtitle} error={errors["subtitle"]}>
           {(control) => (
-            <Select
+            <Input
               {...control}
-              value={values.status}
-              onChange={(ev) => form.set("status", ev.target.value)}
-              disabled={!restricted}
-            >
-              {Object.entries(m.statuses).map(([value, text]) => (
-                <option key={value} value={value}>
-                  {text}
-                </option>
-              ))}
-            </Select>
+              value={values.subtitle}
+              onChange={(ev) => form.set("subtitle", ev.target.value)}
+              maxLength={300}
+              disabled={!content}
+            />
           )}
         </Field>
-        <Field id="product-brand" label={e.general.brand} error={errors["brandId"]}>
-          {(control) => (
-            <Select
-              {...control}
-              value={values.brandId}
-              onChange={(ev) => form.set("brandId", ev.target.value)}
-              disabled={!restricted}
-            >
-              <option value="">{e.general.noBrand}</option>
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.label}
-                </option>
-              ))}
-            </Select>
+
+        <div className="flex flex-col gap-2">
+          <Field
+            id="product-slug"
+            label={e.general.slug}
+            help={e.general.slugHelp}
+            error={errors["slug"]}
+          >
+            {(control) => (
+              <Input
+                {...control}
+                value={values.slug}
+                onChange={(ev) => {
+                  setSlugNote(null);
+                  form.set("slug", ev.target.value);
+                }}
+                maxLength={200}
+                disabled={!content}
+              />
+            )}
+          </Field>
+          {content && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={checking || values.slug.trim() === ""}
+                onClick={() => void checkSlug()}
+              >
+                {checking ? e.general.slugChecking : e.general.slugCheck}
+              </Button>
+              <span role="status" className="text-body text-ink-secondary">
+                {slugNote}
+              </span>
+            </div>
           )}
-        </Field>
-        <Field id="product-shipping" label={e.general.shipping} error={errors["shippingClass"]}>
-          {(control) => (
-            <Select
-              {...control}
-              value={values.shippingClass}
-              onChange={(ev) => form.set("shippingClass", ev.target.value)}
-              disabled={!restricted}
-            >
-              {Object.entries(m.shipping).map(([value, text]) => (
-                <option key={value} value={value}>
-                  {text}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-        <div className="flex flex-col gap-3 sm:col-span-2">
-          <CheckField
-            id="product-installation"
-            label={e.general.requiresInstallation}
-            checked={values.requiresInstallation}
-            disabled={!restricted}
-            onChange={(v) => form.set("requiresInstallation", v)}
-          />
-          <CheckField
-            id="product-exclude-group"
-            label={e.general.excludeFromGroupDiscount}
-            checked={values.excludeFromGroupDiscount}
-            disabled={!restricted}
-            onChange={(v) => form.set("excludeFromGroupDiscount", v)}
-          />
         </div>
-      </fieldset>
+      </Section>
 
-      {!canSave && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      <Section id="general-description" title={e.general.sections.description}>
+        <Field
+          id="product-description"
+          label={e.general.description}
+          help={e.general.descriptionHelp}
+          error={errors["description"]}
+        >
+          {(control) => (
+            <DescriptionEditor
+              id={control.id}
+              initialHtml={editorHtml}
+              editable={content}
+              invalid={control["aria-invalid"] === true}
+              describedBy={control["aria-describedby"]}
+              onChange={(html) => form.set("description", html)}
+            />
+          )}
+        </Field>
+
+        {preview ? (
+          <section
+            aria-labelledby="description-preview-title"
+            data-description-preview
+            className="flex flex-col gap-3 rounded-lg bg-surface-subtle p-4"
+          >
+            <h3 id="description-preview-title" className="text-body font-medium">
+              {e.general.preview.title}
+            </h3>
+            <p className="text-body text-ink-secondary">{e.general.preview.help}</p>
+            {preview}
+          </section>
+        ) : null}
+      </Section>
+
+      <Section id="general-classification" title={e.general.sections.classification}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            id="product-status"
+            label={e.general.status}
+            help={e.general.statusHelp}
+            error={errors["status"]}
+          >
+            {(control) => (
+              <Select
+                {...control}
+                value={values.status}
+                onChange={(ev) => form.set("status", ev.target.value)}
+                disabled={!restricted}
+              >
+                {Object.entries(m.statuses).map(([value, text]) => (
+                  <option key={value} value={value}>
+                    {text}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field id="product-brand" label={e.general.brand} error={errors["brandId"]}>
+            {(control) => (
+              <Select
+                {...control}
+                value={values.brandId}
+                onChange={(ev) => form.set("brandId", ev.target.value)}
+                disabled={!restricted}
+              >
+                <option value="">{e.general.noBrand}</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field id="product-shipping" label={e.general.shipping} error={errors["shippingClass"]}>
+            {(control) => (
+              <Select
+                {...control}
+                value={values.shippingClass}
+                onChange={(ev) => form.set("shippingClass", ev.target.value)}
+                disabled={!restricted}
+              >
+                {Object.entries(m.shipping).map(([value, text]) => (
+                  <option key={value} value={value}>
+                    {text}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            <CheckField
+              id="product-installation"
+              label={e.general.requiresInstallation}
+              checked={values.requiresInstallation}
+              disabled={!restricted}
+              onChange={(v) => form.set("requiresInstallation", v)}
+            />
+            <CheckField
+              id="product-exclude-group"
+              label={e.general.excludeFromGroupDiscount}
+              checked={values.excludeFromGroupDiscount}
+              disabled={!restricted}
+              onChange={(v) => form.set("excludeFromGroupDiscount", v)}
+            />
+          </div>
+        </div>
+      </Section>
+
+      {!canSave && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
       <SaveBar
         pending={pending}
         canSave={canSave}

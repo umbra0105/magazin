@@ -194,7 +194,7 @@ function Form({
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-md bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>

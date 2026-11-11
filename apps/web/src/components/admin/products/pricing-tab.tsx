@@ -62,10 +62,10 @@ export function PricingTab({
   return (
     <div className="flex max-w-3xl flex-col gap-8">
       <section aria-labelledby="pricing-heading" className="flex flex-col gap-4">
-        <h2 id="pricing-heading" className="text-lg font-semibold">
+        <h2 id="pricing-heading" className="text-section font-semibold">
           {e.pricing.heading}
         </h2>
-        <p className="text-sm text-muted-foreground">{e.pricing.vatRate(context.vatRateLabel)}</p>
+        <p className="text-body text-ink-secondary">{e.pricing.vatRate(context.vatRateLabel)}</p>
         {single ? (
           <SingleVariantForm variant={single} caps={caps} context={context} sale={sale} />
         ) : (
@@ -88,13 +88,16 @@ function VariantsTable({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+      <p
+        role="note"
+        className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
+      >
         {e.pricing.multiVariant(variants.length)}
       </p>
-      <table className="w-full text-sm">
+      <table className="w-full text-body">
         <caption className="sr-only">{e.pricing.variantsTable}</caption>
         <thead>
-          <tr className="border-b border-border text-left">
+          <tr className="border-b border-line-subtle text-left">
             <th scope="col" className="py-2 pr-4 font-medium">
               {e.pricing.variantSku}
             </th>
@@ -108,7 +111,7 @@ function VariantsTable({
         </thead>
         <tbody>
           {variants.map((v) => (
-            <tr key={v.id} className="border-b border-border">
+            <tr key={v.id} className="border-b border-line-subtle">
               <th scope="row" className="py-2 pr-4 text-left font-normal">
                 {v.sku}
               </th>
@@ -157,7 +160,7 @@ function PricePreview({
     <section
       aria-labelledby="price-preview-heading"
       data-price-preview
-      className="flex flex-col gap-2 rounded-md border border-border bg-border/20 p-3 text-sm"
+      className="flex flex-col gap-2 rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
     >
       <h3 id="price-preview-heading" className="font-medium">
         {pd.heading}
@@ -167,15 +170,15 @@ function PricePreview({
           const out = previewVariantPrice(row.variant, sale.product, sale.units, format);
           return (
             <li key={row.key} data-preview-row={row.sku ?? undefined} className="flex flex-col">
-              {row.sku && <span className="text-muted-foreground">{pd.forVariant(row.sku)}</span>}
+              {row.sku && <span className="text-ink-secondary">{pd.forVariant(row.sku)}</span>}
               <span data-preview-price>
                 {out.price.reference}
                 {out.price.perUnit && (
-                  <span className="ml-1 text-muted-foreground">{out.price.perUnit}</span>
+                  <span className="ml-1 text-ink-secondary">{out.price.perUnit}</span>
                 )}
               </span>
               {out.price.stepPrice && (
-                <span className="text-muted-foreground" data-preview-step>
+                <span className="text-ink-secondary" data-preview-step>
                   {out.price.stepPrice}
                 </span>
               )}
@@ -183,10 +186,10 @@ function PricePreview({
                 <span data-preview-sale>
                   {pd.saleLabel}: {out.sale.reference}
                   {out.sale.perUnit && (
-                    <span className="ml-1 text-muted-foreground">{out.sale.perUnit}</span>
+                    <span className="ml-1 text-ink-secondary">{out.sale.perUnit}</span>
                   )}
                   {out.sale.stepPrice && (
-                    <span className="block text-muted-foreground">{out.sale.stepPrice}</span>
+                    <span className="block text-ink-secondary">{out.sale.stepPrice}</span>
                   )}
                 </span>
               )}
@@ -194,7 +197,7 @@ function PricePreview({
           );
         })}
       </ul>
-      <p className="text-xs text-muted-foreground" data-price-provisional>
+      <p className="text-label text-ink-secondary" data-price-provisional>
         {pd.provisional}
       </p>
     </section>
@@ -412,7 +415,7 @@ function SingleVariantForm({
         context={context}
       />
 
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
       <SaveBar
         pending={pending}
         canSave={editable}

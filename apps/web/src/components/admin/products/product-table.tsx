@@ -29,6 +29,7 @@ import { priceLines, type PriceLines } from "@/lib/price-view";
 import { badgeVariant, type SummaryView } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
 import { useProductSelection } from "./product-selection";
+import { statusVariant } from "./status-variant";
 import {
   LifecycleConfirmDialog,
   PurgeDialog,
@@ -92,12 +93,6 @@ export interface ProductTableProps {
 type InlineField = "title" | "status" | "stockStatus" | "price";
 type BulkKind =
   "status" | "shippingClass" | "stockStatus" | "brand" | "addCategory" | "priceAdjust";
-
-const STATUS_VARIANT: Record<string, "neutral" | "success" | "info"> = {
-  active: "success",
-  draft: "info",
-  archived: "neutral",
-};
 
 /** Imaginea produsului (și locul ei gol): 32 px, rază de 8 px (docs/17 §3, Tabel). */
 const THUMB = "size-8 rounded-md";
@@ -831,7 +826,7 @@ export function ProductTable({
                     : (() => {
                         const pill = (
                           <Badge
-                            variant={STATUS_VARIANT[row.status] ?? "neutral"}
+                            variant={statusVariant(row.status)}
                             dot
                             data-status-pill
                             className="whitespace-nowrap"

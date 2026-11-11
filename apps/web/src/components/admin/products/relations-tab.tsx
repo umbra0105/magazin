@@ -128,17 +128,17 @@ export function RelationsTab({
     <li
       key={rel.id}
       data-relation-row={`${rel.direction}:${rel.type}`}
-      className="flex flex-wrap items-center gap-3 rounded-md border border-border p-2"
+      className="flex flex-wrap items-center gap-3 rounded-md border border-line-subtle p-2"
     >
       <div className="flex min-w-0 flex-1 flex-col">
         <Link
           href={`/admin/produse/${rel.product.id}`}
           aria-label={r.open(rel.product.title)}
-          className="truncate text-sm font-medium text-link underline-offset-2 hover:underline"
+          className="truncate text-body font-medium text-link underline-offset-2 hover:underline"
         >
           {rel.product.title}
         </Link>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-label text-ink-secondary">
           {[rel.product.sku, statusNote(rel.product)].filter(Boolean).join(" · ")}
         </span>
       </div>
@@ -184,17 +184,17 @@ export function RelationsTab({
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <h2 className="text-lg font-semibold">{r.heading}</h2>
-      <p className="text-sm text-muted-foreground">{r.help}</p>
+      <h2 className="text-section font-semibold">{r.heading}</h2>
+      <p className="text-body text-ink-secondary">{r.help}</p>
 
-      <p role="status" className="text-sm text-muted-foreground">
+      <p role="status" className="text-body text-ink-secondary">
         {status}
       </p>
       {problem && (
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-md bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>
@@ -203,9 +203,9 @@ export function RelationsTab({
       {editable && (
         <section
           aria-labelledby="relation-add"
-          className="flex flex-col gap-3 rounded-md border border-border p-4"
+          className="flex flex-col gap-3 rounded-md border border-line-subtle p-4"
         >
-          <h3 id="relation-add" className="text-base font-semibold">
+          <h3 id="relation-add" className="text-body font-semibold">
             {r.add}
           </h3>
           <Field id="relation-type" label={r.type} help={r.typeHelp[type]}>
@@ -224,7 +224,7 @@ export function RelationsTab({
             )}
           </Field>
           <form onSubmit={search} className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[14rem] flex-1">
+            <div className="min-w-56 flex-1">
               <Field id="relation-search" label={r.search}>
                 {(control) => (
                   <Input
@@ -243,16 +243,14 @@ export function RelationsTab({
           </form>
           {hits !== null &&
             (hits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{r.noResults}</p>
+              <p className="text-body text-ink-secondary">{r.noResults}</p>
             ) : (
               <ul className="flex flex-col gap-1" aria-label={r.search}>
                 {hits.map((hit) => (
                   <li key={hit.id} className="flex flex-wrap items-center gap-3">
-                    <span className="min-w-0 flex-1 truncate text-sm">
+                    <span className="min-w-0 flex-1 truncate text-body">
                       {hit.title}
-                      <span className="text-muted-foreground">
-                        {hit.sku ? ` · ${hit.sku}` : ""}
-                      </span>
+                      <span className="text-ink-secondary">{hit.sku ? ` · ${hit.sku}` : ""}</span>
                     </span>
                     <Button
                       type="button"
@@ -281,17 +279,17 @@ export function RelationsTab({
       )}
 
       <section aria-labelledby="relations-out" className="flex flex-col gap-3">
-        <h3 id="relations-out" className="text-base font-semibold">
+        <h3 id="relations-out" className="text-body font-semibold">
           {r.outgoing}
         </h3>
         {outgoing.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{r.noneOutgoing}</p>
+          <p className="text-body text-ink-secondary">{r.noneOutgoing}</p>
         ) : (
           TYPES.filter((t) => outgoing.some((x) => x.type === t)).map((t) => {
             const group = outgoing.filter((x) => x.type === t);
             return (
               <div key={t} className="flex flex-col gap-2">
-                <h4 className="text-sm font-medium">{r.types[t]}</h4>
+                <h4 className="text-body font-medium">{r.types[t]}</h4>
                 <ul className="flex flex-col gap-2">{group.map((rel, i) => row(rel, i, group))}</ul>
               </div>
             );
@@ -300,17 +298,17 @@ export function RelationsTab({
       </section>
 
       <section aria-labelledby="relations-in" className="flex flex-col gap-3">
-        <h3 id="relations-in" className="text-base font-semibold">
+        <h3 id="relations-in" className="text-body font-semibold">
           {r.incoming}
         </h3>
         {incoming.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{r.noneIncoming}</p>
+          <p className="text-body text-ink-secondary">{r.noneIncoming}</p>
         ) : (
           TYPES.filter((t) => incoming.some((x) => x.type === t)).map((t) => {
             const group = incoming.filter((x) => x.type === t);
             return (
               <div key={t} className="flex flex-col gap-2">
-                <h4 className="text-sm font-medium">{r.types[t]}</h4>
+                <h4 className="text-body font-medium">{r.types[t]}</h4>
                 <ul className="flex flex-col gap-2">{group.map((rel, i) => row(rel, i, group))}</ul>
               </div>
             );
@@ -318,7 +316,7 @@ export function RelationsTab({
         )}
       </section>
 
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
     </div>
   );
 }

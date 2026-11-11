@@ -44,12 +44,12 @@ export default async function NewProductPage() {
       <header className="flex flex-col gap-1">
         <Link
           href="/admin/produse"
-          className="text-sm text-link underline-offset-2 hover:underline"
+          className="text-body text-link underline-offset-2 hover:underline"
         >
           {m.editor.back}
         </Link>
-        <h1 className="text-2xl font-semibold">{m.editor.createTitle}</h1>
-        <p className="text-sm text-muted-foreground">{m.editor.createDescription}</p>
+        <h1 className="text-title font-semibold">{m.editor.createTitle}</h1>
+        <p className="text-body text-ink-secondary">{m.editor.createDescription}</p>
       </header>
       <NewProductForm
         brands={brands.map((b) => ({ id: b.id, label: b.name }))}

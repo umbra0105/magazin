@@ -107,12 +107,12 @@ export function ConformityTab({ product, caps }: { product: EditorProduct; caps:
   return (
     <form onSubmit={onSubmit} noValidate className="flex max-w-3xl flex-col gap-6">
       <div>
-        <h2 className="text-lg font-semibold">{c.heading}</h2>
-        <p className="text-sm text-muted-foreground">{c.help}</p>
+        <h2 className="text-section font-semibold">{c.heading}</h2>
+        <p className="text-body text-ink-secondary">{c.help}</p>
       </div>
 
-      <fieldset className="flex flex-col gap-4 rounded-md border border-border p-4">
-        <legend className="px-1 text-sm font-medium">{c.energyHeading}</legend>
+      <fieldset className="flex flex-col gap-4 rounded-md border border-line-subtle p-4">
+        <legend className="px-1 text-body font-medium">{c.energyHeading}</legend>
         <Field
           id="conf-energy"
           label={c.energyClass}
@@ -151,8 +151,8 @@ export function ConformityTab({ product, caps }: { product: EditorProduct; caps:
         </Field>
       </fieldset>
 
-      <fieldset className="flex flex-col gap-4 rounded-md border border-border p-4">
-        <legend className="px-1 text-sm font-medium">{c.gpsrHeading}</legend>
+      <fieldset className="flex flex-col gap-4 rounded-md border border-line-subtle p-4">
+        <legend className="px-1 text-body font-medium">{c.gpsrHeading}</legend>
         <Field
           id="conf-man-name"
           label={c.gpsrManufacturerName}
@@ -230,7 +230,7 @@ export function ConformityTab({ product, caps }: { product: EditorProduct; caps:
         </Field>
       </fieldset>
 
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
       <SaveBar
         pending={pending}
         canSave={editable}

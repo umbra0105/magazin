@@ -188,7 +188,7 @@ export function DescriptionEditor({
   return (
     <div
       data-description-editor
-      className="rounded-md border border-border bg-background focus-within:ring-2 focus-within:ring-brand"
+      className="rounded-md border border-line-input bg-surface-page focus-within:ring-2 focus-within:ring-brand"
     >
       {editor && editable ? <Toolbar editor={editor} /> : null}
       <div className="overflow-x-auto">
@@ -227,14 +227,14 @@ function Tool({ label, icon: Icon, onClick, pressed, disabled }: ToolProps) {
   return (
     <Button
       type="button"
-      variant={pressed ? "default" : "ghost"}
-      size="sm"
+      variant="ghost"
+      size="icon"
       aria-label={label}
       title={label}
       {...(pressed !== undefined && { "aria-pressed": pressed })}
       disabled={disabled ?? false}
       data-tool
-      className="h-9 w-9 px-0"
+      className="shrink-0 aria-pressed:bg-tone-neutral-bg aria-pressed:text-tone-neutral-fg"
       onMouseDown={keepEditorFocus}
       onClick={onClick}
     >
@@ -375,7 +375,7 @@ function Toolbar({ editor }: { editor: Editor }) {
   };
 
   return (
-    <div className="border-b border-border">
+    <div className="border-b border-line-subtle">
       <div
         ref={ref}
         role="toolbar"
@@ -387,7 +387,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         <Select
           aria-label={t.format.label}
           data-tool
-          className="h-9 w-auto min-w-32 text-sm"
+          className="h-(--control-h-compact) w-auto min-w-32 text-body"
           value={state.format}
           onChange={(event) => setFormat(event.target.value as Format)}
         >
@@ -396,6 +396,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           <option value="h3">{t.format.h3}</option>
           <option value="h4">{t.format.h4}</option>
         </Select>
+        <span aria-hidden="true" data-tool-divider className="mx-1 h-5 w-px bg-line-subtle" />
         <Tool
           label={t.bold}
           icon={Bold}
@@ -432,6 +433,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           pressed={state.subscript}
           onClick={() => chain().toggleMark("subscript").run()}
         />
+        <span aria-hidden="true" data-tool-divider className="mx-1 h-5 w-px bg-line-subtle" />
         <Tool
           label={t.bulletList}
           icon={List}
@@ -451,6 +453,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           onClick={() => chain().toggleBlockquote().run()}
         />
         <Tool label={t.rule} icon={Minus} onClick={() => chain().setHorizontalRule().run()} />
+        <span aria-hidden="true" data-tool-divider className="mx-1 h-5 w-px bg-line-subtle" />
         <Tool label={t.link} icon={LinkIcon} pressed={state.link} onClick={openLink} />
         <Tool
           label={t.unlink}
@@ -467,6 +470,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           }}
         />
         <Tool label={t.image} icon={ImageIcon} onClick={() => setPickerOpen(true)} />
+        <span aria-hidden="true" data-tool-divider className="mx-1 h-5 w-px bg-line-subtle" />
         <Tool
           label={t.undo}
           icon={Undo2}
@@ -553,8 +557,8 @@ function Toolbar({ editor }: { editor: Editor }) {
       </div>
 
       {state.inImage ? (
-        <div className="flex items-center gap-2 border-t border-border p-2">
-          <label htmlFor="description-image-alt" className="text-sm">
+        <div className="flex items-center gap-2 border-t border-line-subtle p-2">
+          <label htmlFor="description-image-alt" className="text-body">
             {t.imageAlt}
           </label>
           <Input
@@ -562,7 +566,7 @@ function Toolbar({ editor }: { editor: Editor }) {
             onKeyDown={onEnter(() => chain().run())}
             value={state.imageAlt}
             maxLength={300}
-            className="h-9"
+            className="h-(--control-h-compact)"
             onChange={(event) =>
               editor.chain().updateAttributes("image", { alt: event.target.value }).run()
             }
@@ -570,7 +574,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         </div>
       ) : null}
       {imageError ? (
-        <p role="alert" className="px-3 py-2 text-sm text-danger">
+        <p role="alert" className="px-3 py-2 text-body text-tone-problem-fg">
           {t.imageFailed}
         </p>
       ) : null}
@@ -582,7 +586,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         closeLabel={t.linkDialog.close}
       >
         <div className="flex flex-col gap-3 p-4">
-          <label htmlFor="description-link-url" className="text-sm font-medium">
+          <label htmlFor="description-link-url" className="text-body font-medium">
             {t.linkDialog.url}
           </label>
           <Input
@@ -598,11 +602,11 @@ function Toolbar({ editor }: { editor: Editor }) {
             autoComplete="off"
             autoFocus
           />
-          <p id="description-link-help" className="text-xs text-muted-foreground">
+          <p id="description-link-help" className="text-label text-ink-secondary">
             {t.linkDialog.help}
           </p>
           {linkError ? (
-            <p role="alert" data-problem className="text-sm text-danger">
+            <p role="alert" data-problem className="text-body text-tone-problem-fg">
               {t.linkDialog.invalid}
             </p>
           ) : null}
@@ -624,7 +628,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         closeLabel={t.tableDialog.close}
       >
         <div className="flex flex-col gap-3 p-4">
-          <label htmlFor="description-table-rows" className="text-sm font-medium">
+          <label htmlFor="description-table-rows" className="text-body font-medium">
             {t.tableDialog.rows}
           </label>
           <Input
@@ -638,7 +642,7 @@ function Toolbar({ editor }: { editor: Editor }) {
             }}
             autoComplete="off"
           />
-          <label htmlFor="description-table-columns" className="text-sm font-medium">
+          <label htmlFor="description-table-columns" className="text-body font-medium">
             {t.tableDialog.columns}
           </label>
           <Input
@@ -652,7 +656,7 @@ function Toolbar({ editor }: { editor: Editor }) {
             }}
             autoComplete="off"
           />
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-body">
             <input
               type="checkbox"
               checked={header}
@@ -661,7 +665,7 @@ function Toolbar({ editor }: { editor: Editor }) {
             {t.tableDialog.header}
           </label>
           {tableError ? (
-            <p role="alert" data-problem className="text-sm text-danger">
+            <p role="alert" data-problem className="text-body text-tone-problem-fg">
               {t.tableDialog.invalid}
             </p>
           ) : null}

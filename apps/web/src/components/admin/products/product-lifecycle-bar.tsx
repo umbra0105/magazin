@@ -88,7 +88,7 @@ export function ProductLifecycleBar({
         </Button>
       </div>
       {problem && (
-        <p role="alert" data-problem className="text-sm text-danger">
+        <p role="alert" data-problem className="text-body text-tone-problem-fg">
           {problem}
         </p>
       )}

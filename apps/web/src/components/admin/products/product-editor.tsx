@@ -21,6 +21,7 @@ import type {
 } from "./editor-types";
 import { GeneralTab } from "./general-tab";
 import { ProductLifecycleBar } from "./product-lifecycle-bar";
+import { statusVariant } from "./status-variant";
 import { MediaTab } from "./media-tab";
 import { PricingTab } from "./pricing-tab";
 import { RelationsTab } from "./relations-tab";
@@ -120,7 +121,7 @@ function EditorBody({
   const badge = (key: string) =>
     dirty.includes(key) ? (
       <span>
-        <span aria-hidden className="text-primary">
+        <span aria-hidden className="text-brand">
           ●
         </span>
         <span className="sr-only"> ({e.unsavedMark})</span>
@@ -272,17 +273,19 @@ function EditorBody({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-col gap-2">
+    <div className="flex flex-col gap-5">
+      <header className="flex flex-col gap-3">
         <Link
           href="/admin/produse"
-          className="text-sm text-link underline-offset-2 hover:underline"
+          className="text-body text-link underline-offset-2 hover:underline"
         >
           {e.back}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold">{e.editTitle(product.title)}</h1>
-          <Badge>{(m.statuses as Record<string, string>)[product.status] ?? product.status}</Badge>
+          <h1 className="text-title">{e.editTitle(product.title)}</h1>
+          <Badge variant={statusVariant(product.status)} dot data-status-pill>
+            {(m.statuses as Record<string, string>)[product.status] ?? product.status}
+          </Badge>
         </div>
         {caps.canWrite && (
           <ProductLifecycleBar
@@ -292,17 +295,17 @@ function EditorBody({
           />
         )}
         {!caps.canWrite && caps.canContent && (
-          <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+          <p role="note" className="rounded-lg bg-surface-subtle p-3 text-body">
             {e.notices.contentOnly}
           </p>
         )}
         {!caps.canWrite && !caps.canContent && (
-          <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+          <p role="note" className="rounded-lg bg-surface-subtle p-3 text-body">
             {e.notices.readOnly}
           </p>
         )}
       </header>
-      <Tabs label={e.tabsLabel} tabs={tabs} defaultTab={defaultTab} />
+      <Tabs label={e.tabsLabel} tabs={tabs} defaultTab={defaultTab} scrollable />
     </div>
   );
 }

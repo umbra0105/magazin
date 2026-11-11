@@ -128,8 +128,8 @@ export function AttributesTab({
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex max-w-3xl flex-col gap-5">
-      <h2 className="text-lg font-semibold">{a.heading}</h2>
-      <p className="text-sm text-muted-foreground">
+      <h2 className="text-section font-semibold">{a.heading}</h2>
+      <p className="text-body text-ink-secondary">
         {a.help}{" "}
         <Link
           href="/admin/produse/atribute"
@@ -140,7 +140,7 @@ export function AttributesTab({
       </p>
 
       {attributes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{a.empty}</p>
+        <p className="text-body text-ink-secondary">{a.empty}</p>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2">
           {attributes.map((attr) => {
@@ -206,7 +206,7 @@ export function AttributesTab({
         </div>
       )}
 
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
       <SaveBar
         pending={pending}
         canSave={editable && attributes.length > 0}

@@ -77,17 +77,17 @@ export function LifecycleConfirmDialog({
       closeLabel={l.confirm.close}
       className="max-w-md"
     >
-      <p className="rounded-md border border-border p-3 text-sm" data-lifecycle-summary>
+      <p className="rounded-md border border-line-subtle p-3 text-body" data-lifecycle-summary>
         {l.confirm[operation]}
       </p>
-      <ul className="max-h-40 list-disc overflow-y-auto pl-5 text-sm">
+      <ul className="max-h-40 list-disc overflow-y-auto pl-5 text-body">
         {products.slice(0, 10).map((p) => (
           <li key={p.id}>{p.title}</li>
         ))}
         {products.length > 10 && <li>… +{products.length - 10}</li>}
       </ul>
       {problem && (
-        <p role="alert" data-problem className="text-sm text-danger">
+        <p role="alert" data-problem className="text-body text-tone-problem-fg">
           {problem}
         </p>
       )}
@@ -182,9 +182,9 @@ export function PurgeDialog({
       closeLabel={l.purge.close}
       className="max-w-lg"
     >
-      {!impact && !problem && <p className="text-sm text-muted-foreground">{l.purge.loading}</p>}
+      {!impact && !problem && <p className="text-body text-ink-secondary">{l.purge.loading}</p>}
       {impact && (
-        <div className="flex flex-col gap-3 text-sm" data-purge-impact>
+        <div className="flex flex-col gap-3 text-body" data-purge-impact>
           <div>
             <p className="font-medium">{l.purge.willDelete}</p>
             <ul className="list-disc pl-5">
@@ -218,7 +218,7 @@ export function PurgeDialog({
             </div>
           )}
           {blocked ? (
-            <p role="alert" data-problem className="text-danger">
+            <p role="alert" data-problem className="text-tone-problem-fg">
               {l.purge.blocked(impact.blockingListings)}
             </p>
           ) : (
@@ -232,7 +232,7 @@ export function PurgeDialog({
                 spellCheck={false}
                 aria-describedby="purge-confirm-help"
               />
-              <p id="purge-confirm-help" className="text-xs text-muted-foreground">
+              <p id="purge-confirm-help" className="text-label text-ink-secondary">
                 {l.purge.confirmHelp}
               </p>
             </div>
@@ -240,7 +240,7 @@ export function PurgeDialog({
         </div>
       )}
       {problem && (
-        <p role="alert" data-problem className="text-sm text-danger">
+        <p role="alert" data-problem className="text-body text-tone-problem-fg">
           {problem}
         </p>
       )}

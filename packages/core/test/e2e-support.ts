@@ -2090,3 +2090,13 @@ export async function lengthenE2eSkus(slugs: readonly string[]): Promise<void> {
     );
   });
 }
+
+/** Identificatorul unui produs de probă (după adresă): pentru teste care deschid direct `/admin/produse/<id>`. */
+export async function readE2eProductId(slug: string): Promise<string> {
+  return withClient(async (db) => {
+    const found = await db.query(`select id from product where slug = $1`, [slug]);
+    const id = found.rows[0]?.id as string | undefined;
+    if (!id) throw new Error(`Produsul de probă ${slug} nu există`);
+    return id;
+  });
+}

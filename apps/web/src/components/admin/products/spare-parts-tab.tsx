@@ -79,34 +79,34 @@ export function SparePartsTab({
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <h2 className="text-lg font-semibold">{s.heading}</h2>
-      <p className="text-sm text-muted-foreground">{s.help}</p>
-      <p role="status" className="text-sm text-muted-foreground">
+      <h2 className="text-section font-semibold">{s.heading}</h2>
+      <p className="text-body text-ink-secondary">{s.help}</p>
+      <p role="status" className="text-body text-ink-secondary">
         {status}
       </p>
       {problem && (
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-md bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>
       )}
 
       <section aria-labelledby="spare-attached" className="flex flex-col gap-3">
-        <h3 id="spare-attached" className="text-base font-semibold">
+        <h3 id="spare-attached" className="text-body font-semibold">
           {s.attached}
         </h3>
         {attached.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{s.none}</p>
+          <p className="text-body text-ink-secondary">{s.none}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {attached.map((d) => (
               <li
                 key={d.id}
                 data-spare-diagram={d.title}
-                className="flex flex-wrap items-center gap-3 rounded-md border border-border p-2"
+                className="flex flex-wrap items-center gap-3 rounded-md border border-line-subtle p-2"
               >
                 {d.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element -- imagine din /media (variante generate)
@@ -115,18 +115,18 @@ export function SparePartsTab({
                     alt=""
                     width={64}
                     height={48}
-                    className="h-12 w-16 rounded-md border border-border object-cover"
+                    className="h-12 w-16 rounded-md border border-line-subtle object-cover"
                   />
                 )}
                 <div className="flex min-w-0 flex-1 flex-col">
                   <Link
                     href={`/admin/produse/fise-explodate/${d.id}`}
                     aria-label={s.open(d.title)}
-                    className="truncate text-sm font-medium text-link underline-offset-2 hover:underline"
+                    className="truncate text-body font-medium text-link underline-offset-2 hover:underline"
                   >
                     {d.title}
                   </Link>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-label text-ink-secondary">
                     {s.meta(d.hotspotCount, d.productCount)}
                   </span>
                 </div>
@@ -161,16 +161,16 @@ export function SparePartsTab({
       {editable && (
         <section
           aria-labelledby="spare-attach"
-          className="flex flex-col gap-3 rounded-md border border-border p-4"
+          className="flex flex-col gap-3 rounded-md border border-line-subtle p-4"
         >
-          <h3 id="spare-attach" className="text-base font-semibold">
+          <h3 id="spare-attach" className="text-body font-semibold">
             {s.attach}
           </h3>
           {available.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{s.noneAvailable}</p>
+            <p className="text-body text-ink-secondary">{s.noneAvailable}</p>
           ) : (
             <div className="flex flex-wrap items-end gap-2">
-              <div className="min-w-[14rem] flex-1">
+              <div className="min-w-56 flex-1">
                 <Field id="spare-choice" label={s.choice}>
                   {(control) => (
                     <Select
@@ -209,7 +209,7 @@ export function SparePartsTab({
               </Button>
             </div>
           )}
-          <p className="text-sm">
+          <p className="text-body">
             <Link
               href="/admin/produse/fise-explodate"
               className="text-link underline-offset-2 hover:underline"
@@ -219,7 +219,7 @@ export function SparePartsTab({
           </p>
         </section>
       )}
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
     </div>
   );
 }

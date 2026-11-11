@@ -17,10 +17,13 @@ import {
   Pagination,
   Progress,
   RowHeader,
+  SaveBar,
+  Section,
   SegmentedBar,
   Select,
   Skeleton,
   Table,
+  Tabs,
   TableCaption,
   TBody,
   Td,
@@ -395,6 +398,117 @@ describe("Table", () => {
       expect(out).toMatch(/<td[^>]*hidden @tier-4[^>]*>detaliu/);
       expect(out).not.toMatch(/<td[^>]*hidden[^>]*@max-2xl\/table:block[^>]*>detaliu/);
     });
+  });
+});
+
+describe("Tabs scrollabile (editarea produsului: 13 taburi, un singur rând)", () => {
+  const tabs = [
+    { id: "a", label: "General", panel: h("p", null, "A") },
+    { id: "b", label: "Prețuri", panel: h("p", null, "B") },
+  ];
+  const render = (scrollable?: boolean) =>
+    html(h(Tabs, { label: "Secțiuni", tabs, ...(scrollable !== undefined && { scrollable }) }));
+
+  it("cu «scrollable» lista de taburi nu se rupe pe rânduri: derulează orizontal, iar tabul nu se strânge și nu se rupe", () => {
+    const out = render(true);
+    const list = /<div[^>]*role="tablist"[^>]*>/.exec(out)?.[0] ?? "";
+    expect(list).toContain("overflow-x-auto");
+    expect(list).toContain("flex-nowrap");
+    const tab = /<button[^>]*role="tab"[^>]*>/.exec(out)?.[0] ?? "";
+    expect(tab).toContain("shrink-0");
+    expect(tab).toContain("whitespace-nowrap");
+  });
+
+  it("fără «scrollable» taburile rămân ca până acum (se rup pe rânduri)", () => {
+    const out = render();
+    const list = /<div[^>]*role="tablist"[^>]*>/.exec(out)?.[0] ?? "";
+    expect(list).not.toContain("overflow-x-auto");
+    expect(list).toContain("flex-wrap");
+    expect(/<button[^>]*role="tab"[^>]*>/.exec(out)?.[0]).not.toContain("shrink-0");
+  });
+});
+
+describe("SaveBar și Section (pagina de editare, docs/17 §4.2)", () => {
+  const labels = { save: "Salvează", saving: "Se salvează…", unsavedMark: "modificări nesalvate" };
+  const bar = (props: Partial<Parameters<typeof SaveBar>[0]> = {}) =>
+    html(
+      h(SaveBar, {
+        pending: false,
+        canSave: true,
+        dirty: false,
+        status: null,
+        problem: null,
+        labels,
+        ...props,
+      }),
+    );
+
+  it("SaveBar e lipită jos (sticky, bottom-0), pe fundal propriu și cu linie deasupra: conținutul nu se vede prin ea", () => {
+    const root = /<div[^>]*data-save-bar[^>]*>/.exec(bar())?.[0] ?? "";
+    expect(root).toContain("sticky");
+    expect(root).toContain("bottom-0");
+    expect(root).toContain("bg-surface-page");
+    expect(root).toContain("border-t");
+    expect(root).toContain("border-line-subtle");
+  });
+
+  it("SaveBar secundară (a doua formă a unui tab): nu e lipită jos și are buton secundar, ca tabul să aibă o singură bară lipită și un singur buton principal", () => {
+    const out = bar({ secondary: true });
+    const root = /<div[^>]*data-save-bar[^>]*>/.exec(out)?.[0] ?? "";
+    expect(root).not.toContain("sticky");
+    expect(root).toContain("border-t");
+    const button = /<button[^>]*type="submit"[^>]*>/.exec(out)?.[0] ?? "";
+    expect(button).toContain("border-line-control");
+    expect(button).not.toContain("bg-action");
+    // principala rămâne principală
+    expect(/<button[^>]*type="submit"[^>]*>/.exec(bar())?.[0]).toContain("bg-action");
+  });
+
+  it("SaveBar are butonul «Salvează» (trimite formularul); fără drept de salvare nu are buton", () => {
+    expect(bar()).toMatch(/<button[^>]*type="submit"[^>]*>Salvează<\/button>/);
+    expect(bar({ canSave: false })).not.toContain("<button");
+    expect(bar({ pending: true })).toContain("Se salvează…");
+  });
+
+  it("SaveBar arată «modificări nesalvate» doar cu modificări și fără salvare în curs", () => {
+    expect(bar({ dirty: true })).toMatch(/data-unsaved-mark[^>]*>modificări nesalvate</);
+    expect(bar({ dirty: false })).not.toContain("data-unsaved-mark");
+    expect(bar({ dirty: true, pending: true })).not.toContain("data-unsaved-mark");
+  });
+
+  it("SaveBar: starea e un status, iar o problemă o alertă în tonul Problemă (fără bordură roșie)", () => {
+    expect(bar({ status: "Salvat." })).toMatch(/role="status"[^>]*>Salvat\./);
+    const alert =
+      /<p[^>]*role="alert"[^>]*>/.exec(bar({ problem: "Nu s-a putut salva." }))?.[0] ?? "";
+    expect(alert).toContain("bg-tone-problem-bg");
+    expect(alert).toContain("text-tone-problem-fg");
+    expect(alert).not.toContain("border-danger");
+  });
+
+  const section = (props: { title?: string; description?: string } = {}) =>
+    html(h(Section, { id: "s1", ...props, children: h("p", null, "conținut") }));
+
+  it("Section: separată prin linie deasupra (nu prin casetă), legată de titlul ei", () => {
+    const out = section({ title: "Descriere" });
+    const root = /<section[^>]*>/.exec(out)?.[0] ?? "";
+    expect(root).toContain("data-editor-section");
+    expect(root).toContain("border-t");
+    expect(root).toContain("border-line-subtle");
+    expect(root).not.toMatch(/(^|[ "])border([ "])/);
+    expect(root).toContain('aria-labelledby="s1-title"');
+    expect(out).toMatch(/<h2[^>]*id="s1-title"[^>]*>Descriere<\/h2>/);
+  });
+
+  it("Section: prima secțiune a paginii nu are linie deasupra, iar descrierea e text secundar sub titlu", () => {
+    const out = section({ title: "Date de bază", description: "Câmpurile de bază." });
+    expect(/<section[^>]*>/.exec(out)?.[0]).toContain("first:border-t-0");
+    expect(out).toMatch(/<p[^>]*text-ink-secondary[^>]*>Câmpurile de bază\.<\/p>/);
+  });
+
+  it("Section: fără titlu nu are antet și nu cere aria-labelledby", () => {
+    const out = section();
+    expect(out).not.toContain("<h2");
+    expect(out).not.toContain("aria-labelledby");
   });
 });
 

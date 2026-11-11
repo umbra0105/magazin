@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { cn } from "../lib/cn";
 import { TAB_LIST_CLASS, tabClass } from "./tab-styles";
 
 export interface TabItem {
@@ -18,6 +19,11 @@ export interface TabsProps {
   tabs: readonly TabItem[];
   defaultTab?: string;
   className?: string;
+  /**
+   * Un singur rând derulabil pe orizontală, în loc de rânduri multiple (pagini cu multe taburi, ca editarea produsului): tabul nu se
+   * strânge și nu se rupe, iar tabul activ e adus în câmpul vizual la montare și la fiecare schimbare.
+   */
+  scrollable?: boolean;
   /** Apelat la schimbarea tabului activ (mouse sau tastatură). */
   onChange?: (id: string) => void;
 }
@@ -27,11 +33,30 @@ export interface TabsProps {
  * ordinea Tab (roving tabindex), săgeți stânga/dreapta, Home și End mută și activează. Panourile
  * inactive sunt `hidden`, dar rămân în DOM.
  */
-export function Tabs({ label, tabs, defaultTab, className, onChange }: TabsProps) {
+export function Tabs({
+  label,
+  tabs,
+  defaultTab,
+  className,
+  scrollable = false,
+  onChange,
+}: TabsProps) {
   const base = useId();
   const initial = tabs.some((t) => t.id === defaultTab) ? (defaultTab as string) : tabs[0]?.id;
   const [active, setActive] = useState<string | undefined>(initial);
   const refs = useRef(new Map<string, HTMLButtonElement>());
+
+  // lista derulabilă: tabul activ se aduce în câmpul vizual (doar pe orizontală: pagina nu se mișcă)
+  useEffect(() => {
+    if (!scrollable || !active) return;
+    const tab = refs.current.get(active);
+    const list = tab?.parentElement;
+    if (!tab || !list) return;
+    if (tab.offsetLeft < list.scrollLeft) list.scrollLeft = tab.offsetLeft;
+    else if (tab.offsetLeft + tab.offsetWidth > list.scrollLeft + list.clientWidth) {
+      list.scrollLeft = tab.offsetLeft + tab.offsetWidth - list.clientWidth;
+    }
+  }, [active, scrollable]);
 
   const select = (id: string, focus = false) => {
     setActive(id);
@@ -54,31 +79,39 @@ export function Tabs({ label, tabs, defaultTab, className, onChange }: TabsProps
 
   return (
     <div className={className}>
-      <div role="tablist" aria-label={label} className={TAB_LIST_CLASS}>
-        {tabs.map((tab, index) => {
-          const selected = tab.id === active;
-          return (
-            <button
-              key={tab.id}
-              ref={(node) => {
-                if (node) refs.current.set(tab.id, node);
-                else refs.current.delete(tab.id);
-              }}
-              type="button"
-              role="tab"
-              id={`${base}-tab-${tab.id}`}
-              aria-selected={selected}
-              aria-controls={`${base}-panel-${tab.id}`}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => select(tab.id)}
-              onKeyDown={(event) => onKeyDown(event, index)}
-              className={tabClass(selected)}
-            >
-              {tab.label}
-              {tab.badge}
-            </button>
-          );
-        })}
+      <div className={scrollable ? "border-b border-line-subtle" : undefined}>
+        <div
+          role="tablist"
+          aria-label={label}
+          className={
+            scrollable ? "relative -mb-px flex flex-nowrap gap-1 overflow-x-auto" : TAB_LIST_CLASS
+          }
+        >
+          {tabs.map((tab, index) => {
+            const selected = tab.id === active;
+            return (
+              <button
+                key={tab.id}
+                ref={(node) => {
+                  if (node) refs.current.set(tab.id, node);
+                  else refs.current.delete(tab.id);
+                }}
+                type="button"
+                role="tab"
+                id={`${base}-tab-${tab.id}`}
+                aria-selected={selected}
+                aria-controls={`${base}-panel-${tab.id}`}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => select(tab.id)}
+                onKeyDown={(event) => onKeyDown(event, index)}
+                className={cn(tabClass(selected), scrollable && "mb-0 shrink-0 whitespace-nowrap")}
+              >
+                {tab.label}
+                {tab.badge}
+              </button>
+            );
+          })}
+        </div>
       </div>
       {tabs.map((tab) => (
         <div

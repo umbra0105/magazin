@@ -21,7 +21,9 @@ import {
   Label,
   Pagination,
   Progress,
+  SaveBar,
   SegmentedBar,
+  Section as FormSection,
   Select,
   Skeleton,
   Table,
@@ -287,6 +289,143 @@ export function Gallery() {
               },
             ]}
           />
+        </Section>
+
+        <Section
+          id="tabs-scrollable"
+          title="Tab-uri pe un singur rând derulabil (13 taburi, ca în editarea produsului)"
+        >
+          <div className="max-w-md">
+            <Tabs
+              label="Secțiunile produsului (exemplu)"
+              scrollable
+              defaultTab="seo"
+              tabs={[
+                "General",
+                "Prețuri",
+                "Unitate și pas",
+                "Variante",
+                "Stoc",
+                "Categorii",
+                "Atribute",
+                "Asociate",
+                "Piese de schimb",
+                "Documente",
+                "Conformitate",
+                "Media",
+                "SEO",
+              ].map((label) => ({
+                id: label === "SEO" ? "seo" : label,
+                label,
+                panel: <p className="text-body">Conținutul tabului {label}.</p>,
+              }))}
+            />
+          </div>
+        </Section>
+
+        <Section
+          id="form-section"
+          title="Secțiuni de formular, separate prin linii (nu prin casete)"
+        >
+          <div className="flex max-w-220 flex-col gap-6">
+            <FormSection
+              id="g-sec-a"
+              title="Date de bază"
+              description="Titlul și adresa produsului."
+            >
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="g-sec-title">Titlu</Label>
+                <Input id="g-sec-title" defaultValue="Pompă de căldură piscină 12 kW" />
+              </div>
+            </FormSection>
+            <FormSection id="g-sec-b" title="Clasificare și livrare">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="g-sec-ship">Clasă de livrare</Label>
+                <Select id="g-sec-ship" defaultValue="oversized">
+                  <option value="standard">Standard</option>
+                  <option value="oversized">Supradimensionat</option>
+                </Select>
+              </div>
+            </FormSection>
+          </div>
+        </Section>
+
+        <Section
+          id="save-bar"
+          title="Bara de salvare (lipită jos: fără modificări, cu modificări, se salvează, eroare, doar citire)"
+        >
+          <div className="flex max-w-220 flex-col gap-4">
+            {(
+              [
+                {
+                  name: "Fără modificări",
+                  props: {
+                    dirty: false,
+                    pending: false,
+                    status: null,
+                    problem: null,
+                    canSave: true,
+                  },
+                },
+                {
+                  name: "Cu modificări nesalvate",
+                  props: {
+                    dirty: true,
+                    pending: false,
+                    status: null,
+                    problem: null,
+                    canSave: true,
+                  },
+                },
+                {
+                  name: "Se salvează",
+                  props: { dirty: true, pending: true, status: null, problem: null, canSave: true },
+                },
+                {
+                  name: "Salvat",
+                  props: {
+                    dirty: false,
+                    pending: false,
+                    status: "Salvat.",
+                    problem: null,
+                    canSave: true,
+                  },
+                },
+                {
+                  name: "Eroare de salvare",
+                  props: {
+                    dirty: true,
+                    pending: false,
+                    status: null,
+                    problem: "Nu s-a putut salva produsul. Încearcă din nou.",
+                    canSave: true,
+                  },
+                },
+                {
+                  name: "Doar citire (fără buton)",
+                  props: {
+                    dirty: false,
+                    pending: false,
+                    status: null,
+                    problem: null,
+                    canSave: false,
+                  },
+                },
+              ] as const
+            ).map((example) => (
+              <div key={example.name} className="flex flex-col gap-1">
+                <p className="text-label text-ink-secondary">{example.name}</p>
+                <SaveBar
+                  {...example.props}
+                  labels={{
+                    save: "Salvează",
+                    saving: "Se salvează…",
+                    unsavedMark: "modificări nesalvate",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </Section>
 
         <Section id="table" title="Tabel (48 px, compact 40 px, rând selectat, cifre la dreapta)">

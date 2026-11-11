@@ -65,7 +65,7 @@ export function SeoTab({ product, caps }: { product: EditorProduct; caps: Editor
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex max-w-3xl flex-col gap-5">
-      <h2 className="text-lg font-semibold">{e.seo.heading}</h2>
+      <h2 className="text-section font-semibold">{e.seo.heading}</h2>
       <Field
         id="seo-title"
         label={e.seo.seoTitle}
@@ -103,17 +103,17 @@ export function SeoTab({ product, caps }: { product: EditorProduct; caps: Editor
         )}
       </Field>
 
-      <figure className="flex flex-col gap-1 rounded-md border border-border p-4">
-        <figcaption className="text-xs font-medium text-muted-foreground">
+      <figure className="flex flex-col gap-1 rounded-md border border-line-subtle p-4">
+        <figcaption className="text-label font-medium text-ink-secondary">
           {e.seo.preview}
         </figcaption>
-        <p className="text-lg text-primary">{values.seoTitle.trim() || product.title}</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-section text-brand">{values.seoTitle.trim() || product.title}</p>
+        <p className="text-body text-ink-secondary">
           {values.seoDescription.trim() || (product.description ?? "").slice(0, 160)}
         </p>
       </figure>
 
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
       <SaveBar
         pending={pending}
         canSave={editable}

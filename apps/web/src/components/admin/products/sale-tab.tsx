@@ -145,8 +145,8 @@ export function SaleTab({
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex max-w-3xl flex-col gap-5">
-      <h2 className="text-lg font-semibold">{t.heading}</h2>
-      <p className="text-sm text-muted-foreground">{t.intro}</p>
+      <h2 className="text-section font-semibold">{t.heading}</h2>
+      <p className="text-body text-ink-secondary">{t.intro}</p>
 
       <Field id="sale-unit" label={t.unit} help={t.unitHelp} error={errors["measureUnitId"]}>
         {(control) => (
@@ -244,18 +244,18 @@ export function SaleTab({
       <section
         aria-labelledby="sale-preview-heading"
         data-sale-preview
-        className="rounded-md border border-border bg-border/20 p-3 text-sm"
+        className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
       >
         <h3 id="sale-preview-heading" className="font-medium">
           {t.preview}
         </h3>
         <p data-sale-preview-list>{t.previewList(preview, symbol)}</p>
         {minimum > 1 && minimumText !== null && (
-          <p className="text-muted-foreground">{t.previewMin(minimumText, symbol)}</p>
+          <p className="text-ink-secondary">{t.previewMin(minimumText, symbol)}</p>
         )}
       </section>
 
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
       <SaveBar
         pending={pending}
         canSave={editable}

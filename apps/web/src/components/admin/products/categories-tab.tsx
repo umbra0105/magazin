@@ -95,14 +95,14 @@ export function CategoriesTab({
 
   return (
     <form onSubmit={onSubmit} className="flex max-w-3xl flex-col gap-4">
-      <h2 className="text-lg font-semibold">{e.categories.heading}</h2>
-      <p className="text-sm text-muted-foreground">{e.categories.help}</p>
+      <h2 className="text-section font-semibold">{e.categories.heading}</h2>
+      <p className="text-body text-ink-secondary">{e.categories.help}</p>
 
       {options.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{e.categories.none}</p>
+        <p className="text-body text-ink-secondary">{e.categories.none}</p>
       ) : (
-        <fieldset className="flex flex-col gap-1 rounded-md border border-border p-3">
-          <legend className="px-1 text-sm font-medium">{e.categories.heading}</legend>
+        <fieldset className="flex flex-col gap-1 rounded-md border border-line-subtle p-3">
+          <legend className="px-1 text-body font-medium">{e.categories.heading}</legend>
           {options.map((option) => {
             const checked = selection.ids.includes(option.id);
             return (
@@ -111,7 +111,7 @@ export function CategoriesTab({
                 className="flex min-h-9 flex-wrap items-center gap-3"
                 style={{ paddingLeft: `${option.depth * 1.25}rem` }}
               >
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-2 text-body">
                   <input
                     type="checkbox"
                     checked={checked}
@@ -122,7 +122,7 @@ export function CategoriesTab({
                   {option.name}
                 </label>
                 {checked && (
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <label className="flex items-center gap-1.5 text-label text-ink-secondary">
                     <input
                       type="radio"
                       name="primary-category"
@@ -139,9 +139,9 @@ export function CategoriesTab({
           })}
         </fieldset>
       )}
-      <p className="text-sm text-muted-foreground">{e.categories.selected(selection.ids.length)}</p>
+      <p className="text-body text-ink-secondary">{e.categories.selected(selection.ids.length)}</p>
 
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
       <SaveBar
         pending={pending}
         canSave={editable}

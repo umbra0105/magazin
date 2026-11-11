@@ -45,14 +45,9 @@ export const LEGACY_ARBITRARY_LENGTHS: Readonly<Record<string, number>> = {
   "apps/web/src/components/admin/measure-units/measure-unit-manager.tsx": 1,
   "apps/web/src/components/admin/media/detail-dialog.tsx": 1,
   "apps/web/src/components/admin/media/media-library.tsx": 1,
-  "apps/web/src/components/admin/products/media-tab.tsx": 1,
   "apps/web/src/components/admin/products/product-import-images.tsx": 1,
   "apps/web/src/components/admin/products/product-import-wizard.tsx": 2,
   "apps/web/src/components/admin/products/product-import-woo.tsx": 3,
-  "apps/web/src/components/admin/products/relations-tab.tsx": 1,
-  "apps/web/src/components/admin/products/spare-parts-tab.tsx": 1,
-  "apps/web/src/components/admin/products/stock-tab.tsx": 1,
-  "apps/web/src/components/admin/products/variants-tab.tsx": 1,
   "apps/web/src/components/admin/warehouses/warehouse-manager.tsx": 1,
 };
 

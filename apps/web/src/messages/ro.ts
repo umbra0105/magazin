@@ -1681,6 +1681,11 @@ export const ro = {
           },
         },
         general: {
+          sections: {
+            basics: "Date de bază",
+            description: "Descrierea produsului",
+            classification: "Clasificare și livrare",
+          },
           title: "Titlu",
           titleRequired: "Titlul e obligatoriu.",
           subtitle: "Subtitlu",

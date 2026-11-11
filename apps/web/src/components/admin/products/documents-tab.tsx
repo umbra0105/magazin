@@ -184,17 +184,17 @@ export function DocumentsTab({
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <h2 className="text-lg font-semibold">{d.heading}</h2>
-      <p className="text-sm text-muted-foreground">{d.help}</p>
+      <h2 className="text-section font-semibold">{d.heading}</h2>
+      <p className="text-body text-ink-secondary">{d.help}</p>
 
-      <p role="status" className="text-sm text-muted-foreground">
+      <p role="status" className="text-body text-ink-secondary">
         {status}
       </p>
       {problem && (
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-md bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>
@@ -204,10 +204,10 @@ export function DocumentsTab({
         <form
           onSubmit={(event) => void onUpload(event)}
           noValidate
-          className="flex flex-col gap-4 rounded-md border border-border p-4"
+          className="flex flex-col gap-4 rounded-md border border-line-subtle p-4"
           aria-label={d.upload}
         >
-          <h3 className="text-base font-semibold">{d.upload}</h3>
+          <h3 className="text-body font-semibold">{d.upload}</h3>
           <Field
             id="doc-file"
             label={d.file}
@@ -280,7 +280,7 @@ export function DocumentsTab({
       )}
 
       {documents.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{d.empty}</p>
+        <p className="text-body text-ink-secondary">{d.empty}</p>
       ) : (
         <ul className="flex flex-col gap-2" aria-label={d.listLabel}>
           {documents.map((doc, index) =>
@@ -300,11 +300,11 @@ export function DocumentsTab({
               <li
                 key={doc.id}
                 data-document-row={doc.title}
-                className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3"
+                className="flex flex-wrap items-center gap-3 rounded-md border border-line-subtle p-3"
               >
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm font-medium">{doc.title}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="truncate text-body font-medium">{doc.title}</span>
+                  <span className="text-label text-ink-secondary">
                     {[
                       (d.types as Record<string, string>)[doc.type] ?? doc.type,
                       (d.languages as Record<string, string>)[doc.language] ?? doc.language,
@@ -322,7 +322,7 @@ export function DocumentsTab({
                   <a
                     href={`${base}/${doc.id}`}
                     aria-label={d.download(doc.title)}
-                    className="inline-flex h-11 items-center gap-2 rounded-md border border-border px-3 text-sm hover:bg-border/30"
+                    className="inline-flex h-11 items-center gap-2 rounded-md border border-line-subtle px-3 text-body hover:bg-surface-subtle"
                   >
                     <Download aria-hidden className="h-4 w-4" />
                     {d.downloadText}
@@ -384,7 +384,7 @@ export function DocumentsTab({
         </ul>
       )}
 
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
 
       {removing && (
         <RemoveDialog
@@ -446,9 +446,12 @@ function EditRow({
   };
 
   return (
-    <li data-document-edit={doc.title} className="rounded-md border border-border bg-border/20 p-4">
+    <li
+      data-document-edit={doc.title}
+      className="rounded-md border border-line-subtle bg-surface-subtle p-4"
+    >
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-        <p className="text-sm font-medium">{d.edit(doc.title)}</p>
+        <p className="text-body font-medium">{d.edit(doc.title)}</p>
         <Field id={`doc-edit-title-${doc.id}`} label={d.title}>
           {(control) => (
             <Input
@@ -493,7 +496,7 @@ function EditRow({
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-md bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>
@@ -535,7 +538,7 @@ function RemoveDialog({
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-md bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>

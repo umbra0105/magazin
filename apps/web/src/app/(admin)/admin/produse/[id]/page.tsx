@@ -226,17 +226,27 @@ export default async function ProductEditorPage({
   return (
     <div className="flex flex-col gap-4">
       {one(query["copied"]) === "1" && (
-        <p role="status" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+        <p
+          role="status"
+          className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
+        >
           {m.lifecycle.duplicatedNotes(Number(one(query["docs"]) ?? 0) || 0)}
         </p>
       )}
       {variants.some((v) => hasCopySkuMarker(v.sku)) && (
-        <p role="note" data-copy-note className="rounded-md border border-border p-3 text-sm">
+        <p
+          role="note"
+          data-copy-note
+          className="rounded-md border border-line-subtle p-3 text-body"
+        >
           {m.editor.copyNote}
         </p>
       )}
       {one(query["created"]) === "1" && (
-        <p role="status" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+        <p
+          role="status"
+          className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
+        >
           {m.editor.created}
         </p>
       )}

@@ -153,7 +153,7 @@ export function ProductExportDialog({
           }}
         >
           <fieldset className="flex flex-col gap-2" data-export-scope>
-            <legend className="mb-1 text-sm font-medium">{m.scopeLegend}</legend>
+            <legend className="mb-1 text-body font-medium">{m.scopeLegend}</legend>
             <Label className="flex items-start gap-2 font-normal">
               <input
                 type="radio"
@@ -205,13 +205,13 @@ export function ProductExportDialog({
               />
               <span>{m.includeTrash}</span>
             </Label>
-            <p id="export-trash-help" className="pl-6 text-xs text-muted-foreground">
+            <p id="export-trash-help" className="pl-6 text-label text-ink-secondary">
               {m.includeTrashHelp}
             </p>
           </div>
 
           <fieldset className="flex flex-col gap-2" data-export-format>
-            <legend className="mb-1 text-sm font-medium">{m.formatLegend}</legend>
+            <legend className="mb-1 text-body font-medium">{m.formatLegend}</legend>
             <Label className="flex items-start gap-2 font-normal">
               <input
                 type="radio"
@@ -223,7 +223,7 @@ export function ProductExportDialog({
               />
               <span className="flex flex-col">
                 <span>{m.format.xlsx}</span>
-                <span className="text-xs text-muted-foreground">{m.format.xlsxHelp}</span>
+                <span className="text-label text-ink-secondary">{m.format.xlsxHelp}</span>
               </span>
             </Label>
             <Label className="flex items-start gap-2 font-normal">
@@ -237,12 +237,12 @@ export function ProductExportDialog({
               />
               <span className="flex flex-col">
                 <span>{m.format.csv}</span>
-                <span className="text-xs text-muted-foreground">{m.format.csvHelp}</span>
+                <span className="text-label text-ink-secondary">{m.format.csvHelp}</span>
               </span>
             </Label>
           </fieldset>
 
-          <p role="alert" className="min-h-5 text-sm text-danger" data-export-error>
+          <p role="alert" className="min-h-5 text-body text-tone-problem-fg" data-export-error>
             {error}
           </p>
           <div className="flex flex-wrap justify-end gap-2">

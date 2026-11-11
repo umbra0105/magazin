@@ -18,6 +18,8 @@ export { Select, type SelectProps } from "./components/select";
 export { Textarea, type TextareaProps } from "./components/textarea";
 export { Dialog, type DialogProps } from "./components/dialog";
 export { Tabs, type TabItem, type TabsProps } from "./components/tabs";
+export { SaveBar, type SaveBarProps } from "./components/save-bar";
+export { Section, type SectionProps } from "./components/form-section";
 export { filterChipClass } from "./components/filter-chip";
 export { TAB_LIST_CLASS, tabClass } from "./components/tab-styles";
 export {

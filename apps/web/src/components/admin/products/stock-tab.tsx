@@ -61,11 +61,11 @@ export function StockTab({
   if (product.type === "digital") {
     return (
       <div className="flex max-w-3xl flex-col gap-3">
-        <h2 className="text-lg font-semibold">{t.heading}</h2>
+        <h2 className="text-section font-semibold">{t.heading}</h2>
         <p
           role="note"
           data-stock-digital
-          className="rounded-md border border-border bg-border/30 p-3 text-sm"
+          className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
         >
           {t.digital}
         </p>
@@ -163,7 +163,7 @@ function ProductStockForm({
       data-stock-form="product"
       className="flex max-w-3xl flex-col gap-5"
     >
-      <h2 className="text-lg font-semibold">{t.heading}</h2>
+      <h2 className="text-section font-semibold">{t.heading}</h2>
       <CheckField
         id="stock-manage"
         label={t.manageStock}
@@ -175,7 +175,10 @@ function ProductStockForm({
 
       {form.values.manageStock ? (
         <>
-          <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+          <p
+            role="note"
+            className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
+          >
             {t.statusManagedNote}
           </p>
           <CheckField
@@ -192,7 +195,7 @@ function ProductStockForm({
           <p
             role="note"
             data-stock-unmanaged
-            className="rounded-md border border-border bg-border/30 p-3 text-sm"
+            className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
           >
             {t.unmanagedNote}
           </p>
@@ -237,11 +240,11 @@ function ProductStockForm({
           />
         )}
       </Field>
-      <p data-stock-lead-now className="-mt-3 text-sm text-muted-foreground">
+      <p data-stock-lead-now className="-mt-3 text-body text-ink-secondary">
         {t.leadTimeNow(daysText(effective.days), effective.origin, effective.brandName)}
       </p>
 
-      {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+      {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
       <SaveBar
         pending={pending}
         canSave={editable}
@@ -344,12 +347,12 @@ function VariantStockForm({
   return (
     <form onSubmit={onSubmit} noValidate data-stock-form="variants" className="flex flex-col gap-4">
       <div>
-        <h3 className="text-base font-semibold">{v.heading}</h3>
-        <p className="text-sm text-muted-foreground">{v.help}</p>
+        <h3 className="text-body font-semibold">{v.heading}</h3>
+        <p className="text-body text-ink-secondary">{v.help}</p>
       </div>
-      <div className="overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-[40rem] text-left text-sm">
-          <thead className="border-b border-border bg-border/30">
+      <div className="overflow-x-auto rounded-md border border-line-subtle">
+        <table className="w-full min-w-160 text-left text-body">
+          <thead className="border-b border-line-subtle bg-surface-subtle">
             <tr>
               <th scope="col" className="p-3 font-medium">
                 {v.variant}
@@ -374,15 +377,15 @@ function VariantStockForm({
                 <tr
                   key={variant.id}
                   data-variant-stock-row={variant.sku}
-                  className="border-t border-border/60"
+                  className="border-t border-line-subtle"
                 >
                   <th scope="row" className="p-3 align-top font-normal">
                     <span className="font-medium">{variant.sku}</span>
                     {variant.label && (
-                      <span className="block text-muted-foreground">{variant.label}</span>
+                      <span className="block text-ink-secondary">{variant.label}</span>
                     )}
                     {failed[variant.id] && (
-                      <span data-problem className="block text-sm text-danger">
+                      <span data-problem className="block text-body text-tone-problem-fg">
                         {failed[variant.id]}
                       </span>
                     )}
@@ -429,6 +432,7 @@ function VariantStockForm({
         status={status}
         problem={problem}
         labels={{ save: v.save, saving: e.common.saving, unsavedMark: e.unsavedMark }}
+        secondary
       />
     </form>
   );

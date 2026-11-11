@@ -30,10 +30,13 @@ export function ProductStockPanel({
   if (!view) {
     return (
       <section aria-labelledby="stock-quantities-heading" className="flex flex-col gap-2">
-        <h3 id="stock-quantities-heading" className="text-base font-semibold">
+        <h3 id="stock-quantities-heading" className="text-body font-semibold">
           {t.heading}
         </h3>
-        <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+        <p
+          role="note"
+          className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
+        >
           {t.noWarehouse}
         </p>
       </section>
@@ -48,10 +51,10 @@ export function ProductStockPanel({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 id="stock-quantities-heading" className="text-base font-semibold">
+          <h3 id="stock-quantities-heading" className="text-body font-semibold">
             {t.heading}
           </h3>
-          <p className="text-sm text-muted-foreground">{t.warehouse(view.warehouse.name)}</p>
+          <p className="text-body text-ink-secondary">{t.warehouse(view.warehouse.name)}</p>
         </div>
         {view.canSeeQuantities && first && (
           <Link
@@ -77,7 +80,7 @@ export function ProductStockPanel({
           <p
             role="note"
             data-stock-no-quantities
-            className="rounded-md border border-border bg-border/30 p-3 text-sm"
+            className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
           >
             {t.noAccess}
           </p>
@@ -88,15 +91,15 @@ export function ProductStockPanel({
                 <li
                   key={row.variantId}
                   data-variant-state-row={row.sku}
-                  className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3 text-sm"
+                  className="flex flex-wrap items-center gap-3 rounded-md border border-line-subtle p-3 text-body"
                 >
                   <span className="font-medium">{row.sku}</span>
                   {row.variantLabel && (
-                    <span className="text-muted-foreground">{row.variantLabel}</span>
+                    <span className="text-ink-secondary">{row.variantLabel}</span>
                   )}
-                  <span className="text-muted-foreground">{kindLabel(row)}</span>
+                  <span className="text-ink-secondary">{kindLabel(row)}</span>
                   <Badge variant={badgeVariant(state.tone)}>{state.label}</Badge>
-                  {state.detail && <span className="text-muted-foreground">{state.detail}</span>}
+                  {state.detail && <span className="text-ink-secondary">{state.detail}</span>}
                 </li>
               );
             })}

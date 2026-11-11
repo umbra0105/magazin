@@ -93,18 +93,18 @@ export function VariantsTab({
   return (
     <div className="flex max-w-5xl flex-col gap-8">
       <section aria-labelledby="variants-heading" className="flex flex-col gap-3">
-        <h2 id="variants-heading" className="text-lg font-semibold">
+        <h2 id="variants-heading" className="text-section font-semibold">
           {v.heading}
         </h2>
-        <p className="text-sm text-muted-foreground">{v.help}</p>
-        <p role="status" className="text-sm text-muted-foreground">
+        <p className="text-body text-ink-secondary">{v.help}</p>
+        <p role="status" className="text-body text-ink-secondary">
           {status}
         </p>
-        <div className="overflow-x-auto rounded-md border border-border">
-          <table className="w-full min-w-[42rem] text-sm">
+        <div className="overflow-x-auto rounded-md border border-line-subtle">
+          <table className="w-full min-w-168 text-body">
             <caption className="sr-only">{v.tableLabel}</caption>
             <thead>
-              <tr className="border-b border-border text-left">
+              <tr className="border-b border-line-subtle text-left">
                 <th scope="col" className="p-3 font-medium">
                   {v.columns.variant}
                 </th>
@@ -153,7 +153,7 @@ export function VariantsTab({
                   <tr
                     key={variant.id}
                     data-variant-row={variant.sku}
-                    className="border-b border-border last:border-0"
+                    className="border-b border-line-subtle last:border-0"
                   >
                     <th scope="row" className="p-3 text-left font-normal">
                       <span className="flex flex-wrap items-center gap-2">
@@ -244,7 +244,7 @@ function StepCell({ variant, sale }: { variant: EditorVariant; sale: SaleContext
   return (
     <span className="flex flex-wrap items-baseline gap-1">
       <span>{`${formatQuantity(quantityFromTicks(ticks))} ${unit.symbol}`}</span>
-      {!own && <span className="text-xs text-muted-foreground">({v.stepInherited})</span>}
+      {!own && <span className="text-label text-ink-secondary">({v.stepInherited})</span>}
     </span>
   );
 }
@@ -346,10 +346,10 @@ function EditRow({
   };
 
   return (
-    <tr data-variant-edit={variant.sku} className="border-b border-border bg-border/20">
+    <tr data-variant-edit={variant.sku} className="border-b border-line-subtle bg-surface-subtle">
       <td colSpan={colSpan} className="p-4">
         <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-          <p className="text-sm font-medium">{v.edit(variant.sku)}</p>
+          <p className="text-body font-medium">{v.edit(variant.sku)}</p>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field id={id("sku")} label={e.pricing.sku} error={errors["sku"]}>
               {(control) => (
@@ -453,8 +453,8 @@ function EditRow({
               )}
             </Field>
           </div>
-          <fieldset className="flex flex-col gap-4 rounded-md border border-border p-3">
-            <legend className="px-1 text-sm font-medium">{e.sale.heading}</legend>
+          <fieldset className="flex flex-col gap-4 rounded-md border border-line-subtle p-3">
+            <legend className="px-1 text-body font-medium">{e.sale.heading}</legend>
             <div className="grid gap-4 sm:grid-cols-3">
               <Field
                 id={id("saleStep")}
@@ -549,7 +549,7 @@ function EditRow({
             <p
               role="alert"
               data-problem
-              className="rounded-md border border-danger p-3 text-sm text-danger"
+              className="rounded-md bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
             >
               {problem}
             </p>
@@ -665,9 +665,9 @@ function GeneratorPanel({
   return (
     <section
       aria-labelledby="generator-heading"
-      className="flex flex-col gap-4 rounded-md border border-border p-4"
+      className="flex flex-col gap-4 rounded-md border border-line-subtle p-4"
     >
-      <h2 id="generator-heading" className="text-lg font-semibold">
+      <h2 id="generator-heading" className="text-section font-semibold">
         {v.generator}
       </h2>
       <form onSubmit={preview} noValidate className="flex flex-col gap-4">
@@ -773,7 +773,7 @@ function GeneratorPanel({
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-md bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>
@@ -782,19 +782,19 @@ function GeneratorPanel({
       {plan && (
         <div
           data-variant-plan
-          className="flex flex-col gap-3 rounded-md border border-border bg-border/20 p-4"
+          className="flex flex-col gap-3 rounded-md border border-line-subtle bg-surface-subtle p-4"
         >
-          <h3 className="text-base font-semibold">{v.planTitle}</h3>
+          <h3 className="text-body font-semibold">{v.planTitle}</h3>
           {plan.toCreate.length === 0 ? (
-            <p className="text-sm">{v.planNothing}</p>
+            <p className="text-body">{v.planNothing}</p>
           ) : (
             <>
-              <p className="text-sm font-medium">{v.planCreate(plan.toCreate.length)}</p>
-              <ul className="list-inside list-disc text-sm">
+              <p className="text-body font-medium">{v.planCreate(plan.toCreate.length)}</p>
+              <ul className="list-inside list-disc text-body">
                 {plan.toCreate.map((item) => (
                   <li key={item.sku}>
                     <span className="font-medium">{item.sku}</span>{" "}
-                    <span className="text-muted-foreground">
+                    <span className="text-ink-secondary">
                       {item.selections.map((s) => `${s.option}: ${s.value}`).join(", ")}
                     </span>
                   </li>
@@ -802,17 +802,17 @@ function GeneratorPanel({
               </ul>
             </>
           )}
-          {plan.existing > 0 && <p className="text-sm">{v.planExisting(plan.existing)}</p>}
+          {plan.existing > 0 && <p className="text-body">{v.planExisting(plan.existing)}</p>}
           {plan.withoutOptions > 0 && (
-            <p className="text-sm">{v.planWithoutOptions(plan.withoutOptions)}</p>
+            <p className="text-body">{v.planWithoutOptions(plan.withoutOptions)}</p>
           )}
           {plan.orphaned.length > 0 && (
-            <div className="text-sm">
+            <div className="text-body">
               <p>{v.planOrphans(plan.orphaned.length)}</p>
               <ul className="list-inside list-disc">
                 {plan.orphaned.map((o) => (
                   <li key={o.variantId}>
-                    {o.sku} <span className="text-muted-foreground">{o.label}</span>
+                    {o.sku} <span className="text-ink-secondary">{o.label}</span>
                   </li>
                 ))}
               </ul>
@@ -855,7 +855,7 @@ function DeleteDialog({
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-md bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>

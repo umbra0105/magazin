@@ -112,8 +112,8 @@ export function MediaTab({
   return (
     <>
       <form onSubmit={onSubmit} className="flex max-w-3xl flex-col gap-4">
-        <h2 className="text-lg font-semibold">{e.media.heading}</h2>
-        <p className="text-sm text-muted-foreground">{e.media.help}</p>
+        <h2 className="text-section font-semibold">{e.media.heading}</h2>
+        <p className="text-body text-ink-secondary">{e.media.help}</p>
 
         {editable && (
           <div>
@@ -126,7 +126,7 @@ export function MediaTab({
               {e.media.add}
             </Button>
             {items.length >= MAX_PRODUCT_MEDIA && (
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-label text-ink-secondary">
                 {e.media.limit(MAX_PRODUCT_MEDIA)}
               </p>
             )}
@@ -134,30 +134,30 @@ export function MediaTab({
         )}
 
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{e.media.empty}</p>
+          <p className="text-body text-ink-secondary">{e.media.empty}</p>
         ) : (
           <ol className="flex flex-col gap-2" aria-label={e.media.heading}>
             {items.map((item, index) => (
               <li
                 key={item.mediaId}
                 data-media-item
-                className="flex flex-wrap items-center gap-3 rounded-md border border-border p-2"
+                className="flex flex-wrap items-center gap-3 rounded-md border border-line-subtle p-2"
               >
                 {item.thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element -- miniatură din /media (variante generate)
                   <img
                     src={item.thumb}
                     alt={item.alt || item.name}
-                    className="h-16 w-16 rounded-md border border-border object-cover"
+                    className="h-16 w-16 rounded-md border border-line-subtle object-cover"
                   />
                 ) : (
-                  <span className="flex h-16 w-16 items-center justify-center rounded-md border border-border text-center text-[10px] text-muted-foreground">
+                  <span className="flex h-16 w-16 items-center justify-center rounded-md border border-line-subtle text-center text-label text-ink-secondary">
                     {e.media.noPreview}
                   </span>
                 )}
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm font-medium">{item.name}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="truncate text-body font-medium">{item.name}</span>
+                  <span className="text-label text-ink-secondary">
                     {index === 0 ? e.media.main : e.media.position(index + 1, items.length)}
                   </span>
                 </div>
@@ -201,7 +201,7 @@ export function MediaTab({
           {announcement}
         </p>
 
-        {!editable && <p className="text-sm text-muted-foreground">{e.common.readOnlyTab}</p>}
+        {!editable && <p className="text-body text-ink-secondary">{e.common.readOnlyTab}</p>}
         <SaveBar
           pending={pending}
           canSave={editable}

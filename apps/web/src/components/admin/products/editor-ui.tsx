@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
-import { Button, Label } from "@ecom/ui";
+import { Label } from "@ecom/ui";
+
+// Bara de salvare lipită jos și secțiunea cu linie sunt componente din `@ecom/ui` (docs/17 §4.2); tab-urile le importă de aici.
+export { SaveBar, Section } from "@ecom/ui";
 
 /** Proprietățile de accesibilitate pe care `Field` le dă controlului din interior. */
 export interface FieldControlProps {
@@ -39,12 +42,12 @@ export function Field({
         ...(describedBy && { "aria-describedby": describedBy }),
       })}
       {help && (
-        <p id={helpId} className="text-xs text-muted-foreground">
+        <p id={helpId} className="text-label text-ink-secondary">
           {help}
         </p>
       )}
       {error && (
-        <p id={errorId} data-problem className="text-sm text-danger">
+        <p id={errorId} data-problem className="text-body text-tone-problem-fg">
           {error}
         </p>
       )}
@@ -77,59 +80,15 @@ export function CheckField({
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
         aria-describedby={help ? `${id}-help` : undefined}
-        className="mt-1 h-4 w-4"
+        className="mt-0.5 size-4 accent-brand"
       />
       <div className="flex flex-col">
         <Label htmlFor={id}>{label}</Label>
         {help && (
-          <p id={`${id}-help`} className="text-xs text-muted-foreground">
+          <p id={`${id}-help`} className="text-label text-ink-secondary">
             {help}
           </p>
         )}
-      </div>
-    </div>
-  );
-}
-
-/** Rândul de jos al unui tab: mesaj de stare, mesaj de eroare și butonul de salvare. */
-export function SaveBar({
-  pending,
-  canSave,
-  dirty,
-  status,
-  problem,
-  labels,
-}: {
-  pending: boolean;
-  canSave: boolean;
-  dirty: boolean;
-  status: string | null;
-  problem: string | null;
-  labels: { save: string; saving: string; unsavedMark: string };
-}) {
-  return (
-    <div className="flex flex-col gap-3 border-t border-border pt-4">
-      {problem && (
-        <p
-          role="alert"
-          data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
-        >
-          {problem}
-        </p>
-      )}
-      <div className="flex flex-wrap items-center gap-3">
-        {canSave && (
-          <Button type="submit" disabled={pending}>
-            {pending ? labels.saving : labels.save}
-          </Button>
-        )}
-        {dirty && !pending && (
-          <span className="text-sm text-muted-foreground">{labels.unsavedMark}</span>
-        )}
-        <p role="status" className="text-sm text-muted-foreground">
-          {status}
-        </p>
       </div>
     </div>
   );

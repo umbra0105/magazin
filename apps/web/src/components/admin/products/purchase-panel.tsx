@@ -63,26 +63,29 @@ export async function PurchasePanel({
   return (
     <section
       aria-labelledby="purchase-heading"
-      className="flex flex-col gap-4 border-t border-border pt-6"
+      className="flex flex-col gap-4 border-t border-line-subtle pt-6"
     >
-      <h2 id="purchase-heading" className="text-lg font-semibold">
+      <h2 id="purchase-heading" className="text-section font-semibold">
         {p.heading}
       </h2>
-      <p className="text-sm text-muted-foreground">{p.description}</p>
-      {!editable && <p className="text-sm text-muted-foreground">{p.readOnly}</p>}
+      <p className="text-body text-ink-secondary">{p.description}</p>
+      {!editable && <p className="text-body text-ink-secondary">{p.readOnly}</p>}
       {message && (
         <p
           role={status === "saved" || status === "history" ? "status" : "alert"}
           data-purchase-status={status}
-          className="rounded-md border border-border bg-border/30 p-3 text-sm"
+          className="rounded-md border border-line-subtle bg-surface-subtle p-3 text-body"
         >
           {message}
         </p>
       )}
 
       {rows.map(({ variant, current, history }) => (
-        <div key={variant.id} className="flex flex-col gap-3 rounded-md border border-border p-4">
-          <h3 className="text-sm font-medium">{p.variant(variant.sku)}</h3>
+        <div
+          key={variant.id}
+          className="flex flex-col gap-3 rounded-md border border-line-subtle p-4"
+        >
+          <h3 className="text-body font-medium">{p.variant(variant.sku)}</h3>
           <form
             action={savePurchasePrice}
             className="grid items-end gap-4 sm:grid-cols-[1fr_1fr_auto]"
@@ -112,17 +115,21 @@ export async function PurchasePanel({
                 readOnly={!editable}
               />
             </div>
-            {editable && <Button type="submit">{p.save}</Button>}
+            {editable && (
+              <Button type="submit" variant="outline">
+                {p.save}
+              </Button>
+            )}
           </form>
 
-          <details className="text-sm">
+          <details className="text-body">
             <summary className="cursor-pointer font-medium">{p.history}</summary>
             {history.length === 0 ? (
-              <p className="mt-2 text-muted-foreground">{p.historyEmpty}</p>
+              <p className="mt-2 text-ink-secondary">{p.historyEmpty}</p>
             ) : (
               <table className="mt-2 w-full">
                 <thead>
-                  <tr className="border-b border-border text-left">
+                  <tr className="border-b border-line-subtle text-left">
                     <th scope="col" className="py-1 pr-4 font-medium">
                       {p.historyDate}
                     </th>
@@ -136,7 +143,7 @@ export async function PurchasePanel({
                 </thead>
                 <tbody>
                   {history.map((entry) => (
-                    <tr key={entry.id} className="border-b border-border">
+                    <tr key={entry.id} className="border-b border-line-subtle">
                       <td className="py-1 pr-4">
                         {entry.effectiveDate.toISOString().slice(0, 10)}
                       </td>
