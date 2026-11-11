@@ -3,7 +3,7 @@
 import { Check, Copy, Pencil, RotateCcw, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { describePrice } from "@ecom/shared/price-display";
 import { QUANTITY_FACTOR, quantityFromTicks } from "@ecom/shared/quantity";
 import {
@@ -101,6 +101,24 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "info"> = {
 
 /** Imaginea produsului (și locul ei gol): 32 px, rază de 8 px (docs/17 §3, Tabel). */
 const THUMB = "size-8 rounded-md";
+
+/** Un SKU mai lung de atâtea caractere se taie cu «…» în coloană și are textul întreg în title. */
+const SKU_TITLE_FROM = 24;
+
+/**
+ * Creionul de editare (docs/17 §3, interacțiuni): pe dispozitive cu cursor (`hover: hover`) apare doar la hover sau la focus pe
+ * rând; pe ecrane tactile rămâne vizibil. Numele accesibile ale butoanelor nu se schimbă (opacitatea nu le scoate din arborele de
+ * accesibilitate). `VALUE_ICON` e pentru creionul din interiorul unei valori-buton: pe telefon (card) valoarea însăși e butonul și
+ * creionul nu mai ocupă loc.
+ */
+const EDIT_ICON =
+  "size-3.5 shrink-0 text-ink-secondary transition-opacity duration-(--motion) hover-device:opacity-0 " +
+  "hover-device:group-hover/row:opacity-100 hover-device:group-focus-within/row:opacity-100";
+const VALUE_ICON = `${EDIT_ICON} group-data-[stacked]/table:@max-2xl/table:hidden`;
+const EDIT_VALUE =
+  "-mx-1.5 -my-1.5 inline-flex min-h-(--control-h-compact) items-center gap-1 whitespace-nowrap rounded-md px-1.5 text-left " +
+  "transition-colors duration-(--motion) hover:bg-surface-hover " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
 
 const label = <T extends Record<string, string>>(map: T, key: string): string =>
   (map as Record<string, string>)[key] ?? key;
@@ -401,14 +419,36 @@ export function ProductTable({
     );
   };
 
+  /** Creionul titlului (titlul e o legătură, deci creionul rămâne buton separat); ținta e de 44 px pe telefon. */
   const editButton = (row: ProductTableRow, field: InlineField, what: string) => (
     <button
       type="button"
       onClick={() => startEdit(row, field)}
       aria-label={m.inline.edit(what, row.title)}
-      className={`${buttonVariants({ variant: "ghost", size: "icon" })} -my-1.5 shrink-0 text-ink-secondary`}
+      className={`${buttonVariants({ variant: "ghost", size: "icon" })} -my-1.5 shrink-0`}
     >
-      <Pencil aria-hidden="true" className="size-3.5" />
+      <Pencil aria-hidden="true" data-edit-icon className={EDIT_ICON} />
+    </button>
+  );
+
+  /**
+   * Valoarea (prețul, starea) ca buton de editare: același nume accesibil «Editează …» ca înainte; creionul din interior apare la
+   * hover sau focus pe rând, iar pe telefon dispare (valoarea însăși e ținta de 44 px).
+   */
+  const editValue = (
+    row: ProductTableRow,
+    field: InlineField,
+    what: string,
+    content: ReactNode,
+  ) => (
+    <button
+      type="button"
+      onClick={() => startEdit(row, field)}
+      aria-label={m.inline.edit(what, row.title)}
+      className={EDIT_VALUE}
+    >
+      {content}
+      <Pencil aria-hidden="true" data-edit-icon className={VALUE_ICON} />
     </button>
   );
 
@@ -574,7 +614,11 @@ export function ProductTable({
                   )}
                 </div>
               )}
-              <Button onClick={requestApply} disabled={pending || bulkKind === ""}>
+              <Button
+                variant="outline"
+                onClick={requestApply}
+                disabled={pending || bulkKind === ""}
+              >
                 {m.bulk.apply}
               </Button>
             </div>
@@ -618,8 +662,8 @@ export function ProductTable({
             <Th>
               <span className="sr-only">{m.table.image}</span>
             </Th>
-            {/* coloana Produs ia loc înaintea celorlalte: titlul și linia «brand · categorie» nu se rup pe 3–4 rânduri */}
-            <Th className="w-2/5">{m.table.product}</Th>
+            {/* coloana Produs ia tot restul lățimii: celelalte (SKU, Preț, Stare …) au lățimea conținutului, deci Produs cedează lățime, nu invers */}
+            <Th className="w-full">{m.table.product}</Th>
             <Th priority="secondary">{m.table.sku}</Th>
             <Th numeric>{m.table.price}</Th>
             <Th>{m.table.status}</Th>
@@ -632,229 +676,257 @@ export function ProductTable({
           </Tr>
         </THead>
         <TBody>
-          {rows.map((row) => (
-            <Tr key={row.id} data-product-row={row.id} data-product-title={row.title}>
-              {selectable && (
-                <Td className="w-10">
-                  <label className="flex size-11 items-center justify-center md:size-8">
-                    <input
-                      type="checkbox"
-                      aria-label={m.table.select(row.title)}
-                      checked={selected.has(row.id)}
-                      onChange={() => toggle(row.id)}
-                      className="size-4 accent-brand"
+          {rows.map((row) => {
+            const stockSummary = stock[row.id];
+            const stockText = stockSummary
+              ? [stockSummary.detail, stockSummary.quantity].filter(Boolean).join(" · ")
+              : row.manageStock
+                ? m.table.managedStock
+                : "";
+            const stockPill = stockSummary ? (
+              <Badge
+                variant={badgeVariant(stockSummary.tone)}
+                dot
+                data-stock-pill
+                className="whitespace-nowrap"
+              >
+                {stockSummary.label}
+              </Badge>
+            ) : (
+              <span data-stock-pill>{label(m.stock, row.stockStatus)}</span>
+            );
+            const subtitle = [
+              row.brandName,
+              ...row.categoryNames.slice(0, 2),
+              m.table.variants(row.variantCount),
+            ]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <Tr
+                key={row.id}
+                data-product-row={row.id}
+                data-product-title={row.title}
+                className="group/row"
+              >
+                {selectable && (
+                  <Td className="w-10">
+                    <label className="flex size-11 items-center justify-center md:size-8">
+                      <input
+                        type="checkbox"
+                        aria-label={m.table.select(row.title)}
+                        checked={selected.has(row.id)}
+                        onChange={() => toggle(row.id)}
+                        className="size-4 accent-brand"
+                      />
+                    </label>
+                  </Td>
+                )}
+                <Td className="w-8">
+                  {row.thumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- miniatura generată (thumb), nu originalul
+                    <img
+                      src={row.thumb}
+                      alt=""
+                      width={32}
+                      height={32}
+                      loading="lazy"
+                      data-product-thumb
+                      className={`${THUMB} object-cover`}
                     />
-                  </label>
-                </Td>
-              )}
-              <Td className="w-8">
-                {row.thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- miniatura generată (thumb), nu originalul
-                  <img
-                    src={row.thumb}
-                    alt=""
-                    width={32}
-                    height={32}
-                    loading="lazy"
-                    data-product-thumb
-                    className={`${THUMB} object-cover`}
-                  />
-                ) : (
-                  <span
-                    role="img"
-                    aria-label={m.table.noImage}
-                    data-product-thumb
-                    className={`${THUMB} flex items-center justify-center bg-surface-subtle text-label text-ink-secondary`}
-                  >
-                    —
-                  </span>
-                )}
-              </Td>
-              <RowHeader stack="lead">
-                {isEditing(row, "title") ? (
-                  cellEditor(row, "title")
-                ) : (
-                  <div className="flex flex-col">
-                    <span className="flex items-center gap-1">
-                      {trash ? (
-                        <span className="font-medium">{row.title}</span>
-                      ) : (
-                        <Link
-                          href={`/admin/produse/${row.id}`}
-                          aria-label={m.editor.editLink(row.title)}
-                          className="font-medium text-ink underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                        >
-                          {row.title}
-                        </Link>
-                      )}
-                      {!trash &&
-                        (canEditContent || canWrite) &&
-                        editButton(row, "title", m.inline.title)}
-                    </span>
-                    <span className="text-label text-ink-secondary">
-                      {[
-                        row.brandName,
-                        ...row.categoryNames.slice(0, 2),
-                        m.table.variants(row.variantCount),
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </div>
-                )}
-              </RowHeader>
-              {/* un SKU lung se rupe pe două rânduri (lățime minimă 9rem), nu lărgește coloana și nu strânge titlul */}
-              <Td priority="secondary" className="min-w-36 text-ink-secondary wrap-anywhere">
-                {row.sku ?? "—"}
-              </Td>
-              <Td numeric className="whitespace-nowrap" data-cell="price">
-                {isEditing(row, "price") ? (
-                  cellEditor(row, "price")
-                ) : (
-                  <>
-                    <span className="inline-flex items-center gap-1">
-                      {priceText(row)}
-                      {priceView(row) && (
-                        <span className="whitespace-nowrap text-ink-secondary" data-price-per>
-                          / {priceView(row)!.per}
-                        </span>
-                      )}
-                      {!trash &&
-                        canWrite &&
-                        row.singleVariantId &&
-                        editButton(row, "price", m.inline.price)}
-                    </span>
-                    {row.priceMin === row.priceMax && priceView(row)?.perUnit && (
-                      <span className="block text-label text-ink-secondary" data-price-unit>
-                        {priceView(row)!.perUnit}
-                      </span>
-                    )}
-                    {row.priceMin === row.priceMax && priceView(row)?.stepPrice && (
-                      <span className="block text-label text-ink-secondary" data-price-step>
-                        {priceView(row)!.stepPrice}
-                      </span>
-                    )}
-                  </>
-                )}
-              </Td>
-              <Td data-cell="status">
-                {isEditing(row, "status") ? (
-                  cellEditor(row, "status")
-                ) : (
-                  <span className="inline-flex items-center gap-1">
-                    <Badge
-                      variant={STATUS_VARIANT[row.status] ?? "neutral"}
-                      dot
-                      data-status-pill
-                      className="whitespace-nowrap"
+                  ) : (
+                    <span
+                      role="img"
+                      aria-label={m.table.noImage}
+                      data-product-thumb
+                      className={`${THUMB} flex items-center justify-center bg-surface-subtle text-label text-ink-secondary`}
                     >
-                      {label(m.statuses, row.status)}
-                    </Badge>
-                    {!trash && canWrite && editButton(row, "status", m.inline.status)}
-                  </span>
-                )}
-              </Td>
-              <Td priority="secondary" data-cell="stock">
-                {isEditing(row, "stockStatus") ? (
-                  cellEditor(row, "stockStatus")
-                ) : (
-                  <>
-                    <span className="flex flex-wrap items-center gap-1">
-                      {stock[row.id] ? (
-                        <Badge
-                          variant={badgeVariant(stock[row.id]!.tone)}
-                          dot
-                          className="whitespace-nowrap"
-                        >
-                          {stock[row.id]!.label}
-                        </Badge>
-                      ) : (
-                        label(m.stock, row.stockStatus)
-                      )}
-                      {stock[row.id]?.detail && (
-                        <span className="text-label text-ink-secondary">
-                          {stock[row.id]!.detail}
-                        </span>
-                      )}
-                      {!trash &&
-                        canWrite &&
-                        !row.manageStock &&
-                        editButton(row, "stockStatus", m.inline.stock)}
+                      —
                     </span>
-                    {stock[row.id]?.quantity ? (
-                      <span className="block text-label text-ink-secondary" data-stock-quantity>
-                        {stock[row.id]!.quantity}
+                  )}
+                </Td>
+                <RowHeader stack="lead" className="@2xl/table:max-w-0">
+                  {isEditing(row, "title") ? (
+                    cellEditor(row, "title")
+                  ) : (
+                    <div className="flex flex-col">
+                      <span className="flex items-center gap-1">
+                        {trash ? (
+                          <span className="font-medium">{row.title}</span>
+                        ) : (
+                          <Link
+                            href={`/admin/produse/${row.id}`}
+                            aria-label={m.editor.editLink(row.title)}
+                            className="font-medium text-ink underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                          >
+                            {row.title}
+                          </Link>
+                        )}
+                        {!trash &&
+                          (canEditContent || canWrite) &&
+                          editButton(row, "title", m.inline.title)}
                       </span>
-                    ) : (
-                      !stock[row.id] &&
-                      row.manageStock && (
-                        <span className="block text-label text-ink-secondary">
-                          {m.table.managedStock}
-                        </span>
-                      )
-                    )}
-                  </>
-                )}
-              </Td>
-              <Td priority="detail">{label(m.shipping, row.shippingClass)}</Td>
-              <Td priority="detail" className="whitespace-nowrap text-ink-secondary">
-                {trash && row.deletedAt
-                  ? m.views.deletedAt(
-                      new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
-                        new Date(row.deletedAt),
-                      ),
-                    )
-                  : new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
-                      new Date(row.updatedAt),
-                    )}
-              </Td>
-              <Td stack="actions" data-cell="actions">
-                {canWrite && (
-                  <div className="flex justify-end gap-1 group-data-[stacked]/table:@max-2xl/table:justify-start">
-                    {!trash && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        disabled={pending}
-                        onClick={() => duplicate(row)}
-                        aria-label={m.lifecycle.duplicateFor(row.title)}
-                        title={m.lifecycle.duplicate}
-                        data-duplicate={row.id}
+                      {/* o singură linie: ce nu încape se taie cu «…», iar textul întreg e în title */}
+                      <span
+                        data-product-subtitle
+                        title={subtitle}
+                        className="block truncate text-label text-ink-secondary"
                       >
-                        <Copy aria-hidden="true" className="size-4" />
-                      </Button>
-                    )}
-                    {trash && (
-                      <>
+                        {subtitle}
+                      </span>
+                    </div>
+                  )}
+                </RowHeader>
+                <Td priority="secondary" className="text-ink-secondary" data-cell="sku">
+                  {/* o linie, fără rupere în mijlocul codului; un SKU lung (peste 24 de caractere) se taie cu «…» și are textul întreg în title */}
+                  <span
+                    data-sku-text
+                    {...(row.sku && row.sku.length > SKU_TITLE_FROM && { title: row.sku })}
+                    className="block max-w-44 truncate whitespace-nowrap"
+                  >
+                    {row.sku ?? "—"}
+                  </span>
+                </Td>
+                <Td numeric className="whitespace-nowrap" data-cell="price">
+                  {isEditing(row, "price") ? (
+                    cellEditor(row, "price")
+                  ) : (
+                    <>
+                      {/* «10,00 RON / kg» e o singură valoare: același buton de editare, cu eticheta unității lipită de preț */}
+                      {(() => {
+                        const value = (
+                          <>
+                            {priceText(row)}
+                            {priceView(row) && (
+                              <span className="whitespace-nowrap text-ink-secondary" data-price-per>
+                                / {priceView(row)!.per}
+                              </span>
+                            )}
+                          </>
+                        );
+                        return (
+                          <span className="inline-flex items-center gap-1">
+                            {!trash && canWrite && row.singleVariantId
+                              ? editValue(row, "price", m.inline.price, value)
+                              : value}
+                          </span>
+                        );
+                      })()}
+                      {row.priceMin === row.priceMax && priceView(row)?.perUnit && (
+                        <span className="block text-label text-ink-secondary" data-price-unit>
+                          {priceView(row)!.perUnit}
+                        </span>
+                      )}
+                      {row.priceMin === row.priceMax && priceView(row)?.stepPrice && (
+                        <span className="block text-label text-ink-secondary" data-price-step>
+                          {priceView(row)!.stepPrice}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </Td>
+                <Td data-cell="status">
+                  {isEditing(row, "status")
+                    ? cellEditor(row, "status")
+                    : (() => {
+                        const pill = (
+                          <Badge
+                            variant={STATUS_VARIANT[row.status] ?? "neutral"}
+                            dot
+                            data-status-pill
+                            className="whitespace-nowrap"
+                          >
+                            {label(m.statuses, row.status)}
+                          </Badge>
+                        );
+                        return !trash && canWrite
+                          ? editValue(row, "status", m.inline.status, pill)
+                          : pill;
+                      })()}
+                </Td>
+                <Td priority="secondary" data-cell="stock" className="max-w-44">
+                  {isEditing(row, "stockStatus") ? (
+                    cellEditor(row, "stockStatus")
+                  ) : (
+                    <>
+                      {/* linia 1: pastila și creionul, fără rupere; linia 2: textul (Digital, Negestionat, Disponibil …) */}
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        {!trash && canWrite && !row.manageStock
+                          ? editValue(row, "stockStatus", m.inline.stock, stockPill)
+                          : stockPill}
+                      </span>
+                      {stockText && (
+                        <span
+                          data-stock-text
+                          title={stockText}
+                          className="block truncate text-label text-ink-secondary"
+                        >
+                          {stockText}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </Td>
+                <Td priority="detail">{label(m.shipping, row.shippingClass)}</Td>
+                <Td priority="detail" className="whitespace-nowrap text-ink-secondary">
+                  {trash && row.deletedAt
+                    ? m.views.deletedAt(
+                        new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
+                          new Date(row.deletedAt),
+                        ),
+                      )
+                    : new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
+                        new Date(row.updatedAt),
+                      )}
+                </Td>
+                <Td stack="end" data-cell="actions">
+                  {canWrite && (
+                    <div className="flex justify-end gap-1 group-data-[stacked]/table:@max-2xl/table:justify-start">
+                      {!trash && (
                         <Button
                           variant="outline"
-                          size="sm"
-                          disabled={pending}
-                          onClick={() => setLifecycle({ operation: "restore", ids: [row.id] })}
-                          aria-label={`${m.lifecycle.actions.restore}: ${row.title}`}
-                          data-restore={row.id}
-                        >
-                          <RotateCcw aria-hidden="true" className="size-4" />
-                          {m.lifecycle.actions.restore}
-                        </Button>
-                        <Button
-                          variant="destructive"
                           size="icon"
                           disabled={pending}
-                          onClick={() => setPurging({ id: row.id, title: row.title })}
-                          aria-label={`${m.lifecycle.actions.purge} ${row.title}`}
-                          title={m.lifecycle.actions.purge}
-                          data-purge={row.id}
+                          onClick={() => duplicate(row)}
+                          aria-label={m.lifecycle.duplicateFor(row.title)}
+                          title={m.lifecycle.duplicate}
+                          data-duplicate={row.id}
                         >
-                          <Trash2 aria-hidden="true" className="size-4" />
+                          <Copy aria-hidden="true" className="size-4" />
                         </Button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </Td>
-            </Tr>
-          ))}
+                      )}
+                      {trash && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pending}
+                            onClick={() => setLifecycle({ operation: "restore", ids: [row.id] })}
+                            aria-label={`${m.lifecycle.actions.restore}: ${row.title}`}
+                            data-restore={row.id}
+                          >
+                            <RotateCcw aria-hidden="true" className="size-4" />
+                            {m.lifecycle.actions.restore}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            disabled={pending}
+                            onClick={() => setPurging({ id: row.id, title: row.title })}
+                            aria-label={`${m.lifecycle.actions.purge} ${row.title}`}
+                            title={m.lifecycle.actions.purge}
+                            data-purge={row.id}
+                          >
+                            <Trash2 aria-hidden="true" className="size-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </Td>
+              </Tr>
+            );
+          })}
         </TBody>
       </Table>
 

@@ -373,6 +373,23 @@ describe("Table", () => {
       expect(tableStackClass("inline")).toBe("");
     });
 
+    it("«end»: celula rămâne pe linia ei și se împinge la dreapta cardului (acțiunea rândului lângă valori), fără linie proprie", () => {
+      const out = html(
+        h(
+          Table,
+          { stacked: true },
+          h(TBody, null, h(Tr, null, h(Td, null, "preț"), h(Td, { stack: "end" }, "duplică"))),
+        ),
+      );
+      const end = /<td[^>]*>duplică/.exec(out)?.[0] ?? "";
+      expect(end).toContain("@max-2xl/table:ml-auto");
+      expect(end).not.toContain("basis-full");
+      expect(tableStackClass("end")).toContain("ml-auto");
+      // «actions» rămâne linie întreagă (Stoc), «inline» nu se schimbă
+      expect(tableStackClass("actions")).toContain("basis-full");
+      expect(tableStackClass("inline")).toBe("");
+    });
+
     it("coloanele ne-principale rămân ascunse și în card", () => {
       const out = card();
       expect(out).toMatch(/<td[^>]*hidden @tier-4[^>]*>detaliu/);

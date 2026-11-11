@@ -6,8 +6,12 @@ import {
   promoteE2eUser,
   removeE2eCatalogRefs,
   removeE2eProducts,
+  removeE2eStock,
+  removeE2eStockShared,
   seedE2eCatalogRefs,
   seedE2eProducts,
+  seedE2eStock,
+  setE2eStockSnapshot,
   trashE2eProducts,
 } from "../packages/core/test/e2e-support";
 import { uniqueClientIp } from "./support/client-ip";
@@ -60,6 +64,14 @@ const TRASHED = [28, 29, 30];
 let account: Account;
 let titles: string[] = [];
 
+// produse gestionate, negestionate și digitale, într-o listă separată (căutare proprie): celula Stoc și rândurile lor
+const stockTag = randomBytes(3).toString("hex");
+const searchStock = `E2E ${stockTag}`;
+const LIST_STOCK = `/admin/produse?q=${encodeURIComponent(searchStock)}&sort=title_asc`;
+/** SKU-ul complet al produsului `n` după `lengthenE2eSkus` (primele 3 produse). */
+const skuOf = (n: number) =>
+  `E2E-${tag.toUpperCase()}-${String(n).padStart(2, "0")}-RAFT-ACCESORIU-LUNG`;
+
 const slugOf = (n: number) => `e2e-${tag}-${String(n).padStart(2, "0")}`;
 
 test.beforeAll(async ({ request, baseURL }) => {
@@ -71,15 +83,70 @@ test.beforeAll(async ({ request, baseURL }) => {
   await linkE2eProductsToCatalogRefs([1, 2, 3].map(slugOf), tag);
   // SKU-uri lungi pe primele 3 produse: coloana SKU se lărgește și ar strânge coloana Produs fără o lățime proprie
   await lengthenE2eSkus([1, 2, 3].map(slugOf));
+  await seedE2eStock(
+    stockTag,
+    [
+      {
+        title: `Liner ${searchStock}`,
+        unit: { symbol: "mp", decimals: 2 },
+        step: "41,25",
+        variants: [{ sku: "L", physical: "17,5" }],
+      },
+      {
+        title: `Bisulfat ${searchStock}`,
+        unit: { symbol: "kg", decimals: 0 },
+        step: "25",
+        variants: [{ sku: "K", physical: "80" }],
+      },
+      {
+        title: `Cartuș ${searchStock}`,
+        manageStock: false,
+        stockStatus: "outofstock",
+        variants: [{ sku: "R", physical: null }],
+      },
+      {
+        title: `Ghid ${searchStock}`,
+        type: "digital",
+        manageStock: false,
+        variants: [{ sku: "G", physical: null }],
+      },
+    ],
+    { asOfHoursAgo: 3 },
+  );
+  await setE2eStockSnapshot(3);
 });
 
 test.afterAll(async () => {
   await removeE2eProducts();
   await removeE2eCatalogRefs();
+  await removeE2eStock({ tag: stockTag });
+  await removeE2eStockShared();
 });
 
 const css = (locator: Locator, property: string) =>
   locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
+
+/**
+ * Butoanele principale vizibile ale paginii (fundal `--action`): culoarea se citește dintr-un element-sondă cu clasa `bg-action`, în
+ * suprafața adminului. Întoarce numele lor (text sau aria-label).
+ */
+async function primaryControls(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.className = "bg-action";
+    (document.querySelector('[data-surface="admin"]') ?? document.body).append(probe);
+    const primary = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const names: string[] = [];
+    for (const el of document.querySelectorAll<HTMLElement>('button, a, [role="button"]')) {
+      const box = el.getBoundingClientRect();
+      if (box.width === 0 || box.height === 0) continue;
+      if (getComputedStyle(el).backgroundColor !== primary) continue;
+      names.push((el.getAttribute("aria-label") ?? el.textContent ?? "").trim());
+    }
+    return names;
+  });
+}
 
 /** Nici regiunea tabelului, nici pagina nu derulează pe orizontală (scrollWidth ≤ clientWidth). */
 async function expectNoHorizontalScroll(page: Page, table: Locator) {
@@ -364,8 +431,204 @@ test.describe("lista de produse, pe componentele din docs/17", () => {
     await expect(page.locator("[data-bulk-bar]")).toHaveCount(0);
   });
 
+  test("un singur buton principal pe pagina Produse, în toate stările (listă, selecție, filtre, coș); Panou și Stoc au cel mult unul", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, account, LIST);
+    // lista simplă
+    expect(await primaryControls(page), "lista").toEqual(["Produs nou"]);
+    // cu rânduri bifate (banda de acțiuni în masă are propriul «Aplică…», dar nu mai e un al doilea buton principal)
+    await page.getByRole("checkbox", { name: `Selectează ${titles[0]}` }).check();
+    await expect(page.locator("[data-bulk-bar]")).toBeVisible();
+    expect(await primaryControls(page), "cu selecție").toEqual(["Produs nou"]);
+    // cu filtre active și în coșul de gunoi
+    await page.goto(`${LIST}&status=active`);
+    expect(await primaryControls(page), "cu filtre").toEqual(["Produs nou"]);
+    await page.goto(`/admin/produse?view=deleted&q=${encodeURIComponent(search)}`);
+    expect(await primaryControls(page), "coș").toEqual(["Produs nou"]);
+    // «Caută» e buton secundar: fundal alb și bordură
+    await page.goto(LIST);
+    const search1 = page.getByRole("button", { name: "Caută", exact: true });
+    expect(await css(search1, "border-top-width")).not.toBe("0px");
+
+    // celelalte ecrane migrate: Panou și Stoc au cel mult un buton principal
+    for (const url of ["/admin", "/admin/produse/stoc"]) {
+      await page.goto(url);
+      await page.waitForLoadState("networkidle");
+      expect(
+        (await primaryControls(page)).length,
+        `butoane principale pe ${url}`,
+      ).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test("creioanele de editare: pe dispozitive cu cursor apar la hover sau la focus pe rând; numele accesibile rămân", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, account, LIST);
+    expect(await page.evaluate(() => matchMedia("(hover: hover)").matches)).toBe(true);
+    const row = rowOf(page, 5);
+    const icons = row.locator("svg[data-edit-icon]");
+    // titlu, preț, stare (produsul e negestionat? nu: stocul se editează doar la produsele negestionate)
+    expect(await icons.count()).toBeGreaterThanOrEqual(3);
+    const opacities = async () =>
+      Promise.all((await icons.all()).map((icon) => css(icon, "opacity")));
+    await page.mouse.move(0, 0);
+    await expect
+      .poll(opacities, { message: "fără hover" })
+      .toEqual(Array(await icons.count()).fill("0"));
+    // hover pe rând: toate creioanele rândului apar
+    await row.hover();
+    await expect
+      .poll(opacities, { message: "hover pe rând" })
+      .toEqual(Array(await icons.count()).fill("1"));
+    // doar rândul cu cursorul: celălalt rând rămâne curat
+    const other = rowOf(page, 6).locator("svg[data-edit-icon]").first();
+    expect(await css(other, "opacity")).toBe("0");
+    // cu tastatura: focus pe un buton al rândului arată creioanele (și cu mouse-ul în altă parte)
+    await page.mouse.move(0, 0);
+    await row.getByRole("button", { name: `Editează prețul pentru ${titles[4]}` }).focus();
+    await expect
+      .poll(opacities, { message: "focus pe rând" })
+      .toEqual(Array(await icons.count()).fill("1"));
+    // numele accesibile și selectorii pe rol rămân valizi chiar și cu creioanele ascunse
+    await page.mouse.move(0, 0);
+    await row.getByRole("button", { name: `Editează starea pentru ${titles[4]}` }).click();
+    await expect(page.getByLabel(`Editează starea pentru ${titles[4]}`)).toBeVisible();
+  });
+
+  test("creioanele de editare: pe ecrane tactile (fără hover) rămân vizibile", async ({
+    browser,
+    baseURL,
+  }) => {
+    const context = await browser.newContext({
+      baseURL: baseURL as string,
+      hasTouch: true,
+      isMobile: true,
+      viewport: { width: 1280, height: 800 },
+    });
+    try {
+      const page = await context.newPage();
+      await login(page, account, LIST);
+      expect(await page.evaluate(() => matchMedia("(hover: hover)").matches)).toBe(false);
+      const icons = rowOf(page, 5).locator("svg[data-edit-icon]");
+      await expect(icons.first()).toBeVisible();
+      for (const icon of await icons.all()) {
+        expect(await css(icon, "opacity")).toBe("1");
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test.describe("celula Stoc și rândurile cu produse gestionate, negestionate și digitale", () => {
+    for (const width of [1440, 1280]) {
+      test(`${width} px: pastila și creionul pe aceeași linie, textul pe a doua; rândurile ≤ 64 px (cele simple ≤ 56 px)`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await login(page, account, LIST_STOCK);
+        const table = tableOf(page);
+        await expectNoHorizontalScroll(page, table);
+        const cases = [
+          { title: `Cartuș ${searchStock}`, text: "Negestionat", pencil: true },
+          { title: `Ghid ${searchStock}`, text: "Digital", pencil: false },
+          { title: `Bisulfat ${searchStock}`, text: /Disponibil 80 kg/, pencil: false },
+        ];
+        for (const item of cases) {
+          const row = page.locator(`[data-product-title="${item.title}"]`);
+          await expect(row).toBeVisible();
+          const cell = row.locator('[data-cell="stock"]');
+          const pill = cell.locator("[data-stock-pill]");
+          const text = cell.locator("[data-stock-text]");
+          await expect(text).toHaveText(item.text);
+          const pillBox = await pill.boundingBox();
+          const textBox = await text.boundingBox();
+          // textul e sub pastilă (a doua linie), pe o singură linie
+          expect(textBox?.y ?? 0, `${item.title}: textul sub pastilă`).toBeGreaterThanOrEqual(
+            (pillBox?.y ?? 0) + (pillBox?.height ?? 0) - 2,
+          );
+          expect(textBox?.height ?? 99, `${item.title}: text pe o linie`).toBeLessThanOrEqual(20);
+          // linia pastilei nu se rupe, iar creionul (dacă există) e pe aceeași linie cu pastila
+          expect(await css(pill.locator("xpath=.."), "white-space")).toBe("nowrap");
+          if (item.pencil) {
+            const icon = await cell.locator("svg[data-edit-icon]").boundingBox();
+            expect(
+              Math.abs(
+                (icon?.y ?? 0) +
+                  (icon?.height ?? 0) / 2 -
+                  ((pillBox?.y ?? 0) + (pillBox?.height ?? 0) / 2),
+              ),
+              `${item.title}: creionul pe linia pastilei`,
+            ).toBeLessThanOrEqual(6);
+          }
+          expect(
+            (await row.boundingBox())?.height ?? 99,
+            `${item.title}: rând`,
+          ).toBeLessThanOrEqual(64);
+        }
+        // prețul pe unitate («/ kg») stă lipit de preț, în interiorul valorii-buton (nu după creionul invizibil)
+        const bisulfat = page.locator(`[data-product-title="Bisulfat ${searchStock}"]`);
+        const priceButton = bisulfat.getByRole("button", { name: /^Editează prețul pentru/ });
+        await expect(priceButton.locator("[data-price-per]")).toHaveText("/ kg");
+        // rândurile simple (un titlu, o variantă): cel mult 56 px
+        await page.goto(LIST);
+        const plain = (await rowOf(page, 5).boundingBox())?.height ?? 99;
+        expect(plain).toBeLessThanOrEqual(56);
+      });
+    }
+  });
+
+  test("SKU și subtitlu pe o singură linie, cu ellipsis și textul întreg în title; titlul rămâne pe un rând (1440 și 1280 px)", async ({
+    page,
+  }) => {
+    for (const width of [1440, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      if (width === 1440) await login(page, account, LIST);
+      else await page.reload();
+      for (const n of [1, 2, 3]) {
+        const row = rowOf(page, n);
+        const sku = row.locator('[data-cell="sku"] [data-sku-text]');
+        const fullSku = `${skuOf(n)}`;
+        // SKU lung (peste 24 de caractere): o linie, nowrap, ellipsis, textul întreg în title
+        expect(fullSku.length).toBeGreaterThan(24);
+        await expect(sku).toHaveAttribute("title", fullSku);
+        expect(await css(sku, "white-space")).toBe("nowrap");
+        expect(await css(sku, "text-overflow")).toBe("ellipsis");
+        expect((await sku.boundingBox())?.height ?? 99, `SKU ${n} pe o linie`).toBeLessThanOrEqual(
+          24,
+        );
+
+        // subtitlul «Brand · Categorie · 1 variantă»: o linie, ellipsis, textul întreg în title
+        const subtitle = row.locator("[data-product-subtitle]");
+        await expect(subtitle).toHaveAttribute(
+          "title",
+          /E2E Brand .* · E2E Categorie .* · 1 variantă$/,
+        );
+        expect(await css(subtitle, "white-space")).toBe("nowrap");
+        expect(await css(subtitle, "text-overflow")).toBe("ellipsis");
+        expect((await subtitle.boundingBox())?.height ?? 99, `subtitlu ${n}`).toBeLessThanOrEqual(
+          20,
+        );
+
+        // titlul pe un rând; rândul cu subtitlu lung rămâne compact
+        const title = row.getByRole("link", { name: `Deschide produsul ${titles[n - 1]}` });
+        expect((await title.boundingBox())?.height ?? 99, `titlul ${n}`).toBeLessThanOrEqual(24);
+        expect((await row.boundingBox())?.height ?? 99, `rândul ${n}`).toBeLessThanOrEqual(64);
+      }
+      // un SKU scurt nu primește title (nu e tăiat) și un subtitlu scurt rămâne întreg
+      const short = rowOf(page, 5);
+      await expect(short.locator('[data-cell="sku"] [data-sku-text]')).not.toHaveAttribute(
+        "title",
+        /.+/,
+      );
+      await expect(short.locator("[data-product-subtitle]")).toHaveText("1 variantă");
+    }
+  });
   test.describe("telefon (390 px): tabelul devine listă de carduri", () => {
-    test("fiecare rând e un card: numele pe toată lățimea, prețul și starea pe o linie, apoi acțiunile (ținte de 44 px)", async ({
+    test("fiecare rând e un card de cel mult 120 px: caseta, imaginea și titlul; apoi prețul, starea și «Duplică»; valorile sunt butoanele de editare (ținte de 44 px)", async ({
       page,
     }) => {
       await page.setViewportSize({ width: 390, height: 844 });
@@ -381,7 +644,8 @@ test.describe("lista de produse, pe componentele din docs/17", () => {
       const row = rowOf(page, 5);
       await row.scrollIntoViewIfNeeded();
       const box = await row.boundingBox();
-      expect(box?.height ?? 999, "înălțimea cardului").toBeLessThanOrEqual(160);
+      expect(box?.height ?? 999, "înălțimea cardului").toBeLessThanOrEqual(120);
+      expect(box?.height ?? 0, "înălțimea cardului").toBeGreaterThanOrEqual(90);
       // prima linie: caseta, imaginea și numele (care umple restul liniei, cel puțin 12rem, nu o fâșie de câteva litere)
       const check = await row.locator("td").first().boundingBox();
       const thumb = await row.locator("[data-product-thumb]").boundingBox();
@@ -397,34 +661,105 @@ test.describe("lista de produse, pe componentele din docs/17", () => {
         40,
       );
 
-      // prețul și starea pe aceeași linie, prețul primul, aliniat la stânga
-      const price = await row.locator('[data-cell="price"]').boundingBox();
-      const status = await row.locator('[data-cell="status"]').boundingBox();
+      // linia 2: valorile sunt ele însele butoane de editare (fără creion separat), iar «Duplică» e în dreapta, pe aceeași linie
+      const priceCell = row.locator('[data-cell="price"]');
+      const statusCell = row.locator('[data-cell="status"]');
+      const priceEdit = row.getByRole("button", { name: `Editează prețul pentru ${titles[4]}` });
+      const statusEdit = row.getByRole("button", { name: `Editează starea pentru ${titles[4]}` });
+      await expect(priceEdit).toContainText("105,00");
+      await expect(statusEdit).toContainText("Ciornă");
+      for (const edit of [priceEdit, statusEdit]) {
+        expect((await edit.boundingBox())?.height ?? 0, "țintă de 44 px").toBeGreaterThanOrEqual(
+          44,
+        );
+        // creionul din interiorul valorii nu ocupă loc propriu pe telefon
+        await expect(edit.locator("svg[data-edit-icon]")).toBeHidden();
+      }
+      const price = await priceCell.boundingBox();
+      const status = await statusCell.boundingBox();
       expect(Math.abs((price?.y ?? 0) - (status?.y ?? 99))).toBeLessThanOrEqual(12);
       expect(price?.x ?? 99).toBeLessThan(status?.x ?? 0);
       expect(price?.x ?? 99, "aliniat la stânga").toBeLessThanOrEqual((box?.x ?? 0) + 24);
-
-      // acțiunile pe ultima linie: nume accesibil și țintă de cel puțin 44 px
-      const actions = await row.locator('[data-cell="actions"]').boundingBox();
-      expect(actions?.width ?? 0, "rândul de acțiuni pe toată lățimea").toBeGreaterThanOrEqual(
-        (box?.width ?? 0) - 24,
-      );
-      expect(actions?.y ?? 0).toBeGreaterThan((price?.y ?? 0) + (price?.height ?? 0) - 4);
       const duplicate = row.getByRole("button", { name: `Duplică produsul ${titles[4]}` });
       await expect(duplicate).toBeVisible();
-      expect((await duplicate.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-      expect((await duplicate.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(44);
-      for (const edit of ["titlul", "starea", "prețul"]) {
-        const button = row.getByRole("button", { name: `Editează ${edit} pentru ${titles[4]}` });
-        await expect(button).toBeVisible();
-        expect((await button.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-      }
+      const dup = await duplicate.boundingBox();
+      expect(dup?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(dup?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(
+        Math.abs(
+          (dup?.y ?? 0) + (dup?.height ?? 0) / 2 - ((price?.y ?? 0) + (price?.height ?? 0) / 2),
+        ),
+        "Duplică pe linia prețului",
+      ).toBeLessThanOrEqual(24);
+      expect(
+        (dup?.x ?? 0) + (dup?.width ?? 0),
+        "Duplică în dreapta cardului",
+      ).toBeGreaterThanOrEqual((box?.x ?? 0) + (box?.width ?? 0) - 24);
+      expect(dup?.x ?? 0, "Duplică după stare").toBeGreaterThan(
+        (status?.x ?? 0) + (status?.width ?? 0),
+      );
+      // linia 1: titlul cu «1 variantă» dedesubt; creionul titlului rămâne (țintă de 44 px)
+      const titleBox = await row
+        .getByRole("link", { name: `Deschide produsul ${titles[4]}` })
+        .boundingBox();
+      const subBox = await row.locator("[data-product-subtitle]").boundingBox();
+      expect(subBox?.y ?? 0, "subtitlul sub titlu").toBeGreaterThan(
+        (titleBox?.y ?? 0) + (titleBox?.height ?? 0) - 4,
+      );
+      const titleEdit = row.getByRole("button", { name: `Editează titlul pentru ${titles[4]}` });
+      await expect(titleEdit).toBeVisible();
+      expect((await titleEdit.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
       // paginarea de pe telefon: «Pagina 1 din 2», butoane de 44 px
       const nav = page.getByRole("navigation", { name: "Paginare" });
       await expect(nav.getByText("Pagina 1 din 2")).toBeVisible();
       expect(
         (await nav.getByRole("link", { name: "Pagina următoare" }).boundingBox())?.height ?? 0,
       ).toBeGreaterThanOrEqual(44);
+    });
+
+    test("filtrele din spatele butonului «Filtre (N)»: căutarea și «Caută» rămân vizibile, etichetele active sub ele", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await login(page, account, `${LIST}&status=active&shipping=standard`);
+      const toggle = page.getByRole("button", { name: "Filtre (2)" });
+      await expect(toggle).toBeVisible();
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      const control = page.locator(`#${(await toggle.getAttribute("aria-controls")) as string}`);
+      // închis: selectoarele nu se văd, dar căutarea și «Caută» da
+      await expect(page.getByLabel("Categorie", { exact: true })).toBeHidden();
+      await expect(control).toBeHidden();
+      const input = page.getByLabel("Caută produse");
+      const submit = page.getByRole("button", { name: "Caută", exact: true });
+      await expect(input).toBeVisible();
+      await expect(submit).toBeVisible();
+      // etichetele active rămân sub căutare și «Caută»; căutarea e și ea o etichetă, dar nu intră în numărul din buton
+      const chips = page.getByRole("list", { name: "Filtre active" });
+      await expect(chips).toBeVisible();
+      const [inputBox, submitBox, chipsBox, toggleBox] = await Promise.all(
+        [input, submit, chips, toggle].map((c) => c.boundingBox()),
+      );
+      expect(chipsBox?.y ?? 0, "etichetele sub «Caută»").toBeGreaterThan(
+        (submitBox?.y ?? 0) + (submitBox?.height ?? 0) - 2,
+      );
+      expect(submitBox?.y ?? 0, "«Caută» sub câmp").toBeGreaterThan(
+        (inputBox?.y ?? 0) + (inputBox?.height ?? 0) - 2,
+      );
+      expect(toggleBox?.height ?? 0, "țintă de 44 px").toBeGreaterThanOrEqual(44);
+      // deschis: selectoarele apar, aria-expanded devine true; închis din nou: dispar
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+      await expect(page.getByLabel("Categorie", { exact: true })).toBeVisible();
+      await expect(page.getByLabel("Clasă de livrare", { exact: true })).toBeVisible();
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await expect(page.getByLabel("Categorie", { exact: true })).toBeHidden();
+      // fără filtre din panou: «Filtre (0)»; la desktop butonul nu există, iar selectoarele sunt mereu vizibile
+      await page.goto(LIST);
+      await expect(page.getByRole("button", { name: "Filtre (0)" })).toBeVisible();
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await expect(page.getByRole("button", { name: /^Filtre \(/ })).toBeHidden();
+      await expect(page.getByLabel("Categorie", { exact: true })).toBeVisible();
     });
 
     test("coșul de gunoi pe telefon: carduri cu «Restaurează» și «Șterge definitiv», fără derulare orizontală", async ({

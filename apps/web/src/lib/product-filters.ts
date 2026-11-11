@@ -70,3 +70,11 @@ export function activeProductFilters(
     };
   });
 }
+
+/**
+ * Câte filtre sunt în spatele butonului «Filtre (N)» de pe telefon: categoria, brandul, starea, clasa de livrare și stocul.
+ * Căutarea stă mereu pe ecran (în afara panoului), deci nu se numără.
+ */
+export function panelFilterCount(filters: readonly ActiveProductFilter[]): number {
+  return filters.filter((filter) => filter.key !== "q").length;
+}

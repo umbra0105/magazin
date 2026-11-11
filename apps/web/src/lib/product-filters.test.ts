@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseProductListQuery, type ProductListQuery } from "@ecom/core";
-import { activeProductFilters } from "./product-filters";
+import { activeProductFilters, panelFilterCount } from "./product-filters";
 
 /** Etichetele eliminabile de sub bara de filtre a listei de produse (docs/17 §4.1): doar filtrele active, fiecare cu legătura care îl scoate. */
 
@@ -76,5 +76,35 @@ describe("activeProductFilters", () => {
     const filters = activeProductFilters({ ...base, categoryId: "sters", brandId: "b9" }, lookups);
     expect(filters.map((f) => f.label)).toEqual(["Categorie: sters", "Brand: b9"]);
     expect(filters[0]?.href).toBe("/admin/produse?brand=b9");
+  });
+});
+
+describe("panelFilterCount", () => {
+  it("numără filtrele din spatele butonului «Filtre» (categorie, brand, stare, livrare, stoc); căutarea e mereu vizibilă și nu se numără", () => {
+    expect(panelFilterCount(activeProductFilters(base, lookups))).toBe(0);
+    expect(panelFilterCount(activeProductFilters({ ...base, q: "liner" }, lookups))).toBe(0);
+    expect(
+      panelFilterCount(
+        activeProductFilters(
+          { ...base, q: "liner", categoryId: "c1", brandId: "b1", status: "active" },
+          lookups,
+        ),
+      ),
+    ).toBe(3);
+    expect(
+      panelFilterCount(
+        activeProductFilters(
+          {
+            ...base,
+            categoryId: "c1",
+            brandId: "b1",
+            status: "active",
+            shippingClass: "pallet",
+            stock: "instock",
+          },
+          lookups,
+        ),
+      ),
+    ).toBe(5);
   });
 });

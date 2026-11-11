@@ -3,6 +3,9 @@
 /* Tokenii adminului (singurul loc cu valori hex ale interfeței), activi doar sub [data-surface="admin"]. */
 @import "../../../../packages/ui/src/styles/admin-tokens.css";
 
+/* dispozitive cu cursor (nu ecrane tactile): pentru elemente care apar doar la hover sau focus (creioanele de editare din liste) */
+@custom-variant hover-device (@media (hover: hover));
+
 /* Clasele Tailwind folosite în componentele din @ecom/ui. */
 @source "../../../../packages/ui/src";
 

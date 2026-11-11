@@ -25,13 +25,14 @@ import {
   tabClass,
 } from "@ecom/ui";
 import { ProductExportAction } from "@/components/admin/products/product-export-action";
+import { ProductFilterBar } from "@/components/admin/products/product-filter-bar";
 import { ProductSelectionProvider } from "@/components/admin/products/product-selection";
 import { ProductTable, type ProductTableRow } from "@/components/admin/products/product-table";
 import { RowsPerPage } from "@/components/admin/products/rows-per-page";
 import { requireAdmin } from "@/lib/admin-page";
 import { getBrandService, getCategoryService, getProductListService } from "@/lib/catalog";
 import { getStockOverviewService } from "@/lib/inventory";
-import { activeProductFilters } from "@/lib/product-filters";
+import { activeProductFilters, panelFilterCount } from "@/lib/product-filters";
 import { productsHref } from "@/lib/product-url";
 import { getSettings } from "@/lib/services";
 import { summaryView, type SummaryView } from "@/lib/stock-view";
@@ -223,28 +224,34 @@ export default async function ProductsPage({
           {trash && <input type="hidden" name="view" value="deleted" />}
           {/* rândurile pe pagină alese rămân la căutare; 25 (implicit) nu se scrie în adresă */}
           {query.pageSize !== 25 && <input type="hidden" name="size" value={query.pageSize} />}
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex min-w-56 flex-1 flex-col gap-1.5">
-              <Label htmlFor="product-q">{m.search.label}</Label>
-              <Input
-                id="product-q"
-                name="q"
-                type="search"
-                defaultValue={query.q}
-                placeholder={m.search.placeholder}
-                maxLength={100}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit">{m.search.submit}</Button>
-              {filtered && (
+          <ProductFilterBar
+            count={panelFilterCount(chips)}
+            search={
+              <>
+                <Label htmlFor="product-q">{m.search.label}</Label>
+                <Input
+                  id="product-q"
+                  name="q"
+                  type="search"
+                  defaultValue={query.q}
+                  placeholder={m.search.placeholder}
+                  maxLength={100}
+                />
+              </>
+            }
+            submit={
+              <Button type="submit" variant="outline">
+                {m.search.submit}
+              </Button>
+            }
+            {...(filtered && {
+              reset: (
                 <Link href={viewHref} className={buttonVariants({ variant: "outline" })}>
                   {m.search.reset}
                 </Link>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
+              ),
+            })}
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="f-category">{m.filters.category}</Label>
               <Select id="f-category" name="category" defaultValue={query.categoryId ?? ""}>
@@ -310,7 +317,7 @@ export default async function ProductsPage({
                 ))}
               </Select>
             </div>
-          </div>
+          </ProductFilterBar>
         </form>
 
         {chips.length > 0 && (

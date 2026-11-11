@@ -1410,6 +1410,7 @@ export const ro = {
         perPage: "Pe pagină",
         all: "Toate",
         clearAll: "Șterge filtrele",
+        toggle: (n: number) => `Filtre (${n})`,
       },
       statuses: { draft: "Ciornă", active: "Activ", archived: "Arhivat" },
       shipping: { standard: "Standard", oversized: "Supradimensionat", pallet: "Paletizat" },
