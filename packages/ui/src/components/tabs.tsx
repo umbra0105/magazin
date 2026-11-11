@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "../lib/cn";
+import { TabsFade, scrollEdges } from "./tabs-fade";
 import { TAB_LIST_CLASS, tabClass } from "./tab-styles";
 
 export interface TabItem {
@@ -45,6 +46,9 @@ export function Tabs({
   const initial = tabs.some((t) => t.id === defaultTab) ? (defaultTab as string) : tabs[0]?.id;
   const [active, setActive] = useState<string | undefined>(initial);
   const refs = useRef(new Map<string, HTMLButtonElement>());
+  const listRef = useRef<HTMLDivElement>(null);
+  // lista derulabilă: pe ce margini mai sunt taburi ascunse (estompare discretă; doar vizual)
+  const [edges, setEdges] = useState({ start: false, end: false });
 
   // lista derulabilă: tabul activ se aduce în câmpul vizual (doar pe orizontală: pagina nu se mișcă)
   useEffect(() => {
@@ -57,6 +61,25 @@ export function Tabs({
       list.scrollLeft = tab.offsetLeft + tab.offsetWidth - list.clientWidth;
     }
   }, [active, scrollable]);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!scrollable || !list) return;
+    const update = () => {
+      const next = scrollEdges(list);
+      setEdges((current) =>
+        current.start === next.start && current.end === next.end ? current : next,
+      );
+    };
+    update();
+    list.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(list);
+    return () => {
+      list.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [scrollable, tabs.length]);
 
   const select = (id: string, focus = false) => {
     setActive(id);
@@ -79,8 +102,9 @@ export function Tabs({
 
   return (
     <div className={className}>
-      <div className={scrollable ? "border-b border-line-subtle" : undefined}>
+      <div className={scrollable ? "relative border-b border-line-subtle" : undefined}>
         <div
+          ref={listRef}
           role="tablist"
           aria-label={label}
           className={
@@ -112,6 +136,8 @@ export function Tabs({
             );
           })}
         </div>
+        {scrollable && edges.start && <TabsFade edge="start" />}
+        {scrollable && edges.end && <TabsFade edge="end" />}
       </div>
       {tabs.map((tab) => (
         <div

@@ -382,12 +382,12 @@ function Toolbar({ editor }: { editor: Editor }) {
         aria-label={t.toolbarLabel}
         onFocus={onFocus}
         onKeyDown={onKeyDown}
-        className="flex flex-wrap items-center gap-1 p-1.5"
+        className="flex flex-nowrap items-center gap-1 overflow-x-auto p-1 max-sm:[scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:p-1.5"
       >
         <Select
           aria-label={t.format.label}
           data-tool
-          className="h-(--control-h-compact) w-auto min-w-32 text-body"
+          className="h-(--control-h-compact) w-auto min-w-32 shrink-0 text-body"
           value={state.format}
           onChange={(event) => setFormat(event.target.value as Format)}
         >
@@ -396,7 +396,11 @@ function Toolbar({ editor }: { editor: Editor }) {
           <option value="h3">{t.format.h3}</option>
           <option value="h4">{t.format.h4}</option>
         </Select>
-        <span aria-hidden="true" data-tool-divider className="mx-1 h-5 w-px bg-line-subtle" />
+        <span
+          aria-hidden="true"
+          data-tool-divider
+          className="mx-1 h-5 w-px shrink-0 bg-line-subtle"
+        />
         <Tool
           label={t.bold}
           icon={Bold}
@@ -433,7 +437,11 @@ function Toolbar({ editor }: { editor: Editor }) {
           pressed={state.subscript}
           onClick={() => chain().toggleMark("subscript").run()}
         />
-        <span aria-hidden="true" data-tool-divider className="mx-1 h-5 w-px bg-line-subtle" />
+        <span
+          aria-hidden="true"
+          data-tool-divider
+          className="mx-1 h-5 w-px shrink-0 bg-line-subtle"
+        />
         <Tool
           label={t.bulletList}
           icon={List}
@@ -453,7 +461,11 @@ function Toolbar({ editor }: { editor: Editor }) {
           onClick={() => chain().toggleBlockquote().run()}
         />
         <Tool label={t.rule} icon={Minus} onClick={() => chain().setHorizontalRule().run()} />
-        <span aria-hidden="true" data-tool-divider className="mx-1 h-5 w-px bg-line-subtle" />
+        <span
+          aria-hidden="true"
+          data-tool-divider
+          className="mx-1 h-5 w-px shrink-0 bg-line-subtle"
+        />
         <Tool label={t.link} icon={LinkIcon} pressed={state.link} onClick={openLink} />
         <Tool
           label={t.unlink}
@@ -470,7 +482,11 @@ function Toolbar({ editor }: { editor: Editor }) {
           }}
         />
         <Tool label={t.image} icon={ImageIcon} onClick={() => setPickerOpen(true)} />
-        <span aria-hidden="true" data-tool-divider className="mx-1 h-5 w-px bg-line-subtle" />
+        <span
+          aria-hidden="true"
+          data-tool-divider
+          className="mx-1 h-5 w-px shrink-0 bg-line-subtle"
+        />
         <Tool
           label={t.undo}
           icon={Undo2}
@@ -489,7 +505,11 @@ function Toolbar({ editor }: { editor: Editor }) {
           onClick={() => chain().unsetAllMarks().clearNodes().run()}
         />
         {state.inTable ? (
-          <div role="group" aria-label={t.tableTools.label} className="flex items-center gap-1">
+          <div
+            role="group"
+            aria-label={t.tableTools.label}
+            className="flex shrink-0 items-center gap-1"
+          >
             <Button
               type="button"
               variant="outline"

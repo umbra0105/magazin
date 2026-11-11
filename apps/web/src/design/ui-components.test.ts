@@ -19,6 +19,7 @@ import {
   RowHeader,
   SaveBar,
   Section,
+  TabsFade,
   SegmentedBar,
   Select,
   Skeleton,
@@ -38,6 +39,7 @@ import {
   kpiCardVariants,
   pageWindow,
   removeToast,
+  scrollEdges,
   segmentShares,
   tabClass,
   tablePriorityClass,
@@ -428,6 +430,52 @@ describe("Tabs scrollabile (editarea produsului: 13 taburi, un singur rând)", (
   });
 });
 
+describe("Taburi derulabile: indicatorul «mai sunt taburi» (estompare pe margine)", () => {
+  const list = (scrollLeft: number, clientWidth = 300, scrollWidth = 900) => ({
+    scrollLeft,
+    clientWidth,
+    scrollWidth,
+  });
+
+  it("fără conținut ascuns nu apare niciun indicator", () => {
+    expect(scrollEdges(list(0, 900, 900))).toEqual({ start: false, end: false });
+    expect(scrollEdges(list(0, 900, 900.4))).toEqual({ start: false, end: false });
+  });
+
+  it("la început e ascuns conținutul din dreapta, în mijloc ambele margini, la capăt cel din stânga", () => {
+    expect(scrollEdges(list(0))).toEqual({ start: false, end: true });
+    expect(scrollEdges(list(200))).toEqual({ start: true, end: true });
+    expect(scrollEdges(list(600))).toEqual({ start: true, end: false });
+  });
+
+  it("toleranță de 1 px (zecimale la derulare și la lățime): capătul atins e capăt", () => {
+    expect(scrollEdges(list(0.5))).toEqual({ start: false, end: true });
+    expect(scrollEdges(list(1.5))).toEqual({ start: true, end: true });
+    expect(scrollEdges(list(599.5))).toEqual({ start: true, end: false });
+    expect(scrollEdges(list(598.5))).toEqual({ start: true, end: true });
+  });
+
+  const fade = (edge: "start" | "end") => html(h(TabsFade, { edge }));
+
+  it("TabsFade: gradient din tokenul de suprafață spre transparent, pe marginea cerută, ascuns pentru cititoare de ecran și fără captarea mouse-ului", () => {
+    const start = fade("start");
+    const end = fade("end");
+    expect(start).toContain('data-tabs-fade="start"');
+    expect(end).toContain('data-tabs-fade="end"');
+    for (const out of [start, end]) {
+      expect(out).toContain('aria-hidden="true"');
+      expect(out).toContain("pointer-events-none");
+      expect(out).toContain("from-surface-page");
+      expect(out).toContain("to-transparent");
+      expect(out).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+    }
+    expect(start).toContain("left-0");
+    expect(start).toContain("bg-linear-to-r");
+    expect(end).toContain("right-0");
+    expect(end).toContain("bg-linear-to-l");
+  });
+});
+
 describe("SaveBar și Section (pagina de editare, docs/17 §4.2)", () => {
   const labels = { save: "Salvează", saving: "Se salvează…", unsavedMark: "modificări nesalvate" };
   const bar = (props: Partial<Parameters<typeof SaveBar>[0]> = {}) =>
@@ -449,7 +497,12 @@ describe("SaveBar și Section (pagina de editare, docs/17 §4.2)", () => {
     expect(root).toContain("bottom-0");
     expect(root).toContain("bg-surface-page");
     expect(root).toContain("border-t");
-    expect(root).toContain("border-line-subtle");
+    // linia de 1 px de deasupra e mai vizibilă decât liniile dintre secțiuni (conținutul trece pe sub bară)
+    expect(root).toContain("border-line-control");
+    expect(root).not.toContain("border-line-subtle");
+    // fundal opac din token (nu `bg-surface-page/…`), fără umbră
+    expect(root).not.toMatch(/bg-surface-page\//);
+    expect(root).not.toMatch(/(^|[ "])shadow-/);
   });
 
   it("SaveBar secundară (a doua formă a unui tab): nu e lipită jos și are buton secundar, ca tabul să aibă o singură bară lipită și un singur buton principal", () => {
@@ -457,6 +510,8 @@ describe("SaveBar și Section (pagina de editare, docs/17 §4.2)", () => {
     const root = /<div[^>]*data-save-bar[^>]*>/.exec(out)?.[0] ?? "";
     expect(root).not.toContain("sticky");
     expect(root).toContain("border-t");
+    expect(root).toContain("border-line-control");
+    expect(root).toContain("bg-surface-page");
     const button = /<button[^>]*type="submit"[^>]*>/.exec(out)?.[0] ?? "";
     expect(button).toContain("border-line-control");
     expect(button).not.toContain("bg-action");

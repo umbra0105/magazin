@@ -41,7 +41,7 @@ export function SaveBar({
     <div
       data-save-bar
       className={cn(
-        "flex flex-col gap-2 border-t border-line-subtle bg-surface-page py-3",
+        "-mx-1 flex flex-col gap-2 border-t border-line-control bg-surface-page px-1 py-3",
         !secondary && "sticky bottom-0 z-10",
         className,
       )}
