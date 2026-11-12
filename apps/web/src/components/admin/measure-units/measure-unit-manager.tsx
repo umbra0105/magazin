@@ -3,7 +3,22 @@
 import { Pencil, Power } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Badge, Button, Dialog, Input, Label, Select } from "@ecom/ui";
+import {
+  Badge,
+  Button,
+  Dialog,
+  EmptyState,
+  Input,
+  Label,
+  RowHeader,
+  Select,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@ecom/ui";
 import {
   createMeasureUnit,
   updateMeasureUnit,
@@ -68,10 +83,10 @@ export function MeasureUnitManager({
 
   return (
     <div className="flex flex-col gap-4">
-      <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+      <p role="note" className="rounded-lg bg-surface-subtle p-3 text-body">
         {m.defaultNote}
       </p>
-      {canWrite && (
+      {canWrite && rows.length > 0 && (
         <div className="flex justify-end">
           <Button onClick={() => setTarget("new")}>{m.create}</Button>
         </div>
@@ -80,7 +95,7 @@ export function MeasureUnitManager({
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>
@@ -90,86 +105,108 @@ export function MeasureUnitManager({
       </p>
 
       {rows.length === 0 ? (
-        <p className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-          {m.empty}
-        </p>
+        <EmptyState
+          title={m.empty}
+          {...(canWrite && {
+            action: <Button onClick={() => setTarget("new")}>{m.create}</Button>,
+          })}
+        />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border">
-          <table className="w-full min-w-[48rem] text-left text-sm" aria-label={m.listLabel}>
-            <thead className="border-b border-border bg-border/30">
-              <tr>
-                {(
-                  ["name", "code", "symbol", "decimals", "smartbill", "usage", "status"] as const
-                ).map((column) => (
-                  <th key={column} scope="col" className="p-3 font-medium">
-                    {m.columns[column]}
-                  </th>
-                ))}
-                {canWrite && (
-                  <th scope="col" className="p-3 text-right font-medium">
-                    {m.columns.actions}
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  data-unit-row={row.code}
-                  data-active={row.isActive ? "true" : "false"}
-                  className="border-b border-border last:border-0"
+        <Table stacked aria-label={m.listLabel}>
+          <THead>
+            <Tr>
+              <Th>{m.columns.name}</Th>
+              <Th priority="secondary">{m.columns.code}</Th>
+              <Th>{m.columns.symbol}</Th>
+              <Th priority="secondary">{m.columns.decimals}</Th>
+              <Th priority="tertiary">{m.columns.smartbill}</Th>
+              <Th priority="detail">{m.columns.usage}</Th>
+              <Th>{m.columns.status}</Th>
+              {canWrite && <Th numeric>{m.columns.actions}</Th>}
+            </Tr>
+          </THead>
+          <TBody>
+            {rows.map((row) => (
+              <Tr
+                key={row.id}
+                data-unit-row={row.code}
+                data-active={row.isActive ? "true" : "false"}
+              >
+                <RowHeader className="font-medium">{row.name}</RowHeader>
+                <Td
+                  priority="secondary"
+                  className="whitespace-nowrap text-ink-secondary"
+                  data-cell="code"
                 >
-                  <td className="p-3 font-medium">{row.name}</td>
-                  <td className="p-3 text-muted-foreground">{row.code}</td>
-                  <td className="p-3">{row.symbol}</td>
-                  <td className="p-3">{m.decimalsValue(row.decimals)}</td>
-                  <td className="p-3">{row.smartbillName ?? m.noSmartbill}</td>
-                  <td className="p-3">{m.usage(row.productCount, row.variantCount)}</td>
-                  <td className="p-3">
-                    <span className="flex flex-wrap gap-1">
-                      <Badge>{row.isActive ? m.status.active : m.status.inactive}</Badge>
-                      {row.code === DEFAULT_UNIT_CODE && <Badge>{m.status.default}</Badge>}
-                    </span>
-                  </td>
-                  {canWrite && (
-                    <td className="p-3">
-                      <div className="flex justify-end gap-1">
+                  <span data-cell-text title={row.code} className="block max-w-44 truncate">
+                    {row.code}
+                  </span>
+                </Td>
+                <Td className="whitespace-nowrap" data-cell="symbol">
+                  {row.symbol}
+                </Td>
+                <Td priority="secondary" className="whitespace-nowrap" data-cell="decimals">
+                  {m.decimalsValue(row.decimals)}
+                </Td>
+                <Td priority="tertiary" className="whitespace-nowrap" data-cell="smartbill">
+                  <span
+                    data-cell-text
+                    title={row.smartbillName ?? undefined}
+                    className="block max-w-44 truncate"
+                  >
+                    {row.smartbillName ?? m.noSmartbill}
+                  </span>
+                </Td>
+                <Td priority="detail" className="whitespace-nowrap" data-cell="usage">
+                  {m.usage(row.productCount, row.variantCount)}
+                </Td>
+                <Td data-cell="status">
+                  <span className="inline-flex flex-wrap gap-1">
+                    <Badge variant={row.isActive ? "success" : "neutral"} dot data-status-pill>
+                      {row.isActive ? m.status.active : m.status.inactive}
+                    </Badge>
+                    {row.code === DEFAULT_UNIT_CODE && (
+                      <Badge variant="info" data-status-pill>
+                        {m.status.default}
+                      </Badge>
+                    )}
+                  </span>
+                </Td>
+                {canWrite && (
+                  <Td stack="actions" data-cell="actions">
+                    <div className="flex justify-end gap-1 group-data-[stacked]/table:@max-2xl/table:justify-start">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label={m.actions.edit(row.name)}
+                        title={m.actions.editLabel}
+                        onClick={() => setTarget(row)}
+                      >
+                        <Pencil aria-hidden="true" className="size-4" />
+                      </Button>
+                      {row.code !== DEFAULT_UNIT_CODE && (
                         <Button
                           variant="outline"
-                          size="sm"
-                          aria-label={m.actions.edit(row.name)}
-                          onClick={() => setTarget(row)}
+                          size="icon"
+                          disabled={pending}
+                          aria-label={
+                            row.isActive
+                              ? m.actions.deactivate(row.name)
+                              : m.actions.activate(row.name)
+                          }
+                          title={row.isActive ? m.actions.deactivateLabel : m.actions.activateLabel}
+                          onClick={() => toggle(row)}
                         >
-                          <Pencil aria-hidden="true" className="h-4 w-4" />
-                          <span className="ml-1 hidden sm:inline">{m.actions.editLabel}</span>
+                          <Power aria-hidden="true" className="size-4" />
                         </Button>
-                        {row.code !== DEFAULT_UNIT_CODE && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={pending}
-                            aria-label={
-                              row.isActive
-                                ? m.actions.deactivate(row.name)
-                                : m.actions.activate(row.name)
-                            }
-                            onClick={() => toggle(row)}
-                          >
-                            <Power aria-hidden="true" className="h-4 w-4" />
-                            <span className="ml-1 hidden sm:inline">
-                              {row.isActive ? m.actions.deactivateLabel : m.actions.activateLabel}
-                            </span>
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      )}
+                    </div>
+                  </Td>
+                )}
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
       )}
 
       <UnitFormDialog
@@ -330,12 +367,12 @@ function UnitFormDialog({
               {...(describedBy(p) && { "aria-describedby": describedBy(p) })}
             />
             {p.help && (
-              <p id={`${p.id}-help`} className="text-xs text-muted-foreground">
+              <p id={`${p.id}-help`} className="text-label text-ink-secondary">
                 {p.help}
               </p>
             )}
             {p.error && (
-              <p id={`${p.id}-error`} className="text-xs text-danger">
+              <p id={`${p.id}-error`} className="text-label text-tone-problem-fg">
                 {p.error}
               </p>
             )}
@@ -356,7 +393,7 @@ function UnitFormDialog({
               </option>
             ))}
           </Select>
-          <p id={`${parts.decimals.id}-help`} className="text-xs text-muted-foreground">
+          <p id={`${parts.decimals.id}-help`} className="text-label text-ink-secondary">
             {parts.decimals.help}
           </p>
         </div>
@@ -370,7 +407,7 @@ function UnitFormDialog({
             autoComplete="off"
             aria-describedby={`${parts.smartbill.id}-help`}
           />
-          <p id={`${parts.smartbill.id}-help`} className="text-xs text-muted-foreground">
+          <p id={`${parts.smartbill.id}-help`} className="text-label text-ink-secondary">
             {parts.smartbill.help}
           </p>
         </div>
@@ -378,7 +415,7 @@ function UnitFormDialog({
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>

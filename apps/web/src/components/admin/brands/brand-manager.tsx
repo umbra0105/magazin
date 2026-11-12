@@ -3,7 +3,21 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Button, Dialog, Input, Label, Textarea } from "@ecom/ui";
+import {
+  Button,
+  Dialog,
+  EmptyState,
+  Input,
+  Label,
+  RowHeader,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Textarea,
+  Th,
+  Tr,
+} from "@ecom/ui";
 import {
   createBrand,
   deleteBrand,
@@ -97,7 +111,7 @@ export function BrandManager({ rows, capabilities, thumbs, editId }: Props) {
   const canEdit = capabilities.content || capabilities.structure;
   return (
     <div className="flex flex-col gap-4">
-      {capabilities.structure && (
+      {capabilities.structure && rows.length > 0 && (
         <div className="flex justify-end">
           <Button onClick={() => setTarget("new")}>{m.create}</Button>
         </div>
@@ -106,7 +120,7 @@ export function BrandManager({ rows, capabilities, thumbs, editId }: Props) {
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>
@@ -116,77 +130,78 @@ export function BrandManager({ rows, capabilities, thumbs, editId }: Props) {
       </p>
 
       {rows.length === 0 ? (
-        <p className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-          {m.empty}
-        </p>
+        <EmptyState
+          title={m.empty}
+          {...(capabilities.structure && {
+            action: <Button onClick={() => setTarget("new")}>{m.create}</Button>,
+          })}
+        />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border">
-          <table className="w-full text-left text-sm" aria-label={m.listLabel}>
-            <thead className="border-b border-border bg-border/30">
-              <tr>
-                <th scope="col" className="p-3 font-medium">
-                  {m.columns.name}
-                </th>
-                <th scope="col" className="p-3 font-medium">
-                  {m.columns.slug}
-                </th>
-                <th scope="col" className="p-3 font-medium">
-                  {m.columns.products}
-                </th>
-                <th scope="col" className="p-3 font-medium">
-                  {m.columns.leadTime}
-                </th>
-                <th scope="col" className="p-3 text-right font-medium">
-                  {m.columns.actions}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  data-brand-row={row.id}
-                  className="border-b border-border last:border-0"
+        <Table stacked aria-label={m.listLabel}>
+          <THead>
+            <Tr>
+              <Th>{m.columns.name}</Th>
+              <Th priority="secondary">{m.columns.slug}</Th>
+              <Th numeric>{m.columns.products}</Th>
+              <Th priority="tertiary">{m.columns.leadTime}</Th>
+              {canEdit && <Th numeric>{m.columns.actions}</Th>}
+            </Tr>
+          </THead>
+          <TBody>
+            {rows.map((row) => (
+              <Tr key={row.id} data-brand-row={row.id}>
+                <RowHeader className="font-medium">{row.name}</RowHeader>
+                <Td
+                  priority="secondary"
+                  className="whitespace-nowrap text-ink-secondary"
+                  data-cell="slug"
                 >
-                  <td className="p-3 font-medium">{row.name}</td>
-                  <td className="p-3 text-muted-foreground">{row.slug}</td>
-                  <td className="p-3">{m.products(row.productCount)}</td>
-                  <td className="p-3 text-muted-foreground" data-cell="lead-time">
-                    {row.defaultLeadTimeDays === null
-                      ? m.leadTimeCell.none
-                      : daysText(row.defaultLeadTimeDays)}
-                  </td>
-                  <td className="p-3">
-                    <div className="flex justify-end gap-1">
-                      {canEdit && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          aria-label={m.actions.edit(row.name)}
-                          onClick={() => setTarget(row)}
-                        >
-                          <Pencil aria-hidden="true" className="h-4 w-4" />
-                          <span className="ml-1 hidden sm:inline">{m.actions.editLabel}</span>
-                        </Button>
-                      )}
+                  <span data-cell-text title={row.slug} className="block max-w-44 truncate">
+                    {row.slug}
+                  </span>
+                </Td>
+                <Td numeric className="whitespace-nowrap" data-cell="products">
+                  {m.products(row.productCount)}
+                </Td>
+                <Td
+                  priority="tertiary"
+                  className="whitespace-nowrap text-ink-secondary"
+                  data-cell="lead-time"
+                >
+                  {row.defaultLeadTimeDays === null
+                    ? m.leadTimeCell.none
+                    : daysText(row.defaultLeadTimeDays)}
+                </Td>
+                {canEdit && (
+                  <Td stack="actions" data-cell="actions">
+                    <div className="flex justify-end gap-1 group-data-[stacked]/table:@max-2xl/table:justify-start">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label={m.actions.edit(row.name)}
+                        title={m.actions.editLabel}
+                        onClick={() => setTarget(row)}
+                      >
+                        <Pencil aria-hidden="true" className="size-4" />
+                      </Button>
                       {capabilities.structure && (
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
                           aria-label={m.actions.delete(row.name)}
+                          title={m.actions.deleteLabel}
                           onClick={() => setDeleteTarget(row)}
                         >
-                          <Trash2 aria-hidden="true" className="h-4 w-4" />
-                          <span className="ml-1 hidden sm:inline">{m.actions.deleteLabel}</span>
+                          <Trash2 aria-hidden="true" className="size-4" />
                         </Button>
                       )}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </Td>
+                )}
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
       )}
 
       <BrandFormDialog
@@ -215,9 +230,9 @@ export function BrandManager({ rows, capabilities, thumbs, editId }: Props) {
             {m.delete.cancel}
           </Button>
           <Button
+            variant="destructive"
             disabled={pending}
             onClick={() => deleteTarget && runDelete(deleteTarget)}
-            className="bg-danger text-primary-foreground hover:bg-danger/90"
           >
             {pending ? m.delete.deleting : m.delete.confirm}
           </Button>
@@ -404,7 +419,7 @@ function BrandFormDialog({
                 aria-describedby="brand-slug-help"
                 disabled={!capabilities.structure}
               />
-              <p id="brand-slug-help" className="text-xs text-muted-foreground">
+              <p id="brand-slug-help" className="text-label text-ink-secondary">
                 {m.form.slugHelp}
               </p>
             </div>
@@ -431,11 +446,11 @@ function BrandFormDialog({
               aria-invalid={leadTimeError ? true : undefined}
               disabled={!capabilities.structure}
             />
-            <p id="brand-lead-time-help" className="text-xs text-muted-foreground">
+            <p id="brand-lead-time-help" className="text-label text-ink-secondary">
               {m.form.leadTimeHelp}
             </p>
             {leadTimeError && (
-              <p data-problem className="text-sm text-danger">
+              <p data-problem className="text-body text-tone-problem-fg">
                 {leadTimeError}
               </p>
             )}
@@ -463,21 +478,23 @@ function BrandFormDialog({
             </div>
           </div>
 
-          <fieldset className="flex flex-col gap-2 rounded-md border border-border p-3">
-            <legend className="px-1 text-sm font-medium">{m.form.logo}</legend>
+          <fieldset className="flex flex-col gap-2 rounded-lg bg-surface-subtle p-3">
+            <legend className="float-left mb-1 w-full p-0 text-body font-medium">
+              {m.form.logo}
+            </legend>
             {logoMediaId ? (
               logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- miniatura din /media
                 <img
                   src={logoUrl}
                   alt={m.form.logoAlt}
-                  className="h-16 w-16 rounded-md border border-border object-contain"
+                  className="h-16 w-16 rounded-md border border-line-subtle object-contain"
                 />
               ) : (
-                <span className="text-sm text-muted-foreground">{m.form.logoAlt}</span>
+                <span className="text-body text-ink-secondary">{m.form.logoAlt}</span>
               )
             ) : (
-              <p className="text-sm text-muted-foreground">{m.form.logoNone}</p>
+              <p className="text-body text-ink-secondary">{m.form.logoNone}</p>
             )}
             {canEditContent && capabilities.pickMedia && (
               <div className="flex flex-wrap gap-2">
@@ -501,8 +518,10 @@ function BrandFormDialog({
           </fieldset>
 
           {capabilities.legacy && (
-            <fieldset className="flex flex-col gap-3 rounded-md border border-border p-3">
-              <legend className="px-1 text-sm font-medium">{m.form.legacyTitle}</legend>
+            <fieldset className="flex flex-col gap-3 rounded-lg bg-surface-subtle p-3">
+              <legend className="float-left mb-1 w-full p-0 text-body font-medium">
+                {m.form.legacyTitle}
+              </legend>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="brand-legacy-id">{m.form.legacyId}</Label>
                 <Input
@@ -521,12 +540,15 @@ function BrandFormDialog({
                   maxLength={1000}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">{m.form.legacyHelp}</p>
+              <p className="text-label text-ink-secondary">{m.form.legacyHelp}</p>
             </fieldset>
           )}
 
           {error && (
-            <p role="alert" className="rounded-md border border-danger p-3 text-sm text-danger">
+            <p
+              role="alert"
+              className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
+            >
               {error}
             </p>
           )}

@@ -394,6 +394,11 @@ export async function removeE2eCatalogRefs(): Promise<void> {
   trackedBrands.clear();
   await withClient(async (db) => {
     if (categories.length > 0) {
+      // copiii categoriilor de probă (arbore) se șterg întâi: părintele are FK Restrict
+      await db.query(
+        `delete from category where "parentId" in (select id from category where slug = any($1::text[]))`,
+        [categories],
+      );
       await db.query(
         `delete from product_category where "categoryId" in (select id from category where slug = any($1::text[]))`,
         [categories],
@@ -2099,4 +2104,103 @@ export async function readE2eProductId(slug: string): Promise<string> {
     if (!id) throw new Error(`Produsul de probă ${slug} nu există`);
     return id;
   });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Liste de catalog (Lotul 3a): categorii, branduri, atribute și unități de probă pentru ecranele de administrare
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Branduri de probă (adresa `e2e-brand-<tag>-NN`) cu numele date; se șterg cu `removeE2eCatalogRefs`. */
+export async function seedE2eBrandList(tag: string, names: readonly string[]): Promise<void> {
+  await withClient(async (db) => {
+    let n = 0;
+    for (const name of names) {
+      n += 1;
+      const slug = `e2e-brand-${tag}-${String(n).padStart(2, "0")}`;
+      trackedBrands.add(slug);
+      await db.query(
+        `insert into brand (id, name, slug, "updatedAt") values (gen_random_uuid()::text, $1, $2, now())`,
+        [name, slug],
+      );
+    }
+  });
+}
+
+/**
+ * Arbore de categorii de probă: rădăcinile au adresa `e2e-cat-<tag>-pN`, copiii `e2e-cat-<tag>-pN-cM` (cale `rădăcină/copil`).
+ * Se urmăresc doar rădăcinile; `removeE2eCatalogRefs` șterge întâi copiii lor. Întoarce numele rădăcinilor.
+ */
+export async function seedE2eCategoryTree(
+  tag: string,
+  tree: readonly { name: string; children?: readonly string[] }[],
+): Promise<string[]> {
+  await withClient(async (db) => {
+    let p = 0;
+    for (const root of tree) {
+      p += 1;
+      const rootSlug = `e2e-cat-${tag}-p${p}`;
+      trackedCategories.add(rootSlug);
+      const inserted = await db.query(
+        `insert into category (id, name, slug, path, depth, "sortOrder", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $2, 0, $3, now()) returning id`,
+        [root.name, rootSlug, p],
+      );
+      const rootId = inserted.rows[0]?.id as string;
+      let c = 0;
+      for (const child of root.children ?? []) {
+        c += 1;
+        const childSlug = `e2e-cat-${tag}-p${p}-c${c}`;
+        await db.query(
+          `insert into category (id, "parentId", name, slug, path, depth, "sortOrder", "updatedAt")
+           values (gen_random_uuid()::text, $1, $2, $3, $4, 1, $5, now())`,
+          [rootId, child, childSlug, `${rootSlug}/${childSlug}`, c],
+        );
+      }
+    }
+  });
+  return tree.map((root) => root.name);
+}
+
+/** Atribute de probă (cod `e2e<tag>…`): text, număr cu unitate (filtrabil), listă cu 3 opțiuni și da/nu. Urmărite pentru ștergere. */
+export async function seedE2eAttributeList(tag: string): Promise<string[]> {
+  const rows = [
+    { code: `e2e${tag}material`, name: "Material", type: "text", unit: null, filterable: false },
+    {
+      code: `e2e${tag}putere`,
+      name: "Putere termică",
+      type: "number",
+      unit: "kW",
+      filterable: true,
+    },
+    { code: `e2e${tag}culoare`, name: "Culoare", type: "select", unit: null, filterable: true },
+    {
+      code: `e2e${tag}telecomanda`,
+      name: "Cu telecomandă",
+      type: "bool",
+      unit: null,
+      filterable: false,
+    },
+  ] as const;
+  await withClient(async (db) => {
+    let order = 800;
+    for (const row of rows) {
+      trackedAttributes.add(row.code);
+      const inserted = await db.query(
+        `insert into attribute (id, code, name, type, unit, "isFilterable", "sortOrder", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, now()) returning id`,
+        [row.code, row.name, row.type, row.unit, row.filterable, order++],
+      );
+      if (row.type === "select") {
+        const attributeId = inserted.rows[0]?.id as string;
+        let position = 0;
+        for (const value of ["Alb", "Gri antracit", "Albastru"]) {
+          await db.query(
+            `insert into attribute_option (id, "attributeId", value, position) values (gen_random_uuid()::text, $1, $2, $3)`,
+            [attributeId, value, position++],
+          );
+        }
+      }
+    }
+  });
+  return rows.map((row) => row.name);
 }

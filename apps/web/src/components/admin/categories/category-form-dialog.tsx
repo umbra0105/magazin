@@ -192,7 +192,7 @@ export function CategoryFormDialog({
                 aria-describedby="cat-slug-help"
                 disabled={!canEditStructure}
               />
-              <p id="cat-slug-help" className="text-xs text-muted-foreground">
+              <p id="cat-slug-help" className="text-label text-ink-secondary">
                 {m.form.slugHelp}
               </p>
             </div>
@@ -251,8 +251,10 @@ export function CategoryFormDialog({
             </div>
           </div>
 
-          <fieldset className="flex flex-col gap-2 rounded-md border border-border p-3">
-            <legend className="px-1 text-sm font-medium">{m.form.image}</legend>
+          <fieldset className="flex flex-col gap-2 rounded-lg bg-surface-subtle p-3">
+            <legend className="float-left mb-1 w-full p-0 text-body font-medium">
+              {m.form.image}
+            </legend>
             {imageMediaId ? (
               <div className="flex items-center gap-3">
                 {imageUrl ? (
@@ -260,14 +262,14 @@ export function CategoryFormDialog({
                   <img
                     src={imageUrl}
                     alt={m.form.imageAlt}
-                    className="h-16 w-16 rounded-md border border-border object-cover"
+                    className="h-16 w-16 rounded-md border border-line-subtle object-cover"
                   />
                 ) : (
-                  <span className="text-sm text-muted-foreground">{m.form.imageAlt}</span>
+                  <span className="text-body text-ink-secondary">{m.form.imageAlt}</span>
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">{m.form.imageNone}</p>
+              <p className="text-body text-ink-secondary">{m.form.imageNone}</p>
             )}
             {canEditContent && capabilities.pickMedia && (
               <div className="flex flex-wrap gap-2">
@@ -302,7 +304,7 @@ export function CategoryFormDialog({
               />
               <div className="flex flex-col">
                 <Label htmlFor="cat-exclude">{m.form.excludeFromGroupDiscount}</Label>
-                <p id="cat-exclude-help" className="text-xs text-muted-foreground">
+                <p id="cat-exclude-help" className="text-label text-ink-secondary">
                   {m.form.excludeHelp}
                 </p>
               </div>
@@ -310,8 +312,10 @@ export function CategoryFormDialog({
           )}
 
           {capabilities.legacy && (
-            <fieldset className="flex flex-col gap-3 rounded-md border border-border p-3">
-              <legend className="px-1 text-sm font-medium">{m.form.legacyTitle}</legend>
+            <fieldset className="flex flex-col gap-3 rounded-lg bg-surface-subtle p-3">
+              <legend className="float-left mb-1 w-full p-0 text-body font-medium">
+                {m.form.legacyTitle}
+              </legend>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="cat-legacy-id">{m.form.legacyId}</Label>
                 <Input
@@ -330,12 +334,15 @@ export function CategoryFormDialog({
                   maxLength={1000}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">{m.form.legacyHelp}</p>
+              <p className="text-label text-ink-secondary">{m.form.legacyHelp}</p>
             </fieldset>
           )}
 
           {error && (
-            <p role="alert" className="rounded-md border border-danger p-3 text-sm text-danger">
+            <p
+              role="alert"
+              className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
+            >
               {error}
             </p>
           )}

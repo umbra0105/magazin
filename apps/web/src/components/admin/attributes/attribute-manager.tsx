@@ -3,7 +3,22 @@
 import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
-import { Button, Dialog, Input, Select, Textarea } from "@ecom/ui";
+import {
+  Badge,
+  Button,
+  Dialog,
+  EmptyState,
+  Input,
+  RowHeader,
+  Select,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Textarea,
+  Th,
+  Tr,
+} from "@ecom/ui";
 import {
   addAttributeOption,
   createAttribute,
@@ -63,8 +78,11 @@ export function AttributeManager({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
-        {canWrite && (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p role="status" className="text-body text-ink-secondary">
+          {status}
+        </p>
+        {canWrite && attributes.length > 0 && (
           <Button
             type="button"
             onClick={() => {
@@ -75,87 +93,104 @@ export function AttributeManager({
             {m.new}
           </Button>
         )}
-        <p role="status" className="text-sm text-muted-foreground">
-          {status}
-        </p>
       </div>
 
       {attributes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{m.empty}</p>
+        <EmptyState
+          title={m.empty}
+          {...(canWrite && {
+            action: (
+              <Button
+                type="button"
+                onClick={() => {
+                  setStatus(null);
+                  setCreating(true);
+                }}
+              >
+                {m.new}
+              </Button>
+            ),
+          })}
+        />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border">
-          <table className="w-full min-w-[40rem] text-sm">
-            <caption className="sr-only">{m.table.label}</caption>
-            <thead>
-              <tr className="border-b border-border text-left">
-                {[
-                  m.table.name,
-                  m.table.code,
-                  m.table.type,
-                  m.table.unit,
-                  m.table.filterable,
-                  m.table.usage,
-                  m.table.options,
-                ].map((label) => (
-                  <th key={label} scope="col" className="p-3 font-medium">
-                    {label}
-                  </th>
-                ))}
-                {canWrite && (
-                  <th scope="col" className="p-3 font-medium">
-                    {m.table.actions}
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {attributes.map((a) => (
-                <tr
-                  key={a.id}
-                  data-attribute-row={a.code}
-                  className="border-b border-border last:border-0"
+        <Table stacked aria-label={m.table.label}>
+          <THead>
+            <Tr>
+              <Th>{m.table.name}</Th>
+              <Th priority="secondary">{m.table.code}</Th>
+              <Th>{m.table.type}</Th>
+              <Th priority="secondary">{m.table.unit}</Th>
+              <Th priority="tertiary">{m.table.filterable}</Th>
+              <Th priority="tertiary" numeric>
+                {m.table.usage}
+              </Th>
+              <Th priority="detail">{m.table.options}</Th>
+              {canWrite && <Th numeric>{m.table.actions}</Th>}
+            </Tr>
+          </THead>
+          <TBody>
+            {attributes.map((a) => (
+              <Tr key={a.id} data-attribute-row={a.code}>
+                <RowHeader className="font-medium">{a.name}</RowHeader>
+                <Td
+                  priority="secondary"
+                  className="whitespace-nowrap text-ink-secondary"
+                  data-cell="code"
                 >
-                  <th scope="row" className="p-3 text-left font-medium">
-                    {a.name}
-                  </th>
-                  <td className="p-3 text-muted-foreground">{a.code}</td>
-                  <td className="p-3">{m.types[a.type]}</td>
-                  <td className="p-3">{a.unit ?? "—"}</td>
-                  <td className="p-3">{a.isFilterable ? m.yes : m.no}</td>
-                  <td className="p-3">{m.usage(a.productCount)}</td>
-                  <td className="p-3">
-                    {a.type === "select" ? m.optionsCount(a.options.length) : "—"}
-                  </td>
-                  {canWrite && (
-                    <td className="p-3">
-                      <div className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          aria-label={m.edit(a.name)}
-                          onClick={() => {
-                            setStatus(null);
-                            setEditingId(a.id);
-                          }}
-                        >
-                          <Pencil aria-hidden className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          aria-label={m.delete.button(a.name)}
-                          onClick={() => setDeleting(a)}
-                        >
-                          <Trash2 aria-hidden className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  <span data-cell-text title={a.code} className="block max-w-44 truncate">
+                    {a.code}
+                  </span>
+                </Td>
+                <Td className="whitespace-nowrap" data-cell="type">
+                  {m.types[a.type]}
+                </Td>
+                <Td priority="secondary" className="whitespace-nowrap" data-cell="unit">
+                  {a.unit ?? "—"}
+                </Td>
+                <Td priority="tertiary" data-cell="filterable">
+                  <Badge variant={a.isFilterable ? "success" : "neutral"} dot>
+                    {a.isFilterable ? m.yes : m.no}
+                  </Badge>
+                </Td>
+                <Td priority="tertiary" numeric className="whitespace-nowrap" data-cell="usage">
+                  {m.usage(a.productCount)}
+                </Td>
+                <Td priority="detail" className="whitespace-nowrap" data-cell="options">
+                  {a.type === "select" ? m.optionsCount(a.options.length) : "—"}
+                </Td>
+                {canWrite && (
+                  <Td stack="actions" data-cell="actions">
+                    <div className="flex justify-end gap-1 group-data-[stacked]/table:@max-2xl/table:justify-start">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={m.edit(a.name)}
+                        title={m.editLabel}
+                        onClick={() => {
+                          setStatus(null);
+                          setEditingId(a.id);
+                        }}
+                      >
+                        <Pencil aria-hidden className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={m.delete.button(a.name)}
+                        title={m.deleteLabel}
+                        onClick={() => setDeleting(a)}
+                      >
+                        <Trash2 aria-hidden className="size-4" />
+                      </Button>
+                    </div>
+                  </Td>
+                )}
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
       )}
 
       {creating && (
@@ -344,7 +379,7 @@ function CreateDialog({
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>
@@ -527,7 +562,7 @@ function EditDialog({
             <p
               role="alert"
               data-problem
-              className="rounded-md border border-danger p-3 text-sm text-danger"
+              className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
             >
               {problem}
             </p>
@@ -545,17 +580,17 @@ function EditDialog({
         {attribute.type === "select" && (
           <section
             aria-labelledby="options-heading"
-            className="flex flex-col gap-3 border-t border-border pt-4"
+            className="flex flex-col gap-3 border-t border-line-subtle pt-4"
           >
-            <h3 id="options-heading" className="text-base font-semibold">
+            <h3 id="options-heading" className="text-body font-semibold">
               {f.options}
             </h3>
-            <p className="text-sm text-muted-foreground">{f.optionsHelp}</p>
+            <p className="text-body text-ink-secondary">{f.optionsHelp}</p>
             {optionProblem && (
               <p
                 role="alert"
                 data-problem
-                className="rounded-md border border-danger p-3 text-sm text-danger"
+                className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
               >
                 {optionProblem}
               </p>
@@ -579,7 +614,7 @@ function EditDialog({
               ))}
             </ul>
             <div className="flex flex-wrap items-end gap-2">
-              <div className="min-w-[12rem] flex-1">
+              <div className="min-w-48 flex-1">
                 <Field id="option-new" label={f.optionNew}>
                   {(control) => (
                     <Input
@@ -653,7 +688,7 @@ function OptionRow({
         onChange={(e) => setDraft(e.target.value)}
         aria-label={f.optionRename(option.value)}
         maxLength={100}
-        className="min-w-[10rem] flex-1"
+        className="min-w-40 flex-1"
       />
       {changed && (
         <Button
@@ -665,35 +700,41 @@ function OptionRow({
           {f.optionSave}
         </Button>
       )}
-      <span className="text-xs text-muted-foreground">
+      <span className="text-label text-ink-secondary">
         {option.productCount > 0 ? f.optionUsedBy(option.productCount) : ""}
       </span>
       <Button
         type="button"
         variant="outline"
+        size="icon"
         disabled={pending || index === 0}
         aria-label={f.optionMoveUp(option.value)}
+        title={f.optionMoveUp(option.value)}
         onClick={() => onMove(-1)}
       >
-        <ArrowUp aria-hidden className="h-4 w-4" />
+        <ArrowUp aria-hidden className="size-4" />
       </Button>
       <Button
         type="button"
         variant="outline"
+        size="icon"
         disabled={pending || index === total - 1}
         aria-label={f.optionMoveDown(option.value)}
+        title={f.optionMoveDown(option.value)}
         onClick={() => onMove(1)}
       >
-        <ArrowDown aria-hidden className="h-4 w-4" />
+        <ArrowDown aria-hidden className="size-4" />
       </Button>
       <Button
         type="button"
         variant="outline"
+        size="icon"
         disabled={pending}
         aria-label={f.optionDelete(option.value)}
+        title={f.optionDelete(option.value)}
         onClick={onDelete}
       >
-        <Trash2 aria-hidden className="h-4 w-4" />
+        <Trash2 aria-hidden className="size-4" />
       </Button>
     </li>
   );
@@ -723,7 +764,7 @@ function DeleteDialog({
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>
@@ -734,6 +775,7 @@ function DeleteDialog({
           </Button>
           <Button
             type="button"
+            variant="destructive"
             disabled={pending}
             onClick={() =>
               startTransition(async () => {

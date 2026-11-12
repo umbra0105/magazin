@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { MAX_CATEGORY_DEPTH, can, childrenOf, validParents, type CategoryNode } from "@ecom/core";
 import { CategoryManager } from "@/components/admin/categories/category-manager";
 import type { CategoryRow } from "@/components/admin/categories/category-types";
+import { PageHeader } from "@/components/admin/page-header";
 import { requireAdmin } from "@/lib/admin-page";
 import { getCategoryService } from "@/lib/catalog";
 import { getMediaLibrary } from "@/lib/media";
@@ -90,20 +91,12 @@ export default async function CategoriesPage({
   const canEdit = capabilities.structure || capabilities.content;
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
-        <p className="text-sm text-muted-foreground">{m.description}</p>
-        {!canEdit && (
-          <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
-            {m.readOnly}
-          </p>
-        )}
-        {canEdit && !capabilities.structure && (
-          <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
-            {m.contentOnly}
-          </p>
-        )}
-      </header>
+      <PageHeader
+        title={m.title}
+        count={rows.length}
+        description={m.description}
+        notes={!canEdit ? [m.readOnly] : !capabilities.structure ? [m.contentOnly] : []}
+      />
       <CategoryManager
         rows={rows}
         capabilities={capabilities}

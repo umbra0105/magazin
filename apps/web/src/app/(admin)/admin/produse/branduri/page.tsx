@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { can } from "@ecom/core";
 import { BrandManager } from "@/components/admin/brands/brand-manager";
+import { PageHeader } from "@/components/admin/page-header";
 import { requireAdmin } from "@/lib/admin-page";
 import { getBrandService } from "@/lib/catalog";
 import { getMediaLibrary } from "@/lib/media";
@@ -41,20 +42,12 @@ export default async function BrandsPage({
   const canEdit = capabilities.structure || capabilities.content;
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
-        <p className="text-sm text-muted-foreground">{m.description}</p>
-        {!canEdit && (
-          <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
-            {m.readOnly}
-          </p>
-        )}
-        {canEdit && !capabilities.structure && (
-          <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
-            {m.contentOnly}
-          </p>
-        )}
-      </header>
+      <PageHeader
+        title={m.title}
+        count={brands.length}
+        description={m.description}
+        notes={!canEdit ? [m.readOnly] : !capabilities.structure ? [m.contentOnly] : []}
+      />
       <BrandManager rows={brands} capabilities={capabilities} thumbs={thumbs} editId={editId} />
     </div>
   );

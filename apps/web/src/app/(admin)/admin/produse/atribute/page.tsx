@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { can } from "@ecom/core";
 import { AttributeManager } from "@/components/admin/attributes/attribute-manager";
+import { PageHeader } from "@/components/admin/page-header";
 import { requireAdmin } from "@/lib/admin-page";
 import { getAttributeService } from "@/lib/catalog";
 import { getMessages } from "@/messages";
@@ -20,15 +21,12 @@ export default async function AttributesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
-        <p className="text-sm text-muted-foreground">{m.description}</p>
-        {!canWrite && (
-          <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
-            {m.readOnly}
-          </p>
-        )}
-      </header>
+      <PageHeader
+        title={m.title}
+        count={attributes.length}
+        description={m.description}
+        notes={canWrite ? [] : [m.readOnly]}
+      />
       <AttributeManager
         canWrite={canWrite}
         attributes={attributes.map((a) => ({

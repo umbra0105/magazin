@@ -3,7 +3,7 @@
 import { ArrowDown, ArrowUp, GripVertical, Pencil, Trash2, MoveRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Button, Dialog, Label, Select, cn } from "@ecom/ui";
+import { Button, Dialog, Label, Select, cn, EmptyState } from "@ecom/ui";
 import { deleteCategory, moveCategory } from "@/app/(admin)/admin/produse/categorii/actions";
 import {
   dropTarget,
@@ -149,8 +149,10 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {structure && <p className="text-sm text-muted-foreground">{m.dragHint}</p>}
-        {structure && (
+        {structure && rows.length > 0 && (
+          <p className="text-body text-ink-secondary">{m.dragHint}</p>
+        )}
+        {structure && rows.length > 0 && (
           <Button onClick={() => setFormTarget("new")} disabled={pending}>
             {m.create}
           </Button>
@@ -161,7 +163,7 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>
@@ -171,9 +173,16 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
       </p>
 
       {rows.length === 0 ? (
-        <p className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-          {m.empty}
-        </p>
+        <EmptyState
+          title={m.empty}
+          {...(structure && {
+            action: (
+              <Button onClick={() => setFormTarget("new")} disabled={pending}>
+                {m.create}
+              </Button>
+            ),
+          })}
+        />
       ) : (
         <ul aria-label={m.treeLabel} className="flex flex-col gap-1" data-category-tree>
           {rows.map((row) => {
@@ -205,7 +214,7 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                 // zona țintă se citește din atribut (stilul și testele nu depind de numele claselor)
                 data-drop-target={isOver ? over?.zone : undefined}
                 className={cn(
-                  "flex flex-wrap items-center gap-2 rounded-md border border-line-subtle bg-surface-page p-2",
+                  "flex flex-wrap items-center gap-2 rounded-lg border border-line-subtle bg-surface-page p-2",
                   dragging === row.id && "opacity-50",
                   "data-[drop-target=inside]:border-brand data-[drop-target=inside]:bg-brand/10",
                   "data-[drop-target=before]:border-t-4 data-[drop-target=before]:border-t-brand",
@@ -215,17 +224,25 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                 {structure && (
                   <GripVertical
                     aria-hidden="true"
-                    className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground"
+                    className="size-4 shrink-0 cursor-grab text-ink-secondary"
                   />
                 )}
-                <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex min-w-48 flex-1 flex-col">
                   <span className="truncate font-medium">{row.name}</span>
                   {/[>|]/.test(row.name) && (
-                    <span role="note" data-category-name-warning className="text-xs text-danger">
+                    <span
+                      role="note"
+                      data-category-name-warning
+                      className="text-label text-tone-problem-fg"
+                    >
                       {m.nameCharsWarning}
                     </span>
                   )}
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span
+                    data-cell-text
+                    title={`/${row.path}`}
+                    className="block truncate text-label text-ink-secondary"
+                  >
                     /{row.path} · {m.products(row.productCount)} · {m.level(row.depth)}
                   </span>
                 </div>
@@ -235,38 +252,40 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
+                        size="icon"
                         aria-label={m.actions.up(row.name)}
+                        title={m.actions.up(row.name)}
                         disabled={pending || stepTarget(row, "up") === null}
                         onClick={() => {
                           const t = stepTarget(row, "up");
                           if (t) runMove(row, t);
                         }}
                       >
-                        <ArrowUp aria-hidden="true" className="h-4 w-4" />
+                        <ArrowUp aria-hidden="true" className="size-4" />
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
+                        size="icon"
                         aria-label={m.actions.down(row.name)}
+                        title={m.actions.down(row.name)}
                         disabled={pending || stepTarget(row, "down") === null}
                         onClick={() => {
                           const t = stepTarget(row, "down");
                           if (t) runMove(row, t);
                         }}
                       >
-                        <ArrowDown aria-hidden="true" className="h-4 w-4" />
+                        <ArrowDown aria-hidden="true" className="size-4" />
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
+                        size="icon"
                         aria-label={m.actions.moveTo(row.name)}
+                        title={m.actions.moveToLabel}
                         onClick={() => setMoveTarget(row)}
                       >
-                        <MoveRight aria-hidden="true" className="h-4 w-4" />
-                        <span className="ml-1 hidden sm:inline">{m.actions.moveToLabel}</span>
+                        <MoveRight aria-hidden="true" className="size-4" />
                       </Button>
                     </>
                   )}
@@ -274,24 +293,24 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="icon"
                       aria-label={m.actions.edit(row.name)}
+                      title={m.actions.editLabel}
                       onClick={() => setFormTarget(row)}
                     >
-                      <Pencil aria-hidden="true" className="h-4 w-4" />
-                      <span className="ml-1 hidden sm:inline">{m.actions.editLabel}</span>
+                      <Pencil aria-hidden="true" className="size-4" />
                     </Button>
                   )}
                   {structure && (
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="icon"
                       aria-label={m.actions.delete(row.name)}
+                      title={m.actions.deleteLabel}
                       onClick={() => setDeleteTarget(row)}
                     >
-                      <Trash2 aria-hidden="true" className="h-4 w-4" />
-                      <span className="ml-1 hidden sm:inline">{m.actions.deleteLabel}</span>
+                      <Trash2 aria-hidden="true" className="size-4" />
                     </Button>
                   )}
                 </div>
@@ -306,7 +325,7 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
           onDragOver={(e) => e.preventDefault()}
           onDrop={onRootDrop}
           data-category-root-drop
-          className="rounded-md border border-dashed border-primary p-3 text-center text-sm text-primary"
+          className="rounded-md border border-dashed border-brand p-3 text-center text-body text-brand"
         >
           {m.rootDrop}
         </div>
@@ -347,9 +366,9 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
             {m.delete.cancel}
           </Button>
           <Button
+            variant="destructive"
             disabled={pending}
             onClick={() => deleteTarget && runDelete(deleteTarget)}
-            className="bg-danger text-primary-foreground hover:bg-danger/90"
           >
             {pending ? m.delete.deleting : m.delete.confirm}
           </Button>
@@ -419,7 +438,7 @@ function MoveDialog({
       className="max-w-md"
     >
       {options.length === 0 && !canRoot ? (
-        <p className="text-sm">{m.move.noOptions}</p>
+        <p className="text-body">{m.move.noOptions}</p>
       ) : (
         <form
           className="flex flex-col gap-4"

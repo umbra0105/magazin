@@ -2889,6 +2889,8 @@ export const ro = {
       usage: (n: number) => (n === 0 ? "nefolosit" : n === 1 ? "1 produs" : `${n} produse`),
       optionsCount: (n: number) => (n === 1 ? "1 opțiune" : `${n} opțiuni`),
       edit: (name: string) => `Editează atributul ${name}`,
+      editLabel: "Editează",
+      deleteLabel: "Șterge",
       form: {
         createTitle: "Atribut nou",
         editTitle: (name: string) => `Atribut: ${name}`,
