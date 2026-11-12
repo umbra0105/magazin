@@ -132,6 +132,8 @@ interface TableScreen {
   actions: RegExp[];
   /** Celulele cu valori scurte care nu se rup (data-cell). */
   nowrap: string[];
+  /** Înălțimea maximă a cardului pe telefon (acțiunile stau în colțul din dreapta-sus, lângă nume). */
+  phoneMax: number;
 }
 
 const TABLES: TableScreen[] = [
@@ -150,6 +152,7 @@ const TABLES: TableScreen[] = [
     },
     actions: [/^Editează unitatea/, /^(Dezactivează|Activează) unitatea/],
     nowrap: ["code", "symbol", "decimals", "usage"],
+    phoneMax: 84,
   },
   {
     key: "branduri",
@@ -166,6 +169,7 @@ const TABLES: TableScreen[] = [
     },
     actions: [/^Editează brandul/, /^Șterge brandul/],
     nowrap: ["slug", "products", "lead-time"],
+    phoneMax: 76,
   },
   {
     key: "atribute",
@@ -182,6 +186,7 @@ const TABLES: TableScreen[] = [
     },
     actions: [/^Editează atributul/, /^Șterge atributul/],
     nowrap: ["code", "unit", "usage"],
+    phoneMax: 76,
   },
 ];
 
@@ -253,7 +258,7 @@ test.describe("liste pe Table: Unități de măsură, Branduri, Atribute", () =>
       ).toBeLessThanOrEqual(0);
     });
 
-    test(`${screen.key}, 390 px: fiecare rând e un card de cel mult 132 px, acțiuni de 44 px, fără derulare orizontală`, async ({
+    test(`${screen.key}, 390 px: cardul de cel mult ${screen.phoneMax} px, acțiunile de 44 px în colțul din dreapta-sus, fără derulare orizontală`, async ({
       page,
     }) => {
       await page.setViewportSize({ width: 390, height: 844 });
@@ -265,7 +270,7 @@ test.describe("liste pe Table: Unități de măsură, Branduri, Atribute", () =>
       const row = screen.row(page);
       await row.scrollIntoViewIfNeeded();
       const box = await row.boundingBox();
-      expect(box?.height ?? 999, "înălțimea cardului").toBeLessThanOrEqual(132);
+      expect(box?.height ?? 999, "înălțimea cardului").toBeLessThanOrEqual(screen.phoneMax);
       for (const action of screen.actions) {
         const button = row.getByRole("button", { name: action });
         await expect(button).toBeVisible();
@@ -274,12 +279,45 @@ test.describe("liste pe Table: Unități de măsură, Branduri, Atribute", () =>
         );
         expect((await button.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(44);
       }
+      await expectActionsBesideName(row, `${screen.key}, 390 px`);
       expect(await primaryControls(page)).toEqual([screen.create]);
     });
   }
 });
 
 test.describe("categorii: arbore cu rânduri uniforme", () => {
+  test("descrierea paginii: o singură formulare, completă; pe telefon dispare nota despre tragere și rămâne mențiunea cu butoanele «Mută»", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, account, "/admin/produse/categorii");
+    const main = page.locator("main");
+    await expect(main).toContainText("Arborele de categorii al magazinului");
+    const text = async () => (await main.innerText()).replace(/\s+/g, " ");
+    // desktop: arborele, ordinea din magazin, tragerea pentru subcategorie sau reordonare, butoanele «Mută» ca alternativă — o singură dată
+    const desktop = await text();
+    for (const part of [
+      "Arborele de categorii al magazinului",
+      "ordinea de aici e ordinea din magazin",
+      "Poți trage o categorie peste alta ca să devină subcategoria ei, sau deasupra/dedesubtul ei ca să o reordonezi",
+      "Alternativ, folosește butoanele „Mută”",
+    ]) {
+      expect(desktop.split(part).length - 1, `«${part}» apare o singură dată`).toBe(1);
+    }
+    // formularea veche (de pe antet) nu mai există
+    expect(desktop).not.toContain("Trage o categorie sau folosește butoanele pentru a o muta");
+    expect(desktop.split("butoanele „Mută”").length - 1, "mențiunea cu butoanele «Mută»").toBe(1);
+
+    // telefon: nota despre tragere dispare, rămâne doar mențiunea cu butoanele «Mută» (o singură dată)
+    await page.setViewportSize({ width: 390, height: 844 });
+    const phone = await text();
+    expect(phone).toContain("Arborele de categorii al magazinului");
+    expect(phone).not.toContain("Poți trage");
+    expect(phone).not.toContain("Alternativ");
+    expect(phone).toContain("Folosește butoanele „Mută” pentru a muta o categorie");
+    expect(phone.split("butoanele „Mută”").length - 1, "mențiunea cu butoanele «Mută»").toBe(1);
+  });
+
   test("1440 px: titlu cu număr, rânduri de 48–60 px, acțiuni doar cu pictogramă, un singur buton principal", async ({
     page,
   }) => {
@@ -338,6 +376,153 @@ test.describe("categorii: arbore cu rânduri uniforme", () => {
     expect([...tops].length, "acțiunile pe o singură linie").toBe(1);
     expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
   });
+});
+
+/**
+ * Acțiunile cardului de pe telefon (Branduri, Unități, Atribute) stau în colțul din dreapta-sus, lângă nume: toate în prima bandă
+ * a cardului (primii 52 px), lipite de marginea din dreapta, în interiorul cardului; textul numelui se oprește înaintea lor.
+ */
+async function expectActionsBesideName(row: Locator, where: string) {
+  const box = await row.boundingBox();
+  const rowTop = box?.y ?? 0;
+  const rowRight = (box?.x ?? 0) + (box?.width ?? 0);
+  let firstLeft = Number.POSITIVE_INFINITY;
+  let lastRight = 0;
+  for (const button of await row.locator('[data-cell="actions"] button').all()) {
+    const b = await button.boundingBox();
+    expect(b?.y ?? 999, `${where}: acțiunea în prima bandă`).toBeLessThanOrEqual(rowTop + 12);
+    expect(
+      (b?.y ?? 0) + (b?.height ?? 0),
+      `${where}: acțiunea în interiorul cardului`,
+    ).toBeLessThanOrEqual((box?.y ?? 0) + (box?.height ?? 0) + 0.5);
+    firstLeft = Math.min(firstLeft, b?.x ?? 0);
+    lastRight = Math.max(lastRight, (b?.x ?? 0) + (b?.width ?? 0));
+  }
+  expect(rowRight - lastRight, `${where}: lipite de marginea din dreapta`).toBeLessThanOrEqual(16);
+  expect(lastRight, `${where}: în interiorul cardului`).toBeLessThanOrEqual(rowRight + 0.5);
+  // textul numelui (nu celula, care are umplutură) se oprește înaintea acțiunilor
+  const nameRight = await row.locator('th[scope="row"]').evaluate((cell) => {
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    return range.getBoundingClientRect().right;
+  });
+  expect(nameRight, `${where}: numele nu se suprapune cu acțiunile`).toBeLessThanOrEqual(
+    firstLeft + 0.5,
+  );
+}
+
+test.describe("acțiunile de rând: pictograme terțe (ghost), fără bordură în repaus", () => {
+  const ROWS = [
+    ...TABLES.map((screen) => ({
+      key: screen.key,
+      url: screen.url,
+      row: screen.row,
+      actions: screen.actions,
+    })),
+    {
+      key: "categorii",
+      url: "/admin/produse/categorii",
+      row: (page: Page) =>
+        page
+          .locator("[data-category-row]")
+          .filter({ hasText: `Pompe ${tag}` })
+          .first(),
+      actions: [
+        /^Mută .* mai sus$/,
+        /^Mută .* mai jos$/,
+        /^Mută categoria/,
+        /^Editează categoria/,
+        /^Șterge categoria/,
+      ],
+    },
+  ];
+
+  for (const item of ROWS) {
+    test(`${item.key}, 1440 px: în repaus fără bordură și fără fundal; la hover fundal, la focus de tastatură inel; ținta rămâne de 32 px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await login(page, account, item.url);
+      expect(await page.evaluate(() => matchMedia("(pointer: fine)").matches)).toBe(true);
+      const row = item.row(page);
+      await expect(row).toBeVisible();
+      for (const action of item.actions) {
+        const button = row.getByRole("button", { name: action });
+        await expect(button, String(action)).toBeVisible();
+        // repaus: nicio bordură, niciun fundal (doar pictograma)
+        await page.mouse.move(0, 0);
+        await page.waitForTimeout(250);
+        expect(await css(button, "border-top-width"), `${action}: bordură în repaus`).toBe("0px");
+        expect(await css(button, "background-color"), `${action}: fundal în repaus`).toBe(
+          "rgba(0, 0, 0, 0)",
+        );
+        // ținta de cursor fin: 32 px (nu 44 px, care e doar pentru ecrane tactile)
+        const box = await button.boundingBox();
+        expect(box?.height ?? 0, `${action}: înălțime`).toBeCloseTo(32, 0);
+        expect(box?.width ?? 0, `${action}: lățime`).toBeCloseTo(32, 0);
+        // hover: apare fundalul (dacă butonul e activ)
+        if (await button.isEnabled()) {
+          await button.hover();
+          await expect
+            .poll(() => css(button, "background-color"), { message: `${action}: fundal la hover` })
+            .not.toBe("rgba(0, 0, 0, 0)");
+          // focus de la tastatură: inel vizibil
+          await page.mouse.move(0, 0);
+          await button.focus();
+          await page.keyboard.press("Shift+Tab");
+          await page.keyboard.press("Tab");
+          await expect(button).toBeFocused();
+          expect(await css(button, "box-shadow"), `${action}: inel la focus`).not.toBe("none");
+        }
+      }
+    });
+  }
+
+  test("categorii: săgețile de la capete sunt dezactivate și vizibil estompate (nu dispar)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, account, "/admin/produse/categorii");
+    const row = page.locator("[data-category-row]").filter({ hasText: "Pompe inverter" }).first();
+    const up = row.getByRole("button", { name: /^Mută Pompe inverter mai sus$/ });
+    await expect(up).toBeVisible();
+    await expect(up).toBeDisabled();
+    const opacity = Number(await css(up, "opacity"));
+    expect(opacity, "estompat").toBeLessThan(1);
+    expect(opacity, "încă vizibil").toBeGreaterThanOrEqual(0.4);
+    // are nume accesibil și tooltip (neschimbate)
+    await expect(up).toHaveAttribute("title", /.+/);
+  });
+
+  for (const item of ROWS) {
+    test(`${item.key}, ecran tactil (pointer grosier, 1024 px): acțiunile de rând au cel puțin 44 px`, async ({
+      browser,
+      baseURL,
+    }) => {
+      const context = await browser.newContext({
+        baseURL: baseURL as string,
+        hasTouch: true,
+        isMobile: true,
+        viewport: { width: 1024, height: 768 },
+      });
+      try {
+        const page = await context.newPage();
+        await login(page, account, item.url);
+        expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
+        const row = item.row(page);
+        await expect(row).toBeVisible();
+        for (const action of item.actions) {
+          const button = row.getByRole("button", { name: action });
+          await expect(button, String(action)).toBeVisible();
+          const box = await button.boundingBox();
+          expect(box?.height ?? 0, `${action}: înălțime`).toBeGreaterThanOrEqual(44);
+          expect(box?.width ?? 0, `${action}: lățime`).toBeGreaterThanOrEqual(44);
+        }
+      } finally {
+        await context.close();
+      }
+    });
+  }
 });
 
 const HARNESS = (screen: string, stare: string) =>
@@ -406,6 +591,15 @@ test.describe("stări: listă goală, doar citire, texte lungi (pagina-harness)"
           expect(await css(text, "white-space")).toBe("nowrap");
           expect(await css(text, "text-overflow")).toBe("ellipsis");
           expect((await text.boundingBox())?.height ?? 99).toBeLessThanOrEqual(24);
+        }
+        // pe telefon, la ecranele cu tabel: acțiunile rămân în colțul cardului chiar și cu nume lung (nu sunt împinse în afară)
+        if (width === 390 && item.key !== "categorii") {
+          for (const row of await page
+            .locator("[data-unit-row], [data-brand-row], [data-attribute-row]")
+            .all()) {
+            if (!(await row.isVisible())) continue;
+            await expectActionsBesideName(row, `${item.key} lung, 390 px`);
+          }
         }
         // niciun rând nu e mai înalt de 200 px (numele lung se rupe pe cuvinte, nu în mijlocul lor)
         for (const row of await page

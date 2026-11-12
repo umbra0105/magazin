@@ -150,7 +150,15 @@ export function BrandManager({ rows, capabilities, thumbs, editId }: Props) {
           <TBody>
             {rows.map((row) => (
               <Tr key={row.id} data-brand-row={row.id}>
-                <RowHeader className="font-medium">{row.name}</RowHeader>
+                <RowHeader
+                  className={
+                    canEdit
+                      ? "font-medium group-data-[stacked]/table:@max-2xl/table:pr-24"
+                      : "font-medium"
+                  }
+                >
+                  {row.name}
+                </RowHeader>
                 <Td
                   priority="secondary"
                   className="whitespace-nowrap text-ink-secondary"
@@ -173,10 +181,10 @@ export function BrandManager({ rows, capabilities, thumbs, editId }: Props) {
                     : daysText(row.defaultLeadTimeDays)}
                 </Td>
                 {canEdit && (
-                  <Td stack="actions" data-cell="actions">
+                  <Td stack="corner" data-cell="actions">
                     <div className="flex justify-end gap-1 group-data-[stacked]/table:@max-2xl/table:justify-start">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         aria-label={m.actions.edit(row.name)}
                         title={m.actions.editLabel}
@@ -186,7 +194,7 @@ export function BrandManager({ rows, capabilities, thumbs, editId }: Props) {
                       </Button>
                       {capabilities.structure && (
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
                           aria-label={m.actions.delete(row.name)}
                           title={m.actions.deleteLabel}

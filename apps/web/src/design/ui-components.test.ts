@@ -74,6 +74,21 @@ describe("Button", () => {
     expect(danger).toContain("border-line-control");
   });
 
+  it("«icon» are ținta de 44 px pe orice ecran tactil (pointer grosier), și peste lățimea de tabletă, unde înălțimea compactă coboară la 32 px", () => {
+    const out = html(h(Button, { size: "icon", "aria-label": "Editează" }, "x"));
+    expect(out).toContain("pointer-coarse:size-11");
+  });
+
+  it("variantele «ghost» și «icon» sunt butonul-pictogramă terț din docs/17: fără bordură și fără fundal în repaus, fundal la cursor, inel de focus", () => {
+    const out = html(h(Button, { variant: "ghost", size: "icon", "aria-label": "Editează" }, "x"));
+    const tag = /<button[^>]*>/.exec(out)?.[0] ?? "";
+    expect(tag).not.toMatch(/(^|[ "])border([ "])/);
+    expect(tag).not.toContain("bg-surface-page");
+    expect(tag).toContain("hover:bg-surface-hover");
+    expect(tag).toContain("focus-visible:ring-2");
+    expect(tag).toContain("disabled:opacity-60");
+  });
+
   it("mărimea «icon» e un pătrat cât înălțimea compactă, fără umplutură (butoane doar cu pictogramă și nume accesibil)", () => {
     const out = html(h(Button, { size: "icon", "aria-label": "Prag stoc mic: Alge" }, "x"));
     expect(out).toContain("size-(--control-h-compact)");
@@ -392,6 +407,38 @@ describe("Table", () => {
       expect(tableStackClass("end")).toContain("ml-auto");
       // «actions» rămâne linie întreagă (Stoc), «inline» nu se schimbă
       expect(tableStackClass("actions")).toContain("basis-full");
+      expect(tableStackClass("inline")).toBe("");
+    });
+
+    it("«corner»: celula stă în colțul din dreapta-sus al cardului (acțiunile rândului lângă nume, nu pe linie proprie), fără să ocupe loc în fluxul cardului", () => {
+      const out = html(
+        h(
+          Table,
+          { stacked: true },
+          h(
+            TBody,
+            null,
+            h(
+              Tr,
+              null,
+              h(RowHeader, null, "Hayward"),
+              h(Td, null, "42 produse"),
+              h(Td, { stack: "corner" }, "acțiuni"),
+            ),
+          ),
+        ),
+      );
+      const corner = /<td[^>]*>acțiuni/.exec(out)?.[0] ?? "";
+      expect(corner).toContain("@max-2xl/table:absolute");
+      expect(corner).toContain("@max-2xl/table:right-2");
+      expect(corner).toContain("@max-2xl/table:top-1");
+      expect(corner).not.toContain("basis-full");
+      expect(corner).not.toContain("ml-auto");
+      // rândul-card e poziționat (colțul se raportează la el), fără să se schimbe pentru tabelele neîn mod stivuit
+      expect(/<tr[^>]*>/.exec(out)?.[0]).toContain("@max-2xl/table:relative");
+      expect(html(h(Table, null, h(TBody, null, h(Tr, null, h(Td, null, "x")))))).not.toContain(
+        "data-stacked",
+      );
       expect(tableStackClass("inline")).toBe("");
     });
 

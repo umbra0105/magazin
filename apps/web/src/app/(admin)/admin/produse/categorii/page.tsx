@@ -94,7 +94,16 @@ export default async function CategoriesPage({
       <PageHeader
         title={m.title}
         count={rows.length}
-        description={m.description}
+        description={
+          <>
+            {m.description}{" "}
+            {/* tragerea nu există pe telefon: acolo rămâne doar mențiunea cu butoanele «Mută» */}
+            <span className="hidden sm:inline">
+              {m.dragIntro} {m.moveAlt}
+            </span>
+            <span className="sm:hidden">{m.moveOnly}</span>
+          </>
+        }
         notes={!canEdit ? [m.readOnly] : !capabilities.structure ? [m.contentOnly] : []}
       />
       <CategoryManager

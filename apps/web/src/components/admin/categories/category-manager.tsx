@@ -148,10 +148,7 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {structure && rows.length > 0 && (
-          <p className="text-body text-ink-secondary">{m.dragHint}</p>
-        )}
+      <div className="flex flex-wrap items-center justify-end gap-3">
         {structure && rows.length > 0 && (
           <Button onClick={() => setFormTarget("new")} disabled={pending}>
             {m.create}
@@ -251,7 +248,7 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                     <>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         aria-label={m.actions.up(row.name)}
                         title={m.actions.up(row.name)}
@@ -265,7 +262,7 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         aria-label={m.actions.down(row.name)}
                         title={m.actions.down(row.name)}
@@ -279,7 +276,7 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         aria-label={m.actions.moveTo(row.name)}
                         title={m.actions.moveToLabel}
@@ -292,7 +289,7 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                   {canEditAnything && (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="icon"
                       aria-label={m.actions.edit(row.name)}
                       title={m.actions.editLabel}
@@ -304,7 +301,7 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
                   {structure && (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="icon"
                       aria-label={m.actions.delete(row.name)}
                       title={m.actions.deleteLabel}

@@ -377,8 +377,11 @@ export const ro = {
     },
     categories: {
       title: "Categorii",
-      description:
-        "Arborele de categorii al magazinului. Trage o categorie sau folosește butoanele pentru a o muta; ordinea de aici e ordinea din magazin.",
+      description: "Arborele de categorii al magazinului; ordinea de aici e ordinea din magazin.",
+      dragIntro:
+        "Poți trage o categorie peste alta ca să devină subcategoria ei, sau deasupra/dedesubtul ei ca să o reordonezi.",
+      moveAlt: "Alternativ, folosește butoanele „Mută”.",
+      moveOnly: "Folosește butoanele „Mută” pentru a muta o categorie.",
       readOnly: "Poți vedea categoriile, dar nu le poți modifica.",
       contentOnly:
         "Poți edita numele, descrierea, SEO-ul și imaginea categoriilor. Structura (creare, mutare, adresă, ștergere) cere permisiunea de gestionare a produselor.",
@@ -388,8 +391,6 @@ export const ro = {
       empty: "Nu există nicio categorie încă.",
       treeLabel: "Arborele de categorii",
       rootDrop: "Trage aici pentru a muta la rădăcină",
-      dragHint:
-        "Poți trage o categorie peste alta ca să devină subcategoria ei, sau deasupra/dedesubtul ei ca să o reordonezi. Alternativ, folosește butoanele „Mută”.",
       products: (n: number) => (n === 1 ? "1 produs" : `${n} produse`),
       level: (n: number) => `nivel ${n + 1}`,
       actions: {

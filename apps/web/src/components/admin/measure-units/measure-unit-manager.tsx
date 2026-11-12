@@ -132,7 +132,15 @@ export function MeasureUnitManager({
                 data-unit-row={row.code}
                 data-active={row.isActive ? "true" : "false"}
               >
-                <RowHeader className="font-medium">{row.name}</RowHeader>
+                <RowHeader
+                  className={
+                    canWrite
+                      ? "font-medium group-data-[stacked]/table:@max-2xl/table:pr-24"
+                      : "font-medium"
+                  }
+                >
+                  {row.name}
+                </RowHeader>
                 <Td
                   priority="secondary"
                   className="whitespace-nowrap text-ink-secondary"
@@ -173,10 +181,10 @@ export function MeasureUnitManager({
                   </span>
                 </Td>
                 {canWrite && (
-                  <Td stack="actions" data-cell="actions">
+                  <Td stack="corner" data-cell="actions">
                     <div className="flex justify-end gap-1 group-data-[stacked]/table:@max-2xl/table:justify-start">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         aria-label={m.actions.edit(row.name)}
                         title={m.actions.editLabel}
@@ -186,7 +194,7 @@ export function MeasureUnitManager({
                       </Button>
                       {row.code !== DEFAULT_UNIT_CODE && (
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
                           disabled={pending}
                           aria-label={

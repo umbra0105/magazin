@@ -14,7 +14,7 @@ export function PageHeader({
   title: string;
   /** Numărul de elemente din listă; lipsă = titlul fără număr. */
   count?: number;
-  description?: string;
+  description?: ReactNode;
   notes?: readonly ReactNode[];
 }) {
   return (

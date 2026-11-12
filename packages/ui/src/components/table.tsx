@@ -19,9 +19,11 @@ export type TablePriority = "primary" | "secondary" | "tertiary" | "detail";
  * Locul unei celule în cardul modului stivuit (`Table stacked`, sub 42rem de tabel): `title` = pe toată lățimea, în capul cardului;
  * `lead` = capul cardului, dar pe aceeași linie cu celulele dinaintea lui (caseta de selecție, imaginea): umple restul liniei;
  * `inline` = pe aceeași linie cu celelalte (implicit); `end` = tot pe linia valorilor, dar împinsă la dreapta cardului (o acțiune
- * a rândului, de exemplu «Duplică», lângă preț și stare); `actions` = pe toată lățimea, ultima linie, cu butoanele.
+ * a rândului, de exemplu «Duplică», lângă preț și stare); `corner` = în colțul din dreapta-sus al cardului, lângă nume, fără să
+ * ocupe loc în fluxul cardului (acțiunile rândului la dreapta primei linii; capul cardului își lasă loc cu o umplutură în dreapta);
+ * `actions` = pe toată lățimea, ultima linie, cu butoanele.
  */
-export type TableStack = "title" | "lead" | "inline" | "end" | "actions";
+export type TableStack = "title" | "lead" | "inline" | "end" | "corner" | "actions";
 
 // Clasele sunt scrise întregi (nu compuse): Tailwind găsește clasele doar ca text. Modul stivuit e activat doar de `data-stacked`
 // de pe tabel, deci celelalte tabele rămân neatinse; «sub 42rem» = `@max-2xl` pe containerul `table`.
@@ -37,6 +39,8 @@ const STACK_CLASS: Record<TableStack, string> = {
   lead: "group-data-[stacked]/table:@max-2xl/table:min-w-48 group-data-[stacked]/table:@max-2xl/table:flex-1",
   inline: "",
   end: "group-data-[stacked]/table:@max-2xl/table:ml-auto",
+  corner:
+    "group-data-[stacked]/table:@max-2xl/table:absolute group-data-[stacked]/table:@max-2xl/table:right-2 group-data-[stacked]/table:@max-2xl/table:top-1",
   actions: "group-data-[stacked]/table:@max-2xl/table:basis-full",
 };
 
@@ -54,6 +58,7 @@ const STACKED_CELL =
 const STACKED_NUMERIC = "group-data-[stacked]/table:@max-2xl/table:text-left";
 
 const STACKED_ROW =
+  "group-data-[stacked]/table:@max-2xl/table:relative " +
   "group-data-[stacked]/table:@max-2xl/table:flex group-data-[stacked]/table:@max-2xl/table:flex-wrap " +
   "group-data-[stacked]/table:@max-2xl/table:items-center group-data-[stacked]/table:@max-2xl/table:gap-x-3 " +
   "group-data-[stacked]/table:@max-2xl/table:gap-y-1 group-data-[stacked]/table:@max-2xl/table:h-auto " +

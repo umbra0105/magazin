@@ -131,7 +131,15 @@ export function AttributeManager({
           <TBody>
             {attributes.map((a) => (
               <Tr key={a.id} data-attribute-row={a.code}>
-                <RowHeader className="font-medium">{a.name}</RowHeader>
+                <RowHeader
+                  className={
+                    canWrite
+                      ? "font-medium group-data-[stacked]/table:@max-2xl/table:pr-24"
+                      : "font-medium"
+                  }
+                >
+                  {a.name}
+                </RowHeader>
                 <Td
                   priority="secondary"
                   className="whitespace-nowrap text-ink-secondary"
@@ -159,11 +167,11 @@ export function AttributeManager({
                   {a.type === "select" ? m.optionsCount(a.options.length) : "—"}
                 </Td>
                 {canWrite && (
-                  <Td stack="actions" data-cell="actions">
+                  <Td stack="corner" data-cell="actions">
                     <div className="flex justify-end gap-1 group-data-[stacked]/table:@max-2xl/table:justify-start">
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         aria-label={m.edit(a.name)}
                         title={m.editLabel}
@@ -176,7 +184,7 @@ export function AttributeManager({
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
                         aria-label={m.delete.button(a.name)}
                         title={m.deleteLabel}
@@ -705,7 +713,7 @@ function OptionRow({
       </span>
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         size="icon"
         disabled={pending || index === 0}
         aria-label={f.optionMoveUp(option.value)}
@@ -716,7 +724,7 @@ function OptionRow({
       </Button>
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         size="icon"
         disabled={pending || index === total - 1}
         aria-label={f.optionMoveDown(option.value)}
@@ -727,7 +735,7 @@ function OptionRow({
       </Button>
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         size="icon"
         disabled={pending}
         aria-label={f.optionDelete(option.value)}
