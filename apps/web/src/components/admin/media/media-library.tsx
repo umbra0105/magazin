@@ -102,6 +102,7 @@ export function MediaLibrary({
         />
         {canWrite && (
           <UploadPanel
+            primary
             items={uploader.uploads}
             rules={m.upload.rules(maxUploadMb, MEDIA_TYPES_LABEL)}
             accept={MEDIA_ACCEPT}

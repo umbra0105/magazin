@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MEDIA_STATUSES, can, type MediaListStatus } from "@ecom/core";
-import { Button, buttonVariants } from "@ecom/ui";
+import { Button, buttonVariants, cn } from "@ecom/ui";
 import { MediaFilterFields } from "@/components/admin/media/media-filter-fields";
 import { MediaLibrary } from "@/components/admin/media/media-library";
 import { PageHeader } from "@/components/admin/page-header";
@@ -80,7 +80,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
         method="get"
         action="/admin/media"
         role="search"
-        className="flex flex-wrap items-end gap-3"
+        className="grid grid-cols-4 items-end gap-3 sm:flex sm:flex-wrap"
       >
         <MediaFilterFields
           idPrefix="media-filter"
@@ -89,11 +89,22 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
           folder={folderParam}
           status={status ?? ""}
         />
-        <Button type="submit" variant="outline">
+        <Button
+          type="submit"
+          variant="outline"
+          className="col-start-4 row-start-1 px-3 sm:col-auto sm:row-auto sm:px-4"
+        >
           {m.search.submit}
         </Button>
         {filtered && (
-          <Link href="/admin/media" className={buttonVariants({ variant: "outline" })}>
+          <Link
+            href="/admin/media"
+            className={cn(
+              // pe telefon: acțiune mică sub filtre; de la `sm` în sus: aceeași mărime ca «Caută», pe același rând
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "col-span-4 justify-self-start sm:col-auto sm:h-(--control-h) sm:px-4 sm:text-(length:--button-text)",
+            )}
+          >
             {m.search.reset}
           </Link>
         )}

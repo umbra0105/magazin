@@ -16,11 +16,14 @@ function errorText(key: UploadErrorKey, retryAfter: number | null): string {
 
 /**
  * Zona de încărcare (drag & drop sau selector de fișiere) și lista încărcărilor curente, cu progres
- * pe fiecare fișier. Încărcarea propriu-zisă o face `UploadQueue` (max. 2 simultan). Erorile și «Încărcat» sunt în
+ * pe fiecare fișier. Încărcarea propriu-zisă o face `UploadQueue` (max. 2 simultan). `primary`: «Alege fișiere» e butonul principal al
+ * ecranului (pagina bibliotecii); în selector rămâne secundar (acolo principal e «Alege N imagini»). Pe ecrane tactile (fără hover sau
+ * cu pointer grosier) nu există tragere, deci dispar pictograma, «Trage imaginile aici» și «sau»: rămân butonul și nota despre formate. Erorile și «Încărcat» sunt în
  * tonurile Problemă / Succes (și scrise cu litere, nu doar colorate); «Reîncearcă» e secundar, iar «Scoate din listă»
  * e un buton doar cu pictogramă (terț), cu nume accesibil și tooltip.
  */
 export function UploadPanel({
+  primary = false,
   items,
   rules,
   accept,
@@ -29,6 +32,7 @@ export function UploadPanel({
   onRemove,
   onClear,
 }: {
+  primary?: boolean;
   items: readonly UploadItem[];
   rules: string;
   accept: string;
@@ -44,6 +48,7 @@ export function UploadPanel({
   return (
     <section aria-labelledby={`${inputId}-title`} className="flex flex-col gap-3">
       <div
+        data-upload-zone
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -56,20 +61,29 @@ export function UploadPanel({
           if (files.length > 0) onFiles(files);
         }}
         className={cn(
-          "flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-line-control p-4 text-center",
+          "flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-line-control p-4 text-center [@media(hover:none),(pointer:coarse)]:border-solid",
           dragging && "border-brand bg-surface-subtle",
         )}
       >
-        <Upload aria-hidden="true" className="size-6 text-ink-secondary" />
-        <h2 id={`${inputId}-title`} className="text-body font-medium">
+        <Upload
+          aria-hidden="true"
+          className="size-6 text-ink-secondary [@media(hover:none),(pointer:coarse)]:hidden"
+        />
+        <h2
+          id={`${inputId}-title`}
+          className="text-body font-medium [@media(hover:none),(pointer:coarse)]:hidden"
+        >
           {m.upload.dropHere}
         </h2>
-        <p className="text-label text-ink-secondary">{m.upload.or} </p>
+        <p className="text-label text-ink-secondary [@media(hover:none),(pointer:coarse)]:hidden">
+          {m.upload.or}{" "}
+        </p>
         <FileInput
           id={inputId}
           multiple
           accept={accept}
           buttonLabel={m.upload.choose}
+          variant={primary ? "default" : "outline"}
           hideStatus
           clearAfterChange
           onFilesChange={(files) => {

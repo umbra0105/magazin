@@ -56,6 +56,7 @@ export function UploadHarness({ stare }: { stare: string }) {
   return (
     <div className="flex max-w-xs flex-col gap-4 lg:w-64">
       <UploadPanel
+        primary
         items={items}
         rules="JPEG, PNG, WebP, AVIF. Cel mult 10 MB per fișier."
         accept="image/png"

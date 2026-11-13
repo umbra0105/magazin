@@ -198,7 +198,7 @@ export function MediaPicker({
       <div data-testid="media-picker" className="flex flex-col gap-4">
         <form
           role="search"
-          className="flex flex-wrap items-end gap-3"
+          className="grid grid-cols-4 items-end gap-3 sm:flex sm:flex-wrap"
           onSubmit={(e) => {
             e.preventDefault();
             submitFilters();
@@ -218,7 +218,11 @@ export function MediaPicker({
               void load(next);
             }}
           />
-          <Button type="submit" variant="outline">
+          <Button
+            type="submit"
+            variant="outline"
+            className="col-start-4 row-start-1 px-3 sm:col-auto sm:row-auto sm:px-4"
+          >
             {m.picker.applyFilters}
           </Button>
         </form>

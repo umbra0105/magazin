@@ -10,7 +10,8 @@ const STATUSES = ["pending", "processing", "ready", "failed"] as const;
 /**
  * Câmpurile de căutare și filtrare ale bibliotecii: aceleași în pagina bibliotecii (formular GET,
  * necontrolate, cu `name`) și în selector (controlate, prin `onChange`). Fără hook-uri, deci se
- * pot folosi și într-un server component.
+ * pot folosi și într-un server component. Câmpurile se așază în formularul-părinte, care e o grilă de 4 coloane pe telefon
+ * (căutarea pe 3 coloane lângă «Caută», Folder și Stare pe câte 2 coloane dedesubt) și un rând care se rupe de la `sm` în sus.
  */
 export function MediaFilterFields({
   idPrefix,
@@ -33,7 +34,7 @@ export function MediaFilterFields({
 }) {
   return (
     <>
-      <div className="flex w-full min-w-48 flex-1 flex-col gap-1.5">
+      <div className="col-span-3 flex min-w-0 flex-col gap-1.5 sm:col-auto sm:min-w-48 sm:flex-1">
         <Label htmlFor={`${idPrefix}-q`}>{m.search.label}</Label>
         <Input
           id={`${idPrefix}-q`}
@@ -46,7 +47,9 @@ export function MediaFilterFields({
             : { defaultValue: q })}
         />
       </div>
-      <div className="flex w-full min-w-40 flex-col gap-1.5 sm:w-auto">
+      <div
+        className={`flex min-w-0 flex-col gap-1.5 sm:col-auto sm:min-w-40 ${showStatus ? "col-span-2" : "col-span-4"}`}
+      >
         <Label htmlFor={`${idPrefix}-folder`}>{m.filters.folder}</Label>
         <Select
           id={`${idPrefix}-folder`}
@@ -65,7 +68,7 @@ export function MediaFilterFields({
         </Select>
       </div>
       {showStatus && (
-        <div className="flex w-full min-w-36 flex-col gap-1.5 sm:w-auto">
+        <div className="col-span-2 flex min-w-0 flex-col gap-1.5 sm:col-auto sm:min-w-36">
           <Label htmlFor={`${idPrefix}-status`}>{m.filters.status}</Label>
           <Select id={`${idPrefix}-status`} name="status" defaultValue={status ?? ""}>
             <option value="">{m.filters.allStatuses}</option>

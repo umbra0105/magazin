@@ -141,142 +141,146 @@ export function MediaDetailDialog({
         description={m.detail.description}
         closeLabel={m.detail.close}
       >
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <div className="flex flex-col gap-2 sm:w-56 sm:shrink-0">
-            <div
-              className="aspect-[4/3] w-full overflow-hidden rounded-lg border border-line-subtle bg-surface-subtle"
-              style={
-                item.placeholder
-                  ? { backgroundImage: `url(${item.placeholder})`, backgroundSize: "cover" }
-                  : undefined
-              }
-            >
-              {item.thumb && (
-                // eslint-disable-next-line @next/next/no-img-element -- thumb generat de worker
-                <img
-                  src={item.thumb.url}
-                  alt={item.alt}
-                  width={item.thumb.width}
-                  height={item.thumb.height}
-                  className="size-full object-cover"
-                />
-              )}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="flex flex-col gap-2 sm:w-56 sm:shrink-0">
+              <div
+                className="aspect-[4/3] w-full overflow-hidden rounded-lg border border-line-subtle bg-surface-subtle"
+                style={
+                  item.placeholder
+                    ? { backgroundImage: `url(${item.placeholder})`, backgroundSize: "cover" }
+                    : undefined
+                }
+              >
+                {item.thumb && (
+                  // eslint-disable-next-line @next/next/no-img-element -- thumb generat de worker
+                  <img
+                    src={item.thumb.url}
+                    alt={item.alt}
+                    width={item.thumb.width}
+                    height={item.thumb.height}
+                    className="size-full object-cover"
+                  />
+                )}
+              </div>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-body">
+                <dt className="text-ink-secondary">{m.detail.dimensions}</dt>
+                <dd>{item.width && item.height ? `${item.width} × ${item.height}` : "—"}</dd>
+                <dt className="text-ink-secondary">{m.detail.size}</dt>
+                <dd>{formatBytes(item.sizeBytes)}</dd>
+                <dt className="text-ink-secondary">{m.detail.type}</dt>
+                <dd>{item.mime}</dd>
+                <dt className="text-ink-secondary">{m.detail.uploaded}</dt>
+                <dd>{formatDate(item.createdAt)}</dd>
+              </dl>
+              <Badge
+                variant={
+                  item.status === "ready"
+                    ? "success"
+                    : item.status === "failed"
+                      ? "danger"
+                      : item.status === "processing"
+                        ? "info"
+                        : "neutral"
+                }
+                className="self-start"
+              >
+                {m.status[status] ?? item.status}
+              </Badge>
             </div>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-body">
-              <dt className="text-ink-secondary">{m.detail.dimensions}</dt>
-              <dd>{item.width && item.height ? `${item.width} × ${item.height}` : "—"}</dd>
-              <dt className="text-ink-secondary">{m.detail.size}</dt>
-              <dd>{formatBytes(item.sizeBytes)}</dd>
-              <dt className="text-ink-secondary">{m.detail.type}</dt>
-              <dd>{item.mime}</dd>
-              <dt className="text-ink-secondary">{m.detail.uploaded}</dt>
-              <dd>{formatDate(item.createdAt)}</dd>
-            </dl>
-            <Badge
-              variant={
-                item.status === "ready"
-                  ? "success"
-                  : item.status === "failed"
-                    ? "danger"
-                    : item.status === "processing"
-                      ? "info"
-                      : "neutral"
-              }
-              className="self-start"
-            >
-              {m.status[status] ?? item.status}
-            </Badge>
+
+            <div className="flex min-w-0 flex-1 flex-col gap-4">
+              {failedReason && (
+                <div
+                  role="alert"
+                  className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
+                >
+                  <p className="font-medium">{m.detail.failedTitle}</p>
+                  <p>{failedReason}</p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="media-alt">{m.detail.alt}</Label>
+                <Textarea
+                  id="media-alt"
+                  value={alt}
+                  onChange={(e) => setAlt(e.target.value)}
+                  readOnly={!canWrite}
+                  maxLength={300}
+                  aria-describedby="media-alt-hint"
+                />
+                <p id="media-alt-hint" className="text-label text-ink-secondary">
+                  {alt.trim() === "" && <strong>{m.detail.altMissing} </strong>}
+                  {m.detail.altHint}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="media-tags">{m.detail.tags}</Label>
+                <Input
+                  id="media-tags"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  readOnly={!canWrite}
+                  aria-describedby="media-tags-hint"
+                />
+                <p id="media-tags-hint" className="text-label text-ink-secondary">
+                  {m.detail.tagsHint}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="media-folder">{m.detail.folder}</Label>
+                <Select
+                  id="media-folder"
+                  value={folderId}
+                  onChange={(e) => setFolderId(e.target.value)}
+                  disabled={!canWrite}
+                >
+                  <option value="">{m.filters.noFolder}</option>
+                  {folderOptions.map(({ folder, depth }) => (
+                    <option key={folder.id} value={folder.id}>
+                      {`${"  ".repeat(depth)}${folder.name}`}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-4">
-            {failedReason && (
-              <div
-                role="alert"
-                className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
+          <p role="status" aria-live="polite" className="text-body empty:hidden">
+            {message && (
+              <span
+                className={
+                  message.kind === "error" ? "text-tone-problem-fg" : "text-tone-success-fg"
+                }
               >
-                <p className="font-medium">{m.detail.failedTitle}</p>
-                <p>{failedReason}</p>
-              </div>
+                {message.text}
+              </span>
             )}
+          </p>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="media-alt">{m.detail.alt}</Label>
-              <Textarea
-                id="media-alt"
-                value={alt}
-                onChange={(e) => setAlt(e.target.value)}
-                readOnly={!canWrite}
-                maxLength={300}
-                aria-describedby="media-alt-hint"
-              />
-              <p id="media-alt-hint" className="text-label text-ink-secondary">
-                {alt.trim() === "" && <strong>{m.detail.altMissing} </strong>}
-                {m.detail.altHint}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="media-tags">{m.detail.tags}</Label>
-              <Input
-                id="media-tags"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                readOnly={!canWrite}
-                aria-describedby="media-tags-hint"
-              />
-              <p id="media-tags-hint" className="text-label text-ink-secondary">
-                {m.detail.tagsHint}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="media-folder">{m.detail.folder}</Label>
-              <Select
-                id="media-folder"
-                value={folderId}
-                onChange={(e) => setFolderId(e.target.value)}
-                disabled={!canWrite}
+          {canWrite && (
+            <div data-media-actions className="flex flex-wrap items-center justify-between gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmDelete(true)}
+                disabled={pending}
+                className="text-tone-problem-fg"
               >
-                <option value="">{m.filters.noFolder}</option>
-                {folderOptions.map(({ folder, depth }) => (
-                  <option key={folder.id} value={folder.id}>
-                    {`${"  ".repeat(depth)}${folder.name}`}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <p role="status" aria-live="polite" className="min-h-5 text-body">
-              {message && (
-                <span
-                  className={
-                    message.kind === "error" ? "text-tone-problem-fg" : "text-tone-success-fg"
-                  }
-                >
-                  {message.text}
-                </span>
-              )}
-            </p>
-
-            {canWrite && (
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={save} disabled={pending}>
-                  {pending ? m.detail.saving : m.detail.save}
-                </Button>
+                {m.detail.delete}
+              </Button>
+              <div className="ml-auto flex flex-wrap justify-end gap-2">
                 <Button variant="outline" onClick={regenerate} disabled={pending}>
                   {m.detail.regenerate}
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => setConfirmDelete(true)}
-                  disabled={pending}
-                  className="ml-auto"
-                >
-                  {m.detail.delete}
+                <Button onClick={save} disabled={pending}>
+                  {pending ? m.detail.saving : m.detail.save}
                 </Button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </Dialog>
 

@@ -29,6 +29,9 @@ import { expectResponseOk } from "./support/diagnostics";
  * `media-picker.spec.ts` și `warehouses.spec.ts`.
  */
 
+/** Dreptunghiul unui element, în pixeli de fereastră. */
+type Box = { x: number; y: number; width: number; height: number };
+
 interface Account {
   email: string;
   password: string;
@@ -131,7 +134,9 @@ async function primaryControls(page: Page, root?: Locator): Promise<string[]> {
     const primary = getComputedStyle(probe).backgroundColor;
     probe.remove();
     const found: string[] = [];
-    for (const el of scope.querySelectorAll<HTMLElement>('button, a, [role="button"]')) {
+    for (const el of scope.querySelectorAll<HTMLElement>(
+      'button, a, [role="button"], label[for]',
+    )) {
       const box = el.getBoundingClientRect();
       if (box.width === 0 || box.height === 0) continue;
       if (getComputedStyle(el).backgroundColor !== primary) continue;
@@ -195,10 +200,10 @@ test.describe("media: pagina bibliotecii", () => {
     await expect(page.getByText(/^\d+ fișiere?$/)).toHaveCount(0);
     expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
 
-    // «Caută» nu e buton principal; «Resetează filtrele» (filtre active) e secundar
+    // «Alege fișiere» (zona de încărcare) e singurul buton principal; «Caută» și «Resetează filtrele» sunt secundare
     const search = page.getByRole("button", { name: "Caută", exact: true });
     await expect(search).toBeVisible();
-    expect(await primaryControls(page)).toEqual([]);
+    expect(await primaryControls(page)).toEqual(["Alege fișiere"]);
     await expect(page.getByRole("link", { name: "Resetează filtrele" })).toBeVisible();
 
     // cardurile: chenar și fundal din tokeni, colțuri rotunjite, numele pe o singură linie cu «…» și title
@@ -249,15 +254,20 @@ test.describe("media: pagina bibliotecii", () => {
       true,
     );
     const search = page.getByRole("search");
-    for (const label of ["Caută după nume, text alternativ sau tag", "Folder", "Stare"]) {
+    // căutarea împarte primul rând cu «Caută»; Folder și Stare au câte o coloană din două
+    for (const [label, min] of [
+      ["Caută după nume, text alternativ sau tag", 240],
+      ["Folder", 150],
+      ["Stare", 150],
+    ] as const) {
       const field = search.getByLabel(label, { exact: true });
-      expect((await field.boundingBox())?.width ?? 0, label).toBeGreaterThanOrEqual(300);
+      expect((await field.boundingBox())?.width ?? 0, label).toBeGreaterThanOrEqual(min);
     }
     const cards = await page.locator("[data-media-card]").all();
     const xs = new Set<number>();
     for (const c of cards) xs.add(Math.round((await c.boundingBox())?.x ?? 0));
     expect(xs.size, "coloane de carduri").toBe(2);
-    expect(await primaryControls(page)).toEqual([]);
+    expect(await primaryControls(page)).toEqual(["Alege fișiere"]);
   });
 });
 
@@ -275,13 +285,15 @@ test.describe("media: stări (pagina-harness)", () => {
         name: "Biblioteca este goală. Încarcă prima imagine.",
       }),
     ).toBeVisible();
-    expect(await primaryControls(page)).toEqual([]);
+    // starea goală nu dublează acțiunea: singurul buton principal rămâne «Alege fișiere» din zona de încărcare
+    expect(await primaryControls(page)).toEqual(["Alege fișiere"]);
     expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
 
     await page.goto(HARNESS("biblioteca", "filtrata"));
     await expect(
       page.getByRole("heading", { level: 2, name: "Niciun fișier nu corespunde filtrelor." }),
     ).toBeVisible();
+    expect(await primaryControls(page)).toEqual(["Alege fișiere"]);
 
     await page.goto(HARNESS("biblioteca", "citire"));
     const note = page.getByRole("note");
@@ -409,8 +421,8 @@ test.describe("media: stări (pagina-harness)", () => {
       }
       const done = page.getByText("Încărcat", { exact: true }).first();
       expect(await css(done, "color")).toBe(success);
-      // «Reîncearcă» secundar; nimic principal pe ecran
-      expect(await primaryControls(page)).toEqual([]);
+      // «Reîncearcă» secundar; singurul buton principal e «Alege fișiere»
+      expect(await primaryControls(page)).toEqual(["Alege fișiere"]);
       const retry = page.getByRole("button", { name: "Reîncearcă" }).first();
       expect(await css(retry, "background-color")).not.toBe(
         await tokenStyle(page, "bg-action", "background-color"),
@@ -545,6 +557,265 @@ test.describe("media: dialoguri (detalii, ștergere, foldere)", () => {
     await expect(alert).toContainText("Numele dosarului e obligatoriu.");
     expect(await css(alert, "color")).toBe(await tokenStyle(page, "text-tone-problem-fg", "color"));
     await expect(dialog.getByLabel("Nume folder")).toBeFocused();
+  });
+});
+
+// ───────────────────────── Media: bara dialogului, filtre pe telefon, zona de încărcare ─────────────────────────
+
+test.describe("media: dialogul de detalii, o singură bară de butoane", () => {
+  const open = async (page: Page) => {
+    await login(page, account, HARNESS("biblioteca"));
+    await page.getByRole("button", { name: "Deschide pompa.png" }).click();
+    const dialog = page.getByRole("dialog", { name: "pompa.png" });
+    await expect(dialog).toBeVisible();
+    return dialog;
+  };
+
+  test("1440 px: «Șterge…» (ghost, pericol) la stânga, «Regenerează variantele» (secundar) și «Salvează» (principal) la dreapta, toate pe același centru vertical; fără gol mare deasupra barei", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const dialog = await open(page);
+    const bar = dialog.locator("[data-media-actions]");
+    await expect(bar).toHaveCount(1);
+    await expect(bar.getByRole("button")).toHaveCount(3);
+    const remove = bar.getByRole("button", { name: "Șterge…" });
+    const regenerate = bar.getByRole("button", { name: "Regenerează variantele" });
+    const save = bar.getByRole("button", { name: "Salvează" });
+    const [r, g, v] = (await Promise.all(
+      [remove, regenerate, save].map((b) => b.boundingBox()),
+    )) as [Box, Box, Box];
+    const center = (b: { y: number; height: number }) => b.y + b.height / 2;
+    expect(
+      Math.abs(center(r) - center(g)),
+      "Șterge… și Regenerează pe același centru",
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(center(g) - center(v)),
+      "Regenerează și Salvează pe același centru",
+    ).toBeLessThanOrEqual(1);
+    expect(r.x, "Șterge… în stânga").toBeLessThan(g.x);
+    expect(g.x, "Regenerează înaintea lui Salvează").toBeLessThan(v.x);
+    // «Salvează» e lipit de marginea din dreapta a conținutului, «Șterge…» de cea din stânga a coloanei de câmpuri
+    const barBox = (await bar.boundingBox()) as { x: number; width: number };
+    expect(barBox.x + barBox.width - (v.x + v.width), "Salvează la dreapta").toBeLessThanOrEqual(1);
+    // stiluri: «Șterge…» terț cu text de pericol; «Regenerează» secundar; «Salvează» principal
+    expect(await css(remove, "background-color")).toBe("rgba(0, 0, 0, 0)");
+    expect(await css(remove, "border-top-width")).toBe("0px");
+    expect(await css(remove, "color")).toBe(
+      await tokenStyle(page, "text-tone-problem-fg", "color"),
+    );
+    expect(await primaryControls(page, dialog)).toEqual(["Salvează"]);
+    // fără gol mare: de la câmpul Folder la bară; rândul de stare gol nu ocupă loc
+    await expect(dialog.locator('p[role="status"]')).toBeHidden();
+    const folder = (await dialog.getByLabel("Folder", { exact: true }).boundingBox()) as {
+      y: number;
+      height: number;
+    };
+    const gap = ((await bar.boundingBox()) as { y: number }).y - (folder.y + folder.height);
+    expect(gap, "golul dintre ultimul câmp și bară").toBeLessThanOrEqual(24);
+  });
+
+  for (const width of [390, 320]) {
+    test(`${width} px: ținte de 44 px, bara încape (fără derulare, nicio acțiune în afara ei), acțiunile principale jos și «Șterge…» deasupra sau pe același rând, «Salvează» lipit la dreapta, fără gol mare`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      const dialog = await open(page);
+      const bar = dialog.locator("[data-media-actions]");
+      await bar.scrollIntoViewIfNeeded();
+      await expectDialogFits(page, dialog);
+      if (width === 390) expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
+      const barBox = (await bar.boundingBox()) as Box;
+      const boxes: Record<string, Box> = {};
+      for (const name of ["Șterge…", "Regenerează variantele", "Salvează"]) {
+        const b = (await bar.getByRole("button", { name }).boundingBox()) as Box;
+        expect(b.height, `${name}: înălțime`).toBeGreaterThanOrEqual(44);
+        expect(b.height, `${name}: pe o singură linie`).toBeLessThanOrEqual(48);
+        expect(b.x, `${name}: în bară, la stânga`).toBeGreaterThanOrEqual(barBox.x - 0.5);
+        expect(b.x + b.width, `${name}: în bară, la dreapta`).toBeLessThanOrEqual(
+          barBox.x + barBox.width + 0.5,
+        );
+        boxes[name] = b;
+      }
+      const remove = boxes["Șterge…"] as Box;
+      const save = boxes["Salvează"] as Box;
+      expect(save.y, "«Salvează» nu e deasupra lui «Șterge…»").toBeGreaterThanOrEqual(remove.y - 1);
+      // când bara nu încape pe un rând (320 px), «Șterge…» rămâne deasupra, iar acțiunile principale jos
+      if (width === 320) expect(save.y, "bara pe două rânduri").toBeGreaterThan(remove.y + 20);
+      expect(
+        barBox.x + barBox.width - (save.x + save.width),
+        "«Salvează» lipit la dreapta",
+      ).toBeLessThanOrEqual(1);
+      // pe 390 px bara are cel mult două rânduri; pe 320 px, unde nici cele două acțiuni principale nu încap alături, trei
+      expect(barBox.height, "înălțimea barei").toBeLessThanOrEqual(width === 390 ? 110 : 160);
+      const folder = (await dialog.getByLabel("Folder", { exact: true }).boundingBox()) as Box;
+      expect(
+        barBox.y - (folder.y + folder.height),
+        "golul dintre ultimul câmp și bară",
+      ).toBeLessThanOrEqual(24);
+      expect(await primaryControls(page, dialog)).toEqual(["Salvează"]);
+    });
+  }
+});
+
+test.describe("media: filtrele pe telefon", () => {
+  test("390 px: căutarea și «Caută» pe primul rând, Folder și Stare pe două coloane pe al doilea, «Resetează filtrele» mic dedesubt; blocul de cel mult 200 px, fără derulare laterală", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page, account, `/admin/media?q=${tag}`);
+    const form = page.getByRole("search");
+    const box = (await form.boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    expect(box.height, "înălțimea blocului de filtre").toBeLessThanOrEqual(200);
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
+    const q = (await form
+      .getByLabel("Caută după nume, text alternativ sau tag", { exact: true })
+      .boundingBox()) as { x: number; y: number; width: number; height: number };
+    const go = (await form.getByRole("button", { name: "Caută", exact: true }).boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    expect(go.x, "«Caută» la dreapta câmpului").toBeGreaterThanOrEqual(q.x + q.width);
+    expect(
+      Math.abs(go.y + go.height - (q.y + q.height)),
+      "«Caută» aliniat cu câmpul",
+    ).toBeLessThanOrEqual(2);
+    const folder = (await form.getByLabel("Folder", { exact: true }).boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    const status = (await form.getByLabel("Stare", { exact: true }).boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    expect(folder.y, "Folder sub căutare").toBeGreaterThanOrEqual(q.y + q.height);
+    expect(Math.abs(folder.y - status.y), "Folder și Stare pe același rând").toBeLessThanOrEqual(1);
+    expect(status.x, "Stare lângă Folder").toBeGreaterThanOrEqual(folder.x + folder.width);
+    expect(Math.abs(folder.width - status.width), "două coloane egale").toBeLessThanOrEqual(2);
+    expect(folder.width, "coloană lată").toBeGreaterThanOrEqual(150);
+    const reset = form.getByRole("link", { name: "Resetează filtrele" });
+    const rb = (await reset.boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    expect(rb.y, "«Resetează filtrele» sub Folder și Stare").toBeGreaterThanOrEqual(
+      folder.y + folder.height,
+    );
+    expect(rb.height, "acțiune mică").toBeLessThanOrEqual(44);
+    expect(Math.abs(rb.x - box.x), "aliniat la stânga").toBeLessThanOrEqual(1);
+    expect(await css(reset, "background-color")).not.toBe(
+      await tokenStyle(page, "bg-action", "background-color"),
+    );
+  });
+
+  test("1440 px: filtrele rămân pe un singur rând (căutare, Folder, Stare, «Caută», «Resetează filtrele»)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, account, `/admin/media?q=${tag}`);
+    const form = page.getByRole("search");
+    const bottoms: number[] = [];
+    for (const locator of [
+      form.getByLabel("Caută după nume, text alternativ sau tag", { exact: true }),
+      form.getByLabel("Folder", { exact: true }),
+      form.getByLabel("Stare", { exact: true }),
+      form.getByRole("button", { name: "Caută", exact: true }),
+      form.getByRole("link", { name: "Resetează filtrele" }),
+    ]) {
+      const b = (await locator.boundingBox()) as { y: number; height: number };
+      bottoms.push(b.y + b.height);
+    }
+    expect(Math.max(...bottoms) - Math.min(...bottoms), "un singur rând").toBeLessThanOrEqual(2);
+  });
+
+  test("selectorul de imagini, 390 px: căutarea și «Caută» pe primul rând, Folder dedesubt, fără derulare laterală", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page, account, PICKER);
+    const dialog = await openPicker(page);
+    // animația de deschidere s-a terminat când apar cardurile
+    await expect(dialog.locator("[data-media-card]").first()).toBeVisible({ timeout: 20_000 });
+    const form = dialog.getByRole("search");
+    const q = (await form.getByLabel(SEARCH_LABEL, { exact: true }).boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    const go = (await form.getByRole("button", { name: "Caută", exact: true }).boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    const folder = (await form.getByLabel("Folder", { exact: true }).boundingBox()) as {
+      y: number;
+    };
+    expect(go.x).toBeGreaterThanOrEqual(q.x + q.width);
+    expect(Math.abs(go.y + go.height - (q.y + q.height))).toBeLessThanOrEqual(2);
+    expect(folder.y).toBeGreaterThanOrEqual(q.y + q.height);
+    expect(
+      ((await form.boundingBox()) as { height: number }).height,
+      "înălțimea filtrelor",
+    ).toBeLessThanOrEqual(160);
+    await expectDialogFits(page, dialog);
+  });
+});
+
+test.describe("media: zona de încărcare, compactă pe ecrane tactile", () => {
+  test("desktop (cursor fin): cu textul de tragere («Trage imaginile aici», «sau»), «Alege fișiere» principal", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, account, HARNESS("biblioteca"));
+    await expect(page.getByText("Trage imaginile aici")).toBeVisible();
+    await expect(page.getByText("sau", { exact: true })).toBeVisible();
+    expect(await primaryControls(page)).toEqual(["Alege fișiere"]);
+  });
+
+  test("ecran tactil, 390 px: fără «Trage imaginile aici» și «sau»; rămân «Alege fișiere» (principal) și nota despre formate, într-un panou de cel mult 130 px, fără derulare laterală", async ({
+    browser,
+    baseURL,
+  }) => {
+    const { page, context } = await touchPage(
+      browser,
+      baseURL as string,
+      account,
+      HARNESS("biblioteca"),
+      { width: 390, height: 844 },
+    );
+    try {
+      expect(await page.evaluate(() => matchMedia("(hover: none)").matches)).toBe(true);
+      expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
+      await expect(page.getByText("Trage imaginile aici")).toBeHidden();
+      await expect(page.getByText("sau", { exact: true })).toBeHidden();
+      await expect(page.getByText(/^JPEG, PNG, WebP, AVIF/)).toBeVisible();
+      expect(await primaryControls(page)).toEqual(["Alege fișiere"]);
+      expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
+      const zone = page.locator("[data-upload-zone]");
+      await expect(zone).toBeVisible();
+      expect(
+        ((await zone.boundingBox()) as { height: number }).height,
+        "panoul de încărcare",
+      ).toBeLessThanOrEqual(130);
+    } finally {
+      await context.close();
+    }
   });
 });
 
