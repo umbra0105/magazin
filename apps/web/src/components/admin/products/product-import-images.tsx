@@ -118,7 +118,7 @@ export function ImageFailures({
           ))}
         </TBody>
       </Table>
-      <p className="text-label text-ink-secondary">{m.hint}</p>
+      <p className="text-label font-normal text-ink-secondary">{m.hint}</p>
     </div>
   );
 }

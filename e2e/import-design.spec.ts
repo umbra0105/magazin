@@ -295,6 +295,38 @@ test.describe("import: pagina și pașii", () => {
   });
 });
 
+test.describe("import: telefon", () => {
+  test("390 px: pașii pe un singur rând derulabil, descrierile formatului în greutate normală, selecturile de mapare cu tooltip, fără derulare orizontală a paginii", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page, account, "/admin/produse/import");
+    const items = page.locator("[data-import-steps] li");
+    await expect(items).toHaveCount(4);
+    const tops = await items.evaluateAll((els) =>
+      els.map((el) => Math.round(el.getBoundingClientRect().top)),
+    );
+    expect(new Set(tops).size, "pașii pe un singur rând").toBe(1);
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
+    const help = page.locator("[data-import-profile] label span.text-label").first();
+    await expect(help).toBeVisible();
+    expect(await css(help, "font-weight"), "descrierea opțiunii radio").toBe("400");
+    const phoneFile = `e2e-${tag}-telefon.csv`;
+    trackE2eImportFile(phoneFile);
+    await page.getByLabel("Fișier CSV sau XLSX").setInputFiles({
+      name: phoneFile,
+      mimeType: "application/octet-stream",
+      buffer: Buffer.from("SKU;Titlu\r\nE2E-TEL-1;Test\r\n", "utf8"),
+    });
+    await page.getByRole("button", { name: "Încarcă și analizează" }).click();
+    await expect(page.getByRole("heading", { name: "Mapează coloanele" })).toBeVisible();
+    await expect(page.getByLabel("Importă în câmpul: SKU")).toHaveAttribute("title", "SKU");
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
+    const first = await items.first().evaluate((el) => el.getBoundingClientRect().height);
+    expect(first).toBeLessThanOrEqual(44);
+  });
+});
+
 // ───────────────────────── Părțile WooCommerce și imaginile (pagina-harness) ─────────────────────────
 
 test.describe("import: WooCommerce și imagini", () => {

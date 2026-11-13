@@ -298,7 +298,11 @@ export function ProductImportWizard({
 
   return (
     <div className="flex max-w-5xl flex-col gap-6">
-      <ol className="flex flex-wrap gap-2 text-body" aria-label={m.title}>
+      <ol
+        className="flex flex-nowrap gap-2 overflow-x-auto text-body"
+        aria-label={m.title}
+        data-import-steps
+      >
         {(
           [
             ["upload", m.steps.upload],
@@ -313,7 +317,7 @@ export function ProductImportWizard({
             <li
               key={id}
               aria-current={current ? "step" : undefined}
-              className={`rounded-md border px-3 py-1 ${current ? "border-brand bg-surface-subtle font-medium text-ink" : "border-line-subtle text-ink-secondary"}`}
+              className={`shrink-0 rounded-md border px-3 py-1 whitespace-nowrap ${current ? "border-brand bg-surface-subtle font-medium text-ink" : "border-line-subtle text-ink-secondary"}`}
             >
               {label}
             </li>
@@ -393,7 +397,7 @@ export function ProductImportWizard({
                   />
                   <span className="flex flex-col">
                     <span className="font-medium">{label}</span>
-                    <span className="text-label text-ink-secondary">{help}</span>
+                    <span className="text-label font-normal text-ink-secondary">{help}</span>
                   </span>
                 </label>
               ))}
@@ -406,7 +410,7 @@ export function ProductImportWizard({
                 accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 aria-describedby="import-file-help"
               />
-              <p id="import-file-help" className="text-label text-ink-secondary">
+              <p id="import-file-help" className="text-label font-normal text-ink-secondary">
                 {m.upload.help(maxUploadMb)}
               </p>
             </div>
@@ -450,7 +454,7 @@ export function ProductImportWizard({
                   </option>
                 ))}
               </Select>
-              <p id="import-delimiter-help" className="text-label text-ink-secondary">
+              <p id="import-delimiter-help" className="text-label font-normal text-ink-secondary">
                 {analysis.delimiterSource
                   ? `${m.mapping.delimiterSource[analysis.delimiterSource]} `
                   : ""}
@@ -495,7 +499,10 @@ export function ProductImportWizard({
                         </Label>
                         <Select
                           id={id}
-                          className="max-w-sm"
+                          className="max-w-sm text-ellipsis"
+                          title={
+                            fields.find((f) => f.key === columns[index])?.label ?? m.mapping.ignore
+                          }
                           value={blocked ? "" : (columns[index] ?? "")}
                           disabled={blocked !== null}
                           onChange={(e) =>
@@ -512,7 +519,10 @@ export function ProductImportWizard({
                           ))}
                         </Select>
                         {blocked && (
-                          <p className="mt-1 text-label text-ink-secondary" data-blocked={blocked}>
+                          <p
+                            className="mt-1 text-label font-normal text-ink-secondary"
+                            data-blocked={blocked}
+                          >
                             {blocked === "cost"
                               ? m.mapping.blockedCost
                               : blocked === "readonly"
@@ -763,7 +773,9 @@ function ReportView({ report, importId }: { report: ImportReport; importId: stri
           </Table>
         )}
         {report.truncated && (
-          <p className="text-label text-ink-secondary">{c.truncated(report.entries.length)}</p>
+          <p className="text-label font-normal text-ink-secondary">
+            {c.truncated(report.entries.length)}
+          </p>
         )}
       </div>
       <div>
