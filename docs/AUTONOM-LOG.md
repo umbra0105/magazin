@@ -29,3 +29,8 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 | 2026-11-13 | redesign-final | Lot 4: autentificare pe suprafața adminului, 404, eroare, PageSkeleton (AdminSurface comună) | commit-ul pasului | per pas: 6 teste noi de design, auth.spec și specurile cu 404 (admin, warehouses) verzi, arhitectură, typecheck, lint OK; verify:full la finalul fazei (acoperă și capătul lotului 4) | S3: 1 notat și rezolvat |
 | 2026-11-13 | redesign-final | trecerea finală pe S3 (3 intrări rezolvate în FINISAJE.md) | în același commit cu Lot 4 | verify:full final pe codul final | S3 deschise: 0 |
 | 2026-11-13 | redesign-finisaje | început de fază | - | copie bază: local-data/backups/ecom-20261113-210735.sql | - |
+| 2026-11-13 | redesign-finisaje | grup 1: plural românesc comun (pluralRo) în raportul de import și în mesaje | c48af00 | per pas: teste pe funcție (5) și pe mesaje (7) roșii apoi verzi, typecheck, lint | - |
+| 2026-11-13 | redesign-finisaje | grup 2: breadcrumb 404 în admin și alerta de formular fără inel de focus | f8c9d83 | per pas: test pe breadcrumbsFor roșu apoi verde, typecheck, lint | - |
+| 2026-11-13 | redesign-finisaje | grup 3: import pe telefon (stepper pe un rând, descrieri în greutate normală, tooltip la selecturi) | b33dea6 | per pas: typecheck, lint, arhitectură 173/173 | - |
+| 2026-11-13 | redesign-finisaje | grup 4: istoricul exporturilor paginat («Încarcă mai multe») | d9f3be5 | per pas: 4 teste unitare pe serviciu roșii apoi verzi, typecheck, lint | - |
+| 2026-11-13 | redesign-finisaje | grup 5: eticheta «Rând» pe carduri, țintă tactilă pentru «Detalii» | f2a8d23 | per pas: typecheck, lint, specuri import-design și states-design verzi (1 test de Tab corectat în commit-ul de documentație) | - |

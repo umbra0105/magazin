@@ -153,7 +153,14 @@ test.describe("autentificare: mesajul de formular", () => {
     }
     // câmpurile și butoanele păstrează inelul la focus de la tastatură
     await page.goto("/autentificare");
-    await page.keyboard.press("Tab");
+    // primul Tab ajunge pe legătura cu numele magazinului: se apasă până la câmpul Email
+    for (let index = 0; index < 4; index += 1) {
+      await page.keyboard.press("Tab");
+      const onEmail = await page
+        .getByLabel("Email")
+        .evaluate((el) => el === document.activeElement);
+      if (onEmail) break;
+    }
     await expect(page.getByLabel("Email")).toBeFocused();
     expect(await css(page.getByLabel("Email"), "box-shadow")).not.toBe("none");
   });
