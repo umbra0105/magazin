@@ -13,7 +13,7 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | ✅ | Branding 100% din panoul de admin: nume, logo, favicon, culori, fonturi, date firmă, texte legale |
 | ✅ | Personalizările se fac prin setări, temă, blocuri CMS și `/extensions`. **Niciodată prin modificarea core-ului.** |
 | ✅ | Livrare prin **Docker Compose** (pachet software, nu are legătură cu curierii) |
-| ✅ | **TU faci instalarea la client**, nu clientul singur. Instalatorul poate fi mai simplu: verificări de bază, fără „prost-rezistență" extremă. Economie: ~2-3 zile |
+| ✅ | **TU faci instalarea la client**, nu clientul singur. Instalatorul poate fi mai simplu: verificări de bază, fără „prost-rezistență" extremă. |
 | ✅ | **Primul magazin lansat e al tău.** Deci: construiești întâi magazinul funcțional, îl lansezi, abia apoi îl transformi în pachet instalabil |
 | ✅ | **Migrare din WordPress/WooCommerce (nu din OpenCart): doar produsele**, prin import CSV/XLSX, cu profil dedicat WooCommerce peste formatul generic. Fără clienți, fără comenzi. **Redirecționări 301 din adresele vechi la lansare: DA** (decizie utilizator, Faza 4): produsele, categoriile și brandurile păstrează `legacyId` și `legacyUrl` (implementare în Faza 17). Prețurile din WooCommerce pot fi cu sau fără TVA: importul convertește cu cota din setări. Eșantion real de 20 de produse și clarificări (TVA, plugin-uri brand/EAN/SEO) vin de la utilizator înainte de punctul 12 |
 | ✅ | Catalog: **~500 de produse publicate** (din portofoliu de ~1.000) → **Postgres FTS e suficient**, fără Meilisearch în Val 1 |
@@ -82,7 +82,7 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | ✅ | Tehnic: **Prisma** · **Better Auth** · storage **disc local**, S3 comutabil · **Postgres FTS** · **SMTP din admin** · **Sentry opțional** |
 | ✅ | **Loialitate**: 1 punct = 1 leu (1% cashback) · acordare automată la expirarea ferestrei de retur · expirare 12 luni cu avertizare · **fără plafon procentual la utilizare** (configurabil din admin, dacă vrei mai târziu), dar punctele **nu acoperă transportul** și se aplică regula dură „suma în bani ≥ costul transportului" (vezi „Fiscal, facturare și plăți") · **Standard, Fidel și VIP acumulează, Partenerii NU** · discountul Fidel/VIP se cumulează cu punctele |
 | ✅ | **Vouchere cadou cu sold rămas**, tratate ca **metodă de plată**, nu ca reducere |
-| ✅ | **Editor de temă Nivel 2**: culori, fonturi, logo, radius, variante de header și footer, layout de card, lățimi, dark mode, CSS custom, preview live (~6 zile) |
+| ✅ | **Editor de temă Nivel 2**: culori, fonturi, logo, radius, variante de header și footer, layout de card, lățimi, dark mode, CSS custom, preview live |
 | ✅ | Ai produse **peste 50 kg și 150 cm** → patru clase de transport, inclusiv palet și „cere ofertă" |
 | ✅ | **Cerere de ofertă instalare**, nu produs: bifă pe produs → bifă în checkout → contact telefonic manual, separat de comandă. Fără preț pe site |
 | ✅ | **Transport**: prețul vine din API-ul curierului. **Trei clase de transport: `standard`, `oversized` și `pallet`** (decizie utilizator, Faza 4: sunt produse livrate pe palet, marcate cu o clasă dedicată; `pallet` înlocuiește un eventual `requiresPalletDelivery`). Fără metodă de livrare separată pentru palet; regulile de preț și de curier pe clase se stabilesc la Faza 12 |

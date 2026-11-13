@@ -1,7 +1,7 @@
 # Faza 2 — verificare manuală cap-coadă
 
 Parcurs în browser, de la zero, pentru cine verifică Faza 2. Fiecare pas are „Aștepți” = ce trebuie să vezi.
-Timp estimat: 30–40 de minute. Parolele le alegi tu la rulare; nu le scrie în fișiere sau în chat.
+Parolele le alegi tu la rulare; nu le scrie în fișiere sau în chat.
 
 ## 0. Pregătire (o singură dată)
 

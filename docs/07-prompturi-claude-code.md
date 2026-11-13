@@ -166,7 +166,7 @@ Adaugă și:
   `allowBackorder`, `Order.parentSubscriptionId`
 - Tabelele de canal din docs/12-emag-marketplace.md §2: SalesChannel, ChannelListing,
   ChannelCategoryMapping + interfața ChannelProvider (doar scheletul, fără eMAG).
-  Canalul `web` creat implicit. Aceasta e ~1 zi acum și salvează săptămâni mai târziu.
+  Canalul `web` creat implicit. Costă puțin acum și salvează mult mai târziu.
 
 La fiecare salvare: auditLog + revalidateTag pentru paginile afectate.
 Scrie teste pentru generarea de variante și pentru unicitatea slug-urilor.

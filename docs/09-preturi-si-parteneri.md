@@ -17,15 +17,14 @@
 
 ### Ce rămâne tăiat din plan
 
-| Tăiat | De ce nu-ți trebuie | Economie |
-|---|---|---|
-| Liste de prețuri per client | Ai un preț public + trei tipuri de grup | ~3 zile |
-| Prețuri pe tranșe de cantitate | N-ai cerut | ~1 zi |
-| Comutator „cu/fără TVA" | Prețul e mereu cu TVA | ~2 zile |
-| Conturi de firmă cu utilizatori multipli și roluri | N-ai cerut | ~3 zile |
-| Cereri de ofertă, aprobări interne | N-ai cerut | ~4 zile |
-| Limită de credit, situație de creanțe | N-ai cerut | ~3 zile |
-| **Total** | | **~16 zile** |
+| Tăiat | De ce nu-ți trebuie |
+|---|---|
+| Liste de prețuri per client | Ai un preț public + trei tipuri de grup |
+| Prețuri pe tranșe de cantitate | N-ai cerut |
+| Comutator „cu/fără TVA" | Prețul e mereu cu TVA |
+| Conturi de firmă cu utilizatori multipli și roluri | N-ai cerut |
+| Cereri de ofertă, aprobări interne | N-ai cerut |
+| Limită de credit, situație de creanțe | N-ai cerut |
 
 ---
 

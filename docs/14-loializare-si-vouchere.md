@@ -144,10 +144,10 @@ Un voucher de 500 de lei folosit la o comandă de 300 de lei. Ce se întâmplă 
 
 | Variantă | Consecință |
 |---|---|
-| **A. Se pierde** — cod de reducere clasic, o singură utilizare | Simplu (~0,5 zile), dar la produse scumpe e o sursă sigură de reclamații |
-| **B. Rămâne pe cod** — voucher cu sold, utilizabil de mai multe ori | ~1,5 zile în plus, dar e ce așteaptă clientul |
+| **A. Se pierde** — cod de reducere clasic, o singură utilizare | Simplu, dar la produse scumpe e o sursă sigură de reclamații |
+| **B. Rămâne pe cod** — voucher cu sold, utilizabil de mai multe ori | Mai mult de construit, dar e ce așteaptă clientul |
 
-*Recomandare fermă: **B**. Vinzi echipamente de câteva mii de lei — un voucher care „arde" 200 de lei îți costă mai mult în reputație decât ziua de dezvoltare.*
+*Recomandare fermă: **B**. Vinzi echipamente de câteva mii de lei — un voucher care „arde" 200 de lei îți costă mai mult în reputație decât dezvoltarea lui.*
 
 ## 3. Model de date
 
@@ -200,13 +200,5 @@ Total de plată: 1.850 lei
 Listă cu status, sold, valoare inițială, cine l-a folosit și când. Anulare cu motiv. Ajustare de sold cu audit. **Raport de datorie**: valoarea totală a voucherelor neutilizate — cifra pe care ți-o va cere contabilul.
 
 ---
-
-## Estimare
-| | Zile |
-|---|---|
-| Puncte de loialitate | ~4 |
-| Vouchere cu sold | ~2 |
-| Regula dură a sumei în bani + reguli de acumulare | ~0,5 |
-| **Total** | **~6,5 zile** |
 
 Ambele se fac într-o fază proprie, **după ce comenzile și plățile funcționează complet** (adică după Faza 13). Nu le construi mai devreme — depind de fluxul de comandă, retur și rambursare.

@@ -21,7 +21,7 @@ Nu construim SaaS multi-tenant. Construim un **produs** — ca WordPress sau Pre
 - Fiecare client își are propriul VPS, propriile chei de plăți/curier, propriul backup.
 
 ### ⚠️ Ce apare în schimb (și lipsea din planul inițial)
-1. **Instalator** — un wizard de instalare în browser. Fără el, fiecare instalare e o operațiune manuală de 2 ore.
+1. **Instalator** — un wizard de instalare în browser. Fără el, fiecare instalare e o operațiune manuală lungă.
 2. **Mecanism de actualizare** — cum duci un fix la 20 de instalări existente.
 3. **Sistem de extensii** — ca să poți personaliza pentru un client fără să faci fork.
 4. **Zero hardcodare** — nici măcar numele tău în footer. Totul din DB.

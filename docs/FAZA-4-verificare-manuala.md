@@ -100,7 +100,7 @@ Autentifică-te pe <http://localhost:3000/autentificare> cu Owner-ul. Păstreaz�
 secțiunile 1–15. Pentru conturile de test ai nevoie de o **fereastră privată** (sau alt browser) ca să nu te
 deconectezi.
 
-### 0.4 Conturile pentru testul de roluri (se fac o singură dată, ~10 minute)
+### 0.4 Conturile pentru testul de roluri (se fac o singură dată)
 
 Ai nevoie de trei conturi: **Editor**, **Suport** și **Manager**. Se creează ca niște clienți, apoi li se dă rolul din
 Prisma Studio.

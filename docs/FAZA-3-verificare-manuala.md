@@ -1,7 +1,7 @@
 # Faza 3 — verificare manuală cap-coadă
 
 Parcurs în browser, de la zero, pentru cine verifică Faza 3 (fișiere media). Fiecare pas are „Aștepți” = ce trebuie
-să vezi. Timp estimat: 20–30 de minute. Comenzile sunt pentru PowerShell pe Windows (`npm.cmd`, nu `npm`).
+să vezi. Comenzile sunt pentru PowerShell pe Windows (`npm.cmd`, nu `npm`).
 Parolele le alegi tu la rulare; nu le scrie în fișiere sau în chat.
 
 Ai nevoie de câteva imagini de test: 3–4 fișiere JPEG/PNG/WebP (oricare), un fișier text redenumit `fals.jpg`

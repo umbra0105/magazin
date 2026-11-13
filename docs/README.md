@@ -79,27 +79,13 @@ Fundație → Setări & branding → Media → Catalog → Stoc → Design syste
 
 Nu o schimba. Fiecare pas depinde direct de cel dinainte.
 
-## Estimare
-
-| | Zile de lucru |
-|---|---|
-| MVP vandabil, fizic + digital (Fazele 0-15) | ~72-84 |
-| + Specificul nișei: transport greu, etichetă energetică, filtre tehnice | +6 |
-| + Loialitate și vouchere (Faza 15b) | +6,5 |
-| + Funcționalități de nișă (transport, documente, fișă explodată) | +6,5-8 |
-| + Pachet distribuibil (instalator, extensii, împachetare) | +14-16 |
-| + CMS, marketing, SEO, rapoarte | +17-20 |
-| **Complet, fără eMAG** | **~122-141** |
-| + eMAG Marketplace | +8-12 |
-| **Total** | **~130-153** |
-
 ## ⚠️ Ordinea de lucru confirmată
 
 **Primul magazin lansat e al tău.** Deci:
 
-1. **Etapa 1** — Fazele 0-17: construiești și lansezi magazinul tău (~85-100 zile)
-2. **Etapa 2** — Fazele 18, 19, 21: instalator, extensii, împachetare (~12-14 zile)
-3. **Etapa 3** — Faza 22b: eMAG Marketplace (~8-12 zile)
+1. **Etapa 1** — Fazele 0-17: construiești și lansezi magazinul tău
+2. **Etapa 2** — Fazele 18, 19, 21: instalator, extensii, împachetare
+3. **Etapa 3** — Faza 22b: eMAG Marketplace
 
 Nu construi instalatorul înainte să ai un magazin care vinde. Vei descoperi în primele două luni de operare zeci de lucruri pe care nu le anticipăm acum, și e mult mai ieftin să le repari într-o instalare decât în douăzeci.
 

@@ -6,7 +6,7 @@ Acesta e fișierul pe care îl ții deschis în timp ce lucrezi. Fișierul 13 sp
 
 ## 1. Anatomia unei sesiuni
 
-O sesiune = o conversație nouă în Claude Code = **2-4 ore de lucru**. Nu mai mult. Când conversația devine lungă, calitatea codului scade vizibil.
+O sesiune = o conversație nouă în Claude Code. Nu o lungi. Când conversația devine lungă, calitatea codului scade vizibil.
 
 ```
 ┌─ 1. DESCHIZI o conversație NOUĂ
@@ -14,7 +14,7 @@ O sesiune = o conversație nouă în Claude Code = **2-4 ore de lucru**. Nu mai 
 ├─ 2. LIPEȘTI textul de start (§4). Întotdeauna același, schimbi doar promptul.
 │
 ├─ 3. CLAUDE CODE citește documentația și îți spune unde suntem.
-│     👉 Tu verifici că a înțeles corect. Dacă nu, corectezi ACUM, nu după 2 ore.
+│     👉 Tu verifici că a înțeles corect. Dacă nu, corectezi ACUM, nu mai târziu.
 │
 ├─ 4. CLAUDE CODE îți dă PLANUL, cu puncte numerotate.
 │     👉 Tu îl citești. Dacă e prea mare, ceri să-l taie. Apoi spui „ok, începe".
@@ -34,40 +34,38 @@ O sesiune = o conversație nouă în Claude Code = **2-4 ore de lucru**. Nu mai 
 
 ## 2. Harta sesiunilor
 
-Fiecare fază are mai multe sesiuni. Estimările sunt orientative — unele vor merge mai repede, altele mai greu.
+Fiecare fază are mai multe sesiuni.
 
-| Faza | Sesiuni | Prompt | Ce ai la final |
-|---|---|---|---|
-| **1** Fundație | 2-3 | 1 | `pnpm dev` pornește, Docker ridică Postgres/Redis/MinIO/Mailpit, CI verde |
-| **2** Setări și branding | 2-3 | 2 | Setările se citesc din bază, cheile se criptează, feature flags funcționează |
-| **2** Autentificare | 2 | 3 | Te loghezi în `/admin`, roluri funcționale |
-| **3** Media | 2 | 4 | Încarci o imagine, se procesează, o vezi în bibliotecă |
-| **4** Catalog | 5-6 | 5 | Creezi un produs cu variante, imagini, atribute, documente |
-| **4** Import | 2 | 6 | **Imporți produsele din WooCommerce** prin CSV |
-| **5** Stoc | 2 | 7 | Bifa de gestiune stoc funcționează în ambele moduri |
-| **6** Design system | 3 | 8 | Header, footer, temă din admin, culori care se schimbă |
-| **7** Storefront | 4-5 | 9 | Vezi produsele pe site, filtrezi, deschizi o pagină de produs |
-| **8** Prețuri și coș | 3-4 | 10 | Adaugi în coș, prețul e corect în toate cazurile |
-| **9** Checkout | 4-5 | 11 | ✅ **Plasezi prima comandă reală, cu ramburs** |
-| **10** Plăți | 3-4 | 12 | ✅ **Plătești cu card în sandbox, statusul se schimbă** |
-| **11** Admin comenzi | 3 | 13 | Procesezi o comandă din admin, cap-coadă |
-| **11** Emailuri | 2 | 14 | Primești emailurile în Mailpit |
-| **12** AWB | 3 | 15 | Generezi un AWB și descarci eticheta |
-| **13** Facturare | 2-3 | 16 | Emiți o factură în SmartBill, o descarci în PDF |
-| **14** Cont și retururi | 3 | 17 | Clientul își vede comenzile, cere retur |
-| **14b** Produse digitale | 3 | 21d | Cumperi un tutorial, îl vizionezi din cont |
-| **15** Grupuri de clienți și prețuri NIR | 4 | 21 | Un Partener vede prețul cost + adaos, plafonat la cel public; imporți prețurile NIR din SmartBill |
-| **15b** Loialitate | 3 | 21f | Primești puncte, le folosești, voucherele funcționează |
-| **16** CMS | 3-4 | 18 | Construiești homepage-ul din blocuri, din admin |
-| **17** Marketing și SEO | 3 | 19, 20 | Cupoane, recenzii, sitemap, structured data |
-| **18** Instalator | 3 | 21b | ✅ **Instalezi de la zero pe o bază goală** |
-| **19** Extensii și update | 2 | 21c | Scriptul de update funcționează cu rollback |
-| **20** Rapoarte | 2 | 22 | Dashboard cu cifre reale |
-| **21** Împachetare | 2-3 | 23 | Instalezi pe un VPS gol, cronometrat |
-| **22** Testare finală | 2-3 | 24 | Suita E2E trece complet |
-| **22b** eMAG | 4-5 | 21e | Oferte publicate, comenzi importate |
-
-**Total: ~75-90 de sesiuni.** La 3-4 sesiuni pe săptămână, asta înseamnă 5-7 luni. Cu ritm mai intens, mai puțin.
+| Faza | Prompt | Ce ai la final |
+|---|---|---|
+| **1** Fundație | 1 | `pnpm dev` pornește, Docker ridică Postgres/Redis/MinIO/Mailpit, CI verde |
+| **2** Setări și branding | 2 | Setările se citesc din bază, cheile se criptează, feature flags funcționează |
+| **2** Autentificare | 3 | Te loghezi în `/admin`, roluri funcționale |
+| **3** Media | 4 | Încarci o imagine, se procesează, o vezi în bibliotecă |
+| **4** Catalog | 5 | Creezi un produs cu variante, imagini, atribute, documente |
+| **4** Import | 6 | **Imporți produsele din WooCommerce** prin CSV |
+| **5** Stoc | 7 | Bifa de gestiune stoc funcționează în ambele moduri |
+| **6** Design system | 8 | Header, footer, temă din admin, culori care se schimbă |
+| **7** Storefront | 9 | Vezi produsele pe site, filtrezi, deschizi o pagină de produs |
+| **8** Prețuri și coș | 10 | Adaugi în coș, prețul e corect în toate cazurile |
+| **9** Checkout | 11 | ✅ **Plasezi prima comandă reală, cu ramburs** |
+| **10** Plăți | 12 | ✅ **Plătești cu card în sandbox, statusul se schimbă** |
+| **11** Admin comenzi | 13 | Procesezi o comandă din admin, cap-coadă |
+| **11** Emailuri | 14 | Primești emailurile în Mailpit |
+| **12** AWB | 15 | Generezi un AWB și descarci eticheta |
+| **13** Facturare | 16 | Emiți o factură în SmartBill, o descarci în PDF |
+| **14** Cont și retururi | 17 | Clientul își vede comenzile, cere retur |
+| **14b** Produse digitale | 21d | Cumperi un tutorial, îl vizionezi din cont |
+| **15** Grupuri de clienți și prețuri NIR | 21 | Un Partener vede prețul cost + adaos, plafonat la cel public; imporți prețurile NIR din SmartBill |
+| **15b** Loialitate | 21f | Primești puncte, le folosești, voucherele funcționează |
+| **16** CMS | 18 | Construiești homepage-ul din blocuri, din admin |
+| **17** Marketing și SEO | 19, 20 | Cupoane, recenzii, sitemap, structured data |
+| **18** Instalator | 21b | ✅ **Instalezi de la zero pe o bază goală** |
+| **19** Extensii și update | 21c | Scriptul de update funcționează cu rollback |
+| **20** Rapoarte | 22 | Dashboard cu cifre reale |
+| **21** Împachetare | 23 | Instalezi pe un VPS gol, cronometrat |
+| **22** Testare finală | 24 | Suita E2E trece complet |
+| **22b** eMAG | 21e | Oferte publicate, comenzi importate |
 
 Sesiunile marcate ✅ sunt **punctele de control majore**. Nu trece mai departe până nu funcționează perfect.
 
@@ -221,7 +219,7 @@ Ce lipsește? Ce ai făcut diferit și de ce?
 
 ---
 
-## 8. Rutina săptămânală (15 minute, duminică seara)
+## 8. Rutina săptămânală (duminică seara)
 
 ```
 [ ] Citesc PROGRESS.md — unde am ajuns față de unde credeam

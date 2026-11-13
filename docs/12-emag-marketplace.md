@@ -6,7 +6,7 @@ Ai confirmat eMAG. **Vestea importantă: asta schimbă modelul de date acum, chi
 
 ## 1. Regula de aur
 
-> **Construiește abstracția de canal acum (~1 zi). Fă integrarea eMAG la final (~8-12 zile).**
+> **Construiește abstracția de canal acum. Fă integrarea eMAG la final.**
 
 Motivul: dacă modelul tău de produs, stoc și comandă nu știe de „canale" din prima, retrofitul e cel mai scump lucru din tot proiectul. Dar dacă construiești integrarea eMAG înainte ca magazinul tău propriu să funcționeze, pierzi 2 săptămâni pe ceva ce nu poți testa.
 
@@ -92,14 +92,14 @@ Recomandare: **A, cu tampon configurabil.**
 
 ## 5. Ce construiești, în ce ordine
 
-### Faza 4 (acum, ~1 zi)
+### Faza 4 (acum)
 - [ ] Tabelele `SalesChannel`, `ChannelListing`, `ChannelCategoryMapping`
 - [ ] Câmpuri `ean`, `warrantyMonths` pe variantă (nullable în bază; EAN-ul și brandul se cer la publicarea pe canal, în serviciu); `brandId` nullable pe produs
 - [ ] `channelId`, `externalId`, `externalData` pe `Order`
 - [ ] Canalul `web` creat implicit la instalare
 - [ ] Interfața `ChannelProvider` (publishListing, syncStock, syncPrice, fetchOrders, acknowledgeOrder, pushAwb, pushInvoice, fetchReturns)
 
-### Fază separată, după lansarea magazinului propriu (~8-12 zile)
+### Fază separată, după lansarea magazinului propriu
 - [ ] Client API eMAG cu rate limiting și retry
 - [ ] Mapare de categorii și caracteristici, cu UI în admin
 - [ ] Publicare oferte: atașare pe `part_number_key` sau documentație nouă
@@ -117,10 +117,10 @@ Recomandare: **A, cu tampon configurabil.**
 ## 6. Alte canale (același model, efort mic)
 
 Odată ce ai `ChannelProvider`, adaugi ieftin:
-- **Google Merchant Center** (feed XML) — ~0,5 zile, deja în plan
-- **Facebook / Instagram Shopping** (feed) — ~0,5 zile, deja în plan
+- **Google Merchant Center** (feed XML) — deja în plan
+- **Facebook / Instagram Shopping** (feed) — deja în plan
 - **TikTok Shop** — feed similar
-- Alte marketplace-uri românești — fiecare ~4-6 zile
+- Alte marketplace-uri românești — fiecare, o integrare separată
 
 Feed-urile sunt mult mai ieftine decât API-urile. Dacă scopul e vizibilitate, începe cu feed-urile.
 

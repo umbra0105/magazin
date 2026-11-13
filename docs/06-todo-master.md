@@ -10,7 +10,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 
 ---
 
-## FAZA 0 — Decizii și pregătire · ~2 zile
+## FAZA 0 — Decizii și pregătire
 - [x] Răspunde la cele 7 întrebări rămase din `01-arhitectura-si-decizii.md` §7 (rezolvate; deciziile sunt în `10`, Partea I)
 - [x] **Completează `10-decizii-deschise.md`** — cel puțin toate întrebările marcate 🔴 (nu mai există nicio decizie 🔴 deschisă; Partea I e integral ✅)
 - [x] ⚠️ **Primul magazin e al tău.** Fazele 18, 19 și 21 (instalator, extensii, împachetare) se fac DUPĂ lansarea magazinului tău, nu înainte. Vezi nota de strategie de la finalul fișierului.
@@ -27,7 +27,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] **Exportă produsele din WordPress/WooCommerce** (CSV standard de export) și verifică ce coloane obții _(necesar în Faza 4, la punctul de import CSV)_
 - [ ] Pregătește 20 de produse reale pentru datele demo _(necesar în Faza 4, la testarea importului; cel târziu Faza 7)_
 
-## FAZA 1 — Fundație · ~3-4 zile
+## FAZA 1 — Fundație
 - [x] Monorepo pnpm + Turborepo conform `01` §2
 - [x] Next.js 15, TypeScript strict, Tailwind, shadcn/ui
 - [x] `docker-compose.dev.yml`: postgres, redis, minio, mailpit
@@ -40,7 +40,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] `CLAUDE.md` scris (fișierul 07)
 - [x] Fișier de versiune `packages/config/version.ts`
 
-## FAZA 2 — Bază de date, setări, autentificare · ~4-5 zile
+## FAZA 2 — Bază de date, setări, autentificare
 > **Stare:** FAZA 2 TERMINATĂ ȘI VERIFICATĂ (🏁 confirmată de utilizator) (Promptul 2 + Promptul 3): setări, criptare, flag-uri, audit, temă, seed, autentificare, rate limiting, RBAC, layout admin, contul de administrator, emailuri și `withAudit` pe scrieri. Verificare manuală: `docs/FAZA-2-verificare-manuala.md`. Atenție: în `07-prompturi-claude-code.md`, Promptul 3 aparține tot acestei faze din TODO; „Faza 3” din TODO este Media (Promptul 4).
 - [x] **Sentry** (`@sentry/nextjs`) activat doar dacă există DSN, cu DSN din tabela `Setting` (editabil din admin), nu din `.env`; requestId ca tag. Decizie utilizator: amânat din Faza 1, se face aici o singură dată, după Service de setări
 - [x] Schema Prisma: Setting, Branding, FeatureFlag, Integration, User, Role, Permission, Session, AuditLog
@@ -63,7 +63,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] (11) Verificare manuală cap-coadă Faza 2 (`docs/FAZA-2-verificare-manuala.md`), cu `pnpm dev:age-session` pentru expirarea sesiunii de admin — confirmată de utilizator
 - [x] (12) Închiderea Fazei 2: TODO, PROGRESS, `docs/FAZA-2-ce-functioneaza.md` — 🏁 confirmată de utilizator
 
-## FAZA 3 — Media · ~2-3 zile
+## FAZA 3 — Media
 
 > **Stare:** FAZA 3 TERMINATĂ ȘI VERIFICATĂ (🏁 confirmată de utilizator; CI verde pe `e8fa51f`). Rezumat: `docs/FAZA-3-ce-functioneaza.md`. Verificare manuală: `docs/FAZA-3-verificare-manuala.md`. Datoriile tehnice sunt într-un singur loc, în `docs/PROGRESS.md`.
 > **Decizii (utilizator, Promptul 4):** driverul de storage rămâne în `.env` (`STORAGE_DRIVER`, credențialele S3), nu în Setări · upload prin server, cu stream, pentru ambele drivere (presigned URL doar când apar fișiere mari) · limită implicită 20 MB și ~40 megapixeli, tipuri JPEG/PNG/WebP/AVIF (fără GIF, SVG respins), editabile din setări · se păstrează originalul fără EXIF/GPS pentru regenerarea variantelor · alegerea furnizorului de storage de producție: Faza 18
@@ -76,7 +76,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] (7) Selector reutilizabil `MediaPicker` pentru formulare (selecție unică și multiplă): număr maxim configurabil, ordinea alegerii păstrată, doar fișiere `ready` cu `thumb`, returnează doar id-uri; reutilizează grid-ul, filtrele și coada de încărcări din bibliotecă; dialog accesibil (focus capturat, Escape, tastatură, telefon, mod întunecat); `media.read`, încărcare doar cu `media.write`; testat printr-un harness doar pentru E2E, fără rută în producție
 - [x] (8) Teste E2E, verificare manuală cap-coadă (`docs/FAZA-3-verificare-manuala.md`) și închiderea fazei (TODO, PROGRESS). **Include un test E2E de upload care rulează pe driverul S3 din CI** (serverul E2E cu `STORAGE_DRIVER=s3` pe MinIO, bucket creat cu `pnpm storage:init` în workflow; bucket cu „test” în nume), ca problemele care apar doar pe configurația reală (bucket lipsă, credențiale, path-style) să nu mai scape
 
-## FAZA 4 — Catalog: model și admin · ~8-10 zile
+## FAZA 4 — Catalog: model și admin
 
 > **Stare:** FAZA 4 TERMINATĂ ȘI VERIFICATĂ (🏁 confirmată de utilizator la 2026-10-21 după parcurgerea integrală a ghidului, fără observații; CI verde pe `445627b`). Verificare manuală: `docs/FAZA-4-verificare-manuala.md` (tabel bifat OK). Revizuirea de securitate (Blocul C): `docs/FAZA-4-bloc-C-constatari.md`, cu starea finală a fiecărei constatări. Datoriile rămase sunt trecute, cu fază și motiv, în fazele 7, 18, 20 și 21 de mai jos; **C-18 (istoric de preț Omnibus) are eticheta «înainte de lansare»** și e legată de întrebarea către contabil/avocat. Tag: `faza-4-completa`.
 
@@ -114,7 +114,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] (15d) *(ordinea după 15c, decizia utilizatorului din 2026-11-06: (15e), apoi «Redesign admin», apoi (15d), apoi Faza 6)* **Descărcarea în media a imaginilor din descrierile WooCommerce** (decizia D3 din 15c: acolo imaginile externe din descrieri se ELIMINĂ, cu avertisment și contor): descărcare prin `safeFetchImage` (singura cale în rețea, domenii permise, limite), în fundal prin BullMQ, idempotentă, cu reluare; imaginea intră în biblioteca media, iar descrierea primește `<img data-media-id>` (cu `ProductDescriptionMedia` din 15c); raport pe produs **Date de lucru (nota din `18-referinta-magazin-vechi.md` §4, 2026-11-13):** (15d) și produsele demo folosesc setul de lucru de **29 de produse** din `local-data/arhiva-piscine-concept/demo/` (în `.gitignore`; nu se comit, nu se tipăresc în loguri, nu devin fixture-uri de test; imaginile celor 29 sunt în arhivă, restul se descarcă din site-ul live prin `safeFetchImage`). ⚠️ **Prețurile din export sunt NEVERIFICATE** până la confirmarea utilizatorului (15 produse din export au valori absurde, iar o eroare de scară mai mică nu se vede de la distanță): nu se scrie niciun preț din exportul brut în nicio bază; prețurile demo se confirmă cu utilizatorul înainte de import.
 - [x] (16) E2E, verificare manuală cap-coadă (`docs/FAZA-4-verificare-manuala.md`) și închiderea fazei (TODO, PROGRESS)
 
-## FAZA 5 — Stoc · ~9-11 zile
+## FAZA 5 — Stoc
 
 > **Plan aprobat de utilizator** (`docs/FAZA-5-plan.md`, versiunea a patra; deciziile D1–D6 și D11 și răspunsurile utilizatorului în `docs/PROGRESS.md`, intrarea din 2026-10-21). Numerotarea de mai jos e cea din plan; un commit per punct; teste care pică întâi; concurența intră din punctul 5. Estimarea inițială (~3 zile) era înainte de D1 (SmartBill), D6 (La comandă) și D11 (unități și cantități zecimale).
 > **Decizii (rezumat):** SmartBill = sursa cantității fizice, aplicația ține «angajat» și «rezervat» (D1) · inventarul îl face utilizatorul, până atunci produsele sunt negestionate (D2) · o singură locație «Depozit principal» (D3) · card 15 min, ramburs imediat, transfer bancar 3 zile lucrătoare, coșul nu rezervă (D4) · fără stoc negativ, în bază (D5) · patru stări vizibile, termen produs → brand → global, hibrid cu `allowBackorder` oprit, coșuri mixte «toată odată» (D6) · unități și cantități zecimale: `BIGINT` cu 4 zecimale, pas de vânzare pe produs/variantă, rest nevandabil ascuns clientului, R1/R2 **provizoriu** (D11) · «angajat» cu referință generică (tip + id) și unicitate, înlocuită cu FK în Faza 9 · `manageStock` implicit ON pentru produse noi, importurile setează `false`, migrare de date pentru produsele existente fără `InventoryItem`.
@@ -168,7 +168,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
       - [ ] 3b-2: Fișe explodate (lista și «învelișul» editorului, fără logica canvasului) și Import/Export (wizard, import Woo, imagini, export, paginile `import/` și `import/istoric`); la final se golește lista de excepții `[…px]`
   - [ ] Lot 4: autentificare, stări goale, erori, notificări (`loading.tsx`, `error.tsx`, `not-found.tsx`)
 
-## FAZA 6 — Design system și layout · ~4-5 zile
+## FAZA 6 — Design system și layout
 - [ ] ⚠️ **Faza 6 pornește de la cerințele din `19-seo-si-migrare-merchant.md` §1** (bază de cerințe, nu plan de execuție; nota din 2026-11-13): HTML complet în răspunsul inițial (meniu cu `<a href>`, un singur H1, nume, preț, disponibilitate, descriere și specificații), 404 real, o singură adresă canonică per produs cu 301 de la celelalte forme, filtre și căutare `noindex`, paginare cu canonical auto-referențial, sitemap cu `lastmod` și imagini, `robots.txt`, JSON-LD complet pe server, transliterare corectă a slug-urilor, imaginea LCP cu prioritate, texte unice, pagini legale obligatorii, consimțământ implicit «refuzat». Fiecare cerință are un mod de verificare în document; se citește înainte de Faza 6 și se bifează aici pe măsură ce intră în teste. Istoricul de adrese și redirecturile 301 la schimbarea slug-ului sunt deja un punct deschis: vezi (C-43) la Faza 7
 - [ ] 🟡 **Întrebări deschise pentru utilizator din `19-seo-si-migrare-merchant.md` §3** (cer decizie înainte de lansare; se pun la începutul Fazei 6, nu se ghicesc): (1) care e site-ul sursă al migrării Merchant: vechiul OpenCart de pe `totalwater.ro` (cum spune documentul de migrare) sau platforma construită anterior (adresele de imagini din export arată `totalwater.ro/api/uploads/...`)? (în TODO, importul planificat e din WooCommerce, vezi punctul de reconciliat 8 de mai jos); (2) structura adreselor de produs: cu sau fără categorie în adresă (`03-frontend.md` planifică `/produs/[slug]`, deci fără); (3) prețurile reale ale celor 15 produse cu valori suspecte; (4) există servicii (construcție, renovare, întreținere) care trebuie să aibă pagini proprii?; (5) paginile legale necesare, împreună cu `INTREBARI-AVOCAT.md`
 - [ ] ⚠️ **PRIMUL PAS, înainte de orice lucru pe design: skill-ul `frontend-design` pentru storefront (verificat împreună cu utilizatorul).** Utilizatorul aduce fișierul `SKILL.md`; îl citim INTEGRAL și verificăm că nu conține instrucțiuni care contrazic `CLAUDE.md` (accesibilitate, performanță, conversie, referințele UX alese de utilizator, regulile de securitate, fără culori sau texte hardcodate). Abia apoi îl punem în `.claude/skills/`, într-un commit separat. **Nu se rulează `npx claude-code-templates` sau alt instalator:** doar fișierul text, copiat și citit. Nu se instalează fără confirmarea explicită a utilizatorului
@@ -181,7 +181,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Mobile nav drawer, footer configurabil cu ANPC/SAL și date firmă
 - [ ] Announcement bar, 404, 500, mentenanță, skeletons
 
-## FAZA 7 — Storefront catalog · ~7-9 zile
+## FAZA 7 — Storefront catalog
 - [ ] ⚠️ **ÎNAINTE DE LANSARE — C-18: istoric de preț pentru Omnibus** (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`). Tranzițiile programate (`saleStartsAt/saleEndsAt`) nu scriu punct de istoric, iar `PriceHistory` se scrie doar la salvarea din admin; `docs/04:650` planifică un snapshot zilnic, absent. Se face un job zilnic care scrie punctul de preț efectiv și calculează «cel mai mic preț din ultimele 30 de zile» pentru afișare. **Legat de o întrebare către contabil/avocat despre Omnibus** (ce se afișează exact, pentru ce reduceri, de la ce dată curge perioada de 30 de zile pentru produsele migrate din WooCommerce, fără istoric). Fără răspuns, afișarea reducerilor în storefront nu se lansează.
 - [ ] (C-35) «Mută mai sus/jos» cu index absolut: mutarea poate cădea pe altă poziție dacă alt administrator adaugă/șterge un frate între timp. Propunere: `move` primește `beforeId`/`afterId` (față de un frate), nu un index. Se decide semantica înainte de implementare (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
 - [ ] (C-37) Worker-ul nu invalidează cache-ul (`revalidateTag` depinde de un tab de admin deschis); regenerarea media șterge imediat variantele vechi. Se tratează odată cu cache-ul vitrinei de mai sus (cheie Redis «versiune catalog» + ștergere întârziată) (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
@@ -202,7 +202,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] ISR + `revalidateTag` la salvarea produsului
 - [ ] ⚠️ **Rutele funcționalităților opționale** (`requireFeature`, `apps/web/src/lib/features.ts`) citesc flag-ul la fiecare cerere, deci ruta devine **dinamică**. Alege conștient: pagina rămâne dinamică sau flag-ul se citește la build/ISR. În ambele cazuri, **paginile din cache trebuie invalidate (`revalidateTag`/`revalidatePath`) când se schimbă un flag**, altfel o pagină oprită rămâne servită din cache
 
-## FAZA 8 — Motor de prețuri și coș · ~5-6 zile ⚠️
+## FAZA 8 — Motor de prețuri și coș ⚠️
 - [ ] **Din Faza 5 (punctul 14):** motorul primește cantitatea ca `Quantity` (`bigint`), aplică R1 (pe unitate) / R2 (pe pas) și face **o singură rotunjire pe linie**; testele numerice includ cele 6 produse-model (3 × 2,03 = 6,09; liner 41,25 mp; bisulfat pe pas, 120,00 lei/sac) și depășirile (`MAX_MONEY`). Dacă răspunsul contabilului (întrebarea 4 din `docs/INTREBARI-CONTABIL.md`) schimbă regula, 🛑 înainte de cod
 - [ ] ⚠️ **Decizia despre helperul `Money` și regula de rotunjire** (din Faza 5, punctul 2): `CLAUDE.md` nu mai pretinde un `Money` existent; aici se decide dacă se creează un helper de bani în `packages/shared` și se confirmă cu contabilul regula de rotunjire pe linie (R1 pe unitate / R2 pe pas, provizorie în `docs/PROGRESS.md`). Motorul primește cantitatea ca `Quantity` și folosește primitivele exacte din `packages/shared/src/quantity.ts` (`exactLineValue`, `exactStepsValue`, `splitScaledMoney`), cu `MAX_MONEY` ca plafon de linie; rotunjirea e o singură dată pe linie
 - [ ] **Motor de prețuri** (`09-preturi-si-parteneri.md` §3): preț brut → salePrice → preț de grup (`none` / `discount` / `cost_plus`; extinderea vine în Faza 15) → cupon → puncte → total linie → extragere TVA
@@ -216,7 +216,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] **Cross-sell în coș**: sugestii de accesorii și racorduri la produsele mari
 - [ ] Aplicare cupon cu toate condițiile
 
-## FAZA 9 — Checkout și plasare comandă · ~8-10 zile ⚠️ partea critică
+## FAZA 9 — Checkout și plasare comandă ⚠️ partea critică
 - [ ] ⚠️ **Din Faza 5 (punctul 14), stoc în coș și plată:** coșul NU rezervă (D4); starea vizibilă (În stoc / Stoc limitat / La comandă cu termen / Indisponibil) și termenul de livrare apar în coș și la plată; **coșuri mixte: livrare toată odată, cu termenul cel mai lung** (D6); selector de cantitate **în pași**, cu **validarea pasului la adăugare, modificare și plasare, pe server** (cantitatea comandată e mereu multiplu EXACT al pasului, nu doar în interfață); fără limită de cantitate la «La comandă», dar cu limita tehnică de siguranță pe linie (setabilă); **ramburs la «La comandă»: decizie (🛑, atinge plata și textele legale, vezi `docs/INTREBARI-AVOCAT.md` §1.5)**
 - [ ] `Order.channelId` (implicit canalul `web`), `Order.externalId`, `Order.externalData` (JSON brut, pentru depanare), pregătite pentru eMAG (mutate din Faza 4, punctul 5; `12` §2)
 - [ ] ⚠️ **Din Faza 5:** angajarea de stoc ține o referință generică (tip + id, cu unicitate) spre comandă, fiindcă `Order` nu exista. Aici se înlocuiește cu **cheie străină** spre `Order`/`OrderLine`, cu **validarea datelor existente** (referințe orfane) înainte de migrație, și testele de concurență din Faza 5 se rulează din nou pe schema nouă
@@ -240,7 +240,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Ramburs + transfer bancar funcționale cap-coadă
 - [ ] E2E Playwright: cumpărare completă ca guest
 
-## FAZA 10 — Plăți online (Netopia + EuPlătesc) · ~7-9 zile
+## FAZA 10 — Plăți online (Netopia + EuPlătesc)
 - [ ] Interfață `PaymentProvider`
 - [ ] Implementare **Netopia mobilPay** ȘI **EuPlătesc**, ambele active, mod test/live din setări
 - [ ] Chei criptate în `Integration`, cu buton „testează conexiunea"
@@ -255,7 +255,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] ⚠️ **Rezervarea la inițierea plății** (Faza 5, punctul 7): termenul vine din `reservationExpiresAt(metodă, acum, setări)` (`packages/core/src/inventory/workdays.ts`): card = `inventory.reservationMinutes` minute, transfer bancar = sfârșitul celei de-a `inventory.transferReservationWorkdays`-a zile lucrătoare (fusul `regional.timezone`); ramburs nu rezervă, ci angajează direct. Expirarea o face jobul `stock-expire-reservations` (la 60 s), deci checkout-ul NU trebuie să elibereze singur rezervările expirate
 - [ ] **Calendarul zilelor nelucrătoare** (Faza 5, punctul 7): «zile lucrătoare» înseamnă acum luni–vineri, fără sărbătorile legale. Adaugă o setare editabilă (`regional.nonWorkingDates`, lista de date) pe care `addWorkdaysEndOfDay` o sare, ca o rezervare prin transfer bancar să nu expire cu o zi mai devreme în jurul sărbătorilor
 
-## FAZA 11 — Admin comenzi + emailuri · ~6-7 zile
+## FAZA 11 — Admin comenzi + emailuri
 - [ ] *(din Redesign admin, 2026-11-09; modelele de aspect sunt în `docs/17` §3–4)* **Clopoțelul cu contor** (notificări de admin) și **contoarele din bara laterală** (comenzi de procesat), **vederile salvate** ca tab-uri în listele de comenzi și **panoul lateral (drawer) pentru consultarea rapidă a comenzii**: apar odată cu datele lor, nu ca elemente moarte
 - [ ] Listă comenzi cu filtre, căutare, vizualizări salvate, acțiuni în masă
 - [ ] Badge și filtru pentru **cereri de instalare**, cu status de urmărire și notificare pe email
@@ -269,7 +269,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] **Alerta «sincronizarea SmartBill e neactualizată» pe email** (Faza 5, punctul 7): jobul `stock-snapshot-freshness` scrie deja în audit (`stock.snapshot.stale` / `stock.snapshot.recovered`, cu memento la 24 h); aici se adaugă trimiterea pe email către adminii cu `inventory.write`: destinatarii și șablonul se decid (utilizatorul activ, cu emailul verificat, REVERIFICAT la fiecare trimitere), prin coadă, o singură dată pe episod
 - [ ] Emailul de confirmare conține informațiile precontractuale cerute de lege
 
-## FAZA 12 — Livrare și AWB (agregator + Sameday) · ~5-6 zile
+## FAZA 12 — Livrare și AWB (agregator + Sameday)
 - [ ] **Din Faza 5 (punctul 14):** greutatea liniei = **greutate pe unitate × cantitate** (cantitățile sunt zecimale: 6,09 mp, 25 kg), calculată exact cu `Quantity`; greutatea volumetrică și cea reală se compară pe LINIE, nu pe produs
 - [ ] ⚠️ **Reguli de preț și de curier pe clase de transport** (`standard` / `oversized` / `pallet`, `shippingClass` din Faza 4): ce curier/serviciu primește `pallet`, dacă prețul vine tot din API, prag de transport gratuit per clasă, blocarea easybox-ului. De decis cu utilizatorul înainte de implementare
 - [ ] Interfață `ShippingProvider`
@@ -282,7 +282,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Cron la 10 min de sincronizare status → email automat la expediere și livrare
 - [ ] Circuit breaker: curier picat ≠ comandă pierdută
 
-## FAZA 13 — Facturare și e-Factura (SmartBill) · ~4-5 zile
+## FAZA 13 — Facturare și e-Factura (SmartBill)
 - [ ] ⚠️ **Din Faza 5 (punctul 14), stoc și facturare:** **ora facturii pe comandă** (`StockService.markInvoiced`: factură înaintea ultimei sincronizări = oglindită, după ea = încă angajată; o bucată se scade o singură dată); unitățile SmartBill (tabelul din `smartbill-units.ts`), **2 zecimale la cantitate cu rotunjire la cea mai apropiată cifră**, kg în kg și sacul ca bucată (răspunsurile contabilului din 2026-10-28), conversia SmartBill ↔ unitatea noastră; **cele 20 de cazuri numerice** (total încasat = total factură, la 1 ban); lista **«comenzi confirmate fără factură»** (altfel rămân angajate la nesfârșit, D1.5 punctul 6); stornoul returnează stocul (D13); factura la «La comandă» (la plată sau, la ramburs, la expediere); SmartBill refuză factura la stoc 0 cu descărcare de gestiune activă, deci emitere fără descărcare când e cazul
 - [ ] **Înainte de a începe:** citește documentația API curentă a SmartBill; utilizatorul a confirmat cu SmartBill că abonamentul include acces API (`10` Partea II #9)
 - [ ] Interfață `InvoiceProvider` (SmartBill primul; Oblio posibil mai târziu prin aceeași interfață)
@@ -301,7 +301,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] **Cantitatea de pe factură are cel mult 2 zecimale** (SmartBill: 2 zecimale, rotunjire la cea mai apropiată cifră): verificare la configurarea pasului și a conversiilor SmartBill (un pas sau un raport care dă mai mult de 2 zecimale pe factură se refuză sau se avertizează); kg se facturează în kg, sacul ca bucată
 - [ ] **Momentul facturii pentru «La comandă»** (răspuns contabil): la plată dacă a fost plătit, la expediere dacă se plătește la livrare (ramburs)
 
-## FAZA 14 — Cont client și retururi · ~4-5 zile
+## FAZA 14 — Cont client și retururi
 - [ ] Dashboard, istoric comenzi, detaliu cu timeline și tracking AWB
 - [ ] Agendă de adrese, descărcare facturi, wishlist, recenziile mele
 - [ ] Preferințe de comunicare, export date GDPR, ștergere cont cu anonimizare
@@ -310,7 +310,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Admin: aprobare, AWB retur, recepție, inspecție, rambursare, repunere pe stoc
 - [ ] Emailuri la fiecare tranziție + raport de motive
 
-## FAZA 14b — Produse digitale · ~5-6 zile
+## FAZA 14b — Produse digitale
 - [ ] 🟡 **Decizie deschisă a utilizatorului, înainte de a începe:** în comanda mixtă plătită cu ramburs, produsul digital se eliberează la **livrare confirmată** (recomandare) sau la virarea banilor? (`10` Partea I)
 - [ ] Schema: DigitalProduct, DigitalAsset, DigitalEntitlement, DigitalAccessLog (`11` §2)
 - [ ] Interfața `MediaDeliveryProvider` cu 3 drivere: `local` (dezvoltare), `bunny` (video în producție), `s3` (fișiere)
@@ -325,7 +325,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Admin: resetare contor descărcări, prelungire acces, revocare, log de accesări
 - [ ] Test: comandă mixtă → digitalul livrat instant, fizicul rămâne `partially_fulfilled`
 
-## FAZA 15 — Grupuri de clienți, prețuri de partener și prețuri NIR · ~4-5 zile
+## FAZA 15 — Grupuri de clienți, prețuri de partener și prețuri NIR
 - [ ] **Din Faza 5 (punctul 14): poza de stoc prin API** în locul fișierului «Stoc la zi»: când integrarea SmartBill cu API-ul există, sincronizarea periodică (ținta: câteva minute, minim zilnic) aplică aceeași `applySnapshot` ca importul din fișier; fișierul rămâne ca soluție de rezervă. Citește documentația API SmartBill (gestiune la factură, unități, zecimale) înainte
 - [ ] **Înainte de a începe:** primești de la utilizator un fișier exemplu de export SmartBill (`10` Partea II #10)
 - [ ] Schema: `CustomerGroup` cu `pricingType` (`none` | `discount` | `cost_plus`), `discountBps`, `markupBps` (întregi în puncte de bază) + `Customer.groupId` + `excludeFromGroupDiscount` pe produs și categorie (se aplică ambelor tipuri)
@@ -342,7 +342,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Raport: vânzări per grup, total avantaj acordat
 - [ ] (opțional) Promovare automată în „Client fidel" după X lei sau N comenzi
 
-## FAZA 15b — Puncte de loialitate și vouchere · ~6 zile
+## FAZA 15b — Puncte de loialitate și vouchere
 Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și retururile funcționează complet.**
 - [ ] Setări de loialitate: rată de acumulare, valoare punct, moment de acordare, expirare, plafon procentual de utilizare (implicit **fără plafon**, configurabil), minim în bani când nu există transport (`minCashAmount`, implicit 1 leu)
 - [ ] Schema: LoyaltyAccount, LoyaltyTransaction (registru imutabil — soldul se recalculează, nu se editează)
@@ -364,7 +364,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Emitere din admin + vânzare ca produs pe site, cu mesaj personalizat pe email
 - [ ] Admin: listă, anulare, ajustare cu audit, **raport de datorie în vouchere**
 
-## FAZA 16 — CMS și conținut · ~6-7 zile
+## FAZA 16 — CMS și conținut
 - [ ] ⚠️ **Provideri de utilizare media pentru pagini și bannere (cerință explicită, cu test):** câte un `MediaUsageProvider` pentru blocurile de pagină (inclusiv homepage), bannere (și blog, dacă are imagini), înregistrate înainte ca editorul de pagini să poată referi fișiere din bibliotecă. Teste: un fișier folosit într-un bloc sau banner nu se poate șterge (refuz cu lista locurilor), iar după ce e scos se poate
 - [ ] ⚠️ **Utilizatori și roluri în admin (`users.manage`) — reguli anti-escaladare de privilegii** (decizie utilizator): un utilizator nu poate acorda un rol sau o permisiune pe care nu o are; doar Owner atribuie sau retrage rolul Owner; un Admin nu își poate modifica propriul rol și nici pe cel al Owner-ului; **test explicit pentru escaladare de privilegii**. Verificarea stă în `packages/core`, nu în UI
 - [ ] 🟡 **Drepturile Depozitului pe elementele din Catalog** (decizie utilizator, blocul 8b: nu se schimbă modelul de drepturi acum; fostele «taburi din Produse», din 8c elemente ale grupului «Catalog»): Depozit vede acum toate elementele din Catalog; de decis dacă primește o permisiune separată pentru taxonomie (Categorii, Branduri, Atribute, Unități).
@@ -382,7 +382,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Banner de cookie-uri care **blochează efectiv scripturile** + Consent Mode v2
 - [ ] ⚠️ **Blog, FAQ și paginile din CMS în spatele flag-urilor** (`requireFeature`): gardarea face ruta dinamică; la schimbarea unui flag din admin invalidează cache-ul paginilor afectate (și meniul/sitemap-ul care îl listează), altfel o funcție oprită rămâne vizibilă din cache
 
-## FAZA 17 — Promoții, recenzii, marketing, SEO · ~6-8 zile
+## FAZA 17 — Promoții, recenzii, marketing, SEO
 - [ ] Schema Discount + motor de reguli (teste scrise întâi)
 - [ ] Admin reduceri, generator de coduri, statistici
 - [ ] Recenzii: submit, moderare, răspuns, achiziție verificată, solicitare automată post-livrare
@@ -394,13 +394,13 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] ⚠️ **Redirecționări 301 din adresele vechi WooCommerce la lansare** (din `legacyUrl` păstrat pe produse, categorii și branduri din Faza 4): tabel de redirecționări, test pe fiecare tip, raport de adrese vechi fără corespondent
 - [ ] Audit SEO intern în admin
 
-## FAZA 18 — Instalator și neutralitate white-label · ~5-6 zile 🔑
+## FAZA 18 — Instalator și neutralitate white-label 🔑
 - [ ] **(C-02) Instalatorul setează `auth.trustedProxyHops`** (1 în spatele Caddy) și **avertisment în Setări** când pagina de setări există și valoarea e 0 în producție. Aplicația avertizează deja la pornire (log) și are limită globală de rezervă, dar în modul fără IP de încredere pragul de blocare e ×3 și blocarea e plafonată la 1 minut, deci rămâne un DoS limitat rezidual (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
 - [ ] **(C-02/C-40) Setările de autentificare din registru nu au UI de administrare** (`auth.registerMaxAttempts`, `auth.loginRatePerMinutePerIp`, `passwordResetMax*`, `verificationResend*`, `unverifiedAccountRetentionDays`, `import.stepMaxAttempts`…): se editează acum doar prin registru/seed; câmpurile apar în pagina de Setări când se construiește. Valoarea implicită `loginRatePerMinutePerIp = 120` poate limita un NAT mare (birou/CGNAT): de reevaluat la instalare.
 - [ ] (C-20) Antete de securitate: CSP (cu nonce pentru scriptul de temă), `frame-ancestors`/`X-Frame-Options`, HSTS, `nosniff` global, Referrer-Policy; `GET /api/auth/error?...` afișează text controlat de atacator pe originea magazinului (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
 - [ ] (C-41) `settings.write` poate schimba orice cheie (inclusiv `auth.*`, `imageImport.allowedHosts`, `monitoring.sentryDsn`): permisiune separată `settings.security.write` când apare UI-ul de setări (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
 - [ ] Wizard `/install` complet (`08-instalare-si-distributie.md` §2)
-- [ ] Notă: **tu faci instalările**, deci wizard-ul poate presupune un utilizator tehnic. Fără „prost-rezistență" extremă. Economie ~2-3 zile.
+- [ ] Notă: **tu faci instalările**, deci wizard-ul poate presupune un utilizator tehnic. Fără „prost-rezistență" extremă.
 - [ ] Verificare cerințe, test conexiune DB, rulare migrații cu progres
 - [ ] Generare `APP_KEY` + avertisment de păstrare
 - [ ] Setare date firmă → propagate automat în footer, facturi, emailuri, pagini legale
@@ -418,7 +418,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] CSS custom + scripturi custom din setări
 - [ ] **Audit de neutralitate**: parcurge checklist-ul din `08` §6, linie cu linie
 
-## FAZA 19 — Extensii și actualizări · ~4-5 zile 🔑
+## FAZA 19 — Extensii și actualizări 🔑
 - [ ] Registry de hooks (`on`, `filter`) în `packages/extensions`
 - [ ] Folder `/extensions` încărcat la boot, exclus din update
 - [ ] Override de componente prin registry
@@ -429,7 +429,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Verificare checksum pe core (detectează modificări neautorizate)
 - [ ] CI care testează update-ul de la fiecare versiune minoră anterioară
 
-## FAZA 20 — Rapoarte, performanță, hardening · ~5 zile
+## FAZA 20 — Rapoarte, performanță, hardening
 - [ ] *(din Redesign admin, 2026-11-09)* **Căutarea globală** din bara de sus (produse, comenzi, clienți) și **variațiile (+/−) și graficele** din Panou și rapoarte, după modelele din `docs/17` §3–4 (card de indicator, linie punctată de comparație, culori de grafic); se adaugă când există datele
 - [ ] **Fixture-uri și teste cu date fixe apropiate (prioritate mică; din auditul de la 12e, 2026-11-04):** de transformat în date relative la ora curentă, conform regulii «Teste și fixture-uri — fără date fixe față de «acum»» din `CLAUDE.md`. Nu pică la trecerea timpului acum (nu compară data cu ceasul real), deci nu urgent: `e2e/product-editor.spec.ts` (promoție 10–30 noiembrie 2026 în formular), `catalog-niche.integration.test.ts` (`expectedRestockDate` 2026-12-01), `catalog-options.integration.test.ts` (cotă cu `validFrom` 2030-01-01), `product-lifecycle.integration.test.ts` (promoție până la 2027-09-01), `product-service.test.ts` (`saleStartsAt` 2027-01-01 față de `NOW` injectat), `catalog-schema.integration.test.ts` (ferestre de promoție fixe). Fixture-ul Woo se face relativ în 12d (commit separat).
 - [ ] **Dependențe cu avertismente de audit, doar URMĂRITE (de la 12b, 2026-10-28):** `deepmerge-ts`, `mysql2` și `fast-uri` (aduse de Prisma / `ajv`, nefolosite la rulare cu date de la clienți), `deepmerge` 4.3.1 (fără versiune reparată; vine din `html-to-text` din `@react-email/render`) și `postcss` 8.4.31 (adus de Next, rulează doar la build). Se reverifică cu `pnpm audit` după fiecare actualizare de Prisma sau Next și înainte de lansare; nu se actualizează acum.
@@ -446,7 +446,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Test de încărcare k6 pe PDP și checkout
 - [ ] Audit de accesibilitate cu axe
 
-## FAZA 21 — Împachetare și distribuție · ~4-5 zile 🔑
+## FAZA 21 — Împachetare și distribuție 🔑
 - [ ] *(din Redesign admin, 2026-11-09)* **Fontul Inter:** dacă build-ul rulează la client sau fără rețea, trecem de la `next/font/google` la fișiere woff2 locale cu `next/font/local` (subseturile `latin` + `latin-ext`, ~131 KB) și `OFL.txt` în pachet; până atunci nu se schimbă nimic
 - [ ] *(din Redesign admin, 2026-11-09)* **Pagina de exemplu a componentelor** (`*.e2e.tsx`, doar dezvoltare) **nu intră în pachet**, ca scripturile dev-only (`dev:*`, `dev:seed-products`); testul `design-gallery` din Lot 0 dovedește că nu există într-un build de producție
 - [ ] (C-26) Filtrul de conținut activ din PDF nu vede obiecte comprimate (`/ObjStm`) și lasă `/OpenAction`, `/URI`, `/SubmitForm`, `/AA`, `/GoToR`, `/ImportData`: adaugă marcajele și respinge `/ObjStm` cu conținut activ. Fișierele se servesc doar ca `attachment` cu `nosniff` și CSP `sandbox` (Blocul C, `docs/FAZA-4-bloc-C-constatari.md`).
@@ -468,7 +468,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] **Instalare de la zero pe un VPS gol, cronometrată** — țintă sub 15 minute
 - [ ] Mediu de staging identic cu producția
 
-## FAZA 22 — Testare finală și lansare · ~4-5 zile
+## FAZA 22 — Testare finală și lansare
 - [ ] ⚠️ **Stoc — «înainte de lansare» (D1.5, din Faza 5, punctul 14).** Fără acestea stocul se îndepărtează de realitate:
   - [ ] **Sincronizare regulată:** minim zilnică (la o oră fixă) până apare API-ul; **cineva anume e responsabil** (tu / contabilul) și există o listă de verificare
   - [ ] **Indicatorul de prospețime** funcționează: bannerul «Sincronizare SmartBill» și cardul din Panou, avertisment după X ore (setarea `inventory.snapshotStaleHours`, implicit 24), alertă pe email când e «Neactualizat» (Faza 11)
@@ -492,7 +492,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Instruirea clientului + video de onboarding
 - [ ] Plan de rollback
 
-## FAZA 22b — eMAG Marketplace · ~8-12 zile (după lansarea magazinului propriu)
+## FAZA 22b — eMAG Marketplace (după lansarea magazinului propriu)
 - [ ] ⚠️ **Unitatea în care se trimite stocul către eMAG** (din Faza 5, punctul 2): `ChannelListing.stock` este `Int?`, iar stocul propriu e `Quantity` în zecimi de miime, cu pas de vânzare. De decis: se trimite numărul de pași vandabili (disponibil în pași, fără rest), sau bucăți întregi; conversie cu rotunjire în jos, tampon de siguranță și produsele vândute la ml/mp/kg (probabil nu se listează pe eMAG); ce coloană/tip se schimbă, cu migrație și teste
 - [ ] Client API eMAG cu rate limiting, retry și IP fix confirmat
 - [ ] Mapare categorii + caracteristici obligatorii, cu UI în admin
@@ -547,15 +547,14 @@ Verificare făcută la intrarea documentelor 18 și 19: fără credențiale sau 
 ```
 ETAPA 1 — Magazinul tău, funcțional și lansat
   Fazele 0-17 (fără 18, 19, 21)
-  ~85-100 zile → ai un magazin real, care vinde, cu clienți reali
+  → ai un magazin real, care vinde, cu clienți reali
 
 ETAPA 2 — Transformarea în produs
   Fazele 18, 19, 21: instalator, extensii, împachetare
-  ~12-14 zile → abia acum devine un pachet vandabil
+  → abia acum devine un pachet vandabil
 
 ETAPA 3 — Extindere
   Faza 22b: eMAG Marketplace
-  ~8-12 zile
 ```
 
 **De ce în ordinea asta:** un magazin care vinde e o bază infinit mai bună de produs decât unul teoretic. Vei descoperi în primele 2 luni de operare zeci de lucruri pe care nici tu, nici eu nu le anticipăm acum — și e mult mai ieftin să le repari într-o instalare decât în douăzeci.
@@ -568,16 +567,6 @@ ETAPA 3 — Extindere
 
 Astea patru sunt „taxa" pe care o plătești acum ca să nu rescrii nimic mai târziu. Restul poate aștepta.
 
-## Estimare
-
-| | Zile de lucru |
-|---|---|
-| **MVP vandabil, produse fizice** (Fazele 0-15) | ~76-90 |
-| + Produse digitale (Faza 14b) | inclus mai sus |
-| + Pachet distribuibil (Fazele 18, 19, 21) | +14-16 |
-| + CMS, marketing, SEO, rapoarte (Fazele 16, 17, 20) | +17-20 |
-| **Complet, fără eMAG** | **~107-126** |
-| + eMAG Marketplace (Faza 22b) | +8-12 |
-| **Total** | **~115-138** |
+## Recomandare
 
 Sugestia mea: lansează magazinul propriu (Fazele 0-17) pentru **un client real**, încasează, apoi adaugă instalatorul și eMAG. eMAG nu are sens înainte ca magazinul tău să funcționeze impecabil — penalizările lor sunt reale.

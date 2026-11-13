@@ -1,6 +1,6 @@
 # Întrebări pentru contabil — stoc, unități de măsură, cantități cu zecimale
 
-**Stare:** de trimis · **Actualizat:** 2026-10-21 · **Timp de completat:** ~15 minute (11 întrebări)
+**Stare:** de trimis · **Actualizat:** 2026-10-21 · **11 întrebări**
 
 Magazinul online vinde echipamente și materiale pentru piscine, cu TVA 21% inclus în preț. Facturile le emite SmartBill. Unele produse
 se vând la metri, metri pătrați, kilograme, litri sau în ambalaje (rolă, sac, cutie). Vrem ca **suma încasată de la client să fie exact

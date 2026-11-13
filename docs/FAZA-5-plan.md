@@ -176,13 +176,12 @@ Reguli care **nu se schimbă**: prețurile sunt brute (cu TVA), în bani; TVA-ul
 
 Implicit **1 pas**. Câmpul „Minim (pași)” e opțional (ex. minim 2 role la liner). Cantitatea minimă în unitate = minim × pas. Fără cantitate maximă acum (doar limită tehnică pe linie).
 
-### D11.9 Impactul asupra punctelor și noua estimare
+### D11.9 Impactul asupra punctelor
 
 - Punctul „Unități de măsură și cantități” din versiunea anterioară se **împarte în două**: **2 = Cantități exacte** (modulul `Quantity`, aritmetica `bigint`, testele numerice) și **3 = Unități, pas și configurare**
   (lista de unități, pas/bază de preț/minim pe produs și variantă, validarea, conversia SmartBill). Rezultat: **14 puncte** (în loc de 13).
 - Se schimbă: **1** (schema: câmpurile de mai sus, `BIGINT`), **4** (disponibil în pași, rest), **5** (rezervări în multipli de pas + teste), **8** (admin stoc: pași și rest), **9** (editor: unitate, bază de preț, pas pe produs și variantă, afișarea
   prețului pe unitate și pe pas; import/export), **10** (praguri în pași), **12** (importul „stoc la zi” cu conversie).
-- **Estimare: de la 8–10 zile la 9–11 zile** de lucru efectiv (+1 zi: aritmetica `bigint` și testele numerice, conversia SmartBill, pasul pe variantă).
 - **Motorul de prețuri (Faza 8)** nu se construiește acum; primitivele exacte (preț × cantitate cu `bigint`, multiplu de pas) stau în `packages/shared`, iar **regula de rotunjire o aplică motorul unic de prețuri**, ca să nu existe calcule duplicate.
 
 ### Ce rămâne de decis de tine la D11
@@ -246,7 +245,6 @@ rotunjire), citită înainte de implementare, cum cere `CLAUDE.md`.
 
 # 4. Împărțirea în puncte (14, cu punctele noi 2 și 3)
 
-Estimare nouă: **9–11 zile** de lucru efectiv (față de ~3 în planul inițial; 6–8, apoi 8–10 în versiunile anterioare), cu pauzele tale de confirmare.
 Fiecare punct: 🟢 ÎNCEP, teste care pică întâi, commit separat, ✅ GATA cu „👉 VERIFICĂ TU”. Concurența intră din punctele 4–5.
 
 | # | Punct | Ce rezultă | 👉 Cum verifici tu (scurt) |
@@ -322,7 +320,7 @@ completă citită înainte de commit, push doar cu secvența obișnuită, nimic 
 
 # 6. Ce îți cer acum
 
-1. **Aprobare** (sau corecturi) pe planul revizuit: cele **14 puncte** și estimarea **9–11 zile**.
+1. **Aprobare** (sau corecturi) pe planul revizuit: cele **14 puncte**.
 2. **Alegerile D11** (lista „Ce rămâne de decis”, punctele 1–10), în special: stocarea `BIGINT` cu 4 zecimale, baza prețului la liner/mozaic/bisulfat, rotunjirea R1+R2, restul nevandabil, pragurile în pași.
 3. **Pentru cele 6 produse:** unitatea în care le ține SmartBill (din export) și numele unităților din SmartBill; răspunsurile contabilului (inclusiv rotunjirea și zecimalele).
 4. Cifrele din „Parametri rămași” (pot fi aproximative).

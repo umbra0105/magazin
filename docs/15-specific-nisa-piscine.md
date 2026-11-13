@@ -32,10 +32,10 @@ Bifa `oversized` rămâne necesară indiferent de preț: o pompă de 60 kg nu î
 
 👉 **Întreabă agregatorul, exact așa**: *„Ce se întâmplă dacă cer un tarif pentru 90 kg, 160×80×80 cm? Primesc preț sau eroare?"*
 - Primești preț → perfect, rămâi cu două clase și ai terminat.
-- Primești eroare → ai nevoie de o singură ramură de rezervă: când API-ul refuză, produsul afișează „transport calculat individual", comanda se plasează fără cost de transport, iar tu îl adaugi manual din admin și trimiți link de plată. Cost ~1 zi, și o construiești **doar dacă e nevoie**.
+- Primești eroare → ai nevoie de o singură ramură de rezervă: când API-ul refuză, produsul afișează „transport calculat individual", comanda se plasează fără cost de transport, iar tu îl adaugi manual din admin și trimiți link de plată. O construiești **doar dacă e nevoie**.
 
 **2. Pragul de transport gratuit.** Dacă ai „livrare gratuită peste 500 lei" și cineva cumpără o pompă de căldură de 8.000 de lei, plătești 300 de lei din marjă.
-*Recomandare: pragul de transport gratuit **dezactivabil per clasă de transport și per produs**. Pentru `oversized`, implicit dezactivat.* Costă ~2 ore și acoperă o gaură reală în profit.
+*Recomandare: pragul de transport gratuit **dezactivabil per clasă de transport și per produs**. Pentru `oversized`, implicit dezactivat.* Acoperă o gaură reală în profit.
 
 ### Ce rămâne de făcut
 - `weight` și `dimensions` obligatorii pe variantă
@@ -44,8 +44,6 @@ Bifa `oversized` rămâne necesară indiferent de preț: o pompă de 60 kg nu î
 - Tarife cerute în timp real de la API, cu cache scurt și **fallback pe o taxă fixă dacă API-ul e picat** (nu bloca niciodată checkout-ul)
 - Prag de transport gratuit dezactivabil per clasă
 - Mesaj explicit: livrarea se face la adresă, la nivelul solului; descărcarea și manipularea sunt în sarcina clientului
-
-**Economie față de planul anterior: ~2 zile.**
 
 ---
 
@@ -110,7 +108,7 @@ La echipamente tehnice, filtrele sunt principalul mod de navigare, nu un moft.
 
 Ai simplificat corect. **Nu e un produs, nu are preț, nu are programare, nu intră în comandă.** E doar un semnal că acel client vrea să fie sunat.
 
-**Renunțăm complet la tipul de produs `service`.** Economie: ~3 zile.
+**Renunțăm complet la tipul de produs `service`.**
 
 ```
 Product
@@ -138,8 +136,6 @@ Nebifată implicit. Nu blochează nimic. Nu modifică totalul comenzii.
 - Notificare pe email către echipă la plasarea unei astfel de comenzi
 - Status de urmărire, ca să nu se piardă cererile
 - Raport: câte cereri, câte convertite
-
-**Cost: ~0,5 zile** în loc de 3.
 
 > 💡 Generic, în spatele flag-ului `installationRequests`. Un magazin de mobilă, de aer condiționat sau de electrocasnice încorporabile îl folosește identic.
 
@@ -179,14 +175,14 @@ PartsDiagramHotspot
 
 **Două variante de implementat — alege:**
 
-| | Ce vede clientul | Efort |
-|---|---|---|
-| **A. Simplă** | Imaginea + un tabel numerotat alături (nr., denumire, cod, preț, „adaugă în coș"). Numerele din tabel corespund celor tipărite pe desenul producătorului | **~1 zi** |
-| **B. Cu hotspot-uri** | Ca A, plus puncte marcate pe imagine. Click pe punct → evidențiază rândul sau duce la produs. În admin, plasezi punctele dând click pe imagine | **~2,5 zile** |
+| | Ce vede clientul |
+|---|---|
+| **A. Simplă** | Imaginea + un tabel numerotat alături (nr., denumire, cod, preț, „adaugă în coș"). Numerele din tabel corespund celor tipărite pe desenul producătorului |
+| **B. Cu hotspot-uri** | Ca A, plus puncte marcate pe imagine. Click pe punct → evidențiază rândul sau duce la produs. În admin, plasezi punctele dând click pe imagine |
 
 ### ✅ DECIS: varianta A, cu structura pregătită pentru B
 
-Construim imaginea + tabelul numerotat (~1 zi). **Dar tabela `PartsDiagramHotspot` se creează de la început**, chiar dacă nu o folosim încă. Când vrei hotspot-uri, adaugi doar editorul din admin și marcajele pe imagine — fără migrație de date, fără rescriere. Diferența: ~1,5 zile atunci, în loc de 2,5 acum.
+Construim imaginea + tabelul numerotat. **Dar tabela `PartsDiagramHotspot` se creează de la început**, chiar dacă nu o folosim încă. Când vrei hotspot-uri, adaugi doar editorul din admin și marcajele pe imagine — fără migrație de date, fără rescriere.
 
 **Detaliu care contează**: fă `PartsDiagram` o entitate proprie, atașabilă la mai multe produse. O familie de pompe are aceeași fișă explodată pentru 6 modele. Altfel o încarci de 6 ori.
 
@@ -213,7 +209,7 @@ Vânzările vor fi concentrate în martie-august, cu vârf în mai-iunie.
 Piscinierii, constructorii și firmele de service cumpără repetat. Grupurile „Partener 1/2/3" (prețul de achiziție + adaos, plafonat la prețul public) sunt exact instrumentul potrivit, fără B2B complicat.
 
 Ieftin și util în plus:
-- **Comandă repetată** din istoric („comandă din nou") — ~0,5 zile
+- **Comandă repetată** din istoric („comandă din nou")
 - Facturare pe firmă la checkout — deja în plan
 - Descărcarea documentelor de produs — deja acoperită de tabul „Documente"
 
@@ -227,24 +223,6 @@ Asta justifică blogul: în nișa asta conținutul tehnic aduce trafic organic c
 
 ---
 
-## 9. Recapitulare cost, după simplificări
-
-| Adăugare | Fază | Cost |
-|---|---|---|
-| Clase de transport + greutate volumetrică + tarife din API | 4 + 9 | +1 zi |
-| Blocare easybox pentru `oversized` + prag gratuit per clasă | 9 + 12 | +0,5 zile |
-| Tab „Documente" pe produs + afișare clasă energetică | 4 + 7 | +1,5 zile |
-| Atribute numerice cu unități + filtre pe interval | 7 | +1 zi |
-| Cerere de ofertă instalare | 4 + 9 + 11 | +0,5 zile |
-| Căutare pe cod de piesă (trigram + potrivire exactă) | 7 | +0,5 zile |
-| Fișă explodată, varianta A | 4 + 7 | +1 zi |
-| Fișă explodată, varianta B (hotspot-uri, ulterior) | Val 2 | +1,5 zile |
-| Comandă repetată din istoric | 14 | +0,5 zile |
-
-**Total: ~6,5 zile.**
-
-Față de versiunea anterioară a acestui fișier (~10,5 zile), simplificările tale au tăiat **~4 zile**.
-
-### Amânate, ca extensii sau Val 2
+## 9. Amânate, ca extensii sau Val 2
 - **Selector de produs** („ce pompă îmi trebuie") → prea specific pentru core. Se face ca **extensie** în `/extensions`, când vrei. Rămâne cea mai bună investiție pentru conversie în nișa ta, dar nu în pachetul de bază.
-- **Comparare de produse** → Val 2, ~2 zile.
+- **Comparare de produse** → Val 2.
