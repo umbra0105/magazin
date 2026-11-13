@@ -52,7 +52,9 @@
     "admin:create": "node --import tsx packages/core/scripts/admin-create.ts",
     "dev:age-session": "node --import tsx packages/core/scripts/dev-age-session.ts",
     "admin:set-password": "node --import tsx packages/core/scripts/admin-set-password.ts",
-    "cli:tty-test": "node --import tsx packages/core/scripts/tty-test.ts"
+    "cli:tty-test": "node --import tsx packages/core/scripts/tty-test.ts",
+    "gate:merge": "node --import tsx scripts/autonom/gate-cli.ts",
+    "verify:full": "node --import tsx scripts/autonom/verify-full.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",
