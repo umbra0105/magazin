@@ -179,7 +179,7 @@ test.describe("import WooCommerce", () => {
     await page.locator("[data-import-apply]").click();
     await expect(page.locator("[data-import-summary]")).toContainText("7 produse noi");
     await expect(page.locator("[data-import-summary]")).toContainText(
-      "Se vor crea 6 categorii, 2 branduri și 1 atribute",
+      "Se vor crea 6 categorii, 2 branduri și 1 atribut",
     );
     await page.locator("[data-import-confirm]").click();
     await expect(page.locator("[data-import-done]")).toBeVisible();
@@ -249,7 +249,7 @@ test.describe("import WooCommerce", () => {
     const row = page.locator("[data-history-row]").filter({ hasText: fileName });
     await expect(row).toContainText("WooCommerce");
     await expect(row.locator("[data-history-created]")).toContainText(
-      "6 categorii, 2 branduri, 1 atribute",
+      "6 categorii, 2 branduri, 1 atribut",
     );
     await expect(row.locator("[data-history-counts]")).toContainText("7 noi");
     await expect(page.locator("body")).not.toContainText(WOO_COST_SENTINEL);

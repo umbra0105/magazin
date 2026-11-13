@@ -50,6 +50,11 @@ describe("numărători acordate în română", () => {
     expect(imp.history.exports.rowsAndProducts(25, 120)).toBe("25 de rânduri, 120 de produse");
   });
 
+  it("istoricul importurilor: «Create: …» cu acord", () => {
+    expect(imp.history.created(6, 2, 1)).toBe("Create: 6 categorii, 2 branduri, 1 atribut");
+    expect(imp.history.created(1, 1, 20)).toBe("Create: 1 categorie, 1 brand, 20 de atribute");
+  });
+
   it("istoricul exporturilor: «Se afișează …» cu acord", () => {
     expect(imp.history.exports.shown(1)).toBe("Se afișează cel mai nou export.");
     expect(imp.history.exports.shown(5)).toBe("Se afișează cele mai noi 5 exporturi.");

@@ -2349,7 +2349,7 @@ export const ro = {
           errors: "cu erori",
         } as Record<string, string>,
         created: (categories: number, brands: number, attributes: number) =>
-          `Create: ${categories} categorii, ${brands} branduri, ${attributes} atribute`,
+          `Create: ${countOf(categories, "categorie", "categorii", "de categorii")}, ${countOf(brands, "brand", "branduri", "de branduri")}, ${countOf(attributes, "atribut", "atribute", "de atribute")}`,
         purged: "detaliu șters",
         details: "Detalii",
         pagination: {
