@@ -284,6 +284,17 @@ describe("condiția 1: arbore curat și fără fișiere din afara scopului", () 
     }
   });
 
+  it("docs/AUTONOM-APROBARI.md în diferența ramurii oprește poarta: îl scrie numai utilizatorul, iar aprobarea intră în main, nu pe ramura fazei", async () => {
+    for (const diffFiles of [
+      ["docs/AUTONOM-APROBARI.md"],
+      ["apps/web/src/a.tsx", "docs/AUTONOM-APROBARI.md", "docs/PROGRESS.md"],
+    ]) {
+      const r = await run({ branch: "faza-9", diffFiles }, "9");
+      expectStopsAt(r, 1);
+      expect(JSON.stringify(r.result)).toContain("AUTONOM-APROBARI");
+    }
+  });
+
   it("migrările SQL și fișierele obișnuite din diferență nu sunt «din afara scopului»", async () => {
     const r = await run({
       diffFiles: [

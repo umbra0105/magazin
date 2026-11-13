@@ -58,6 +58,10 @@ const STRAY: readonly { pattern: RegExp; label: string }[] = [
   { pattern: /^local-data\//, label: "local-data/" },
   { pattern: /(^|\/)\.env($|\.)/, label: "fișier .env" },
   { pattern: /^STOP\.txt$/, label: "STOP.txt" },
+  {
+    pattern: /^docs\/AUTONOM-APROBARI\.md$/,
+    label: "docs/AUTONOM-APROBARI.md: îl scrie numai utilizatorul, nu ramura fazei",
+  },
   { pattern: /(^|\/)zz-[^/]*$/, label: "fișier temporar zz-*" },
   { pattern: /(^|\/)test-results\//, label: "test-results/" },
   { pattern: /(^|\/)playwright-report\//, label: "playwright-report/" },

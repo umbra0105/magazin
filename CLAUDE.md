@@ -419,7 +419,8 @@ din acest fișier, **câștigă `CLAUDE.md`**.
   arbore curat și fără fișiere din afara scopului; ramura actualizată față de `main` și publicată;
   verificarea completă locală pe codul final (`npm.cmd run verify:full`); `gh pr checks` verde pe
   vârful ramurii; fără intrări S1 sau S2 deschise în `docs/FINISAJE.md`; pentru fazele B și C,
-  «aprobat» scris de utilizator în `docs/AUTONOM-APROBARI.md`; apoi eticheta `pre-faza-N`,
+  «aprobat» scris de utilizator în `docs/AUTONOM-APROBARI.md` (**fișier al utilizatorului: nu-l scriu
+  și nu-l modific niciodată**; un test pică dacă un commit al ramurii fazei îl atinge); apoi eticheta `pre-faza-N`,
   îmbinare prin commit (`--merge`, fără squash, ramura nu se șterge) și eticheta `faza-N-completa`.
 - **Niveluri de gravitate:** **S1** (bani, stoc, plăți, securitate, permisiuni, date personale,
   migrări pe date, aspecte legale, pierdere de date) = oprire imediată cu 🛑; **S2** (o funcție nu
