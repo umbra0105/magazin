@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { EmptyState } from "@ecom/ui";
 import { getMessages } from "@/messages";
 import { MediaDetailDialog } from "./detail-dialog";
 import { FolderPanel } from "./folder-panel";
@@ -89,8 +90,8 @@ export function MediaLibrary({
   const selected = items.find((i) => i.id === selectedId) ?? null;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
-      <aside className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <aside className="flex min-w-0 flex-col gap-6 lg:w-64 lg:shrink-0">
         <FolderPanel
           folders={folders}
           current={currentFolder}
@@ -112,14 +113,12 @@ export function MediaLibrary({
         )}
       </aside>
 
-      <div className="flex min-w-0 flex-col gap-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
         <p role="status" aria-live="polite" className="sr-only">
           {announcement}
         </p>
         {items.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-            {canWrite && totalCount === 0 ? m.grid.empty : m.grid.emptyFiltered}
-          </p>
+          <EmptyState title={canWrite && totalCount === 0 ? m.grid.empty : m.grid.emptyFiltered} />
         ) : (
           <MediaGrid label={m.grid.label}>
             {items.map((item) => (

@@ -41,12 +41,9 @@ export const LEGACY_ARBITRARY_LENGTHS: Readonly<Record<string, number>> = {
   "apps/web/src/components/admin/diagrams/diagram-editor.tsx": 4,
   "apps/web/src/components/admin/diagrams/diagram-list.tsx": 1,
   "apps/web/src/components/admin/inventory/movements-table.tsx": 1,
-  "apps/web/src/components/admin/media/detail-dialog.tsx": 1,
-  "apps/web/src/components/admin/media/media-library.tsx": 1,
   "apps/web/src/components/admin/products/product-import-images.tsx": 1,
   "apps/web/src/components/admin/products/product-import-wizard.tsx": 2,
   "apps/web/src/components/admin/products/product-import-woo.tsx": 3,
-  "apps/web/src/components/admin/warehouses/warehouse-manager.tsx": 1,
 };
 
 const HEX = /(?<![&\w])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![\w-])/g;

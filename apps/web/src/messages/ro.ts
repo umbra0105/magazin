@@ -201,7 +201,6 @@ export const ro = {
         "Imaginile magazinului: încarcă, caută, organizează în foldere și completează textul alternativ.",
       readOnly:
         "Ai acces doar de citire: poți vedea biblioteca, dar nu poți încărca, edita sau șterge fișiere.",
-      total: (n: number) => (n === 1 ? "1 fișier" : `${n} fișiere`),
       search: {
         label: "Caută după nume, text alternativ sau tag",
         placeholder: "Caută fișiere…",

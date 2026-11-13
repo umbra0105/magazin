@@ -1,6 +1,6 @@
 "use client";
 
-import { Folder, FolderPlus } from "lucide-react";
+import { Folder, FolderInput, FolderPlus, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { Button, Dialog, Input, Label, Select, cn } from "@ecom/ui";
@@ -27,7 +27,8 @@ type Mode =
 
 /**
  * Arborele de foldere: navigarea e prin linkuri (filtrul din URL), iar crearea, redenumirea și
- * mutarea prin dialoguri. Fără `media.write` nu există butoane de scriere.
+ * mutarea prin dialoguri. Fără `media.write` nu există butoane de scriere. Acțiunile unui folder sunt
+ * butoane doar cu pictogramă (terțe: fără bordură în repaus, 44 px pe ecrane tactile), cu nume accesibil și tooltip.
  */
 export function FolderPanel({
   folders,
@@ -98,15 +99,15 @@ export function FolderPanel({
 
   const itemClass = (active: boolean) =>
     cn(
-      "flex min-h-11 flex-1 items-center gap-2 rounded-md px-2 text-sm hover:bg-border/50 " +
+      "flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 text-body hover:bg-surface-hover " +
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-      active && "bg-border/60 font-semibold",
+      active && "bg-surface-hover font-semibold",
     );
 
   return (
     <nav aria-label={m.folders.nav} className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">{m.folders.title}</h2>
+        <h2 className="text-body font-semibold">{m.folders.title}</h2>
         {canWrite && (
           <Button size="sm" variant="outline" onClick={() => setMode({ kind: "create" })}>
             <FolderPlus aria-hidden="true" className="size-4" />
@@ -115,7 +116,7 @@ export function FolderPanel({
         )}
       </div>
       <ul className="flex flex-col gap-0.5">
-        <li>
+        <li className="flex">
           <Link
             href={hrefFor(null)}
             aria-current={current === null ? "page" : undefined}
@@ -124,11 +125,11 @@ export function FolderPanel({
             <Folder aria-hidden="true" className="size-4 shrink-0" />
             <span className="truncate">{m.filters.allFolders}</span>
             {totalCount !== null && (
-              <span className="ml-auto text-xs text-muted-foreground">{totalCount}</span>
+              <span className="ml-auto text-label text-ink-secondary">{totalCount}</span>
             )}
           </Link>
         </li>
-        <li>
+        <li className="flex">
           <Link
             href={hrefFor("root")}
             aria-current={current === "root" ? "page" : undefined}
@@ -146,30 +147,35 @@ export function FolderPanel({
           >
             <Link
               href={hrefFor(folder.id)}
+              title={folder.name}
               aria-current={current === folder.id ? "page" : undefined}
               className={itemClass(current === folder.id)}
             >
               <Folder aria-hidden="true" className="size-4 shrink-0" />
               <span className="truncate">{folder.name}</span>
-              <span className="ml-auto text-xs text-muted-foreground">{folder.mediaCount}</span>
+              <span className="ml-auto shrink-0 text-label text-ink-secondary">
+                {folder.mediaCount}
+              </span>
             </Link>
             {canWrite && (
               <span className="flex shrink-0">
                 <Button
-                  size="sm"
                   variant="ghost"
+                  size="icon"
                   onClick={() => setMode({ kind: "rename", folder })}
                   aria-label={`${m.folders.rename}: ${folder.name}`}
+                  title={m.folders.rename}
                 >
-                  {m.folders.rename}
+                  <Pencil aria-hidden="true" className="size-4" />
                 </Button>
                 <Button
-                  size="sm"
                   variant="ghost"
+                  size="icon"
                   onClick={() => setMode({ kind: "move", folder })}
                   aria-label={`${m.folders.move}: ${folder.name}`}
+                  title={m.folders.move}
                 >
-                  {m.folders.move}
+                  <FolderInput aria-hidden="true" className="size-4" />
                 </Button>
               </span>
             )}
@@ -223,14 +229,14 @@ export function FolderPanel({
                 {(mode?.kind === "move" ? movableTargets(folders, mode.folder.id) : flat).map(
                   ({ folder, depth }) => (
                     <option key={folder.id} value={folder.id}>
-                      {`${"  ".repeat(depth)}${folder.name}`}
+                      {`${"  ".repeat(depth)}${folder.name}`}
                     </option>
                   ),
                 )}
               </Select>
             </div>
           )}
-          <p role="alert" className="min-h-5 text-sm text-danger">
+          <p role="alert" className="min-h-5 text-body text-tone-problem-fg">
             {error}
           </p>
           <div className="flex justify-end gap-2">

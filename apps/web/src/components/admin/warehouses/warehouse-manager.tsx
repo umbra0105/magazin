@@ -3,7 +3,21 @@
 import { Pencil, Power } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Badge, Button, Dialog, Input, Label } from "@ecom/ui";
+import {
+  Badge,
+  Button,
+  Dialog,
+  EmptyState,
+  Input,
+  Label,
+  RowHeader,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@ecom/ui";
 import {
   createWarehouse,
   renameWarehouse,
@@ -35,7 +49,8 @@ function errorText(result: ProductActionFailure): string {
 /**
  * Lista depozitelor, cu creare, redenumire (și a celui implicit) și dezactivare / activare. Fără `inventory.write` butoanele de
  * scriere sunt dezactivate. Regulile (depozitul implicit nu se dezactivează, un depozit cu stoc nu se dezactivează, nume unic)
- * sunt pe server; aici apar doar ca indicii.
+ * sunt pe server; aici apar doar ca indicii. Lista e un `Table` (docs/17): pe telefon fiecare depozit e un card cu acțiunile în
+ * colțul din dreapta-sus, iar acțiunile sunt doar pictograme terțe, cu nume accesibil și tooltip.
  */
 export function WarehouseManager({
   rows,
@@ -70,19 +85,21 @@ export function WarehouseManager({
 
   return (
     <div className="flex flex-col gap-4">
-      <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+      <p role="note" className="rounded-lg bg-surface-subtle p-3 text-body">
         {m.defaultNote}
       </p>
-      <div className="flex justify-end">
-        <Button disabled={!canWrite} onClick={() => setForm("new")} data-warehouse-create>
-          {m.create}
-        </Button>
-      </div>
+      {rows.length > 0 && (
+        <div className="flex justify-end">
+          <Button disabled={!canWrite} onClick={() => setForm("new")} data-warehouse-create>
+            {m.create}
+          </Button>
+        </div>
+      )}
       {problem && (
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>
@@ -92,87 +109,102 @@ export function WarehouseManager({
       </p>
 
       {rows.length === 0 ? (
-        <p className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-          {m.empty}
-        </p>
+        <EmptyState
+          title={m.empty}
+          action={
+            <Button disabled={!canWrite} onClick={() => setForm("new")} data-warehouse-create>
+              {m.create}
+            </Button>
+          }
+        />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border">
-          <table className="w-full min-w-[40rem] text-left text-sm" aria-label={m.listLabel}>
-            <thead className="border-b border-border bg-border/30">
-              <tr>
-                {(["name", "code", "stock", "status"] as const).map((column) => (
-                  <th key={column} scope="col" className="p-3 font-medium">
-                    {m.columns[column]}
-                  </th>
-                ))}
-                <th scope="col" className="p-3 text-right font-medium">
-                  {m.columns.actions}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  data-warehouse-row={row.code}
-                  data-active={row.isActive ? "true" : "false"}
-                  data-default={row.isDefault ? "true" : "false"}
-                  className="border-b border-border last:border-0"
+        <Table stacked aria-label={m.listLabel}>
+          <THead>
+            <Tr>
+              <Th>{m.columns.name}</Th>
+              <Th priority="secondary">{m.columns.code}</Th>
+              <Th priority="secondary">{m.columns.stock}</Th>
+              <Th>{m.columns.status}</Th>
+              <Th numeric>{m.columns.actions}</Th>
+            </Tr>
+          </THead>
+          <TBody>
+            {rows.map((row) => (
+              <Tr
+                key={row.id}
+                data-warehouse-row={row.code}
+                data-active={row.isActive ? "true" : "false"}
+                data-default={row.isDefault ? "true" : "false"}
+              >
+                <RowHeader className="font-medium group-data-[stacked]/table:@max-2xl/table:pr-24">
+                  {row.name}
+                </RowHeader>
+                <Td
+                  priority="secondary"
+                  className="whitespace-nowrap text-ink-secondary"
+                  data-cell="code"
                 >
-                  <td className="p-3 font-medium">{row.name}</td>
-                  <td className="p-3 text-muted-foreground">{row.code}</td>
-                  <td className="p-3">{m.stockedItems(row.stockedItems)}</td>
-                  <td className="p-3">
-                    <span className="flex flex-wrap gap-1">
-                      <Badge>{row.isActive ? m.status.active : m.status.inactive}</Badge>
-                      {row.isDefault && <Badge>{m.status.default}</Badge>}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!canWrite}
-                        aria-label={m.actions.rename(row.name)}
-                        onClick={() => setForm(row)}
-                      >
-                        <Pencil aria-hidden="true" className="h-4 w-4" />
-                        <span className="ml-1 hidden sm:inline">{m.actions.renameLabel}</span>
-                      </Button>
-                      {!row.isDefault &&
-                        (row.isActive ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!canWrite}
-                            aria-label={m.actions.deactivate(row.name)}
-                            onClick={() => setConfirming(row)}
-                          >
-                            <Power aria-hidden="true" className="h-4 w-4" />
-                            <span className="ml-1 hidden sm:inline">
-                              {m.actions.deactivateLabel}
-                            </span>
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!canWrite || pending}
-                            aria-label={m.actions.activate(row.name)}
-                            onClick={() => activate(row)}
-                          >
-                            <Power aria-hidden="true" className="h-4 w-4" />
-                            <span className="ml-1 hidden sm:inline">{m.actions.activateLabel}</span>
-                          </Button>
-                        ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  <span data-cell-text title={row.code} className="block max-w-44 truncate">
+                    {row.code}
+                  </span>
+                </Td>
+                <Td priority="secondary" className="whitespace-nowrap" data-cell="stock">
+                  {m.stockedItems(row.stockedItems)}
+                </Td>
+                <Td data-cell="status">
+                  <span className="inline-flex flex-wrap gap-1">
+                    <Badge variant={row.isActive ? "success" : "neutral"} dot data-status-pill>
+                      {row.isActive ? m.status.active : m.status.inactive}
+                    </Badge>
+                    {row.isDefault && (
+                      <Badge variant="info" data-status-pill>
+                        {m.status.default}
+                      </Badge>
+                    )}
+                  </span>
+                </Td>
+                <Td stack="corner" data-cell="actions">
+                  <div className="flex justify-end gap-1 group-data-[stacked]/table:@max-2xl/table:justify-start">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={!canWrite}
+                      aria-label={m.actions.rename(row.name)}
+                      title={m.actions.renameLabel}
+                      onClick={() => setForm(row)}
+                    >
+                      <Pencil aria-hidden="true" className="size-4" />
+                    </Button>
+                    {!row.isDefault &&
+                      (row.isActive ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={!canWrite}
+                          aria-label={m.actions.deactivate(row.name)}
+                          title={m.actions.deactivateLabel}
+                          onClick={() => setConfirming(row)}
+                        >
+                          <Power aria-hidden="true" className="size-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={!canWrite || pending}
+                          aria-label={m.actions.activate(row.name)}
+                          title={m.actions.activateLabel}
+                          onClick={() => activate(row)}
+                        >
+                          <Power aria-hidden="true" className="size-4" />
+                        </Button>
+                      ))}
+                  </div>
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
       )}
 
       <NameDialog
@@ -285,11 +317,11 @@ function NameDialog({
               error ? "warehouse-name-help warehouse-name-error" : "warehouse-name-help"
             }
           />
-          <p id="warehouse-name-help" className="text-xs text-muted-foreground">
+          <p id="warehouse-name-help" className="text-label text-ink-secondary">
             {m.form.nameHelp}
           </p>
           {error && (
-            <p id="warehouse-name-error" className="text-xs text-danger">
+            <p id="warehouse-name-error" className="text-label text-tone-problem-fg">
               {error}
             </p>
           )}
@@ -298,7 +330,7 @@ function NameDialog({
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>
@@ -316,7 +348,10 @@ function NameDialog({
   );
 }
 
-/** Confirmarea dezactivării. Un depozit cu stoc nu se dezactivează: dialogul spune de ce, iar serverul refuză oricum. */
+/**
+ * Confirmarea dezactivării: acțiune de pericol (nu buton principal). Un depozit cu stoc nu se dezactivează: dialogul spune de ce,
+ * iar serverul refuză oricum.
+ */
 function DeactivateDialog({
   target,
   onClose,
@@ -360,12 +395,12 @@ function DeactivateDialog({
       className="max-w-lg"
     >
       <div className="flex flex-col gap-4">
-        <p className="text-sm">{m.confirm.body}</p>
+        <p className="text-body">{m.confirm.body}</p>
         {blocked && (
           <p
             role="note"
             data-has-stock
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {m.confirm.hasStock(target.stockedItems)}
           </p>
@@ -374,7 +409,7 @@ function DeactivateDialog({
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>
@@ -383,7 +418,12 @@ function DeactivateDialog({
           <Button type="button" variant="outline" onClick={onClose}>
             {m.confirm.cancel}
           </Button>
-          <Button type="button" disabled={pending || blocked} onClick={confirm}>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={pending || blocked}
+            onClick={confirm}
+          >
             {pending ? m.confirm.confirming : m.confirm.confirm}
           </Button>
         </div>

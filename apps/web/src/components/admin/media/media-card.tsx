@@ -16,7 +16,9 @@ const STATUS_VARIANT = {
 
 /**
  * Cardul unui fișier: folosește DOAR varianta thumb (niciodată originalul) și, cât timp aceasta nu
- * există sau se încarcă, placeholderul calculat din blurhash. Butonul întreg e ținta de atingere.
+ * există sau se încarcă, placeholderul calculat din blurhash. Butonul întreg e ținta de atingere; cardurile
+ * de pe același rând ies egale (elementul de listă întinde butonul pe toată înălțimea rândului), iar numele
+ * stă pe o singură linie, tăiat cu «…», cu textul întreg în `title`.
  */
 export function MediaCard({
   item,
@@ -34,7 +36,7 @@ export function MediaCard({
   const status = item.status as keyof typeof STATUS_VARIANT;
   const busy = item.status === "pending" || item.status === "processing";
   return (
-    <li>
+    <li className="flex">
       <button
         type="button"
         data-media-card
@@ -52,14 +54,14 @@ export function MediaCard({
           "aria-disabled": selection.order === null && selection.blocked,
         })}
         className={cn(
-          "group relative flex w-full flex-col overflow-hidden rounded-lg border border-border bg-background text-left " +
-            "hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-          selection && selection.order !== null && "border-primary ring-2 ring-brand",
+          "group relative flex w-full flex-col overflow-hidden rounded-lg border border-line-subtle bg-surface-page text-left " +
+            "hover:border-line-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          selection && selection.order !== null && "border-brand ring-2 ring-brand",
           selection && selection.order === null && selection.blocked && "opacity-60",
         )}
       >
         <span
-          className="relative block aspect-[4/3] w-full overflow-hidden bg-border/40"
+          className="relative block aspect-[4/3] w-full overflow-hidden bg-surface-subtle"
           style={
             item.placeholder
               ? { backgroundImage: `url(${item.placeholder})`, backgroundSize: "cover" }
@@ -78,7 +80,7 @@ export function MediaCard({
               className="size-full object-cover"
             />
           ) : (
-            <span className="flex size-full flex-col items-center justify-center gap-1 text-xs text-muted-foreground">
+            <span className="flex size-full flex-col items-center justify-center gap-1 text-label text-ink-secondary">
               {busy ? (
                 <Loader2 aria-hidden="true" className="size-5 animate-spin" />
               ) : item.status === "failed" ? (
@@ -93,13 +95,15 @@ export function MediaCard({
         {selection?.order != null && (
           <span
             aria-hidden="true"
-            className="absolute left-2 top-2 inline-flex size-7 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+            className="absolute left-2 top-2 inline-flex size-7 items-center justify-center rounded-full bg-brand text-body font-semibold text-on-brand"
           >
             {selection.order}
           </span>
         )}
         <span className="flex flex-col gap-1 p-2">
-          <span className="truncate text-sm font-medium">{item.originalName}</span>
+          <span title={item.originalName} className="truncate text-body font-medium text-ink">
+            {item.originalName}
+          </span>
           <span className="flex flex-wrap items-center gap-1">
             <Badge variant={STATUS_VARIANT[status] ?? "neutral"}>
               {m.status[status] ?? item.status}

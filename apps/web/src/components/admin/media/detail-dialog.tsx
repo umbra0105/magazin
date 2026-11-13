@@ -141,10 +141,10 @@ export function MediaDetailDialog({
         description={m.detail.description}
         closeLabel={m.detail.close}
       >
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,14rem)_1fr]">
-          <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:w-56 sm:shrink-0">
             <div
-              className="aspect-[4/3] w-full overflow-hidden rounded-md border border-border bg-border/40"
+              className="aspect-[4/3] w-full overflow-hidden rounded-lg border border-line-subtle bg-surface-subtle"
               style={
                 item.placeholder
                   ? { backgroundImage: `url(${item.placeholder})`, backgroundSize: "cover" }
@@ -162,14 +162,14 @@ export function MediaDetailDialog({
                 />
               )}
             </div>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-              <dt className="text-muted-foreground">{m.detail.dimensions}</dt>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-body">
+              <dt className="text-ink-secondary">{m.detail.dimensions}</dt>
               <dd>{item.width && item.height ? `${item.width} × ${item.height}` : "—"}</dd>
-              <dt className="text-muted-foreground">{m.detail.size}</dt>
+              <dt className="text-ink-secondary">{m.detail.size}</dt>
               <dd>{formatBytes(item.sizeBytes)}</dd>
-              <dt className="text-muted-foreground">{m.detail.type}</dt>
+              <dt className="text-ink-secondary">{m.detail.type}</dt>
               <dd>{item.mime}</dd>
-              <dt className="text-muted-foreground">{m.detail.uploaded}</dt>
+              <dt className="text-ink-secondary">{m.detail.uploaded}</dt>
               <dd>{formatDate(item.createdAt)}</dd>
             </dl>
             <Badge
@@ -188,11 +188,11 @@ export function MediaDetailDialog({
             </Badge>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
             {failedReason && (
               <div
                 role="alert"
-                className="rounded-md border border-danger/50 bg-danger/10 p-3 text-sm"
+                className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
               >
                 <p className="font-medium">{m.detail.failedTitle}</p>
                 <p>{failedReason}</p>
@@ -209,7 +209,7 @@ export function MediaDetailDialog({
                 maxLength={300}
                 aria-describedby="media-alt-hint"
               />
-              <p id="media-alt-hint" className="text-xs text-muted-foreground">
+              <p id="media-alt-hint" className="text-label text-ink-secondary">
                 {alt.trim() === "" && <strong>{m.detail.altMissing} </strong>}
                 {m.detail.altHint}
               </p>
@@ -224,7 +224,7 @@ export function MediaDetailDialog({
                 readOnly={!canWrite}
                 aria-describedby="media-tags-hint"
               />
-              <p id="media-tags-hint" className="text-xs text-muted-foreground">
+              <p id="media-tags-hint" className="text-label text-ink-secondary">
                 {m.detail.tagsHint}
               </p>
             </div>
@@ -246,9 +246,13 @@ export function MediaDetailDialog({
               </Select>
             </div>
 
-            <p role="status" aria-live="polite" className="min-h-5 text-sm">
+            <p role="status" aria-live="polite" className="min-h-5 text-body">
               {message && (
-                <span className={message.kind === "error" ? "text-danger" : "text-success"}>
+                <span
+                  className={
+                    message.kind === "error" ? "text-tone-problem-fg" : "text-tone-success-fg"
+                  }
+                >
                   {message.text}
                 </span>
               )}
@@ -259,18 +263,14 @@ export function MediaDetailDialog({
                 <Button onClick={save} disabled={pending}>
                   {pending ? m.detail.saving : m.detail.save}
                 </Button>
-                <Button
-                  variant={item.status === "failed" ? "default" : "outline"}
-                  onClick={regenerate}
-                  disabled={pending}
-                >
+                <Button variant="outline" onClick={regenerate} disabled={pending}>
                   {m.detail.regenerate}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="destructive"
                   onClick={() => setConfirmDelete(true)}
                   disabled={pending}
-                  className="ml-auto border-danger/60 text-danger"
+                  className="ml-auto"
                 >
                   {m.detail.delete}
                 </Button>
@@ -292,9 +292,9 @@ export function MediaDetailDialog({
         className="max-w-md"
       >
         {usages ? (
-          <ul className="flex flex-col gap-1 text-sm">
+          <ul className="flex flex-col gap-1 text-body">
             {usages.map((u, i) => (
-              <li key={`${u.kind}-${i}`} className="rounded-md border border-border p-2">
+              <li key={`${u.kind}-${i}`} className="rounded-lg border border-line-subtle p-2">
                 {u.href ? (
                   <a href={u.href} className="text-link underline">
                     {u.label}
@@ -306,7 +306,7 @@ export function MediaDetailDialog({
             ))}
           </ul>
         ) : (
-          <p className="text-sm">
+          <p className="text-body">
             <strong>{item.originalName}</strong>
           </p>
         )}
@@ -321,11 +321,7 @@ export function MediaDetailDialog({
             {m.delete.cancel}
           </Button>
           {!usages && (
-            <Button
-              onClick={remove}
-              disabled={pending}
-              className="bg-danger text-primary-foreground hover:bg-danger/90"
-            >
+            <Button variant="destructive" onClick={remove} disabled={pending}>
               {pending ? m.delete.deleting : m.delete.confirm}
             </Button>
           )}

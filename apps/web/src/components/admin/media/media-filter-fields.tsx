@@ -33,7 +33,7 @@ export function MediaFilterFields({
 }) {
   return (
     <>
-      <div className="flex min-w-48 flex-1 flex-col gap-1.5">
+      <div className="flex w-full min-w-48 flex-1 flex-col gap-1.5">
         <Label htmlFor={`${idPrefix}-q`}>{m.search.label}</Label>
         <Input
           id={`${idPrefix}-q`}
@@ -46,7 +46,7 @@ export function MediaFilterFields({
             : { defaultValue: q })}
         />
       </div>
-      <div className="flex min-w-40 flex-col gap-1.5">
+      <div className="flex w-full min-w-40 flex-col gap-1.5 sm:w-auto">
         <Label htmlFor={`${idPrefix}-folder`}>{m.filters.folder}</Label>
         <Select
           id={`${idPrefix}-folder`}
@@ -65,7 +65,7 @@ export function MediaFilterFields({
         </Select>
       </div>
       {showStatus && (
-        <div className="flex min-w-36 flex-col gap-1.5">
+        <div className="flex w-full min-w-36 flex-col gap-1.5 sm:w-auto">
           <Label htmlFor={`${idPrefix}-status`}>{m.filters.status}</Label>
           <Select id={`${idPrefix}-status`} name="status" defaultValue={status ?? ""}>
             <option value="">{m.filters.allStatuses}</option>

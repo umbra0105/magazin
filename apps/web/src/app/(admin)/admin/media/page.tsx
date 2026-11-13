@@ -4,6 +4,7 @@ import { MEDIA_STATUSES, can, type MediaListStatus } from "@ecom/core";
 import { Button, buttonVariants } from "@ecom/ui";
 import { MediaFilterFields } from "@/components/admin/media/media-filter-fields";
 import { MediaLibrary } from "@/components/admin/media/media-library";
+import { PageHeader } from "@/components/admin/page-header";
 import { requireAdmin } from "@/lib/admin-page";
 import { getMediaLibrary } from "@/lib/media";
 import { getSettings } from "@/lib/services";
@@ -68,15 +69,12 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
-        <p className="text-sm text-muted-foreground">{m.description}</p>
-        {!canWrite && (
-          <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
-            {m.readOnly}
-          </p>
-        )}
-      </header>
+      <PageHeader
+        title={m.title}
+        count={result.total}
+        description={m.description}
+        notes={canWrite ? [] : [m.readOnly]}
+      />
 
       <form
         method="get"
@@ -91,15 +89,15 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
           folder={folderParam}
           status={status ?? ""}
         />
-        <Button type="submit">{m.search.submit}</Button>
+        <Button type="submit" variant="outline">
+          {m.search.submit}
+        </Button>
         {filtered && (
           <Link href="/admin/media" className={buttonVariants({ variant: "outline" })}>
             {m.search.reset}
           </Link>
         )}
       </form>
-
-      <p className="text-sm text-muted-foreground">{m.total(result.total)}</p>
 
       <MediaLibrary
         items={result.items}
@@ -128,7 +126,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
             <span />
           )}
           <span
-            className="order-last w-full text-center text-sm sm:order-none sm:w-auto"
+            className="order-last w-full text-center text-body sm:order-none sm:w-auto"
             aria-current="page"
           >
             {m.grid.pageOf(result.page, result.pageCount)}

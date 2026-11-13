@@ -2,7 +2,7 @@
 
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Dialog } from "@ecom/ui";
+import { Button, Dialog, EmptyState } from "@ecom/ui";
 import { getMessages } from "@/messages";
 import { getMediaStatuses, listPickerMedia } from "@/app/(admin)/admin/media/actions";
 import { effectiveMax, normalizeInitial, toggleSelection } from "@/lib/media-selection";
@@ -218,13 +218,17 @@ export function MediaPicker({
               void load(next);
             }}
           />
-          <Button type="submit">{m.picker.applyFilters}</Button>
+          <Button type="submit" variant="outline">
+            {m.picker.applyFilters}
+          </Button>
         </form>
-        <p className="text-xs text-muted-foreground">{m.picker.onlyReady}</p>
+        <p className="text-label text-ink-secondary">{m.picker.onlyReady}</p>
 
         {listing?.canWrite && (
-          <details className="rounded-lg border border-border p-3">
-            <summary className="cursor-pointer text-sm font-medium">{m.picker.uploadTitle}</summary>
+          <details className="rounded-lg border border-line-subtle p-3">
+            <summary className="cursor-pointer text-body font-medium">
+              {m.picker.uploadTitle}
+            </summary>
             <div className="mt-3">
               <UploadPanel
                 items={uploader.uploads}
@@ -236,7 +240,7 @@ export function MediaPicker({
                 onClear={uploader.clearFinished}
               />
               {awaiting.length > 0 && (
-                <p role="status" className="mt-2 text-sm">
+                <p role="status" className="mt-2 text-body">
                   {m.picker.processingNew(awaiting.length)}
                 </p>
               )}
@@ -246,18 +250,19 @@ export function MediaPicker({
 
         <div aria-busy={loading} className="min-h-40">
           {error ? (
-            <div role="alert" className="flex flex-col items-start gap-2 text-sm">
+            <div
+              role="alert"
+              className="flex flex-col items-start gap-2 text-body text-tone-problem-fg"
+            >
               <p>{m.picker.loadError}</p>
               <Button variant="outline" onClick={() => void load(applied)}>
                 {m.picker.retry}
               </Button>
             </div>
           ) : !listing ? (
-            <p className="text-sm text-muted-foreground">{m.picker.loading}</p>
+            <p className="text-body text-ink-secondary">{m.picker.loading}</p>
           ) : listing.items.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              {m.picker.empty}
-            </p>
+            <EmptyState title={m.picker.empty} />
           ) : (
             <MediaGrid label={m.grid.label}>
               {listing.items.map((item) => {
@@ -288,7 +293,7 @@ export function MediaPicker({
               {m.grid.previous}
             </Button>
             <span
-              className="order-last w-full text-center text-sm sm:order-none sm:w-auto"
+              className="order-last w-full text-center text-body sm:order-none sm:w-auto"
               aria-current="page"
             >
               {m.grid.pageOf(listing.page, listing.pageCount)}
@@ -309,19 +314,19 @@ export function MediaPicker({
 
         <section
           aria-label={m.picker.tray}
-          className="flex flex-col gap-2 border-t border-border pt-3"
+          className="flex flex-col gap-2 border-t border-line-subtle pt-3"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p
               data-testid="picker-count"
               role="status"
               aria-live="polite"
-              className="text-sm font-medium"
+              className="text-body font-medium"
             >
               {m.picker.selectedCount(selected.length, limit)}
             </p>
             {rejected && (
-              <p role="alert" className="text-sm text-danger">
+              <p role="alert" className="text-body text-tone-problem-fg">
                 {m.picker.maxReached(limit)}
               </p>
             )}
@@ -334,18 +339,19 @@ export function MediaPicker({
                 return (
                   <li
                     key={id}
-                    className="flex items-center gap-1 rounded-md border border-border py-1 pl-2 pr-1 text-xs"
+                    className="flex items-center gap-1 rounded-lg border border-line-subtle py-1 pl-2 pr-1 text-label"
                   >
                     <span className="font-semibold">{i + 1}.</span>
                     <span className="max-w-32 truncate">{name}</span>
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => toggle(id)}
                       aria-label={m.picker.removeFromSelection(name)}
-                      className="inline-flex size-8 items-center justify-center rounded-md hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      title={m.picker.removeFromSelection(name)}
                     >
                       <X aria-hidden="true" className="size-4" />
-                    </button>
+                    </Button>
                   </li>
                 );
               })}

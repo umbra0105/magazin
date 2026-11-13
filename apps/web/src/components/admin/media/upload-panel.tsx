@@ -16,7 +16,9 @@ function errorText(key: UploadErrorKey, retryAfter: number | null): string {
 
 /**
  * Zona de încărcare (drag & drop sau selector de fișiere) și lista încărcărilor curente, cu progres
- * pe fiecare fișier. Încărcarea propriu-zisă o face `UploadQueue` (max. 2 simultan).
+ * pe fiecare fișier. Încărcarea propriu-zisă o face `UploadQueue` (max. 2 simultan). Erorile și «Încărcat» sunt în
+ * tonurile Problemă / Succes (și scrise cu litere, nu doar colorate); «Reîncearcă» e secundar, iar «Scoate din listă»
+ * e un buton doar cu pictogramă (terț), cu nume accesibil și tooltip.
  */
 export function UploadPanel({
   items,
@@ -54,15 +56,15 @@ export function UploadPanel({
           if (files.length > 0) onFiles(files);
         }}
         className={cn(
-          "flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border p-4 text-center",
-          dragging && "border-primary bg-primary/5",
+          "flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-line-control p-4 text-center",
+          dragging && "border-brand bg-surface-subtle",
         )}
       >
-        <Upload aria-hidden="true" className="size-6 text-muted-foreground" />
-        <h2 id={`${inputId}-title`} className="text-sm font-medium">
+        <Upload aria-hidden="true" className="size-6 text-ink-secondary" />
+        <h2 id={`${inputId}-title`} className="text-body font-medium">
           {m.upload.dropHere}
         </h2>
-        <p className="text-xs text-muted-foreground">{m.upload.or} </p>
+        <p className="text-label text-ink-secondary">{m.upload.or} </p>
         <FileInput
           id={inputId}
           multiple
@@ -74,13 +76,13 @@ export function UploadPanel({
             if (files.length > 0) onFiles(files);
           }}
         />
-        <p className="text-xs text-muted-foreground">{rules}</p>
+        <p className="text-label text-ink-secondary">{rules}</p>
       </div>
 
       {items.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
-            <p role="status" aria-live="polite" className="text-sm">
+            <p role="status" aria-live="polite" className="text-body">
               {m.upload.summary(done, items.length)}
             </p>
             {done > 0 && (
@@ -91,10 +93,15 @@ export function UploadPanel({
           </div>
           <ul className="flex flex-col gap-2">
             {items.map((item) => (
-              <li key={item.id} className="flex flex-col gap-1 rounded-md border border-border p-2">
+              <li
+                key={item.id}
+                className="flex flex-col gap-1 rounded-lg border border-line-subtle p-2"
+              >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium">{item.file.name}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
+                  <span title={item.file.name} className="min-w-0 truncate text-body font-medium">
+                    {item.file.name}
+                  </span>
+                  <span className="shrink-0 text-label text-ink-secondary">
                     {formatBytes(item.file.size)}
                   </span>
                 </div>
@@ -104,11 +111,12 @@ export function UploadPanel({
                     {...(item.status === "uploading" ? { value: item.progress } : { value: 0 })}
                   />
                 )}
-                <div className="flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center justify-between gap-2 text-label">
                   <span
                     className={cn(
-                      item.status === "error" && "text-danger",
-                      item.status === "done" && "text-success",
+                      "min-w-0",
+                      item.status === "error" && "text-tone-problem-fg",
+                      item.status === "done" && "text-tone-success-fg",
                     )}
                   >
                     {item.status === "queued" && m.upload.queued}
@@ -120,7 +128,7 @@ export function UploadPanel({
                       item.errorKey &&
                       errorText(item.errorKey, item.errorRetryAfter)}
                   </span>
-                  <span className="flex shrink-0 gap-1">
+                  <span className="flex shrink-0 items-center gap-1">
                     {item.status === "error" && (
                       <Button size="sm" variant="outline" onClick={() => onRetry(item.id)}>
                         {m.upload.retry}
@@ -129,14 +137,15 @@ export function UploadPanel({
                     {(item.status === "error" ||
                       item.status === "done" ||
                       item.status === "queued") && (
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onRemove(item.id)}
                         aria-label={`${m.upload.remove}: ${item.file.name}`}
-                        className="inline-flex size-9 items-center justify-center rounded-md hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                        title={m.upload.remove}
                       >
                         <X aria-hidden="true" className="size-4" />
-                      </button>
+                      </Button>
                     )}
                   </span>
                 </div>
