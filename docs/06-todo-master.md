@@ -518,6 +518,12 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 
 ---
 
+## Mod autonom (`20-mod-autonom.md`, adoptat de utilizator la 2026-11-13)
+
+- [ ] **Pasul de configurare (docs/20 §10)** _(făcut, comis și verificat; așteaptă confirmarea utilizatorului)_: `docs/20`, secțiunea «Mod autonom» în `CLAUDE.md`, cele trei puncte din `docs/13`, poarta `gate:merge` cu `verify:full`, `db:backup`, testul de migrări periculoase, `STOP.txt`, șabloanele `AUTONOM-LOG` / `FINISAJE` / `AUTONOM-APROBARI`. Detalii, ajustări față de document și ce nu se poate testa fără `gh` real: `docs/PROGRESS.md`, Sesiunea 15
+- [ ] Utilizatorul verifică în GitHub (Settings → Branches) dacă protecția ramurii `main` e disponibilă (verificări de stare obligatorii, fără push forțat, fără ștergere); fără ea, poarta locală e singura barieră
+- [ ] **Pilot:** restul redesignului (3b-2 și Lotul 4) ca fază autonomă în modul A, pe ramura `redesign-final`; pornește doar la comanda «Execută Faza redesign-final în mod autonom, conform docs/20». Ce învățăm din pilot se ajustează în `docs/20`; prima rulare reală a porții, cu `--dry-run`
+
 ## Documentație: puncte de reconciliat între `18` / `19` și documentele existente (2026-11-13)
 Verificare făcută la intrarea documentelor 18 și 19: fără credențiale sau date personale în ele, iar linkurile dintre ele sunt corecte. **Regula: documentul existent câștigă până decide utilizatorul.** Fiecare punct se reia la începutul fazei care folosește regula, iar 18 și 19 se ajustează atunci (nu înainte).
 - [ ] 1. **Loialitate** (`18` §2.3 vs `14`): rata implicită 2% (în 14: 1 punct la 100 de lei, adică 1%, la fel și în README); puncte acordate la COMPLETED (în 14: automat la expirarea ferestrei de retur, 14 zile de la livrare, cu puncte «în așteptare»); răscumpărare limitată la min(cerute, sold, sumă răscumpărabilă) (în 14: regula dură, suma în bani ≥ max(transport, `minCashAmount`)); puncte returnate la anulare într-un lot nou cu expirare nouă (14 nu o spune). Rămân compatibile: 1 punct = 1 leu, expirare 12 luni, baza fără transport, registru de tranzacții. Câștigă 14 (Faza 15b)
