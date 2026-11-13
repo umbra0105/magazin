@@ -1,8 +1,11 @@
 name: CI
 
+# Rulează (1) la push pe ramurile de fază ale modului autonom (faza-N, redesign-…, docs/20 §4), (2) la orice cerere de îmbinare
+# (inclusiv spre main) și (3) la push pe main. Cererea și push-ul aceleiași ramuri au grupuri de concurență diferite (vezi mai jos),
+# deci amândouă rulează și amândouă raportează verificarea «check»; poarta de îmbinare cere ca toate să fie verzi.
 on:
   push:
-    branches: [main]
+    branches: [main, "faza-*", "redesign-*"]
   pull_request:
 
 concurrency:
