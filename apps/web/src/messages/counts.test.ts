@@ -50,6 +50,12 @@ describe("numărători acordate în română", () => {
     expect(imp.history.exports.rowsAndProducts(25, 120)).toBe("25 de rânduri, 120 de produse");
   });
 
+  it("istoricul exporturilor: «Se afișează …» cu acord", () => {
+    expect(imp.history.exports.shown(1)).toBe("Se afișează cel mai nou export.");
+    expect(imp.history.exports.shown(5)).toBe("Se afișează cele mai noi 5 exporturi.");
+    expect(imp.history.exports.shown(25)).toBe("Se afișează cele mai noi 25 de exporturi.");
+  });
+
   it("fișe explodate, atribute, branduri și categorii", () => {
     expect(ro.admin.diagrams.counts.hotspots(20)).toBe("20 de hotspot-uri");
     expect(ro.admin.brands.products(20)).toBe("20 de produse");

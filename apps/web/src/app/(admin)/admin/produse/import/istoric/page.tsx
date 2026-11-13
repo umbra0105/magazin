@@ -64,8 +64,15 @@ export default async function ImportHistoryPage({
           Number.isFinite(pageNumber) ? pageNumber : 1,
         )
       : null;
-  const exportsList =
-    tab === "exports" && canExport ? await getProductExportService().history(subject) : null;
+  const requestedLimit = Number.parseInt(one(params["limita"]), 10);
+  const exportsPage =
+    tab === "exports" && canExport
+      ? await getProductExportService().historyPage(
+          subject,
+          Number.isFinite(requestedLimit) ? requestedLimit : undefined,
+        )
+      : null;
+  const exportsList = exportsPage?.items ?? null;
 
   const href = (page: number): string =>
     `/admin/produse/import/istoric${page > 1 ? `?pagina=${page}` : ""}`;
@@ -315,6 +322,22 @@ export default async function ImportHistoryPage({
                 ))}
               </TBody>
             </Table>
+          )}
+          {exportsList && exportsList.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-label font-normal text-ink-secondary" data-exports-shown>
+                {m.exports.shown(exportsList.length)}
+              </p>
+              {exportsPage?.hasMore && (
+                <Link
+                  href={`/admin/produse/import/istoric?fila=exporturi&limita=${exportsPage.limit + 25}`}
+                  className={buttonVariants({ variant: "outline" })}
+                  data-exports-more
+                >
+                  {m.exports.loadMore}
+                </Link>
+              )}
+            </div>
           )}
         </section>
       )}

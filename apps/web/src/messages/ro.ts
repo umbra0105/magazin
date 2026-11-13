@@ -2397,6 +2397,11 @@ export const ro = {
           description:
             "Ultimele exporturi, din jurnalul de audit. Conțin doar numere (rânduri, produse), niciodată valori din catalog.",
           empty: "Niciun export încă.",
+          shown: (n: number) =>
+            n === 1
+              ? "Se afișează cel mai nou export."
+              : `Se afișează cele mai noi ${countOf(n, "export", "exporturi", "de exporturi")}.`,
+          loadMore: "Încarcă mai multe",
           forbidden: "Istoricul exporturilor cere permisiunea de export de produse.",
           columns: {
             date: "Data",

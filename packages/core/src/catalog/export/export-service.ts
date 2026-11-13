@@ -127,8 +127,35 @@ export interface ExportHistoryItem {
   longDescriptions: number | null;
 }
 
+export const HISTORY_DEFAULT_LIMIT = 25;
+export const HISTORY_MAX_LIMIT = 200;
+
+/** O pagină din istoricul exporturilor (vezi `historyPage`). */
+export interface ExportHistoryPage {
+  items: ExportHistoryItem[];
+  hasMore: boolean;
+  limit: number;
+}
+
 export class ProductExportService {
   constructor(private readonly deps: ProductExportDeps) {}
+
+  /**
+   * O pagină din istoric: cele mai noi `limit` exporturi (implicit 25, între 1 și 200), plus `hasMore` când există mai multe
+   * (se cere un rând în plus). «Încarcă mai multe» mărește `limit`-ul; istoricul nu se citește niciodată nelimitat.
+   */
+  async historyPage(
+    subject: PermissionSubject | null,
+    limit: number = HISTORY_DEFAULT_LIMIT,
+  ): Promise<ExportHistoryPage> {
+    assertCan(subject, "products.export");
+    const safe =
+      Number.isFinite(limit) && limit >= 1
+        ? Math.min(Math.floor(limit), HISTORY_MAX_LIMIT)
+        : HISTORY_DEFAULT_LIMIT;
+    const items = await this.history(subject, safe + 1);
+    return { items: items.slice(0, safe), hasMore: items.length > safe, limit: safe };
+  }
 
   /** Ultimele exporturi (cele mai noi întâi), din jurnalul de audit. Cere `products.export`. */
   async history(subject: PermissionSubject | null, limit = 100): Promise<ExportHistoryItem[]> {

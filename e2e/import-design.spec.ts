@@ -472,6 +472,33 @@ test.describe("import: istoric", () => {
     await expectPhoneFits(page, "exporturile");
   });
 
+  test("fila Exporturi e paginată: cu limita 1 apare un singur rând și «Încarcă mai multe», care aduce restul", async ({
+    page,
+    baseURL,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, account, "/admin/produse");
+    for (let index = 0; index < 2; index += 1) {
+      const exported = await page.request.post("/api/admin/product-exports", {
+        headers: { origin: baseURL as string },
+        data: { format: "csv", scope: "filters", filters: { q: tag } },
+      });
+      expect(exported.status()).toBe(200);
+      await exported.body();
+    }
+    await page.goto("/admin/produse/import/istoric?fila=exporturi&limita=1");
+    await expect(page.locator("[data-export-row]")).toHaveCount(1);
+    await expect(page.locator("[data-exports-shown]")).toHaveText(
+      "Se afișează cel mai nou export.",
+    );
+    const more = page.locator("[data-exports-more]");
+    await expect(more).toBeVisible();
+    expect(await primaryControls(page)).toEqual([]);
+    await more.click();
+    await page.waitForURL(/limita=26/);
+    expect(await page.locator("[data-export-row]").count()).toBeGreaterThanOrEqual(2);
+  });
+
   test("detaliile unui import: antet cu stare în pastilă, contoare în chenar-token, filtre ca tab-uri, raport pe Table, descărcarea secundară, fără buton principal; fără derulare orizontală la 390 px", async ({
     page,
   }) => {
