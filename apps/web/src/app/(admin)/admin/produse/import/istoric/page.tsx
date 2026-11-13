@@ -205,7 +205,7 @@ export default async function ImportHistoryPage({
                     <Td stack="actions">
                       <Link
                         href={`/admin/produse/import/istoric/${item.id}`}
-                        className="text-link underline-offset-2 hover:underline"
+                        className="inline-flex items-center text-link underline-offset-2 hover:underline pointer-coarse:min-h-11"
                         data-history-details
                       >
                         {m.details}

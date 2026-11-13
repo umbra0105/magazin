@@ -753,7 +753,12 @@ function ReportView({ report, importId }: { report: ImportReport; importId: stri
                   data-outcome={entry.outcome}
                   className="align-top"
                 >
-                  <Td numeric>{entry.row}</Td>
+                  <Td numeric>
+                    <span className="hidden group-data-[stacked]/table:@max-2xl/table:inline">
+                      {c.row}{" "}
+                    </span>
+                    {entry.row}
+                  </Td>
                   <Td className="whitespace-nowrap">{entry.sku || "—"}</Td>
                   <Td>{c.outcomes[entry.outcome]}</Td>
                   <Td stack="title">

@@ -459,7 +459,12 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
                   <TBody>
                     {images.issues.map((issue, index) => (
                       <Tr key={`${issue.row}-${index}`}>
-                        <Td numeric>{issue.row}</Td>
+                        <Td numeric>
+                          <span className="hidden group-data-[stacked]/table:@max-2xl/table:inline">
+                            {r.row}{" "}
+                          </span>
+                          {issue.row}
+                        </Td>
                         <Td className="break-all">{issue.sku || "—"}</Td>
                         <Td className="break-all">{issue.host ?? "—"}</Td>
                         <Td stack="title">{issue.message}</Td>

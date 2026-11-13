@@ -110,7 +110,12 @@ export function ImageFailures({
         <TBody>
           {failures.map((failure, index) => (
             <Tr key={`${failure.row}-${failure.host}-${index}`} data-image-failure={failure.row}>
-              <Td numeric>{failure.row}</Td>
+              <Td numeric>
+                <span className="hidden group-data-[stacked]/table:@max-2xl/table:inline">
+                  {m.row}{" "}
+                </span>
+                {failure.row}
+              </Td>
               <Td className="break-all">{failure.sku || "—"}</Td>
               <Td className="break-all">{failure.host}</Td>
               <Td stack="title">{failure.message}</Td>

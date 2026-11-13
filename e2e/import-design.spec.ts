@@ -412,6 +412,12 @@ test.describe("import: WooCommerce și imagini", () => {
     );
     expect(await css(tile.locator("dd"), "font-size")).toBe("22px");
     await expectTable(page, page.getByRole("table", { name: "Imagini eșuate" }), "eșecurile");
+    // pe desktop numărul rândului e sub antetul «Rând»; pe telefon (carduri) are eticheta «Rând» în față
+    const failure = page.locator('[data-image-failure="17"]');
+    expect(await failure.evaluate((el) => (el as HTMLElement).innerText)).not.toContain("Rând 17");
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await failure.evaluate((el) => (el as HTMLElement).innerText)).toContain("Rând 17");
+    await page.setViewportSize({ width: 1440, height: 900 });
     await expect(page.getByRole("button", { name: "Reia imaginile" })).toBeVisible();
     expect(await primaryControls(page)).toEqual([]);
     await expectPhoneFits(page, "progresul imaginilor");
@@ -551,6 +557,11 @@ test.describe("import: istoric", () => {
         const box = await control.boundingBox();
         expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
       }
+      // legătura «Detalii» din istoric (card pe telefon) are și ea 44 px pe ecran tactil
+      await page.goto("/admin/produse/import/istoric");
+      const details = page.locator("[data-history-details]").first();
+      await expect(details).toBeVisible();
+      expect((await details.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     } finally {
       await context.close();
     }
