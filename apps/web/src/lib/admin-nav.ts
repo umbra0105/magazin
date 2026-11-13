@@ -235,12 +235,21 @@ export function breadcrumbsFor(
     raw: string,
     previous: string | null,
   ) => string | null,
+  /**
+   * Eticheta fixă pentru o cale care nu aparține niciunei secțiuni (pagina 404 din admin): o singură migă după Panou, în loc de
+   * slug-ul brut al adresei. Fără ea, segmentele necunoscute se afișează decodate.
+   */
+  unknownLabel?: string,
 ): Crumb[] {
   const path = pathname.split(/[?#]/)[0] ?? "";
   const segments = path.split("/").filter(Boolean);
   if (segments[0] !== "admin") return [];
   const crumbs: Crumb[] = [{ label: homeLabel, href: "/admin" }];
   const section = navEntryForPath(path, entries);
+  // «Panou» (/admin) potrivește orice cale de sub el: dacă nu e chiar /admin, adresa nu aparține niciunei secțiuni
+  if ((!section || section.href === "/admin") && unknownLabel && segments.length > 1) {
+    return [crumbs[0] as Crumb, { label: unknownLabel, href: null }];
+  }
   let sectionId: AdminNavIcon | null = section?.id ?? null;
   let consumed = 1;
   if (section && section.href !== "/admin") {

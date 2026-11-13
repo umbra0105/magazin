@@ -19,6 +19,8 @@ export const ro = {
   states: {
     notFound: {
       title: "Pagina nu a fost găsită",
+      /** Ultima migă din admin pe o adresă care nu aparține niciunei secțiuni (în loc de slug-ul brut). */
+      crumb: "Pagină negăsită",
       description: "Adresa nu există sau pagina a fost mutată.",
       home: "Înapoi la prima pagină",
       admin: "Înapoi la panou",
