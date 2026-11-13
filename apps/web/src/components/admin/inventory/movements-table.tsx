@@ -1,4 +1,5 @@
 import type { StockMovementRow } from "@ecom/core";
+import { EmptyState, TBody, THead, Table, Td, Th, Tr } from "@ecom/ui";
 import { formatLocalDateTime } from "@/lib/stock-time";
 import { deltaText, quantityText } from "@/lib/stock-view";
 import { getMessages } from "@/messages";
@@ -7,7 +8,9 @@ const m = getMessages().admin.inventory.history;
 
 /**
  * Istoricul mișcărilor unei variante, cele mai noi primele. Registrul e imuabil (nicio acțiune de modificare sau ștergere).
- * Motivele vin ca etichete din nucleu (aceleași ca în dialogul de ajustare).
+ * Motivele vin ca etichete din nucleu (aceleași ca în dialogul de ajustare). `Table stacked` (docs/17 §3): data, tipul, variația
+ * fizică și stocul fizic după rămân mereu; motivul și variația angajată de la 48rem, nota și autorul de la 60rem, angajatul
+ * după și referința de la 68rem.
  */
 export function MovementsTable({
   rows,
@@ -20,76 +23,56 @@ export function MovementsTable({
   timeZone: string;
   reasonLabels: Readonly<Record<string, string>>;
 }) {
-  if (rows.length === 0) {
-    return (
-      <p className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-        {m.empty}
-      </p>
-    );
-  }
+  if (rows.length === 0) return <EmptyState title={m.empty} />;
   const c = m.columns;
   const kinds = m.kinds as Record<string, string>;
   return (
-    <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full min-w-[56rem] text-left text-sm" aria-label={m.listLabel}>
-        <thead className="border-b border-border bg-border/30">
-          <tr>
-            {(
-              [
-                "effectiveAt",
-                "kind",
-                "reason",
-                "note",
-                "deltaPhysical",
-                "deltaCommitted",
-                "physicalAfter",
-                "committedAfter",
-                "actor",
-                "reference",
-              ] as const
-            ).map((column) => (
-              <th key={column} scope="col" className="p-3 font-medium">
-                {c[column]}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.id}
-              data-movement={row.kind}
-              className="border-b border-border last:border-0"
-            >
-              <td className="p-3 align-top whitespace-nowrap">
-                {formatLocalDateTime(row.effectiveAt, timeZone)}
-                <span className="block text-xs text-muted-foreground">
-                  {m.recordedAt(formatLocalDateTime(row.createdAt, timeZone))}
-                </span>
-              </td>
-              <td className="p-3 align-top">{kinds[row.kind] ?? row.kind}</td>
-              <td className="p-3 align-top">
-                {row.reason ? (reasonLabels[row.reason] ?? row.reason) : ""}
-              </td>
-              <td className="p-3 align-top">{row.note ?? ""}</td>
-              <td className="p-3 align-top" data-cell="delta-physical">
-                {row.deltaPhysical === 0n ? "" : deltaText(row.deltaPhysical, unit)}
-              </td>
-              <td className="p-3 align-top" data-cell="delta-committed">
-                {row.deltaCommitted === 0n ? "" : deltaText(row.deltaCommitted, unit)}
-              </td>
-              <td className="p-3 align-top" data-cell="physical-after">
-                {quantityText(row.physicalAfter, unit)}
-              </td>
-              <td className="p-3 align-top">{quantityText(row.committedAfter, unit)}</td>
-              <td className="p-3 align-top">{row.actorLabel ?? m.system}</td>
-              <td className="p-3 align-top text-muted-foreground">
-                {row.refType && row.refId ? `${row.refType} ${row.refId}` : ""}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table stacked aria-label={m.listLabel}>
+      <THead>
+        <Tr>
+          <Th>{c.effectiveAt}</Th>
+          <Th>{c.kind}</Th>
+          <Th priority="secondary">{c.reason}</Th>
+          <Th priority="tertiary">{c.note}</Th>
+          <Th>{c.deltaPhysical}</Th>
+          <Th priority="secondary">{c.deltaCommitted}</Th>
+          <Th>{c.physicalAfter}</Th>
+          <Th priority="detail">{c.committedAfter}</Th>
+          <Th priority="tertiary">{c.actor}</Th>
+          <Th priority="detail">{c.reference}</Th>
+        </Tr>
+      </THead>
+      <TBody>
+        {rows.map((row) => (
+          <Tr key={row.id} data-movement={row.kind} className="align-top">
+            <Td stack="title" className="whitespace-nowrap">
+              {formatLocalDateTime(row.effectiveAt, timeZone)}
+              <span className="block text-label text-ink-secondary">
+                {m.recordedAt(formatLocalDateTime(row.createdAt, timeZone))}
+              </span>
+            </Td>
+            <Td>{kinds[row.kind] ?? row.kind}</Td>
+            <Td priority="secondary">
+              {row.reason ? (reasonLabels[row.reason] ?? row.reason) : ""}
+            </Td>
+            <Td priority="tertiary" className="wrap-anywhere">
+              {row.note ?? ""}
+            </Td>
+            <Td data-cell="delta-physical">
+              {row.deltaPhysical === 0n ? "" : deltaText(row.deltaPhysical, unit)}
+            </Td>
+            <Td priority="secondary" data-cell="delta-committed">
+              {row.deltaCommitted === 0n ? "" : deltaText(row.deltaCommitted, unit)}
+            </Td>
+            <Td data-cell="physical-after">{quantityText(row.physicalAfter, unit)}</Td>
+            <Td priority="detail">{quantityText(row.committedAfter, unit)}</Td>
+            <Td priority="tertiary">{row.actorLabel ?? m.system}</Td>
+            <Td priority="detail" className="text-ink-secondary wrap-anywhere">
+              {row.refType && row.refId ? `${row.refType} ${row.refId}` : ""}
+            </Td>
+          </Tr>
+        ))}
+      </TBody>
+    </Table>
   );
 }

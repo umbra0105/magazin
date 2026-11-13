@@ -104,6 +104,7 @@ export function migratedFiles(): SourceFile[] {
     ...MEDIA_WAREHOUSE_SCREENS.map((screen) => screen.page),
     ...DIAGRAM_SCREENS.map((screen) => screen.page),
     ...IMPORT_PAGES,
+    "apps/web/src/components/admin/inventory/movements-table.tsx",
   ]) {
     out.push({ path: page, content: readFileSync(join(root, page), "utf8") });
   }
@@ -200,6 +201,7 @@ describe("lista fișierelor migrate", () => {
       "apps/web/src/app/(admin)/admin/produse/import/page.tsx",
       "apps/web/src/app/(admin)/admin/produse/import/istoric/page.tsx",
       "apps/web/src/app/(admin)/admin/produse/import/istoric/[id]/page.tsx",
+      "apps/web/src/components/admin/inventory/movements-table.tsx",
     ]) {
       expect(paths, expected).toContain(expected);
     }
