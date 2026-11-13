@@ -23,6 +23,13 @@ Un singur simbol, patru stări:
 
 ## 2. Cele patru anunțuri obligatorii (de pus în `CLAUDE.md`)
 
+> **Mod autonom (`20-mod-autonom.md`, adoptat 2026-11-13).** Trei puncte din acest protocol se schimbă, și numai ele:
+> 1. În modul autonom, raportul **✅ GATA per pas devine o linie în `docs/AUTONOM-LOG.md`** (se trimit doar 🛑 și 🏁).
+> 2. **«Continui?» și «Estimare» dispar din șabloane**, în orice mod: nu se mai dau estimări de timp.
+> 3. **«Fără push până nu cere utilizatorul» devine «push doar pe ramura de fază»**, doar după comanda explicită «Execută Faza N în mod autonom, conform docs/20».
+>
+> Restul rămâne: 🛑 la decizii, un singur `[~]`, definiția de «gata», regulile de securitate, de date, de bani și de parole. Dacă `20` contrazice `CLAUDE.md` pe securitate, date sau bani, câștigă `CLAUDE.md`. Șabloanele de mai jos sunt cele din sesiunile obișnuite.
+
 ```markdown
 ## Protocol de raportare — OBLIGATORIU
 
@@ -43,7 +50,6 @@ aceste patru formate, în limba română:
     Fișiere pe care le voi atinge: packages/db/schema.prisma,
     packages/core/catalog/categories.ts, apps/web/src/app/(admin)/admin/categorii/
 
-    Estimare: ~45 de minute
     Depinde de: punctul 1 (schema produs) — ✅ gata
 
 Apoi marchează punctul cu [~] în docs/06-todo-master.md.
@@ -69,10 +75,7 @@ După fiecare punct terminat:
 
     Commit: feat(catalog): arbore de categorii cu reordonare drag & drop
 
-    Următorul punct: 4 din 14 — „CRUD branduri"
-    Continui? (da / stai să verific / modifică ceva)
-
-Apoi marchează [x] în TODO.
+Apoi marchează [x] în TODO. (În modul autonom, în locul acestui raport: o linie în `docs/AUTONOM-LOG.md`.)
 
 ### 🏁 FAZĂ TERMINATĂ
 La finalul unei faze întregi:

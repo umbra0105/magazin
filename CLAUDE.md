@@ -346,7 +346,8 @@ commit-ul e făcut, și `docs/06-todo-master.md` e bifat.
 Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
 
 - Nu începe niciun punct din TODO fără anunțul **🟢 ÎNCEP** (ce faci, ce fișiere
-  atingi, cât durează). Marchează punctul cu `[~]`.
+  atingi). Marchează punctul cu `[~]`. **Fără estimări de timp, nicăieri** (nici în
+  anunțuri, nici în planuri, nici în rapoarte) și fără «Continui?» la capătul rapoartelor.
 - Nu termina niciun punct fără anunțul **✅ GATA**, care include OBLIGATORIU
   secțiunea „👉 VERIFICĂ TU" cu pași concreți de testat în browser.
   Marchează `[x]` doar după ce utilizatorul confirmă.
@@ -383,18 +384,60 @@ Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
   (de exemplu `ecom_ci_test`, pe același server; `test:integration` o creează și o migrează singur),
   apoi `npm.cmd run test:integration`; după verificare o ștergi cu `DROP DATABASE` (doar baza pe
   care ai creat-o tu). Un test care trece pe una și pică pe cealaltă se repară în test, nu în CI.
-- **Niciun `git push` fără autorizarea utilizatorului**, în conversație, pentru acel moment.
-  Când e autorizat, arăt MAI ÎNTÂI `git status --short` și `git log --oneline origin/main..HEAD`
+- **Niciun `git push` fără autorizarea utilizatorului**, în conversație, pentru acel moment
+  (în modul autonom, singura autorizare de push este cea pentru ramura de fază: vezi «Mod
+  autonom» mai jos). Când e autorizat, arăt MAI ÎNTÂI `git status --short` și `git log --oneline origin/main..HEAD`
   și mă opresc dacă apare ceva neașteptat; apoi rulez, în ordine: `prettier --check .` pe tot
   repo-ul, lint, `lint:root`, typecheck; abia apoi `git push origin main`.
 - **După push aștept «CI verde» de la utilizator** înainte de punctul următor (excepție doar când
-  utilizatorul spune explicit altceva; dacă CI-ul pică, mă opresc și raportez).
+  utilizatorul spune explicit altceva; dacă CI-ul pică, mă opresc și raportez). În modul
+  autonom, CI-ul ramurii de fază îl citește poarta de îmbinare prin `gh pr checks`.
 - **Nu ating dev serverul utilizatorului.** Spun când trebuie repornit (după migrații și după
   orice modificare în nucleu, singletonurile păstrează codul vechi).
 - **Migrațiile le aplică utilizatorul** pe baza de dezvoltare; eu le verific doar pe baza `*_test`.
 - **Decizii care ating bani, TVA, facturare sau obligații legale:** mă opresc cu 🛑 și le aduc
   utilizatorului înainte; punctele deschise rămase le decid cu recomandarea din plan și le notez
   în `docs/PROGRESS.md`.
+
+## Mod autonom — regulă permanentă (document complet: `docs/20-mod-autonom.md`)
+
+Adoptat de utilizator la 2026-11-13. **Se activează doar la comanda explicită** «Execută Faza N în
+mod autonom, conform docs/20»; fără ea, toate regulile de mai sus rămân neschimbate. Dacă
+`docs/20` contrazice această secțiune sau o regulă de securitate, de date, de bani sau de parole
+din acest fișier, **câștigă `CLAUDE.md`**.
+
+- **Ce se înlocuiește (doar atât):** raportul ✅ GATA per pas devine o linie în
+  `docs/AUTONOM-LOG.md` (se trimit doar 🛑 și 🏁, nu rapoarte per lot); «Continui?» și «Estimare» nu
+  mai există în șabloane; «fără push până nu cere utilizatorul» devine «push doar pe ramura de
+  fază». Rămân: 🛑 la decizii, un singur `[~]`, definiția de «gata», testele care pică întâi,
+  verificarea completă citită integral, migrațiile pe baza de dezvoltare le aplică utilizatorul,
+  toate regulile de securitate, de date, de bani și de parole.
+- **Push:** doar ramura de fază (`faza-N`, sau `redesign-…`), niciodată `main`. `main` se
+  atinge numai prin poarta `npm.cmd run gate:merge -- --faza N`: nu îmbin manual, nu rulez
+  `gh pr merge` direct, fără `--force`, fără `reset --hard` pe ramuri publicate, fără `--admin`.
+- **Poarta de îmbinare** se oprește la prima condiție neîndeplinită și nu are flag de ocolire:
+  arbore curat și fără fișiere din afara scopului; ramura actualizată față de `main` și publicată;
+  verificarea completă locală pe codul final (`npm.cmd run verify:full`); `gh pr checks` verde pe
+  vârful ramurii; fără intrări S1 sau S2 deschise în `docs/FINISAJE.md`; pentru fazele B și C,
+  «aprobat» scris de utilizator în `docs/AUTONOM-APROBARI.md`; apoi eticheta `pre-faza-N`,
+  îmbinare prin commit (`--merge`, fără squash, ramura nu se șterge) și eticheta `faza-N-completa`.
+- **Niveluri de gravitate:** **S1** (bani, stoc, plăți, securitate, permisiuni, date personale,
+  migrări pe date, aspecte legale, pierdere de date) = oprire imediată cu 🛑; **S2** (o funcție nu
+  merge, un test critic pică) = repar pe loc, înainte de pasul următor; **S3** (aspect, text,
+  aliniere, finisaje) = o linie în `docs/FINISAJE.md` și continui. La îndoială între S2 și S3,
+  nivelul mai grav.
+- **Condiții de oprire (🛑):** orice S1; aceeași verificare pică de 2 ori la rând pe același pas;
+  peste 3 runde de corecții pe același pas; o modificare în afara scopului declarat al pasului; un
+  test intermitent care atinge zona pasului (se notează, nu se ascunde și nu se dezactivează);
+  nevoie de parole, chei, conturi de test sau decizii din `10-decizii-deschise.md`; biblioteci
+  noi, programe de instalat sau setări de securitate Windows; Docker sau baza de date nu răspund.
+- **Frâna de mână:** la începutul fiecărui pas rulez `npm.cmd run autonom:stop-check`; dacă există
+  `STOP.txt` în rădăcină (în `.gitignore`), termin pasul curent, comit, notez starea și mă opresc.
+- **Plasa de siguranță:** la începutul fiecărei faze, `npm.cmd run db:backup` (ultimele 5, în
+  `local-data/backups/`) și calea în `docs/AUTONOM-LOG.md`; o migrare nouă cu `DROP TABLE`,
+  `DROP COLUMN`, `TRUNCATE` sau `DELETE` fără `WHERE` pică testul de arhitectură dacă nu are
+  adnotarea de aprobare și e întotdeauna S1.
+- **`docs/PROGRESS.md`** («de unde reiau») se actualizează după fiecare pas.
 
 ## Jurnalul de audit — imuabil — regulă permanentă
 
