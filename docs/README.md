@@ -27,6 +27,7 @@ Plan complet de arhitectură, liste, TODO și prompturi pentru Claude Code.
 | 14 | `14-loializare-si-vouchere.md` | Puncte de loialitate (1% cashback) și vouchere cadou cu sold |
 | 15 | `15-specific-nisa-piscine.md` | 🔑 Funcționalități generice cerute de nișă: transport greu, documente, fișă explodată |
 | 16 | `16-ghid-de-executie.md` | 🔑 **Ține-l deschis cât lucrezi.** Ce ceri, când, și cum nu deraiezi |
+| 17 | `17-design-sistem-admin.md` | 🔑 **Normativ** pentru orice interfață din admin: tokeni, componente, machete, accesibilitate, mișcare (redesign admin, loturile 0-4) |
 | 18 | `18-referinta-magazin-vechi.md` | Referință (nu specificație): regulile de business și capcanele magazinului vechi (transport, plăți, loialitate, B2B, facturare) și curățarea datelor produselor de lucru (15d) |
 | 19 | `19-seo-si-migrare-merchant.md` | Cerințe SEO pentru Faza 6 și lansare, migrarea feed-ului Google Merchant fără pierderea istoricului, controlul prețurilor, întrebări deschise |
 
