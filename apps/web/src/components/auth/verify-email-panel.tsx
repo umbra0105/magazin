@@ -53,7 +53,7 @@ export function VerifyEmailPanel() {
 
   if (state.phase === "reading") {
     return (
-      <p role="status" className="text-sm text-muted-foreground">
+      <p role="status" className="text-body text-ink-secondary">
         {m.verify.loading}
       </p>
     );
@@ -62,7 +62,7 @@ export function VerifyEmailPanel() {
   if (state.phase === "verified") {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">{m.verify.successTitle}</h1>
+        <h1 className="text-title">{m.verify.successTitle}</h1>
         <FormAlert tone="success">{m.verify.success}</FormAlert>
         <Link href="/autentificare" className={buttonVariants({ className: "w-full" })}>
           {m.login.submit}
@@ -75,8 +75,8 @@ export function VerifyEmailPanel() {
     const token = state.token;
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">{m.verify.confirmTitle}</h1>
-        <p className="text-sm text-muted-foreground">{m.verify.confirmDescription}</p>
+        <h1 className="text-title">{m.verify.confirmTitle}</h1>
+        <p className="text-body text-ink-secondary">{m.verify.confirmDescription}</p>
         {state.phase === "ready" && state.notice ? (
           <FormAlert tone="error">{state.notice}</FormAlert>
         ) : null}
@@ -94,11 +94,11 @@ export function VerifyEmailPanel() {
   // missing | invalid: mesaj clar + posibilitatea de a cere un mesaj nou.
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">{m.verify.errorTitle}</h1>
+      <h1 className="text-title">{m.verify.errorTitle}</h1>
       <FormAlert tone="error">
         {state.phase === "invalid" ? m.verify.error : m.verify.incomplete}
       </FormAlert>
-      <p className="text-sm text-muted-foreground">{m.verify.resendDescription}</p>
+      <p className="text-body text-ink-secondary">{m.verify.resendDescription}</p>
       <EmailRequestForm
         endpoint="/api/auth/send-verification-email"
         body={{ callbackURL: "/verificare-email" }}

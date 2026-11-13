@@ -12,6 +12,7 @@ import {
   buttonVariants,
 } from "@ecom/ui";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminSurface } from "@/components/admin/admin-surface";
 import type { SidebarNavItem } from "@/components/admin/sidebar-nav";
 import { ADMIN_NAV, visibleNav } from "@/lib/admin-nav";
 import { getAdminAccess } from "@/lib/admin-page";
@@ -33,29 +34,6 @@ export const metadata: Metadata = {
   title: { default: m.metaTitle, template: `%s · ${m.metaTitle}` },
   robots: { index: false, follow: false, nocache: true },
 };
-
-/**
- * Suprafața adminului (docs/17): `data-surface="admin"` activează fișierul de tokeni al adminului (culori deschise și închise,
- * dimensiuni, Inter fix). Adminul nu urmează paleta magazinului: din `Branding` vine doar brandul (`accent`, cu gardă de
- * contrast, pus inline ca `--brand-light` / `--brand-dark`), sigla și numele. Fiecare ecran de sub el moștenește suprafața.
- */
-function AdminSurface({
-  brandStyle,
-  children,
-}: {
-  brandStyle: CSSProperties;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      data-surface="admin"
-      style={brandStyle}
-      className="min-h-dvh bg-surface-page font-sans text-body text-ink"
-    >
-      {children}
-    </div>
-  );
-}
 
 /**
  * Paza zonei de admin. Layout-ul NU se re-rulează la navigarea între pagini, deci fiecare pagină își

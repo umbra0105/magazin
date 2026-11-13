@@ -9,6 +9,23 @@ const countOf = (n: number, one: string, many: string, manyDe: string): string =
 const produse = (n: number): string => countOf(n, "produs", "produse", "de produse");
 
 export const ro = {
+  /** Stări comune ale paginilor: negăsit (404), eroare neprevăzută și încărcare (docs/17, Lotul 4). */
+  states: {
+    notFound: {
+      title: "Pagina nu a fost găsită",
+      description: "Adresa nu există sau pagina a fost mutată.",
+      home: "Înapoi la prima pagină",
+      admin: "Înapoi la panou",
+    },
+    error: {
+      title: "Ceva nu a mers bine",
+      description:
+        "Pagina nu a putut fi încărcată. Încearcă din nou; dacă problema continuă, spune-i administratorului codul de mai jos.",
+      retry: "Reîncearcă",
+      reference: (digest: string) => `Cod de referință: ${digest}`,
+    },
+    loading: "Se încarcă…",
+  },
   auth: {
     common: {
       email: "Email",
@@ -2752,6 +2769,10 @@ export const ro = {
       },
       open: (title: string) => `Deschide fișa ${title}`,
       noImage: "Fără imagine",
+      counts: {
+        hotspots: (n: number) => countOf(n, "hotspot", "hotspot-uri", "de hotspot-uri"),
+        products: (n: number) => produse(n),
+      },
       create: {
         title: "Fișă explodată nouă",
         titleField: "Titlu",

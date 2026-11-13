@@ -2,8 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
-import { Button, Dialog, Input } from "@ecom/ui";
+import { useRef, useState, useTransition, type FormEvent } from "react";
+import {
+  Button,
+  Dialog,
+  EmptyState,
+  Input,
+  RowHeader,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@ecom/ui";
 import { createDiagram } from "@/app/(admin)/admin/produse/fise-explodate/actions";
 import { Field } from "@/components/admin/products/editor-ui";
 import { getMessages } from "@/messages";
@@ -22,7 +34,8 @@ export interface DiagramListRow {
 
 /**
  * Lista fișelor explodate și crearea uneia noi (titlu + imagine din bibliotecă). După creare se
- * deschide editorul fișei. Fără `canWrite`, doar listă.
+ * deschide editorul fișei. Fără `canWrite`, doar listă. Tabelul e `Table stacked` (docs/17 §3): pe telefon fiecare
+ * fișă e un card cu miniatura, titlul și numărătorile; lista goală are o singură acțiune de creare.
  */
 export function DiagramList({
   diagrams,
@@ -35,8 +48,8 @@ export function DiagramList({
 
   return (
     <div className="flex flex-col gap-4">
-      {canWrite && (
-        <div>
+      {canWrite && diagrams.length > 0 && (
+        <div className="flex justify-end">
           <Button type="button" onClick={() => setCreating(true)}>
             {m.new}
           </Button>
@@ -44,65 +57,63 @@ export function DiagramList({
       )}
 
       {diagrams.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{m.empty}</p>
+        <EmptyState
+          title={m.empty}
+          {...(canWrite && {
+            action: (
+              <Button type="button" onClick={() => setCreating(true)}>
+                {m.new}
+              </Button>
+            ),
+          })}
+        />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border">
-          <table className="w-full min-w-[32rem] text-sm">
-            <caption className="sr-only">{m.listLabel}</caption>
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th scope="col" className="p-3 font-medium">
-                  {m.table.image}
-                </th>
-                <th scope="col" className="p-3 font-medium">
-                  {m.table.title}
-                </th>
-                <th scope="col" className="p-3 font-medium">
-                  {m.table.hotspots}
-                </th>
-                <th scope="col" className="p-3 font-medium">
-                  {m.table.products}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {diagrams.map((d) => (
-                <tr
-                  key={d.id}
-                  data-diagram-row={d.title}
-                  className="border-b border-border last:border-0"
-                >
-                  <td className="p-3">
-                    {d.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- imagine din /media (variante generate)
-                      <img
-                        src={d.imageUrl}
-                        alt=""
-                        width={64}
-                        height={48}
-                        loading="lazy"
-                        className="h-12 w-16 rounded-md border border-border object-cover"
-                      />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">{m.noImage}</span>
-                    )}
-                  </td>
-                  <th scope="row" className="p-3 text-left font-medium">
-                    <Link
-                      href={`/admin/produse/fise-explodate/${d.id}`}
-                      aria-label={m.open(d.title)}
-                      className="text-link underline-offset-2 hover:underline"
-                    >
-                      {d.title}
-                    </Link>
-                  </th>
-                  <td className="p-3">{d.hotspotCount}</td>
-                  <td className="p-3">{d.productCount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table stacked aria-label={m.listLabel}>
+          <THead>
+            <Tr>
+              <Th>{m.table.image}</Th>
+              <Th>{m.table.title}</Th>
+              <Th numeric>{m.table.hotspots}</Th>
+              <Th numeric>{m.table.products}</Th>
+            </Tr>
+          </THead>
+          <TBody>
+            {diagrams.map((d) => (
+              <Tr key={d.id} data-diagram-row={d.title}>
+                <Td data-cell="image">
+                  {d.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- imagine din /media (variante generate)
+                    <img
+                      src={d.imageUrl}
+                      alt=""
+                      width={64}
+                      height={48}
+                      loading="lazy"
+                      className="h-12 w-16 rounded-md border border-line-subtle object-cover"
+                    />
+                  ) : (
+                    <span className="text-label text-ink-secondary">{m.noImage}</span>
+                  )}
+                </Td>
+                <RowHeader stack="lead" className="font-medium">
+                  <Link
+                    href={`/admin/produse/fise-explodate/${d.id}`}
+                    aria-label={m.open(d.title)}
+                    className="text-link underline-offset-2 hover:underline"
+                  >
+                    {d.title}
+                  </Link>
+                </RowHeader>
+                <Td numeric className="whitespace-nowrap text-ink-secondary" data-cell="hotspots">
+                  {m.counts.hotspots(d.hotspotCount)}
+                </Td>
+                <Td numeric className="whitespace-nowrap text-ink-secondary" data-cell="products">
+                  {m.counts.products(d.productCount)}
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
       )}
 
       {creating && <CreateDialog onClose={() => setCreating(false)} />}
@@ -118,6 +129,8 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [problem, setProblem] = useState<string | null>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const pickRef = useRef<HTMLButtonElement>(null);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -126,7 +139,12 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
     if (!mediaId) found["image"] = m.create.imageRequired;
     setErrors(found);
     setProblem(null);
-    if (Object.keys(found).length > 0) return;
+    if (Object.keys(found).length > 0) {
+      // focus pe primul câmp greșit (formularul are `noValidate`, mesajele sunt ale aplicației)
+      if (found["title"]) titleRef.current?.focus();
+      else pickRef.current?.focus();
+      return;
+    }
     startTransition(async () => {
       try {
         const result = await createDiagram({ title: title.trim(), mediaId });
@@ -161,6 +179,7 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
             {(control) => (
               <Input
                 {...control}
+                ref={titleRef}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={200}
@@ -169,18 +188,23 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
             )}
           </Field>
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium">{m.create.image}</span>
-            <p className="text-xs text-muted-foreground">{m.create.imageHelp}</p>
-            <p className="text-sm" data-diagram-image-state>
+            <span className="text-label text-ink-secondary">{m.create.image}</span>
+            <p className="text-label text-ink-secondary">{m.create.imageHelp}</p>
+            <p className="text-body" data-diagram-image-state>
               {mediaId ? m.create.chosen : m.create.none}
             </p>
             <div>
-              <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>
+              <Button
+                ref={pickRef}
+                type="button"
+                variant="outline"
+                onClick={() => setPickerOpen(true)}
+              >
                 {mediaId ? m.create.change : m.create.pick}
               </Button>
             </div>
             {errors["image"] && (
-              <p data-problem className="text-sm text-danger">
+              <p data-problem className="text-body text-tone-problem-fg">
                 {errors["image"]}
               </p>
             )}
@@ -189,7 +213,7 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
             <p
               role="alert"
               data-problem
-              className="rounded-md border border-danger p-3 text-sm text-danger"
+              className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
             >
               {problem}
             </p>

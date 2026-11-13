@@ -2,7 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ImportError } from "@ecom/core";
-import { Badge, buttonVariants } from "@ecom/ui";
+import {
+  Badge,
+  TAB_LIST_CLASS,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+  buttonVariants,
+  tabClass,
+} from "@ecom/ui";
 import {
   ImageFailures,
   ImageProgress,
@@ -81,17 +92,17 @@ export default async function ImportHistoryDetailPage({
       <header className="flex flex-col gap-2">
         <Link
           href="/admin/produse/import/istoric"
-          className="text-sm text-link underline-offset-2 hover:underline"
+          className="text-body text-link underline-offset-2 hover:underline"
         >
           {m.detail.back}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold break-all">{m.detail.title(item.fileName)}</h1>
+          <h1 className="text-title break-all">{m.detail.title(item.fileName)}</h1>
           <Badge variant={STATE_VARIANT[item.state]} data-history-state={item.state}>
             {m.states[item.state]}
           </Badge>
         </div>
-        <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <dl className="grid gap-x-6 gap-y-1 text-body sm:grid-cols-2 lg:grid-cols-3">
           {(
             [
               [m.detail.summary.date, when(item.createdAt)],
@@ -103,7 +114,7 @@ export default async function ImportHistoryDetailPage({
             ] as const
           ).map(([label, value]) => (
             <div key={label} className="flex gap-2">
-              <dt className="text-muted-foreground">{label}:</dt>
+              <dt className="text-ink-secondary">{label}:</dt>
               <dd className="font-medium">{value}</dd>
             </div>
           ))}
@@ -113,14 +124,17 @@ export default async function ImportHistoryDetailPage({
       {item.state === "interrupted" && (
         <p
           role="alert"
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           data-history-interrupted
         >
           {m.interrupted(item.processedRows, item.rowCount)}
         </p>
       )}
       {item.state === "failed" && (
-        <p role="alert" className="rounded-md border border-danger p-3 text-sm text-danger">
+        <p
+          role="alert"
+          className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
+        >
           {m.failed(item.errorMessage ?? "—")}
         </p>
       )}
@@ -128,15 +142,15 @@ export default async function ImportHistoryDetailPage({
       {item.counts && (
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5" data-history-counts>
           {(["new", "updated", "unchanged", "skipped", "errors"] as const).map((key) => (
-            <div key={key} className="rounded-md border border-border p-3" data-count={key}>
-              <dt className="text-xs text-muted-foreground">{root.check.counts[key]}</dt>
-              <dd className="text-xl font-semibold">{item.counts?.[key]}</dd>
+            <div key={key} className="rounded-lg border border-line-subtle p-3" data-count={key}>
+              <dt className="text-label text-ink-secondary">{root.check.counts[key]}</dt>
+              <dd className="text-title">{item.counts?.[key]}</dd>
             </div>
           ))}
         </dl>
       )}
       {item.counts?.created && (
-        <p className="text-sm text-muted-foreground" data-history-created>
+        <p className="text-body text-ink-secondary" data-history-created>
           {m.created(
             item.counts.created.categories,
             item.counts.created.brands,
@@ -148,10 +162,10 @@ export default async function ImportHistoryDetailPage({
       {item.images && (
         <section
           aria-labelledby="hist-images"
-          className="flex flex-col gap-3 rounded-md border border-border p-3"
+          className="flex flex-col gap-3 rounded-lg border border-line-subtle p-3"
           data-history-images
         >
-          <h2 id="hist-images" className="text-lg font-semibold">
+          <h2 id="hist-images" className="text-section">
             {root.images.heading}
           </h2>
           <ImageProgress progress={item.images} />
@@ -164,16 +178,12 @@ export default async function ImportHistoryDetailPage({
       )}
 
       {item.state === "completed" && !report && (
-        <p
-          role="note"
-          className="rounded-md border border-border bg-border/30 p-3 text-sm"
-          data-history-purged
-        >
+        <p role="note" className="rounded-lg bg-surface-subtle p-3 text-body" data-history-purged>
           {m.detail.purged(retentionDays)}
         </p>
       )}
       {item.state !== "completed" && item.state !== "failed" && (
-        <p role="note" className="text-sm text-muted-foreground">
+        <p role="note" className="text-body text-ink-secondary">
           {m.detail.noFinalReport}
         </p>
       )}
@@ -181,15 +191,15 @@ export default async function ImportHistoryDetailPage({
       {report && (
         <>
           {item.reportUntil && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-label text-ink-secondary">
               {m.detail.until(when(item.reportUntil))}
             </p>
           )}
           {report.woo && <WooReportExtras woo={report.woo} />}
           {report.fileWarnings.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold">{root.check.fileWarnings}</h2>
-              <ul className="list-disc pl-5 text-sm" data-file-warnings>
+              <h2 className="text-body font-semibold">{root.check.fileWarnings}</h2>
+              <ul className="list-disc pl-5 text-body" data-file-warnings>
                 {report.fileWarnings.map((w) => (
                   <li key={w}>{w}</li>
                 ))}
@@ -198,7 +208,7 @@ export default async function ImportHistoryDetailPage({
           )}
           <section aria-labelledby="hist-rows" className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id="hist-rows" className="text-lg font-semibold">
+              <h2 id="hist-rows" className="text-section">
                 {root.check.entries}
               </h2>
               <a
@@ -210,11 +220,7 @@ export default async function ImportHistoryDetailPage({
                 {m.detail.download}
               </a>
             </div>
-            <nav
-              aria-label={m.detail.filterLabel}
-              className="flex flex-wrap gap-2"
-              data-history-filters
-            >
+            <nav aria-label={m.detail.filterLabel} className={TAB_LIST_CLASS} data-history-filters>
               {FILTERS.map((value) => (
                 <Link
                   key={value}
@@ -224,63 +230,55 @@ export default async function ImportHistoryDetailPage({
                       : `/admin/produse/import/istoric/${item.id}?rezultat=${value}`
                   }
                   aria-current={filter === value ? "page" : undefined}
-                  className={buttonVariants({
-                    variant: filter === value ? "default" : "outline",
-                    size: "sm",
-                  })}
+                  className={tabClass(filter === value)}
                 >
                   {m.detail.filters[value]}
                 </Link>
               ))}
             </nav>
             {shown.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{m.detail.noRows}</p>
+              <p className="text-body text-ink-secondary">{m.detail.noRows}</p>
             ) : (
               <>
-                <p className="text-xs text-muted-foreground" data-history-shown>
+                <p className="text-label text-ink-secondary" data-history-shown>
                   {m.detail.shown(shown.length, matching.length)}
                   {report.truncated ? ` · ${root.check.truncated(entries.length)}` : ""}
                 </p>
-                <div className="overflow-x-auto rounded-md border border-border">
-                  <table className="w-full min-w-[40rem] text-left text-sm">
-                    <thead className="border-b border-border bg-border/30">
-                      <tr>
-                        {[root.check.row, root.check.sku, root.check.result, root.check.reason].map(
-                          (label) => (
-                            <th key={label} scope="col" className="p-2 font-medium">
-                              {label}
-                            </th>
-                          ),
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shown.map((entry) => (
-                        <tr
-                          key={`${entry.row}-${entry.sku}`}
-                          data-report-row={entry.row}
-                          data-outcome={entry.outcome}
-                          className="border-b border-border align-top last:border-0"
-                        >
-                          <td className="p-2">{entry.row}</td>
-                          <td className="p-2 break-all">{entry.sku || "—"}</td>
-                          <td className="p-2">{root.check.outcomes[entry.outcome]}</td>
-                          <td className="p-2">
-                            {entry.messages.length > 0 ? (
-                              <ul className="list-disc pl-4">
-                                {entry.messages.map((message) => (
-                                  <li key={message}>{message}</li>
-                                ))}
-                              </ul>
-                            ) : entry.changed.length > 0 ? (
-                              root.check.willChange(entry.changed.join(", "))
-                            ) : null}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <Table stacked aria-label={root.check.entries}>
+                  <THead>
+                    <Tr>
+                      <Th numeric>{root.check.row}</Th>
+                      <Th>{root.check.sku}</Th>
+                      <Th>{root.check.result}</Th>
+                      <Th>{root.check.reason}</Th>
+                    </Tr>
+                  </THead>
+                  <TBody>
+                    {shown.map((entry) => (
+                      <Tr
+                        key={`${entry.row}-${entry.sku}`}
+                        data-report-row={entry.row}
+                        data-outcome={entry.outcome}
+                        className="align-top"
+                      >
+                        <Td numeric>{entry.row}</Td>
+                        <Td className="whitespace-nowrap">{entry.sku || "—"}</Td>
+                        <Td>{root.check.outcomes[entry.outcome]}</Td>
+                        <Td stack="title">
+                          {entry.messages.length > 0 ? (
+                            <ul className="list-disc pl-4">
+                              {entry.messages.map((message) => (
+                                <li key={message}>{message}</li>
+                              ))}
+                            </ul>
+                          ) : entry.changed.length > 0 ? (
+                            root.check.willChange(entry.changed.join(", "))
+                          ) : null}
+                        </Td>
+                      </Tr>
+                    ))}
+                  </TBody>
+                </Table>
               </>
             )}
           </section>

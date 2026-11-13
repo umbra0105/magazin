@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import type { WooAnalysis, WooOptions, WooReportSection } from "@ecom/core";
-import { Label, Select } from "@ecom/ui";
+import { Label, RowHeader, Select, TBody, THead, Table, Td, Th, Tr } from "@ecom/ui";
 import { getMessages } from "@/messages";
 
 const m = getMessages().admin.productImport.woo;
@@ -42,19 +42,19 @@ export function WooOptionsPanel({
 
   return (
     <div className="flex flex-col gap-5" data-woo-options>
-      <p className="text-sm text-muted-foreground">{m.intro}</p>
-      <p className="text-sm" data-woo-row-types>
+      <p className="text-body text-ink-secondary">{m.intro}</p>
+      <p className="text-body" data-woo-row-types>
         {m.rowTypes(describeRowTypes(analysis.rowTypes))}
       </p>
 
       <fieldset className="flex flex-col gap-2" data-woo-mode>
-        <legend className="mb-1 text-sm font-semibold">{m.mode.heading}</legend>
+        <legend className="mb-1 text-body font-semibold">{m.mode.heading}</legend>
         {(["full", "descriptionsOnly"] as const).map((value) => (
-          <label key={value} className="flex items-start gap-2 text-sm">
+          <label key={value} className="flex items-start gap-2 text-body">
             <input
               type="radio"
               name="woo-mode"
-              className="mt-1 size-4 shrink-0 accent-primary"
+              className="mt-1 size-4 shrink-0 accent-brand"
               checked={options.mode === value}
               onChange={() => update({ mode: value })}
               data-woo-mode-option={value}
@@ -64,11 +64,11 @@ export function WooOptionsPanel({
         ))}
         {options.mode === "descriptionsOnly" && (
           <div className="flex flex-col gap-2 pl-6" data-woo-descriptions-only>
-            <p className="text-xs text-muted-foreground">{m.mode.descriptionsOnlyHelp}</p>
-            <label className="flex items-start gap-2 text-sm font-medium">
+            <p className="text-label text-ink-secondary">{m.mode.descriptionsOnlyHelp}</p>
+            <label className="flex items-start gap-2 text-body font-medium">
               <input
                 type="checkbox"
-                className="mt-1 size-4 shrink-0 accent-primary"
+                className="mt-1 size-4 shrink-0 accent-brand"
                 checked={options.overwriteEditedDescriptions}
                 onChange={(event) => update({ overwriteEditedDescriptions: event.target.checked })}
                 aria-describedby="woo-overwrite-help"
@@ -76,7 +76,7 @@ export function WooOptionsPanel({
               />
               <span>{m.mode.overwrite}</span>
             </label>
-            <p id="woo-overwrite-help" className="pl-6 text-xs text-muted-foreground">
+            <p id="woo-overwrite-help" className="pl-6 text-label text-ink-secondary">
               {m.mode.overwriteHelp}
             </p>
           </div>
@@ -103,10 +103,10 @@ function WooFullOptions({
   return (
     <>
       <fieldset className="flex flex-col gap-1">
-        <label className="flex items-start gap-2 text-sm font-medium">
+        <label className="flex items-start gap-2 text-body font-medium">
           <input
             type="checkbox"
-            className="mt-1 size-4 shrink-0 accent-primary"
+            className="mt-1 size-4 shrink-0 accent-brand"
             checked={options.keepStatus}
             onChange={(event) => update({ keepStatus: event.target.checked })}
             aria-describedby="woo-status-help"
@@ -114,15 +114,15 @@ function WooFullOptions({
           />
           <span>{m.status.label}</span>
         </label>
-        <p id="woo-status-help" className="pl-6 text-xs text-muted-foreground">
+        <p id="woo-status-help" className="pl-6 text-label text-ink-secondary">
           {m.status.help}
         </p>
       </fieldset>
 
       {analysis.images.hasColumn && (
         <fieldset className="flex flex-col gap-2" data-woo-images>
-          <legend className="mb-1 text-sm font-semibold">{m.images.heading}</legend>
-          <p className="text-sm">
+          <legend className="mb-1 text-body font-semibold">{m.images.heading}</legend>
+          <p className="text-body">
             {m.images.found(
               analysis.images.total,
               analysis.images.onAllowedHosts,
@@ -132,8 +132,8 @@ function WooFullOptions({
           </p>
           {analysis.images.hosts.length > 0 && (
             <div>
-              <h3 className="text-xs font-medium text-muted-foreground">{m.images.hostsHeading}</h3>
-              <ul className="list-disc pl-5 text-sm" data-woo-image-hosts>
+              <h3 className="text-label font-medium text-ink-secondary">{m.images.hostsHeading}</h3>
+              <ul className="list-disc pl-5 text-body" data-woo-image-hosts>
                 {analysis.images.hosts.map((host) => (
                   <li key={host.host} data-image-host={host.host} data-allowed={host.allowed}>
                     {m.images.hostLine(host.host, host.count, host.allowed)}
@@ -145,7 +145,7 @@ function WooFullOptions({
           {!analysis.images.canImport ? (
             <p
               role="note"
-              className="rounded-md border border-border p-3 text-sm"
+              className="rounded-lg bg-surface-subtle p-3 text-body"
               data-images-no-right
             >
               {m.images.noRight}
@@ -155,16 +155,16 @@ function WooFullOptions({
               {analysis.images.allowedHosts.length === 0 && (
                 <p
                   role="note"
-                  className="rounded-md border border-danger p-3 text-sm"
+                  className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
                   data-images-no-hosts
                 >
                   {m.images.noHosts}
                 </p>
               )}
-              <label className="flex items-start gap-2 text-sm font-medium">
+              <label className="flex items-start gap-2 text-body font-medium">
                 <input
                   type="checkbox"
-                  className="mt-1 size-4 shrink-0 accent-primary"
+                  className="mt-1 size-4 shrink-0 accent-brand"
                   checked={options.importImages}
                   onChange={(event) => update({ importImages: event.target.checked })}
                   aria-describedby="woo-images-help"
@@ -172,7 +172,7 @@ function WooFullOptions({
                 />
                 <span>{m.images.checkbox}</span>
               </label>
-              <p id="woo-images-help" className="pl-6 text-xs text-muted-foreground">
+              <p id="woo-images-help" className="pl-6 text-label text-ink-secondary">
                 {m.images.help}
               </p>
             </>
@@ -181,7 +181,7 @@ function WooFullOptions({
       )}
 
       <fieldset className="grid gap-3 sm:grid-cols-2">
-        <legend className="mb-1 text-sm font-semibold">{m.units.heading}</legend>
+        <legend className="mb-1 text-body font-semibold">{m.units.heading}</legend>
         <div className="flex flex-col gap-1">
           <Label htmlFor="woo-weight-unit">{m.units.weight}</Label>
           <Select
@@ -198,7 +198,7 @@ function WooFullOptions({
             ))}
           </Select>
           {analysis.units.weight && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-label text-ink-secondary">
               {m.units.fromHeader(analysis.units.weight)}
             </p>
           )}
@@ -219,7 +219,7 @@ function WooFullOptions({
             ))}
           </Select>
           {analysis.units.dimensions && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-label text-ink-secondary">
               {m.units.fromHeader(analysis.units.dimensions)}
             </p>
           )}
@@ -228,135 +228,125 @@ function WooFullOptions({
 
       {analysis.shippingClasses.length > 0 && (
         <section aria-labelledby="woo-shipping" className="flex flex-col gap-2">
-          <h3 id="woo-shipping" className="text-sm font-semibold">
+          <h3 id="woo-shipping" className="text-body font-semibold">
             {m.shipping.heading}
           </h3>
-          <p className="text-xs text-muted-foreground">{m.shipping.help}</p>
-          <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full min-w-[32rem] text-left text-sm" data-woo-shipping>
-              <thead className="border-b border-border bg-border/30">
-                <tr>
-                  <th scope="col" className="p-3 font-medium">
-                    {m.shipping.column}
-                  </th>
-                  <th scope="col" className="p-3 font-medium">
-                    {m.shipping.target}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {analysis.shippingClasses.map((item) => (
-                  <tr key={item.key} className="border-b border-border last:border-0">
-                    <th scope="row" className="p-3 font-medium">
-                      {item.name}{" "}
-                      <span className="font-normal text-muted-foreground">
-                        ({m.shipping.products(item.count)})
-                      </span>
-                    </th>
-                    <td className="p-3">
-                      <Label htmlFor={`woo-ship-${item.key}`} className="sr-only">
-                        {`${m.shipping.target}: ${item.name}`}
-                      </Label>
-                      <Select
-                        id={`woo-ship-${item.key}`}
-                        value={options.shippingClassMap[item.key] ?? ""}
-                        onChange={(event) =>
-                          update({
-                            shippingClassMap: withoutKey(
-                              options.shippingClassMap,
-                              item.key,
-                              event.target.value as WooOptions["shippingClassMap"][string] | "",
-                            ),
-                          })
-                        }
-                      >
-                        <option value="">{m.shipping.none}</option>
-                        {SHIPPING_CLASSES.map((value) => (
-                          <option key={value} value={value}>
-                            {m.shipping.classes[value]}
-                          </option>
-                        ))}
-                      </Select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="text-label text-ink-secondary">{m.shipping.help}</p>
+          <Table stacked aria-label={m.shipping.heading} data-woo-shipping>
+            <THead>
+              <Tr>
+                <Th>{m.shipping.column}</Th>
+                <Th>{m.shipping.target}</Th>
+              </Tr>
+            </THead>
+            <TBody>
+              {analysis.shippingClasses.map((item) => (
+                <Tr key={item.key}>
+                  <RowHeader className="font-medium">
+                    {item.name}{" "}
+                    <span className="font-normal text-ink-secondary">
+                      ({m.shipping.products(item.count)})
+                    </span>
+                  </RowHeader>
+                  <Td stack="actions" className="py-2">
+                    <Label htmlFor={`woo-ship-${item.key}`} className="sr-only">
+                      {`${m.shipping.target}: ${item.name}`}
+                    </Label>
+                    <Select
+                      className="max-w-md"
+                      id={`woo-ship-${item.key}`}
+                      value={options.shippingClassMap[item.key] ?? ""}
+                      onChange={(event) =>
+                        update({
+                          shippingClassMap: withoutKey(
+                            options.shippingClassMap,
+                            item.key,
+                            event.target.value as WooOptions["shippingClassMap"][string] | "",
+                          ),
+                        })
+                      }
+                    >
+                      <option value="">{m.shipping.none}</option>
+                      {SHIPPING_CLASSES.map((value) => (
+                        <option key={value} value={value}>
+                          {m.shipping.classes[value]}
+                        </option>
+                      ))}
+                    </Select>
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
         </section>
       )}
 
       {analysis.attributes.length > 0 && (
         <section aria-labelledby="woo-attributes" className="flex flex-col gap-2">
-          <h3 id="woo-attributes" className="text-sm font-semibold">
+          <h3 id="woo-attributes" className="text-body font-semibold">
             {m.attributes.heading}
           </h3>
-          <p className="text-xs text-muted-foreground">{m.attributes.help}</p>
-          <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full min-w-[32rem] text-left text-sm" data-woo-attributes>
-              <thead className="border-b border-border bg-border/30">
-                <tr>
-                  <th scope="col" className="p-3 font-medium">
-                    {m.attributes.column}
-                  </th>
-                  <th scope="col" className="p-3 font-medium">
-                    {m.attributes.target}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {analysis.attributes.map((item) => (
-                  <tr key={item.key} className="border-b border-border last:border-0">
-                    <th scope="row" className="p-3 font-medium">
-                      {item.name}{" "}
-                      <span className="font-normal text-muted-foreground">
-                        ({m.attributes.products(item.count)})
-                      </span>
-                    </th>
-                    <td className="p-3">
-                      <Label htmlFor={`woo-attr-${item.key}`} className="sr-only">
-                        {`${m.attributes.target}: ${item.name}`}
-                      </Label>
-                      <Select
-                        id={`woo-attr-${item.key}`}
-                        value={options.attributeTargets[item.key] ?? item.existingId ?? "create"}
-                        onChange={(event) =>
-                          update({
-                            attributeTargets: {
-                              ...options.attributeTargets,
-                              [item.key]: event.target.value,
-                            },
-                          })
-                        }
-                      >
-                        <option value="create">{m.attributes.create}</option>
-                        {analysis.existingAttributes.map((attribute) => (
-                          <option key={attribute.id} value={attribute.id}>
-                            {m.attributes.existing(attribute.name)}
-                          </option>
-                        ))}
-                        <option value="ignore">{m.attributes.ignore}</option>
-                      </Select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="text-label text-ink-secondary">{m.attributes.help}</p>
+          <Table stacked aria-label={m.attributes.heading} data-woo-attributes>
+            <THead>
+              <Tr>
+                <Th>{m.attributes.column}</Th>
+                <Th>{m.attributes.target}</Th>
+              </Tr>
+            </THead>
+            <TBody>
+              {analysis.attributes.map((item) => (
+                <Tr key={item.key}>
+                  <RowHeader className="font-medium">
+                    {item.name}{" "}
+                    <span className="font-normal text-ink-secondary">
+                      ({m.attributes.products(item.count)})
+                    </span>
+                  </RowHeader>
+                  <Td stack="actions" className="py-2">
+                    <Label htmlFor={`woo-attr-${item.key}`} className="sr-only">
+                      {`${m.attributes.target}: ${item.name}`}
+                    </Label>
+                    <Select
+                      className="max-w-md"
+                      id={`woo-attr-${item.key}`}
+                      value={options.attributeTargets[item.key] ?? item.existingId ?? "create"}
+                      onChange={(event) =>
+                        update({
+                          attributeTargets: {
+                            ...options.attributeTargets,
+                            [item.key]: event.target.value,
+                          },
+                        })
+                      }
+                    >
+                      <option value="create">{m.attributes.create}</option>
+                      {analysis.existingAttributes.map((attribute) => (
+                        <option key={attribute.id} value={attribute.id}>
+                          {m.attributes.existing(attribute.name)}
+                        </option>
+                      ))}
+                      <option value="ignore">{m.attributes.ignore}</option>
+                    </Select>
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
         </section>
       )}
 
       {(analysis.ignoredColumns.length > 0 || analysis.blockedColumns.length > 0) && (
-        <details className="rounded-md border border-border p-3 text-sm" data-woo-columns>
+        <details className="rounded-lg border border-line-subtle p-3 text-body" data-woo-columns>
           <summary className="cursor-pointer font-medium">{m.columns.heading}</summary>
-          <p className="mt-2 text-xs text-muted-foreground">{m.columns.help}</p>
+          <p className="mt-2 text-label text-ink-secondary">{m.columns.help}</p>
           {analysis.blockedColumns.length > 0 && (
-            <p className="mt-2 text-xs" data-woo-blocked>
+            <p className="mt-2 text-label" data-woo-blocked>
               <strong>{m.columns.blocked}</strong>
               {analysis.blockedColumns.join(", ")}
             </p>
           )}
-          <ul className="mt-2 list-disc pl-5 text-xs">
+          <ul className="mt-2 list-disc pl-5 text-label">
             {analysis.ignoredColumns.map((column) => (
               <li key={column.header}>
                 <span className="font-medium">{column.header}</span> — {column.reason}
@@ -390,16 +380,16 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
   ) as [string, number][];
   return (
     <div className="flex flex-col gap-2" data-woo-images-report>
-      <h4 className="text-sm font-medium">{r.heading}</h4>
+      <h4 className="text-body font-medium">{r.heading}</h4>
       {!images.enabled ? (
-        <p className="text-sm text-muted-foreground">{r.off}</p>
+        <p className="text-body text-ink-secondary">{r.off}</p>
       ) : (
         <>
-          <p className="text-sm" data-images-summary>
+          <p className="text-body" data-images-summary>
             {r.summary(stats.total, stats.accepted, stats.rejected)}
           </p>
           {extra.length > 0 && (
-            <ul className="list-disc pl-5 text-sm">
+            <ul className="list-disc pl-5 text-body">
               {extra.map(([key, value]) => (
                 <li key={key} data-images-stat={key}>
                   {r.stats[key]}: {value}
@@ -409,8 +399,8 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
           )}
           {Object.keys(stats.byHost).length > 0 && (
             <div>
-              <h5 className="text-xs font-medium text-muted-foreground">{r.hostsHeading}</h5>
-              <ul className="list-disc pl-5 text-sm" data-images-hosts>
+              <h5 className="text-label font-medium text-ink-secondary">{r.hostsHeading}</h5>
+              <ul className="list-disc pl-5 text-body" data-images-hosts>
                 {Object.entries(stats.byHost).map(([host, count]) => (
                   <li key={host}>
                     {host}: {count}
@@ -421,8 +411,8 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
           )}
           {Object.keys(stats.rejectedByReason).length > 0 && (
             <div>
-              <h5 className="text-xs font-medium text-muted-foreground">{r.reasonsHeading}</h5>
-              <ul className="list-disc pl-5 text-sm" data-images-rejected>
+              <h5 className="text-label font-medium text-ink-secondary">{r.reasonsHeading}</h5>
+              <ul className="list-disc pl-5 text-body" data-images-rejected>
                 {Object.entries(stats.rejectedByReason).map(([reason, count]) => (
                   <li key={reason} data-images-reason={reason}>
                     {r.reasons[reason] ?? reason}: {count}
@@ -432,36 +422,32 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
             </div>
           )}
           {images.issues.length > 0 && (
-            <details className="rounded-md border border-border p-2 text-sm">
+            <details className="rounded-lg border border-line-subtle p-2 text-body">
               <summary className="cursor-pointer font-medium">{r.issuesHeading}</summary>
-              <div className="mt-2 overflow-x-auto">
-                <table className="w-full min-w-[28rem] text-left text-sm" data-images-issues>
-                  <thead className="border-b border-border">
-                    <tr>
-                      {[r.row, r.sku, r.host, r.reason].map((label) => (
-                        <th key={label} scope="col" className="p-1 font-medium">
-                          {label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="mt-2">
+                <Table stacked aria-label={r.issuesHeading} data-images-issues>
+                  <THead>
+                    <Tr>
+                      <Th numeric>{r.row}</Th>
+                      <Th>{r.sku}</Th>
+                      <Th>{r.host}</Th>
+                      <Th>{r.reason}</Th>
+                    </Tr>
+                  </THead>
+                  <TBody>
                     {images.issues.map((issue, index) => (
-                      <tr
-                        key={`${issue.row}-${index}`}
-                        className="border-b border-border last:border-0"
-                      >
-                        <td className="p-1">{issue.row}</td>
-                        <td className="p-1 break-all">{issue.sku || "—"}</td>
-                        <td className="p-1 break-all">{issue.host ?? "—"}</td>
-                        <td className="p-1">{issue.message}</td>
-                      </tr>
+                      <Tr key={`${issue.row}-${index}`}>
+                        <Td numeric>{issue.row}</Td>
+                        <Td className="break-all">{issue.sku || "—"}</Td>
+                        <Td className="break-all">{issue.host ?? "—"}</Td>
+                        <Td stack="title">{issue.message}</Td>
+                      </Tr>
                     ))}
-                  </tbody>
-                </table>
+                  </TBody>
+                </Table>
               </div>
               {images.issuesTruncated && (
-                <p className="mt-1 text-xs text-muted-foreground">{r.truncated}</p>
+                <p className="mt-1 text-label text-ink-secondary">{r.truncated}</p>
               )}
             </details>
           )}
@@ -491,15 +477,18 @@ export function WooReportExtras({ woo }: { woo: WooReportSection }) {
       ] as const)
     : null;
   return (
-    <div className="flex flex-col gap-4 rounded-md border border-border p-3" data-woo-report>
-      <h3 className="text-sm font-semibold">{m.report.heading}</h3>
+    <div className="flex flex-col gap-4 rounded-lg border border-line-subtle p-3" data-woo-report>
+      <h3 className="text-body font-semibold">{m.report.heading}</h3>
       {counters && (
         <div data-woo-desc-counters>
-          <h4 className="text-sm font-medium">{m.report.descriptions.heading}</h4>
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+          <h4 className="text-body font-medium">{m.report.descriptions.heading}</h4>
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-body sm:grid-cols-2">
             {counters.map(([key, value]) => (
-              <div key={key} className="flex justify-between gap-2 border-b border-border py-0.5">
-                <dt className="text-muted-foreground">{m.report.descriptions[key]}</dt>
+              <div
+                key={key}
+                className="flex justify-between gap-2 border-b border-line-subtle py-0.5"
+              >
+                <dt className="text-ink-secondary">{m.report.descriptions[key]}</dt>
                 <dd className="font-medium" data-woo-desc-counter={key}>
                   {value}
                 </dd>
@@ -509,10 +498,10 @@ export function WooReportExtras({ woo }: { woo: WooReportSection }) {
         </div>
       )}
       {nothing ? (
-        <p className="text-sm text-muted-foreground">{m.report.none}</p>
+        <p className="text-body text-ink-secondary">{m.report.none}</p>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground">{m.report.confirmNote}</p>
+          <p className="text-label text-ink-secondary">{m.report.confirmNote}</p>
           {(
             [
               [
@@ -530,8 +519,8 @@ export function WooReportExtras({ woo }: { woo: WooReportSection }) {
           ).map(([key, label, items]) =>
             items.length > 0 ? (
               <div key={key} data-woo-create={key}>
-                <h4 className="text-sm font-medium">{label}</h4>
-                <ul className="list-disc pl-5 text-sm">
+                <h4 className="text-body font-medium">{label}</h4>
+                <ul className="list-disc pl-5 text-body">
                   {items.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
@@ -543,16 +532,19 @@ export function WooReportExtras({ woo }: { woo: WooReportSection }) {
       )}
       {woo.images && woo.images.stats.total > 0 && <WooImageReport images={woo.images} />}
       <div>
-        <h4 className="text-sm font-medium">{m.report.rowTypes}</h4>
-        <p className="text-sm">{describeRowTypes(woo.rowTypes)}</p>
+        <h4 className="text-body font-medium">{m.report.rowTypes}</h4>
+        <p className="text-body">{describeRowTypes(woo.rowTypes)}</p>
       </div>
       {stats.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium">{m.report.statsHeading}</h4>
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2" data-woo-stats>
+          <h4 className="text-body font-medium">{m.report.statsHeading}</h4>
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-body sm:grid-cols-2" data-woo-stats>
             {stats.map(([key, value]) => (
-              <div key={key} className="flex justify-between gap-2 border-b border-border py-0.5">
-                <dt className="text-muted-foreground">{m.report.stats[key] ?? key}</dt>
+              <div
+                key={key}
+                className="flex justify-between gap-2 border-b border-line-subtle py-0.5"
+              >
+                <dt className="text-ink-secondary">{m.report.stats[key] ?? key}</dt>
                 <dd className="font-medium" data-woo-stat={key}>
                   {value}
                 </dd>

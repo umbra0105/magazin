@@ -35,16 +35,7 @@ export interface SourceFile {
  * Valori arbitrare în px/rem/em care existau înainte de redesign: cale → număr de apariții. Se golește pe măsură ce
  * lanțul de loturi (docs/17 §8) migrează ecranele; NU se adaugă intrări noi.
  */
-export const LEGACY_ARBITRARY_LENGTHS: Readonly<Record<string, number>> = {
-  "apps/web/src/app/(admin)/admin/produse/import/istoric/page.tsx": 2,
-  "apps/web/src/app/(admin)/admin/produse/import/istoric/[id]/page.tsx": 1,
-  "apps/web/src/components/admin/diagrams/diagram-editor.tsx": 4,
-  "apps/web/src/components/admin/diagrams/diagram-list.tsx": 1,
-  "apps/web/src/components/admin/inventory/movements-table.tsx": 1,
-  "apps/web/src/components/admin/products/product-import-images.tsx": 1,
-  "apps/web/src/components/admin/products/product-import-wizard.tsx": 2,
-  "apps/web/src/components/admin/products/product-import-woo.tsx": 3,
-};
+export const LEGACY_ARBITRARY_LENGTHS: Readonly<Record<string, number>> = {};
 
 const HEX = /(?<![&\w])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![\w-])/g;
 const ARBITRARY_LENGTH = /\[[^\]\s]*\d(?:px|rem|em)(?![a-z])[^\]\s]*\]/g;

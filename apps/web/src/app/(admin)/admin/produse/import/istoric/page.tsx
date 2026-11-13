@@ -1,7 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { can } from "@ecom/core";
-import { Badge, buttonVariants } from "@ecom/ui";
+import {
+  Badge,
+  EmptyState,
+  RowHeader,
+  TAB_LIST_CLASS,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+  buttonVariants,
+  tabClass,
+} from "@ecom/ui";
 import { requireAdmin } from "@/lib/admin-page";
 import { formatDateTime } from "@/lib/format-date";
 import { getProductExportService } from "@/lib/product-exports";
@@ -62,20 +75,17 @@ export default async function ImportHistoryPage({
       <header className="flex flex-col gap-2">
         <Link
           href="/admin/produse/import"
-          className="text-sm text-link underline-offset-2 hover:underline"
+          className="text-body text-link underline-offset-2 hover:underline"
         >
           {m.back}
         </Link>
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
-        <p className="text-sm text-muted-foreground">{m.description}</p>
-        <nav aria-label={m.tabsLabel} className="mt-2 flex gap-2" data-history-tabs>
+        <h1 className="text-title">{m.title}</h1>
+        <p className="text-body text-ink-secondary">{m.description}</p>
+        <nav aria-label={m.tabsLabel} className={`mt-2 ${TAB_LIST_CLASS}`} data-history-tabs>
           <Link
             href="/admin/produse/import/istoric"
             aria-current={tab === "imports" ? "page" : undefined}
-            className={buttonVariants({
-              variant: tab === "imports" ? "default" : "outline",
-              size: "sm",
-            })}
+            className={tabClass(tab === "imports")}
           >
             {m.tabs.imports}
           </Link>
@@ -83,10 +93,7 @@ export default async function ImportHistoryPage({
             <Link
               href="/admin/produse/import/istoric?fila=exporturi"
               aria-current={tab === "exports" ? "page" : undefined}
-              className={buttonVariants({
-                variant: tab === "exports" ? "default" : "outline",
-                size: "sm",
-              })}
+              className={tabClass(tab === "exports")}
             >
               {m.tabs.exports}
             </Link>
@@ -96,124 +103,114 @@ export default async function ImportHistoryPage({
 
       {history && (
         <>
-          <p className="text-sm text-muted-foreground" data-history-retention>
+          <p className="text-body text-ink-secondary" data-history-retention>
             {m.retention(history.retentionDays)}
           </p>
           {history.items.length === 0 ? (
-            <p className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-              {m.empty}
-            </p>
+            <EmptyState title={m.empty} />
           ) : (
-            <div className="overflow-x-auto rounded-md border border-border">
-              <table className="w-full min-w-[60rem] text-left text-sm" data-history-table>
-                <thead className="border-b border-border bg-border/30">
-                  <tr>
-                    {(
-                      [
-                        m.columns.date,
-                        m.columns.user,
-                        m.columns.file,
-                        m.columns.profile,
-                        m.columns.state,
-                        m.columns.rows,
-                        m.columns.result,
-                        m.columns.actions,
-                      ] as const
-                    ).map((label) => (
-                      <th key={label} scope="col" className="p-3 font-medium">
-                        {label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.items.map((item) => (
-                    <tr
-                      key={item.id}
-                      data-history-row={item.id}
-                      data-state={item.state}
-                      className="border-b border-border align-top last:border-0"
-                    >
-                      <td className="p-3 whitespace-nowrap">{when(item.createdAt)}</td>
-                      <td className="p-3">{item.userName ?? item.userEmail ?? m.unknownUser}</td>
-                      <td className="p-3">
-                        <span className="font-medium break-all">{item.fileName}</span>
-                        <span className="block text-xs text-muted-foreground uppercase">
-                          {item.format}
-                        </span>
-                      </td>
-                      <td className="p-3">{m.profiles[item.profile]}</td>
-                      <td className="p-3">
-                        <Badge variant={STATE_VARIANT[item.state]}>{m.states[item.state]}</Badge>
-                      </td>
-                      <td className="p-3 whitespace-nowrap">
-                        {m.progress(item.processedRows, item.rowCount)}
-                      </td>
-                      <td className="p-3">
-                        {item.counts ? (
-                          <>
-                            <ul className="flex flex-wrap gap-x-3 gap-y-0.5" data-history-counts>
-                              {(["new", "updated", "unchanged", "skipped", "errors"] as const).map(
-                                (key) => (
-                                  <li key={key}>
-                                    <span className="font-medium">{item.counts?.[key]}</span>{" "}
-                                    <span className="text-muted-foreground">{m.counts[key]}</span>
-                                  </li>
-                                ),
+            <Table stacked aria-label={m.title} data-history-table>
+              <THead>
+                <Tr>
+                  <Th priority="secondary">{m.columns.date}</Th>
+                  <Th priority="tertiary">{m.columns.user}</Th>
+                  <Th>{m.columns.file}</Th>
+                  <Th priority="tertiary">{m.columns.profile}</Th>
+                  <Th>{m.columns.state}</Th>
+                  <Th priority="secondary">{m.columns.rows}</Th>
+                  <Th>{m.columns.result}</Th>
+                  <Th>{m.columns.actions}</Th>
+                </Tr>
+              </THead>
+              <TBody>
+                {history.items.map((item) => (
+                  <Tr
+                    key={item.id}
+                    data-history-row={item.id}
+                    data-state={item.state}
+                    className="align-top"
+                  >
+                    <Td priority="secondary" className="whitespace-nowrap">
+                      {when(item.createdAt)}
+                    </Td>
+                    <Td priority="tertiary">{item.userName ?? item.userEmail ?? m.unknownUser}</Td>
+                    <RowHeader stack="lead">
+                      <span className="font-medium break-all">{item.fileName}</span>
+                      <span className="block text-label text-ink-secondary uppercase">
+                        {item.format}
+                      </span>
+                    </RowHeader>
+                    <Td priority="tertiary">{m.profiles[item.profile]}</Td>
+                    <Td>
+                      <Badge variant={STATE_VARIANT[item.state]}>{m.states[item.state]}</Badge>
+                    </Td>
+                    <Td priority="secondary" className="whitespace-nowrap">
+                      {m.progress(item.processedRows, item.rowCount)}
+                    </Td>
+                    <Td stack="title">
+                      {item.counts ? (
+                        <>
+                          <ul className="flex flex-wrap gap-x-3 gap-y-0.5" data-history-counts>
+                            {(["new", "updated", "unchanged", "skipped", "errors"] as const).map(
+                              (key) => (
+                                <li key={key}>
+                                  <span className="font-medium">{item.counts?.[key]}</span>{" "}
+                                  <span className="text-ink-secondary">{m.counts[key]}</span>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                          {item.counts.created && (
+                            <p className="text-label text-ink-secondary" data-history-created>
+                              {m.created(
+                                item.counts.created.categories,
+                                item.counts.created.brands,
+                                item.counts.created.attributes,
                               )}
-                            </ul>
-                            {item.counts.created && (
-                              <p className="text-xs text-muted-foreground" data-history-created>
-                                {m.created(
-                                  item.counts.created.categories,
-                                  item.counts.created.brands,
-                                  item.counts.created.attributes,
-                                )}
-                              </p>
-                            )}
-                            {item.images && (
-                              <p
-                                className="text-xs text-muted-foreground"
-                                data-history-images-summary
-                              >
-                                {imagesText.heading}:{" "}
-                                {imagesText.summary(
-                                  item.images.downloaded,
-                                  item.images.existing,
-                                  item.images.failed,
-                                  item.images.pending,
-                                )}
-                                {item.images.state === "interrupted"
-                                  ? ` — ${imagesText.states.interrupted}`
-                                  : ""}
-                              </p>
-                            )}
-                          </>
-                        ) : item.state === "interrupted" ? (
-                          <p className="text-danger" data-history-interrupted>
-                            {m.interrupted(item.processedRows, item.rowCount)}
-                          </p>
-                        ) : item.state === "failed" ? (
-                          <p className="text-danger">{m.failed(item.errorMessage ?? "—")}</p>
-                        ) : null}
-                      </td>
-                      <td className="p-3">
-                        <Link
-                          href={`/admin/produse/import/istoric/${item.id}`}
-                          className="text-link underline-offset-2 hover:underline"
-                          data-history-details
-                        >
-                          {m.details}
-                        </Link>
-                        {item.state === "completed" && !item.hasReport && (
-                          <span className="block text-xs text-muted-foreground">{m.purged}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            </p>
+                          )}
+                          {item.images && (
+                            <p
+                              className="text-label text-ink-secondary"
+                              data-history-images-summary
+                            >
+                              {imagesText.heading}:{" "}
+                              {imagesText.summary(
+                                item.images.downloaded,
+                                item.images.existing,
+                                item.images.failed,
+                                item.images.pending,
+                              )}
+                              {item.images.state === "interrupted"
+                                ? ` — ${imagesText.states.interrupted}`
+                                : ""}
+                            </p>
+                          )}
+                        </>
+                      ) : item.state === "interrupted" ? (
+                        <p className="text-tone-problem-fg" data-history-interrupted>
+                          {m.interrupted(item.processedRows, item.rowCount)}
+                        </p>
+                      ) : item.state === "failed" ? (
+                        <p className="text-tone-problem-fg">{m.failed(item.errorMessage ?? "—")}</p>
+                      ) : null}
+                    </Td>
+                    <Td stack="actions">
+                      <Link
+                        href={`/admin/produse/import/istoric/${item.id}`}
+                        className="text-link underline-offset-2 hover:underline"
+                        data-history-details
+                      >
+                        {m.details}
+                      </Link>
+                      {item.state === "completed" && !item.hasReport && (
+                        <span className="block text-label text-ink-secondary">{m.purged}</span>
+                      )}
+                    </Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </Table>
           )}
           {history.pageCount > 1 && (
             <nav
@@ -231,7 +228,7 @@ export default async function ImportHistoryPage({
               ) : (
                 <span />
               )}
-              <span aria-current="page" className="text-sm">
+              <span aria-current="page" className="text-body">
                 {m.pagination.pageOf(history.page, history.pageCount)}
               </span>
               {history.page < history.pageCount ? (
@@ -251,88 +248,73 @@ export default async function ImportHistoryPage({
       )}
 
       {tab === "exports" && !canExport && (
-        <p role="note" className="rounded-md border border-border p-3 text-sm">
+        <p role="note" className="rounded-lg bg-surface-subtle p-3 text-body">
           {m.exports.forbidden}
         </p>
       )}
       {exportsList && (
         <section aria-labelledby="hist-exports" className="flex flex-col gap-3">
-          <h2 id="hist-exports" className="text-lg font-semibold">
+          <h2 id="hist-exports" className="text-section">
             {m.exports.title}
           </h2>
-          <p className="text-sm text-muted-foreground">{m.exports.description}</p>
+          <p className="text-body text-ink-secondary">{m.exports.description}</p>
           {exportsList.length === 0 ? (
-            <p className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
-              {m.exports.empty}
-            </p>
+            <EmptyState title={m.exports.empty} />
           ) : (
-            <div className="overflow-x-auto rounded-md border border-border">
-              <table className="w-full min-w-[44rem] text-left text-sm" data-exports-table>
-                <thead className="border-b border-border bg-border/30">
-                  <tr>
-                    {(
-                      [
-                        m.exports.columns.date,
-                        m.exports.columns.user,
-                        m.exports.columns.scope,
-                        m.exports.columns.format,
-                        m.exports.columns.rows,
-                        m.exports.columns.state,
-                      ] as const
-                    ).map((label) => (
-                      <th key={label} scope="col" className="p-3 font-medium">
-                        {label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {exportsList.map((item) => (
-                    <tr
-                      key={item.id}
-                      data-export-row
-                      data-state={item.state}
-                      className="border-b border-border align-top last:border-0"
-                    >
-                      <td className="p-3 whitespace-nowrap">{when(item.at)}</td>
-                      <td className="p-3">{item.actorLabel ?? m.unknownUser}</td>
-                      <td className="p-3">
-                        {item.scope ? (m.exports.scopes[item.scope] ?? item.scope) : "—"}
-                        {item.filtered && (
-                          <span className="block text-xs text-muted-foreground">
-                            {m.exports.filtered}
-                          </span>
-                        )}
-                        {item.includeTrash && (
-                          <span className="block text-xs text-muted-foreground">
-                            {m.exports.trash}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 uppercase">{item.format ?? "—"}</td>
-                      <td className="p-3">
-                        {item.rows !== null && item.products !== null
-                          ? m.exports.rowsAndProducts(item.rows, item.products)
-                          : "—"}
-                        {item.longDescriptions !== null && item.longDescriptions > 0 && (
-                          <span
-                            className="block text-xs text-muted-foreground"
-                            data-long-descriptions
-                          >
-                            {m.exports.longDescriptions(item.longDescriptions)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <Badge variant={item.state === "downloaded" ? "success" : "danger"}>
-                          {m.exports.states[item.state]}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table stacked aria-label={m.exports.title} data-exports-table>
+              <THead>
+                <Tr>
+                  <Th>{m.exports.columns.date}</Th>
+                  <Th priority="secondary">{m.exports.columns.user}</Th>
+                  <Th>{m.exports.columns.scope}</Th>
+                  <Th priority="secondary">{m.exports.columns.format}</Th>
+                  <Th>{m.exports.columns.rows}</Th>
+                  <Th>{m.exports.columns.state}</Th>
+                </Tr>
+              </THead>
+              <TBody>
+                {exportsList.map((item) => (
+                  <Tr key={item.id} data-export-row data-state={item.state} className="align-top">
+                    <RowHeader className="whitespace-nowrap font-normal">{when(item.at)}</RowHeader>
+                    <Td priority="secondary">{item.actorLabel ?? m.unknownUser}</Td>
+                    <Td>
+                      {item.scope ? (m.exports.scopes[item.scope] ?? item.scope) : "—"}
+                      {item.filtered && (
+                        <span className="block text-label text-ink-secondary">
+                          {m.exports.filtered}
+                        </span>
+                      )}
+                      {item.includeTrash && (
+                        <span className="block text-label text-ink-secondary">
+                          {m.exports.trash}
+                        </span>
+                      )}
+                    </Td>
+                    <Td priority="secondary" className="uppercase">
+                      {item.format ?? "—"}
+                    </Td>
+                    <Td>
+                      {item.rows !== null && item.products !== null
+                        ? m.exports.rowsAndProducts(item.rows, item.products)
+                        : "—"}
+                      {item.longDescriptions !== null && item.longDescriptions > 0 && (
+                        <span
+                          className="block text-label text-ink-secondary"
+                          data-long-descriptions
+                        >
+                          {m.exports.longDescriptions(item.longDescriptions)}
+                        </span>
+                      )}
+                    </Td>
+                    <Td>
+                      <Badge variant={item.state === "downloaded" ? "success" : "danger"}>
+                        {m.exports.states[item.state]}
+                      </Badge>
+                    </Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </Table>
           )}
         </section>
       )}

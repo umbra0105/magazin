@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { can } from "@ecom/core";
+import { PageHeader } from "@/components/admin/page-header";
 import { DiagramList } from "@/components/admin/diagrams/diagram-list";
 import { requireAdmin } from "@/lib/admin-page";
 import { getPartsDiagramService } from "@/lib/catalog";
@@ -21,15 +22,12 @@ export default async function DiagramsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
-        <p className="text-sm text-muted-foreground">{m.description}</p>
-        {!canWrite && (
-          <p role="note" className="mt-2 rounded-md border border-border bg-border/30 p-3 text-sm">
-            {m.readOnly}
-          </p>
-        )}
-      </header>
+      <PageHeader
+        title={m.title}
+        count={diagrams.length}
+        description={m.description}
+        notes={canWrite ? [] : [m.readOnly]}
+      />
       <DiagramList
         canWrite={canWrite}
         diagrams={diagrams.map((d) => ({

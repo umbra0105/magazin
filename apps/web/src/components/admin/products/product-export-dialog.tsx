@@ -21,7 +21,7 @@ export interface ProductExportProps {
   trashView: boolean;
 }
 
-const RADIO = "mt-1 size-4 shrink-0 accent-primary";
+const RADIO = "mt-1 size-4 shrink-0 accent-brand";
 
 /** Numele fișierului din antetul `Content-Disposition`, sau unul implicit. */
 function fileNameOf(response: Response, fallback: string): string {

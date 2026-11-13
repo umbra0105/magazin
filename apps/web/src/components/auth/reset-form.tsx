@@ -62,7 +62,7 @@ export function ResetForm({
         <FormAlert tone="success">{m.reset.done}</FormAlert>
         <Link
           href="/autentificare"
-          className="text-sm text-link underline-offset-4 hover:underline"
+          className="text-body text-link underline-offset-4 hover:underline"
         >
           {m.common.backToLogin}
         </Link>
@@ -82,7 +82,7 @@ export function ResetForm({
       {tokenInvalid ? (
         <Link
           href="/recuperare-parola"
-          className="text-sm text-link underline-offset-4 hover:underline"
+          className="text-body text-link underline-offset-4 hover:underline"
         >
           {m.reset.requestNew}
         </Link>

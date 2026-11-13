@@ -32,12 +32,12 @@ export function AuthField({
       <Label htmlFor={id}>{label}</Label>
       {children}
       {hint ? (
-        <p id={ids.hint} className="text-sm text-muted-foreground">
+        <p id={ids.hint} className="text-body text-ink-secondary">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={ids.error} className="text-sm text-danger">
+        <p id={ids.error} className="text-body text-tone-problem-fg">
           {error}
         </p>
       ) : null}
