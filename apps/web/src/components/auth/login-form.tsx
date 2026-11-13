@@ -131,11 +131,11 @@ export function LoginForm({
         {isSubmitting ? m.common.submitting : m.login.submit}
       </Button>
 
-      <div className="flex flex-col gap-2 text-sm">
+      <div className="flex flex-col gap-2 text-body">
         <Link href="/recuperare-parola" className="text-link underline-offset-4 hover:underline">
           {m.login.forgot}
         </Link>
-        <p className="text-muted-foreground">
+        <p className="text-ink-secondary">
           {m.login.noAccount}{" "}
           <Link href={registerHref} className="text-link underline-offset-4 hover:underline">
             {m.login.register}

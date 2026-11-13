@@ -27,8 +27,10 @@ export function FormAlert({
       role={tone === "error" ? "alert" : "status"}
       tabIndex={-1}
       className={cn(
-        "rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-        tone === "error" ? "border-danger text-danger" : "border-success text-foreground",
+        "rounded-lg px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        tone === "error"
+          ? "bg-tone-problem-bg text-tone-problem-fg"
+          : "bg-tone-success-bg text-tone-success-fg",
       )}
     >
       {children}

@@ -1,6 +1,8 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { getSettings } from "@/lib/services";
+import type { CSSProperties, ReactNode } from "react";
+import { adminBrandStyle, resolveAdminBrand } from "@ecom/core";
+import { AdminSurface } from "@/components/admin/admin-surface";
+import { getBranding, getSettings } from "@/lib/services";
 
 /**
  * Depinde de sesiune/setări la fiecare cerere: nu se prerandează la build (altfel build-ul ar cere DB și
@@ -9,18 +11,27 @@ import { getSettings } from "@/lib/services";
  */
 export const dynamic = "force-dynamic";
 
-/** Cadru comun al paginilor de autentificare: numele magazinului (din setări) și conținutul centrat. */
+/**
+ * Cadrul comun al paginilor de autentificare: suprafața adminului (tokeni, temă deschisă și închisă; brandul magazinului doar
+ * ca accent, cu garda de contrast), numele magazinului (din setări) și conținutul centrat.
+ */
 export default async function AuthLayout({ children }: { children: ReactNode }) {
-  const storeName = await getSettings().get("general.storeName");
+  const [storeName, branding] = await Promise.all([
+    getSettings().get("general.storeName"),
+    getBranding().getConfig(),
+  ]);
+  const brandStyle = adminBrandStyle(resolveAdminBrand(branding.colors)) as CSSProperties;
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-8">
-      <Link
-        href="/"
-        className="rounded-md text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-      >
-        {storeName}
-      </Link>
-      <main className="w-full max-w-md">{children}</main>
-    </div>
+    <AdminSurface brandStyle={brandStyle}>
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-8">
+        <Link
+          href="/"
+          className="rounded-md text-section focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {storeName}
+        </Link>
+        <main className="w-full max-w-md">{children}</main>
+      </div>
+    </AdminSurface>
   );
 }

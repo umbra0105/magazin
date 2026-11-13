@@ -104,10 +104,10 @@ export function DiagramList({
                     {d.title}
                   </Link>
                 </RowHeader>
-                <Td numeric className="whitespace-nowrap" data-cell="hotspots">
+                <Td numeric className="whitespace-nowrap text-ink-secondary" data-cell="hotspots">
                   {m.counts.hotspots(d.hotspotCount)}
                 </Td>
-                <Td numeric className="whitespace-nowrap" data-cell="products">
+                <Td numeric className="whitespace-nowrap text-ink-secondary" data-cell="products">
                   {m.counts.products(d.productCount)}
                 </Td>
               </Tr>

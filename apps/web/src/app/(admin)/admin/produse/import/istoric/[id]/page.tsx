@@ -262,7 +262,7 @@ export default async function ImportHistoryDetailPage({
                         className="align-top"
                       >
                         <Td numeric>{entry.row}</Td>
-                        <Td className="break-all">{entry.sku || "—"}</Td>
+                        <Td className="whitespace-nowrap">{entry.sku || "—"}</Td>
                         <Td>{root.check.outcomes[entry.outcome]}</Td>
                         <Td stack="title">
                           {entry.messages.length > 0 ? (

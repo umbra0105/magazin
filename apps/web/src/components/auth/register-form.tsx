@@ -73,9 +73,9 @@ export function RegisterForm({
   if (checkEmail) {
     return (
       <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">{m.register.checkEmailTitle}</h2>
+        <h2 className="text-section">{m.register.checkEmailTitle}</h2>
         <FormAlert tone="success">{m.register.checkEmail}</FormAlert>
-        <Link href={loginHref} className="text-sm text-link underline-offset-4 hover:underline">
+        <Link href={loginHref} className="text-body text-link underline-offset-4 hover:underline">
           {m.common.backToLogin}
         </Link>
       </div>
@@ -140,7 +140,7 @@ export function RegisterForm({
         {isSubmitting ? m.common.submitting : m.register.submit}
       </Button>
 
-      <p className="text-sm text-muted-foreground">
+      <p className="text-body text-ink-secondary">
         {m.register.haveAccount}{" "}
         <Link href={loginHref} className="text-link underline-offset-4 hover:underline">
           {m.register.login}

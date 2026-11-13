@@ -83,6 +83,23 @@ const IMPORT_PAGES = [
   "apps/web/src/app/(admin)/admin/produse/import/istoric/[id]/page.tsx",
 ] as const;
 
+/** Autentificare, 404, eroare și încărcare (Lotul 4): paginile, cadrul și componentele formularelor. */
+const AUTH_DIR = "apps/web/src/components/auth";
+const STATE_FILES = [
+  "apps/web/src/app/(auth)/layout.tsx",
+  "apps/web/src/app/(auth)/autentificare/page.tsx",
+  "apps/web/src/app/(auth)/inregistrare/page.tsx",
+  "apps/web/src/app/(auth)/recuperare-parola/page.tsx",
+  "apps/web/src/app/(auth)/resetare-parola/page.tsx",
+  "apps/web/src/app/(auth)/verificare-email/page.tsx",
+  "apps/web/src/app/not-found.tsx",
+  "apps/web/src/app/global-error.tsx",
+  "apps/web/src/app/(admin)/admin/not-found.tsx",
+  "apps/web/src/app/(admin)/admin/error.tsx",
+  "apps/web/src/components/admin/page-skeleton.tsx",
+  "apps/web/src/components/admin/admin-surface.tsx",
+] as const;
+
 /** Fișierele migrate: editarea produsului (Lotul 2b), cele 4 ecrane de catalog (3a), Media și Depozite (3b-1), fără importul de produse (3b-2). */
 export function migratedFiles(): SourceFile[] {
   const dir = join(root, "apps/web/src/components/admin/products");
@@ -126,6 +143,21 @@ export function migratedFiles(): SourceFile[] {
         path: relative(root, join(dir, name)).replaceAll("\\", "/"),
         content: readFileSync(join(dir, name), "utf8"),
       });
+    }
+  }
+  // Lotul 4: componentele de autentificare și fișierele de stare (cele lipsă nu se citesc; lista lor e păzită mai jos)
+  for (const name of readdirSync(join(root, AUTH_DIR))) {
+    if (!name.endsWith(".tsx")) continue;
+    out.push({
+      path: `${AUTH_DIR}/${name}`,
+      content: readFileSync(join(root, AUTH_DIR, name), "utf8"),
+    });
+  }
+  for (const path of STATE_FILES) {
+    try {
+      out.push({ path, content: readFileSync(join(root, path), "utf8") });
+    } catch {
+      // fișierul apare odată cu migrarea
     }
   }
   // antetul comun al paginilor de catalog (Lotul 3a)
@@ -202,6 +234,9 @@ describe("lista fișierelor migrate", () => {
       "apps/web/src/app/(admin)/admin/produse/import/istoric/page.tsx",
       "apps/web/src/app/(admin)/admin/produse/import/istoric/[id]/page.tsx",
       "apps/web/src/components/admin/inventory/movements-table.tsx",
+      "apps/web/src/components/auth/login-form.tsx",
+      "apps/web/src/components/auth/form-alert.tsx",
+      ...STATE_FILES,
     ]) {
       expect(paths, expected).toContain(expected);
     }
