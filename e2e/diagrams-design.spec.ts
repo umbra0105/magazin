@@ -183,7 +183,7 @@ test.describe("fișe explodate: lista", () => {
     await expect(row(page, "Pompă de filtrare").getByText("12 hotspot-uri")).toBeVisible();
     await expect(row(page, "Pompă de filtrare").getByText("5 produse")).toBeVisible();
     await expect(row(page, "Filtru cu nisip").getByText("Fără imagine")).toBeVisible();
-    await expect(row(page, "Skimmer").getByText("0 de produse")).toBeVisible();
+    await expect(row(page, "Skimmer").getByText("0 produse")).toBeVisible();
     // miniatura are chenar-token, nu clasa veche
     const thumb = row(page, "Pompă de filtrare").locator("img");
     expect(await css(thumb, "border-top-color")).toBe(

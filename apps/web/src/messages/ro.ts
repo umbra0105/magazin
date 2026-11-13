@@ -3,10 +3,16 @@
  * nu în componente: traducerea în altă limbă (ex. engleză, la cerere) înseamnă un fișier nou cu
  * aceeași formă. Funcțiile primesc valorile dinamice (minute, lungimi), ca acordul să fie corect.
  */
-/** Acord cu numărul în română: `1 produs`, `2–19 produse`, `20, 30, 120 de produse`. */
-const countOf = (n: number, one: string, many: string, manyDe: string): string =>
-  n === 1 ? `1 ${one}` : n % 100 === 0 || n % 100 >= 20 ? `${n} ${manyDe}` : `${n} ${many}`;
+import { pluralRo } from "@ecom/shared/plural";
+
+/** Acord cu numărul în română (1 = singular, 0 și 2–19 = plural, 20+ cu «de»); funcția comună și testată din `@ecom/shared`. */
+const countOf = pluralRo;
 const produse = (n: number): string => countOf(n, "produs", "produse", "de produse");
+const randuri = (n: number): string => countOf(n, "rând", "rânduri", "de rânduri");
+const variante = (n: number): string => countOf(n, "variantă", "variante", "de variante");
+const imagini = (n: number): string => countOf(n, "imagine", "imagini", "de imagini");
+const fisiere = (n: number): string => countOf(n, "fișier", "fișiere", "de fișiere");
+const hotspoturi = (n: number): string => countOf(n, "hotspot", "hotspot-uri", "de hotspot-uri");
 
 export const ro = {
   /** Stări comune ale paginilor: negăsit (404), eroare neprevăzută și încărcare (docs/17, Lotul 4). */
@@ -378,16 +384,16 @@ export const ro = {
         tray: "Imaginile alese, în ordine",
         removeFromSelection: (name: string) => `Scoate din selecție: ${name}`,
         unknownItem: "Fișier ales",
-        confirm: (n: number) => (n === 1 ? "Alege 1 imagine" : `Alege ${n} imagini`),
+        confirm: (n: number) => `Alege ${imagini(n)}`,
         cancel: "Anulează",
         uploadTitle: "Încarcă imagini noi",
         processingNew: (n: number) =>
-          n === 1 ? "1 fișier încărcat se procesează…" : `${n} fișiere încărcate se procesează…`,
+          `${n === 1 ? "1 fișier încărcat se procesează" : `${fisiere(n)} încărcate se procesează`}…`,
         becameReady: "Un fișier încărcat e gata și a apărut în listă.",
         applyFilters: "Caută",
       },
       live: {
-        uploaded: (n: number) => (n === 1 ? "1 fișier încărcat" : `${n} fișiere încărcate`),
+        uploaded: (n: number) => (n === 1 ? "1 fișier încărcat" : `${fisiere(n)} încărcate`),
         ready: "Un fișier a fost procesat.",
       },
     },
@@ -407,7 +413,7 @@ export const ro = {
       empty: "Nu există nicio categorie încă.",
       treeLabel: "Arborele de categorii",
       rootDrop: "Trage aici pentru a muta la rădăcină",
-      products: (n: number) => (n === 1 ? "1 produs" : `${n} produse`),
+      products: (n: number) => produse(n),
       level: (n: number) => `nivel ${n + 1}`,
       actions: {
         edit: (name: string) => `Editează categoria ${name}`,
@@ -515,7 +521,7 @@ export const ro = {
       leadTimeCell: {
         none: "Setarea magazinului",
       },
-      products: (n: number) => (n === 1 ? "1 produs" : `${n} produse`),
+      products: (n: number) => produse(n),
       actions: {
         edit: (name: string) => `Editează brandul ${name}`,
         editLabel: "Editează",
@@ -1455,7 +1461,7 @@ export const ro = {
         brand: "Brand",
         updated: "Modificat",
         actions: "Acțiuni",
-        variants: (n: number) => (n === 1 ? "1 variantă" : `${n} variante`),
+        variants: (n: number) => variante(n),
         noImage: "Fără imagine",
         noVariants: "Fără variante",
         managedStock: "Stoc gestionat",
@@ -1578,7 +1584,7 @@ export const ro = {
           loading: "Se calculează ce se șterge…",
           willDelete: "Se șterg odată cu produsul:",
           line: {
-            variants: (n: number) => (n === 1 ? "1 variantă" : `${n} variante`),
+            variants: (n: number) => variante(n),
             media: (n: number) => `${n} legături cu imagini (fișierele din bibliotecă rămân)`,
             documents: (n: number) => `${n} documente (fișierele se șterg din stocare)`,
             attributes: (n: number) => `${n} valori de atribute`,
@@ -1904,7 +1910,10 @@ export const ro = {
           primary: "Principală",
           primaryFor: (name: string) => `Categoria principală: ${name}`,
           none: "Nu există încă nicio categorie. Creează una din Categorii.",
-          selected: (n: number) => (n === 1 ? "1 categorie aleasă" : `${n} categorii alese`),
+          selected: (n: number) =>
+            n === 1
+              ? "1 categorie aleasă"
+              : `${countOf(n, "categorie", "categorii", "de categorii")} alese`,
         },
         media: {
           heading: "Imagini",
@@ -1941,7 +1950,7 @@ export const ro = {
           none: "Nicio fișă asociată încă.",
           open: (title: string) => `Deschide fișa ${title}`,
           meta: (hotspots: number, products: number) =>
-            `${hotspots === 1 ? "1 hotspot" : `${hotspots} hotspot-uri`} · ${products === 1 ? "1 produs" : `${products} produse`}`,
+            `${hotspoturi(hotspots)} · ${produse(products)}`,
           attach: "Asociază o fișă existentă",
           choice: "Fișa de asociat",
           choose: "— Alege o fișă —",
@@ -2167,7 +2176,10 @@ export const ro = {
           apply: "Creează variantele noi",
           applying: "Se creează…",
           planTitle: "Planul generatorului",
-          planCreate: (n: number) => (n === 1 ? "1 variantă nouă" : `${n} variante noi`),
+          planCreate: (n: number) =>
+            n === 1
+              ? "1 variantă nouă"
+              : `${countOf(n, "variantă", "variante", "de variante")} noi`,
           planExisting: (n: number) =>
             n === 1 ? "1 combinație există deja" : `${n} combinații există deja`,
           planNothing: "Nu e nimic de creat: toate combinațiile există deja.",
@@ -2179,7 +2191,7 @@ export const ro = {
             n === 1
               ? "1 variantă fără opțiuni rămâne neatinsă."
               : `${n} variante fără opțiuni rămân neatinse.`,
-          created: (n: number) => (n === 1 ? "Am creat 1 variantă." : `Am creat ${n} variante.`),
+          created: (n: number) => `Am creat ${variante(n)}.`,
           priceInvalid: "Introdu un preț valid, cu cel mult 2 zecimale.",
           needOptions: "Completează cel puțin o opțiune, cu nume și valori.",
         },
@@ -2405,9 +2417,9 @@ export const ro = {
           trash: "cu coșul de gunoi",
           filtered: "cu filtre",
           rowsAndProducts: (rows: number, products: number) =>
-            `${rows} ${rows === 1 ? "rând" : "rânduri"}, ${products} ${products === 1 ? "produs" : "produse"}`,
+            `${randuri(rows)}, ${produse(products)}`,
           longDescriptions: (count: number) =>
-            `${count} ${count === 1 ? "descriere peste" : "descrieri peste"} limita unei celule Excel (32.767 de caractere)`,
+            `${countOf(count, "descriere", "descrieri", "de descrieri")} peste limita unei celule Excel (32.767 de caractere)`,
         },
       },
       title: "Import de produse",
@@ -2500,7 +2512,7 @@ export const ro = {
             oversized: "Supradimensionat",
             pallet: "Paletizat",
           } as Record<string, string>,
-          products: (n: number) => (n === 1 ? "1 rând" : `${n} rânduri`),
+          products: (n: number) => randuri(n),
         },
         attributes: {
           heading: "Atribute",
@@ -2510,15 +2522,15 @@ export const ro = {
           create: "Creează atribut nou (text)",
           ignore: "Ignoră atributul",
           existing: (name: string) => `Atribut existent: ${name}`,
-          products: (n: number) => (n === 1 ? "1 rând" : `${n} rânduri`),
+          products: (n: number) => randuri(n),
         },
         images: {
           heading: "Imagini",
           found: (total: number, onAllowed: number, onOther: number, invalid: number) =>
-            `${total === 1 ? "Fișierul conține o adresă de imagine" : `Fișierul conține ${total} adrese de imagini`}: ${onAllowed} pe domenii permise, ${onOther} pe alte domenii (se vor respinge), ${invalid} care nu respectă regulile (https, portul 443, fără IP, utilizator sau fragment; se vor respinge).`,
+            `${total === 1 ? "Fișierul conține o adresă de imagine" : `Fișierul conține ${countOf(total, "adresă", "adrese", "de adrese")} de imagini`}: ${onAllowed} pe domenii permise, ${onOther} pe alte domenii (se vor respinge), ${invalid} care nu respectă regulile (https, portul 443, fără IP, utilizator sau fragment; se vor respinge).`,
           hostsHeading: "Domenii din fișier",
           hostLine: (host: string, count: number, allowed: boolean) =>
-            `${host}: ${count} ${count === 1 ? "imagine" : "imagini"} — ${allowed ? "domeniu permis" : "domeniu NEPERMIS (imaginile de aici se vor respinge)"}`,
+            `${host}: ${imagini(count)} — ${allowed ? "domeniu permis" : "domeniu NEPERMIS (imaginile de aici se vor respinge)"}`,
           noRight:
             "Contul tău nu poate încărca fișiere în biblioteca media (drept lipsă), deci imaginile nu se vor importa. Produsele se importă normal.",
           noHosts:
@@ -2534,9 +2546,10 @@ export const ro = {
         },
         report: {
           heading: "Ce se creează odată cu produsele",
-          categories: (n: number) => `${n} categorii de creat`,
-          brands: (n: number) => `${n} branduri de creat`,
-          attributes: (n: number) => `${n} atribute de creat`,
+          categories: (n: number) =>
+            `${countOf(n, "categorie", "categorii", "de categorii")} de creat`,
+          brands: (n: number) => `${countOf(n, "brand", "branduri", "de branduri")} de creat`,
+          attributes: (n: number) => `${countOf(n, "atribut", "atribute", "de atribute")} de creat`,
           none: "Nimic de creat: categoriile, brandurile și atributele există deja.",
           confirmNote: "Crearea lor se face la aplicare, înaintea produselor, doar dacă confirmi.",
           statsHeading: "Alte constatări",
@@ -2601,16 +2614,16 @@ export const ro = {
         imagesApply: (n: number) =>
           n === 0
             ? ""
-            : ` ${n === 1 ? "O imagine va fi adusă" : `${n} imagini vor fi aduse`} în fundal, după produse.`,
+            : ` ${n === 1 ? "O imagine va fi adusă" : `${imagini(n)} vor fi aduse`} în fundal, după produse.`,
         apply: (categories: number, brands: number, attributes: number) =>
           categories + brands + attributes === 0
             ? ""
-            : `Se vor crea ${categories} categorii, ${brands} branduri și ${attributes} atribute înaintea produselor.`,
+            : `Se vor crea ${countOf(categories, "categorie", "categorii", "de categorii")}, ${countOf(brands, "brand", "branduri", "de branduri")} și ${countOf(attributes, "atribut", "atribute", "de atribute")} înaintea produselor.`,
       },
       mapping: {
         heading: "Mapează coloanele",
         detected: (name: string, format: string) => `Fișier: ${name} (${format})`,
-        rows: (n: number) => `${n} ${n === 1 ? "rând de date" : "rânduri de date"}`,
+        rows: (n: number) => `${randuri(n)} de date`,
         delimiter: "Delimitator",
         delimiters: { ",": "Virgulă ( , )", ";": "Punct și virgulă ( ; )", "\t": "Tab" },
         delimiterHelp: "Dacă previzualizarea arată coloanele lipite, schimbă delimitatorul.",
@@ -2678,7 +2691,7 @@ export const ro = {
         description:
           "Se aplică exact ce a arătat verificarea. Dacă între timp s-a schimbat catalogul sau fișierul, importul nu pornește și trebuie să reiei verificarea.",
         summary: (created: number, updated: number) =>
-          `${created === 1 ? "1 produs nou" : `${created} produse noi`} și ${updated === 1 ? "1 produs actualizat" : `${updated} produse actualizate`}.`,
+          `${countOf(created, "produs nou", "produse noi", "de produse noi")} și ${countOf(updated, "produs actualizat", "produse actualizate", "de produse actualizate")}.`,
         confirm: "Confirm și aplic",
         applying: "Se aplică…",
         cancel: "Anulează",
@@ -2861,7 +2874,7 @@ export const ro = {
         deleteDescription: (hotspots: number) =>
           hotspots === 0
             ? "Fișa nu are hotspot-uri. Se șterge împreună cu asocierile ei; produsele și imaginea rămân."
-            : `Se șterg fișa, cele ${hotspots === 1 ? "1 hotspot" : `${hotspots} hotspot-uri`} ale ei și asocierile cu produse. Produsele și imaginea rămân. Acțiunea nu se poate anula.`,
+            : `Se șterg fișa, cele ${hotspoturi(hotspots)} ale ei și asocierile cu produse. Produsele și imaginea rămân. Acțiunea nu se poate anula.`,
         deleteConfirm: "Șterge fișa definitiv",
         deleting: "Se șterge…",
         cancel: "Anulează",
@@ -2907,8 +2920,8 @@ export const ro = {
         options: "Opțiuni",
         actions: "Acțiuni",
       },
-      usage: (n: number) => (n === 0 ? "nefolosit" : n === 1 ? "1 produs" : `${n} produse`),
-      optionsCount: (n: number) => (n === 1 ? "1 opțiune" : `${n} opțiuni`),
+      usage: (n: number) => (n === 0 ? "nefolosit" : produse(n)),
+      optionsCount: (n: number) => countOf(n, "opțiune", "opțiuni", "de opțiuni"),
       edit: (name: string) => `Editează atributul ${name}`,
       editLabel: "Editează",
       deleteLabel: "Șterge",
@@ -2921,7 +2934,7 @@ export const ro = {
           "Cod stabil: litere mici, cifre și _ (ex. diametru_interior). Nu se mai schimbă după creare; filtrele și importurile se leagă de el.",
         type: "Tip",
         typeLocked: (n: number) =>
-          `Tipul nu se mai poate schimba: atributul are valori la ${n === 1 ? "1 produs" : `${n} produse`}.`,
+          `Tipul nu se mai poate schimba: atributul are valori la ${produse(n)}.`,
         typeFree: "Tipul se poate schimba doar cât atributul nu are valori pe produse.",
         unit: "Unitate de măsură",
         unitHelp: "Doar la atributele numerice (ex. mm, m³/h, kW).",
@@ -2937,7 +2950,7 @@ export const ro = {
         optionDelete: (value: string) => `Șterge opțiunea ${value}`,
         optionMoveUp: (value: string) => `Mută mai sus: ${value}`,
         optionMoveDown: (value: string) => `Mută mai jos: ${value}`,
-        optionUsedBy: (n: number) => (n === 1 ? "1 produs" : `${n} produse`),
+        optionUsedBy: (n: number) => produse(n),
         optionsAfterCreate: "Opțiunile se pot adăuga imediat după creare.",
         optionsInitial: "Opțiuni inițiale (câte una pe rând)",
         save: "Salvează",
