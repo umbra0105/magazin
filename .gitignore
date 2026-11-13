@@ -20,3 +20,6 @@ generated
 
 # Skill-uri locale ale asistentului (.claude/skills/); restul din .claude/ nu e ignorat
 .claude/skills/
+
+# Frâna de mână a modului autonom (docs/20 §6.4): creat de utilizator, niciodată comis
+STOP.txt
