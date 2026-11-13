@@ -24,12 +24,12 @@ export default async function ProductImportPage() {
       <header className="flex flex-col gap-2">
         <Link
           href="/admin/produse"
-          className="text-sm text-link underline-offset-2 hover:underline"
+          className="text-body text-link underline-offset-2 hover:underline"
         >
           {m.back}
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-semibold">{m.title}</h1>
+          <h1 className="text-title">{m.title}</h1>
           <Link
             href="/admin/produse/import/istoric"
             className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -38,7 +38,7 @@ export default async function ProductImportPage() {
             {m.history.openLink}
           </Link>
         </div>
-        <p className="text-sm text-muted-foreground">{m.description}</p>
+        <p className="text-body text-ink-secondary">{m.description}</p>
       </header>
       <ProductImportWizard
         fields={IMPORT_FIELDS.map((f) => ({ key: f.key, label: f.label }))}

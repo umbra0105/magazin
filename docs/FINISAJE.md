@@ -19,6 +19,7 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 ## Deschise
 
 - [ ] S3 | Fișe explodate, lista pe telefon | numărătorile «N hotspot-uri» și «N produse» din card sunt în culoarea textului principal; în `docs/17` valorile de context sunt `text-ink-secondary` | local-data/capturi-redesign/lot3b2-dupa/fise-lista-light-390.png
+- [ ] S3 | Import, raportul de verificare | coloana SKU e îngustă și un cod scurt se rupe în mijloc («E2E-218C25-BA / D»); coloana Motiv ia aproape tot locul | local-data/capturi-redesign/lot3b2-dupa/import-3-verificare-dark-1440.png
 
 ## Rezolvate
 

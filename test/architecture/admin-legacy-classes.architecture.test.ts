@@ -76,13 +76,19 @@ const DIAGRAM_SCREENS = [
   },
 ] as const;
 
+/** Paginile importului de produse și ale istoricului lui (Lotul 3b-2); componentele lui stau în folderul produselor. */
+const IMPORT_PAGES = [
+  "apps/web/src/app/(admin)/admin/produse/import/page.tsx",
+  "apps/web/src/app/(admin)/admin/produse/import/istoric/page.tsx",
+  "apps/web/src/app/(admin)/admin/produse/import/istoric/[id]/page.tsx",
+] as const;
+
 /** Fișierele migrate: editarea produsului (Lotul 2b), cele 4 ecrane de catalog (3a), Media și Depozite (3b-1), fără importul de produse (3b-2). */
 export function migratedFiles(): SourceFile[] {
   const dir = join(root, "apps/web/src/components/admin/products");
   const out: SourceFile[] = [];
   for (const name of readdirSync(dir)) {
     if (!name.endsWith(".tsx")) continue;
-    if (name.startsWith("product-import-")) continue; // Lotul 3
     const full = join(dir, name);
     out.push({
       path: relative(root, full).replaceAll("\\", "/"),
@@ -97,6 +103,7 @@ export function migratedFiles(): SourceFile[] {
     ),
     ...MEDIA_WAREHOUSE_SCREENS.map((screen) => screen.page),
     ...DIAGRAM_SCREENS.map((screen) => screen.page),
+    ...IMPORT_PAGES,
   ]) {
     out.push({ path: page, content: readFileSync(join(root, page), "utf8") });
   }
@@ -158,7 +165,7 @@ describe("findLegacyClasses", () => {
 describe("lista fișierelor migrate", () => {
   const paths = migratedFiles().map((file) => file.path);
 
-  it("cuprinde editarea produsului, cele 4 ecrane de catalog, Media și Depozite (pagini și componente) și antetul comun, nu importul de produse", () => {
+  it("cuprinde editarea produsului, cele 4 ecrane de catalog, Media, Depozite, Fișele explodate și importul de produse cu istoricul lui (pagini și componente) și antetul comun", () => {
     for (const expected of [
       "apps/web/src/components/admin/products/general-tab.tsx",
       "apps/web/src/components/admin/categories/category-manager.tsx",
@@ -186,15 +193,21 @@ describe("lista fișierelor migrate", () => {
       "apps/web/src/components/admin/diagrams/diagram-list.tsx",
       "apps/web/src/app/(admin)/admin/produse/fise-explodate/page.tsx",
       "apps/web/src/app/(admin)/admin/produse/fise-explodate/[id]/page.tsx",
+      "apps/web/src/components/admin/products/product-import-wizard.tsx",
+      "apps/web/src/components/admin/products/product-import-woo.tsx",
+      "apps/web/src/components/admin/products/product-import-images.tsx",
+      "apps/web/src/components/admin/products/product-export-dialog.tsx",
+      "apps/web/src/app/(admin)/admin/produse/import/page.tsx",
+      "apps/web/src/app/(admin)/admin/produse/import/istoric/page.tsx",
+      "apps/web/src/app/(admin)/admin/produse/import/istoric/[id]/page.tsx",
     ]) {
       expect(paths, expected).toContain(expected);
     }
-    expect(paths.some((path) => path.includes("product-import-"))).toBe(false);
   });
 });
 
 describe("codul real", () => {
-  it("fișierele editării produsului, ale celor 4 ecrane de catalog, ale Media și Depozitelor nu mai folosesc nume vechi de clase", () => {
+  it("fișierele migrate (editarea produsului, catalogul, Media, Depozitele, Fișele explodate, importul de produse) nu mai folosesc nume vechi de clase", () => {
     expect(findLegacyClasses(migratedFiles())).toEqual([]);
   });
 });

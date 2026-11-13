@@ -23,4 +23,5 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 | data | faza | pas | commit | verificare | S3 notate |
 | ---- | ---- | --- | ------ | ---------- | --------- |
 | 2026-11-13 | redesign-final | început de fază | - | copie bază: local-data/backups/ecom-20261113-142651.sql | - |
-| 2026-11-13 | redesign-final | Lot 3b-2 / pasul 1: Fișe explodate (lista și shell-ul editorului) | commit-ul pasului | per pas: 12 teste noi de design (roșu pe 9), parts-diagrams 3/3, arhitectură, typecheck OK; verify:full în rândul de mai jos | S3: 1 (FINISAJE.md) |
+| 2026-11-13 | redesign-final | Lot 3b-2 / pasul 1: Fișe explodate (lista și shell-ul editorului) | 4244c6f | per pas: 12 teste noi de design (roșu pe 9), parts-diagrams 3/3, arhitectură, typecheck OK; verify:full complet pe codul comis: prettier, lint, lint:root, typecheck, typecheck autonom OK; 3266 unitare, 920 integrare dezvoltare, 920 integrare doar migrată, 382 E2E, 0 picate/sărite/intermitente | S3: 1 (FINISAJE.md) |
+| 2026-11-13 | redesign-final | Lot 3b-2 / pasul 2: Import și Export (wizard, Woo, imagini, istoric, dialogul de export) | commit-ul pasului | per pas: 10 teste noi de design (roșu pe 9 din 10), 23 de comportament import/Woo/istoric/export verzi, arhitectură, typecheck, lint OK; verify:full la capătul lotului 3b-2 | S3: 1 (FINISAJE.md) |

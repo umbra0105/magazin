@@ -10,7 +10,22 @@ import type {
   ImportValidation,
   WooOptions,
 } from "@ecom/core";
-import { Button, Dialog, FileInput, Label, Select, buttonVariants } from "@ecom/ui";
+import {
+  Button,
+  Dialog,
+  FileInput,
+  Label,
+  Progress,
+  RowHeader,
+  Select,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+  buttonVariants,
+} from "@ecom/ui";
 import {
   analyzeProductImport,
   applyProductImport,
@@ -283,7 +298,7 @@ export function ProductImportWizard({
 
   return (
     <div className="flex max-w-5xl flex-col gap-6">
-      <ol className="flex flex-wrap gap-2 text-sm" aria-label={m.title}>
+      <ol className="flex flex-wrap gap-2 text-body" aria-label={m.title}>
         {(
           [
             ["upload", m.steps.upload],
@@ -298,7 +313,7 @@ export function ProductImportWizard({
             <li
               key={id}
               aria-current={current ? "step" : undefined}
-              className={`rounded-md border px-3 py-1 ${current ? "border-primary bg-primary/10 font-medium" : "border-border text-muted-foreground"}`}
+              className={`rounded-md border px-3 py-1 ${current ? "border-brand bg-surface-subtle font-medium text-ink" : "border-line-subtle text-ink-secondary"}`}
             >
               {label}
             </li>
@@ -310,7 +325,7 @@ export function ProductImportWizard({
         <p
           role="alert"
           data-problem
-          className="rounded-md border border-danger p-3 text-sm text-danger"
+          className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
         >
           {problem}
         </p>
@@ -318,21 +333,21 @@ export function ProductImportWizard({
 
       {step === "upload" && (
         <section aria-labelledby="imp-upload" className="flex flex-col gap-4">
-          <h2 id="imp-upload" className="text-lg font-semibold">
+          <h2 id="imp-upload" className="text-section">
             {m.upload.heading}
           </h2>
-          <ul className="list-disc pl-5 text-sm text-muted-foreground">
+          <ul className="list-disc pl-5 text-body text-ink-secondary">
             {m.upload.rules.map((rule) => (
               <li key={rule}>{rule}</li>
             ))}
           </ul>
-          <div className="flex flex-col gap-2 rounded-md border border-border p-4">
-            <h3 className="text-base font-medium">{m.upload.template}</h3>
-            <p className="text-sm text-muted-foreground">{m.upload.templateHelp}</p>
+          <div className="flex flex-col gap-2 rounded-lg border border-line-subtle p-4">
+            <h3 className="text-body font-medium">{m.upload.template}</h3>
+            <p className="text-body text-ink-secondary">{m.upload.templateHelp}</p>
             <div className="flex flex-wrap gap-2">
               <a
                 href="/api/admin/product-imports/template?format=xlsx"
-                className={buttonVariants({ variant: "default", size: "sm" })}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
                 download
                 data-template="xlsx"
               >
@@ -347,7 +362,7 @@ export function ProductImportWizard({
                 {m.upload.templateCsv}
               </a>
             </div>
-            <p className="text-sm text-muted-foreground" data-excel-help>
+            <p className="text-body text-ink-secondary" data-excel-help>
               {m.upload.excelHelp}
             </p>
           </div>
@@ -360,25 +375,25 @@ export function ProductImportWizard({
             }}
           >
             <fieldset className="flex flex-col gap-2" data-import-profile>
-              <legend className="mb-1 text-sm font-medium">{m.profile.legend}</legend>
+              <legend className="mb-1 text-body font-medium">{m.profile.legend}</legend>
               {(
                 [
                   ["generic", m.profile.generic, m.profile.genericHelp],
                   ["woocommerce", m.profile.woocommerce, m.profile.woocommerceHelp],
                 ] as const
               ).map(([value, label, help]) => (
-                <label key={value} className="flex items-start gap-2 text-sm">
+                <label key={value} className="flex items-start gap-2 text-body">
                   <input
                     type="radio"
                     name="import-profile"
                     value={value}
-                    className="mt-1 size-4 shrink-0 accent-primary"
+                    className="mt-1 size-4 shrink-0 accent-brand"
                     checked={profile === value}
                     onChange={() => setProfile(value)}
                   />
                   <span className="flex flex-col">
                     <span className="font-medium">{label}</span>
-                    <span className="text-xs text-muted-foreground">{help}</span>
+                    <span className="text-label text-ink-secondary">{help}</span>
                   </span>
                 </label>
               ))}
@@ -391,7 +406,7 @@ export function ProductImportWizard({
                 accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 aria-describedby="import-file-help"
               />
-              <p id="import-file-help" className="text-xs text-muted-foreground">
+              <p id="import-file-help" className="text-label text-ink-secondary">
                 {m.upload.help(maxUploadMb)}
               </p>
             </div>
@@ -406,16 +421,16 @@ export function ProductImportWizard({
 
       {step === "mapping" && analysis && (
         <section aria-labelledby="imp-mapping" className="flex flex-col gap-4">
-          <h2 id="imp-mapping" className="text-lg font-semibold">
+          <h2 id="imp-mapping" className="text-section">
             {wooProfile ? m.woo.heading : m.mapping.heading}
           </h2>
-          <p className="text-sm">
+          <p className="text-body">
             {m.mapping.detected(analysis.fileName, analysis.format.toUpperCase())} ·{" "}
             {m.mapping.rows(analysis.rowCount)}
             {analysis.encoding ? ` · ${m.mapping.encoding(analysis.encoding)}` : ""}
           </p>
           {analysis.warnings.map((warning) => (
-            <p key={warning} role="note" className="rounded-md border border-border p-3 text-sm">
+            <p key={warning} role="note" className="rounded-lg bg-surface-subtle p-3 text-body">
               {warning}
             </p>
           ))}
@@ -435,7 +450,7 @@ export function ProductImportWizard({
                   </option>
                 ))}
               </Select>
-              <p id="import-delimiter-help" className="text-xs text-muted-foreground">
+              <p id="import-delimiter-help" className="text-label text-ink-secondary">
                 {analysis.delimiterSource
                   ? `${m.mapping.delimiterSource[analysis.delimiterSource]} `
                   : ""}
@@ -450,83 +465,70 @@ export function ProductImportWizard({
               onChange={setWooOptions}
             />
           ) : (
-            <div className="overflow-x-auto rounded-md border border-border">
-              <table className="w-full min-w-[40rem] text-left text-sm">
-                <thead className="border-b border-border bg-border/30">
-                  <tr>
-                    <th scope="col" className="p-3 font-medium">
-                      {m.mapping.column}
-                    </th>
-                    <th scope="col" className="p-3 font-medium">
-                      {m.mapping.sample}
-                    </th>
-                    <th scope="col" className="p-3 font-medium">
-                      {m.mapping.target}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analysis.headers.map((header, index) => {
-                    const blocked = analysis.columns[index]?.blocked ?? null;
-                    const id = `import-col-${index}`;
-                    return (
-                      <tr
-                        key={`${index}-${header}`}
-                        className="border-b border-border align-top last:border-0"
-                      >
-                        <th scope="row" className="p-3 font-medium">
-                          {header || `(coloana ${index + 1})`}
-                        </th>
-                        <td className="p-3 text-muted-foreground">
-                          {analysis.sample
-                            .slice(0, 3)
-                            .map((row) => row[index] ?? "")
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </td>
-                        <td className="p-3">
-                          <Label htmlFor={id} className="sr-only">
-                            {`${m.mapping.target}: ${header}`}
-                          </Label>
-                          <Select
-                            id={id}
-                            value={blocked ? "" : (columns[index] ?? "")}
-                            disabled={blocked !== null}
-                            onChange={(e) =>
-                              setColumns((current) =>
-                                current.map((c, i) => (i === index ? e.target.value : c)),
-                              )
-                            }
-                          >
-                            <option value="">{m.mapping.ignore}</option>
-                            {fields.map((f) => (
-                              <option key={f.key} value={f.key}>
-                                {f.label}
-                              </option>
-                            ))}
-                          </Select>
-                          {blocked && (
-                            <p
-                              className="mt-1 text-xs text-muted-foreground"
-                              data-blocked={blocked}
-                            >
-                              {blocked === "cost"
-                                ? m.mapping.blockedCost
-                                : blocked === "readonly"
-                                  ? m.mapping.blockedReadonly
-                                  : m.mapping.blockedImages}
-                            </p>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <Table stacked aria-label={m.mapping.heading}>
+              <THead>
+                <Tr>
+                  <Th>{m.mapping.column}</Th>
+                  <Th>{m.mapping.sample}</Th>
+                  <Th>{m.mapping.target}</Th>
+                </Tr>
+              </THead>
+              <TBody>
+                {analysis.headers.map((header, index) => {
+                  const blocked = analysis.columns[index]?.blocked ?? null;
+                  const id = `import-col-${index}`;
+                  return (
+                    <Tr key={`${index}-${header}`} className="align-top">
+                      <RowHeader className="font-medium">
+                        {header || `(coloana ${index + 1})`}
+                      </RowHeader>
+                      <Td className="text-ink-secondary wrap-anywhere" stack="title">
+                        {analysis.sample
+                          .slice(0, 3)
+                          .map((row) => row[index] ?? "")
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </Td>
+                      <Td stack="actions" className="py-2">
+                        <Label htmlFor={id} className="sr-only">
+                          {`${m.mapping.target}: ${header}`}
+                        </Label>
+                        <Select
+                          id={id}
+                          className="max-w-sm"
+                          value={blocked ? "" : (columns[index] ?? "")}
+                          disabled={blocked !== null}
+                          onChange={(e) =>
+                            setColumns((current) =>
+                              current.map((c, i) => (i === index ? e.target.value : c)),
+                            )
+                          }
+                        >
+                          <option value="">{m.mapping.ignore}</option>
+                          {fields.map((f) => (
+                            <option key={f.key} value={f.key}>
+                              {f.label}
+                            </option>
+                          ))}
+                        </Select>
+                        {blocked && (
+                          <p className="mt-1 text-label text-ink-secondary" data-blocked={blocked}>
+                            {blocked === "cost"
+                              ? m.mapping.blockedCost
+                              : blocked === "readonly"
+                                ? m.mapping.blockedReadonly
+                                : m.mapping.blockedImages}
+                          </p>
+                        )}
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </TBody>
+            </Table>
           )}
           {!skuMapped && (
-            <p role="note" className="text-sm text-danger">
+            <p role="note" className="text-body text-tone-problem-fg">
               {m.mapping.required}
             </p>
           )}
@@ -543,20 +545,20 @@ export function ProductImportWizard({
 
       {step === "check" && validation && (
         <section aria-labelledby="imp-check" className="flex flex-col gap-4">
-          <h2 id="imp-check" className="text-lg font-semibold">
+          <h2 id="imp-check" className="text-section">
             {m.check.heading}
           </h2>
-          <p role="note" className="rounded-md border border-border bg-border/30 p-3 text-sm">
+          <p role="note" className="rounded-lg bg-surface-subtle p-3 text-body">
             {m.check.notApplied}
           </p>
           <ReportView report={validation.report} importId={validation.importId} />
           {validation.report.counts.errors > 0 && (
-            <p className="text-sm text-muted-foreground">{m.check.errorsApplyNote}</p>
+            <p className="text-body text-ink-secondary">{m.check.errorsApplyNote}</p>
           )}
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body text-ink-secondary">
             {validation.mode === "sync" ? m.check.modeSync : m.check.modeBackground}
           </p>
-          {nothingToApply && <p className="text-sm">{m.check.nothing}</p>}
+          {nothingToApply && <p className="text-body">{m.check.nothing}</p>}
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => setConfirmOpen(true)}
@@ -580,7 +582,7 @@ export function ProductImportWizard({
             closeLabel={m.apply.close}
             className="max-w-md"
           >
-            <p className="rounded-md border border-border p-3 text-sm" data-import-summary>
+            <p className="rounded-lg border border-line-subtle p-3 text-body" data-import-summary>
               {m.apply.summary(validation.report.counts.new, validation.report.counts.updated)}
               {validation.report.woo
                 ? ` ${m.woo.apply(
@@ -605,7 +607,7 @@ export function ProductImportWizard({
 
       {step === "running" && (
         <section aria-labelledby="imp-run" className="flex flex-col gap-3">
-          <h2 id="imp-run" className="text-lg font-semibold">
+          <h2 id="imp-run" className="text-section">
             {m.apply.progressLabel}
           </h2>
           {status && status.status === "failed" ? (
@@ -613,7 +615,7 @@ export function ProductImportWizard({
               <p
                 role="alert"
                 data-problem
-                className="rounded-md border border-danger p-3 text-sm text-danger"
+                className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
               >
                 {m.apply.failedHeading}: {status.errorMessage ?? m.errors.generic}
               </p>
@@ -625,13 +627,14 @@ export function ProductImportWizard({
             </div>
           ) : (
             <div className="flex flex-col gap-2" data-import-progress>
-              <progress
-                aria-label={m.apply.progressLabel}
-                className="h-3 w-full"
-                max={status?.rowCount ?? validation?.rowCount ?? 1}
-                value={status?.processedRows ?? 0}
+              <Progress
+                label={m.apply.progressLabel}
+                value={
+                  ((status?.processedRows ?? 0) / (status?.rowCount ?? validation?.rowCount ?? 1)) *
+                  100
+                }
               />
-              <p role="status" aria-live="polite" className="text-sm">
+              <p role="status" aria-live="polite" className="text-body">
                 {status && status.status === "running"
                   ? m.apply.progress(status.processedRows, status.rowCount)
                   : m.apply.queued}
@@ -643,16 +646,16 @@ export function ProductImportWizard({
 
       {step === "done" && finalReport && importId && (
         <section aria-labelledby="imp-done" className="flex flex-col gap-4" data-import-done>
-          <h2 id="imp-done" className="text-lg font-semibold">
+          <h2 id="imp-done" className="text-section">
             {m.apply.doneHeading}
           </h2>
           {imageProgress && (
             <section
               aria-labelledby="imp-images"
-              className="flex flex-col gap-3 rounded-md border border-border p-3"
+              className="flex flex-col gap-3 rounded-lg border border-line-subtle p-3"
               data-import-images
             >
-              <h3 id="imp-images" className="text-sm font-semibold">
+              <h3 id="imp-images" className="text-body font-semibold">
                 {m.images.heading}
               </h3>
               <ImageProgress progress={imageProgress} />
@@ -665,7 +668,7 @@ export function ProductImportWizard({
               )}
               <Link
                 href={`/admin/produse/import/istoric/${importId}`}
-                className="text-sm text-link underline-offset-2 hover:underline"
+                className="text-body text-link underline-offset-2 hover:underline"
               >
                 {m.images.failuresHeading}
               </Link>
@@ -701,17 +704,17 @@ function ReportView({ report, importId }: { report: ImportReport; importId: stri
             ["errors", counts.errors],
           ] as const
         ).map(([key, value]) => (
-          <div key={key} className="rounded-md border border-border p-3" data-count={key}>
-            <dt className="text-xs text-muted-foreground">{c.counts[key]}</dt>
-            <dd className="text-xl font-semibold">{value}</dd>
+          <div key={key} className="rounded-lg border border-line-subtle p-3" data-count={key}>
+            <dt className="text-label text-ink-secondary">{c.counts[key]}</dt>
+            <dd className="text-title">{value}</dd>
           </div>
         ))}
       </dl>
       {report.woo && <WooReportExtras woo={report.woo} />}
       {report.fileWarnings.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold">{c.fileWarnings}</h3>
-          <ul className="list-disc pl-5 text-sm" data-file-warnings>
+          <h3 className="text-body font-semibold">{c.fileWarnings}</h3>
+          <ul className="list-disc pl-5 text-body" data-file-warnings>
             {report.fileWarnings.map((w) => (
               <li key={w}>{w}</li>
             ))}
@@ -719,58 +722,48 @@ function ReportView({ report, importId }: { report: ImportReport; importId: stri
         </div>
       )}
       <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold">{c.entries}</h3>
+        <h3 className="text-body font-semibold">{c.entries}</h3>
         {report.entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{c.entriesNone}</p>
+          <p className="text-body text-ink-secondary">{c.entriesNone}</p>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full min-w-[40rem] text-left text-sm">
-              <thead className="border-b border-border bg-border/30">
-                <tr>
-                  <th scope="col" className="p-2 font-medium">
-                    {c.row}
-                  </th>
-                  <th scope="col" className="p-2 font-medium">
-                    {c.sku}
-                  </th>
-                  <th scope="col" className="p-2 font-medium">
-                    {c.result}
-                  </th>
-                  <th scope="col" className="p-2 font-medium">
-                    {c.reason}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.entries.map((entry) => (
-                  <tr
-                    key={`${entry.row}-${entry.sku}`}
-                    data-report-row={entry.row}
-                    data-outcome={entry.outcome}
-                    className="border-b border-border align-top last:border-0"
-                  >
-                    <td className="p-2">{entry.row}</td>
-                    <td className="p-2">{entry.sku || "—"}</td>
-                    <td className="p-2">{c.outcomes[entry.outcome]}</td>
-                    <td className="p-2">
-                      {entry.messages.length > 0 ? (
-                        <ul className="list-disc pl-4">
-                          {entry.messages.map((message) => (
-                            <li key={message}>{message}</li>
-                          ))}
-                        </ul>
-                      ) : entry.changed.length > 0 ? (
-                        c.willChange(entry.changed.join(", "))
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table stacked aria-label={c.entries}>
+            <THead>
+              <Tr>
+                <Th numeric>{c.row}</Th>
+                <Th>{c.sku}</Th>
+                <Th>{c.result}</Th>
+                <Th>{c.reason}</Th>
+              </Tr>
+            </THead>
+            <TBody>
+              {report.entries.map((entry) => (
+                <Tr
+                  key={`${entry.row}-${entry.sku}`}
+                  data-report-row={entry.row}
+                  data-outcome={entry.outcome}
+                  className="align-top"
+                >
+                  <Td numeric>{entry.row}</Td>
+                  <Td className="break-all">{entry.sku || "—"}</Td>
+                  <Td>{c.outcomes[entry.outcome]}</Td>
+                  <Td stack="title">
+                    {entry.messages.length > 0 ? (
+                      <ul className="list-disc pl-4">
+                        {entry.messages.map((message) => (
+                          <li key={message}>{message}</li>
+                        ))}
+                      </ul>
+                    ) : entry.changed.length > 0 ? (
+                      c.willChange(entry.changed.join(", "))
+                    ) : null}
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
         )}
         {report.truncated && (
-          <p className="text-xs text-muted-foreground">{c.truncated(report.entries.length)}</p>
+          <p className="text-label text-ink-secondary">{c.truncated(report.entries.length)}</p>
         )}
       </div>
       <div>
