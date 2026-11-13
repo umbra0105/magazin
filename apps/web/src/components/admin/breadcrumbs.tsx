@@ -27,6 +27,7 @@ export function Breadcrumbs() {
       if (raw === "import") return m.productImport.title;
       return raw === "nou" ? m.products.editor.createTitle : m.products.editor.breadcrumbEdit;
     },
+    getMessages().states.notFound.crumb,
   );
   if (crumbs.length === 0) return null;
   return (

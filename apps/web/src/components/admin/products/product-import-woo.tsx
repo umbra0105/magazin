@@ -64,7 +64,9 @@ export function WooOptionsPanel({
         ))}
         {options.mode === "descriptionsOnly" && (
           <div className="flex flex-col gap-2 pl-6" data-woo-descriptions-only>
-            <p className="text-label text-ink-secondary">{m.mode.descriptionsOnlyHelp}</p>
+            <p className="text-label font-normal text-ink-secondary">
+              {m.mode.descriptionsOnlyHelp}
+            </p>
             <label className="flex items-start gap-2 text-body font-medium">
               <input
                 type="checkbox"
@@ -76,7 +78,7 @@ export function WooOptionsPanel({
               />
               <span>{m.mode.overwrite}</span>
             </label>
-            <p id="woo-overwrite-help" className="pl-6 text-label text-ink-secondary">
+            <p id="woo-overwrite-help" className="pl-6 text-label font-normal text-ink-secondary">
               {m.mode.overwriteHelp}
             </p>
           </div>
@@ -114,7 +116,7 @@ function WooFullOptions({
           />
           <span>{m.status.label}</span>
         </label>
-        <p id="woo-status-help" className="pl-6 text-label text-ink-secondary">
+        <p id="woo-status-help" className="pl-6 text-label font-normal text-ink-secondary">
           {m.status.help}
         </p>
       </fieldset>
@@ -132,7 +134,7 @@ function WooFullOptions({
           </p>
           {analysis.images.hosts.length > 0 && (
             <div>
-              <h3 className="text-label font-medium text-ink-secondary">{m.images.hostsHeading}</h3>
+              <h3 className="text-label font-normal text-ink-secondary">{m.images.hostsHeading}</h3>
               <ul className="list-disc pl-5 text-body" data-woo-image-hosts>
                 {analysis.images.hosts.map((host) => (
                   <li key={host.host} data-image-host={host.host} data-allowed={host.allowed}>
@@ -172,7 +174,7 @@ function WooFullOptions({
                 />
                 <span>{m.images.checkbox}</span>
               </label>
-              <p id="woo-images-help" className="pl-6 text-label text-ink-secondary">
+              <p id="woo-images-help" className="pl-6 text-label font-normal text-ink-secondary">
                 {m.images.help}
               </p>
             </>
@@ -198,7 +200,7 @@ function WooFullOptions({
             ))}
           </Select>
           {analysis.units.weight && (
-            <p className="text-label text-ink-secondary">
+            <p className="text-label font-normal text-ink-secondary">
               {m.units.fromHeader(analysis.units.weight)}
             </p>
           )}
@@ -219,7 +221,7 @@ function WooFullOptions({
             ))}
           </Select>
           {analysis.units.dimensions && (
-            <p className="text-label text-ink-secondary">
+            <p className="text-label font-normal text-ink-secondary">
               {m.units.fromHeader(analysis.units.dimensions)}
             </p>
           )}
@@ -231,7 +233,7 @@ function WooFullOptions({
           <h3 id="woo-shipping" className="text-body font-semibold">
             {m.shipping.heading}
           </h3>
-          <p className="text-label text-ink-secondary">{m.shipping.help}</p>
+          <p className="text-label font-normal text-ink-secondary">{m.shipping.help}</p>
           <Table stacked aria-label={m.shipping.heading} data-woo-shipping>
             <THead>
               <Tr>
@@ -253,8 +255,13 @@ function WooFullOptions({
                       {`${m.shipping.target}: ${item.name}`}
                     </Label>
                     <Select
-                      className="max-w-md"
+                      className="max-w-md text-ellipsis"
                       id={`woo-ship-${item.key}`}
+                      title={
+                        options.shippingClassMap[item.key]
+                          ? m.shipping.classes[options.shippingClassMap[item.key] as string]
+                          : m.shipping.none
+                      }
                       value={options.shippingClassMap[item.key] ?? ""}
                       onChange={(event) =>
                         update({
@@ -286,7 +293,7 @@ function WooFullOptions({
           <h3 id="woo-attributes" className="text-body font-semibold">
             {m.attributes.heading}
           </h3>
-          <p className="text-label text-ink-secondary">{m.attributes.help}</p>
+          <p className="text-label font-normal text-ink-secondary">{m.attributes.help}</p>
           <Table stacked aria-label={m.attributes.heading} data-woo-attributes>
             <THead>
               <Tr>
@@ -308,8 +315,12 @@ function WooFullOptions({
                       {`${m.attributes.target}: ${item.name}`}
                     </Label>
                     <Select
-                      className="max-w-md"
+                      className="max-w-md text-ellipsis"
                       id={`woo-attr-${item.key}`}
+                      title={attributeTargetLabel(
+                        options.attributeTargets[item.key] ?? item.existingId ?? "create",
+                        analysis.existingAttributes,
+                      )}
                       value={options.attributeTargets[item.key] ?? item.existingId ?? "create"}
                       onChange={(event) =>
                         update({
@@ -339,7 +350,7 @@ function WooFullOptions({
       {(analysis.ignoredColumns.length > 0 || analysis.blockedColumns.length > 0) && (
         <details className="rounded-lg border border-line-subtle p-3 text-body" data-woo-columns>
           <summary className="cursor-pointer font-medium">{m.columns.heading}</summary>
-          <p className="mt-2 text-label text-ink-secondary">{m.columns.help}</p>
+          <p className="mt-2 text-label font-normal text-ink-secondary">{m.columns.help}</p>
           {analysis.blockedColumns.length > 0 && (
             <p className="mt-2 text-label" data-woo-blocked>
               <strong>{m.columns.blocked}</strong>
@@ -357,6 +368,17 @@ function WooFullOptions({
       )}
     </>
   );
+}
+
+/** Textul opțiunii alese pentru un atribut (tooltip al selectului: opțiunile lungi se taie în câmp). */
+function attributeTargetLabel(
+  value: string,
+  existing: readonly { id: string; name: string }[],
+): string {
+  if (value === "create") return m.attributes.create;
+  if (value === "ignore") return m.attributes.ignore;
+  const found = existing.find((attribute) => attribute.id === value);
+  return found ? m.attributes.existing(found.name) : m.attributes.create;
 }
 
 /** Setează sau scoate o cheie dintr-un obiect (valoarea goală = fără corespondent). */
@@ -399,7 +421,7 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
           )}
           {Object.keys(stats.byHost).length > 0 && (
             <div>
-              <h5 className="text-label font-medium text-ink-secondary">{r.hostsHeading}</h5>
+              <h5 className="text-label font-normal text-ink-secondary">{r.hostsHeading}</h5>
               <ul className="list-disc pl-5 text-body" data-images-hosts>
                 {Object.entries(stats.byHost).map(([host, count]) => (
                   <li key={host}>
@@ -411,7 +433,7 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
           )}
           {Object.keys(stats.rejectedByReason).length > 0 && (
             <div>
-              <h5 className="text-label font-medium text-ink-secondary">{r.reasonsHeading}</h5>
+              <h5 className="text-label font-normal text-ink-secondary">{r.reasonsHeading}</h5>
               <ul className="list-disc pl-5 text-body" data-images-rejected>
                 {Object.entries(stats.rejectedByReason).map(([reason, count]) => (
                   <li key={reason} data-images-reason={reason}>
@@ -437,7 +459,12 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
                   <TBody>
                     {images.issues.map((issue, index) => (
                       <Tr key={`${issue.row}-${index}`}>
-                        <Td numeric>{issue.row}</Td>
+                        <Td numeric>
+                          <span className="hidden group-data-[stacked]/table:@max-2xl/table:inline">
+                            {r.row}{" "}
+                          </span>
+                          {issue.row}
+                        </Td>
                         <Td className="break-all">{issue.sku || "—"}</Td>
                         <Td className="break-all">{issue.host ?? "—"}</Td>
                         <Td stack="title">{issue.message}</Td>
@@ -447,7 +474,7 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
                 </Table>
               </div>
               {images.issuesTruncated && (
-                <p className="mt-1 text-label text-ink-secondary">{r.truncated}</p>
+                <p className="mt-1 text-label font-normal text-ink-secondary">{r.truncated}</p>
               )}
             </details>
           )}
@@ -501,7 +528,7 @@ export function WooReportExtras({ woo }: { woo: WooReportSection }) {
         <p className="text-body text-ink-secondary">{m.report.none}</p>
       ) : (
         <>
-          <p className="text-label text-ink-secondary">{m.report.confirmNote}</p>
+          <p className="text-label font-normal text-ink-secondary">{m.report.confirmNote}</p>
           {(
             [
               [

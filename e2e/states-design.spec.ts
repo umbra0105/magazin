@@ -138,6 +138,34 @@ test.describe("autentificare", () => {
   });
 });
 
+test.describe("autentificare: mesajul de formular", () => {
+  test("link invalid de verificare și de resetare: alerta primește focus, dar fără inel de focus (inelul rămâne la navigarea cu tastatura)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const path of ["/verificare-email", "/resetare-parola"]) {
+      await page.goto(path);
+      const alert = page.locator("main [role=alert]");
+      await expect(alert, path).toBeVisible();
+      await expect(alert, path).toBeFocused();
+      expect(await css(alert, "box-shadow"), `${path}: inel (box-shadow)`).toBe("none");
+      expect(await css(alert, "outline-style"), `${path}: inel (outline)`).toBe("none");
+    }
+    // câmpurile și butoanele păstrează inelul la focus de la tastatură
+    await page.goto("/autentificare");
+    // primul Tab ajunge pe legătura cu numele magazinului: se apasă până la câmpul Email
+    for (let index = 0; index < 4; index += 1) {
+      await page.keyboard.press("Tab");
+      const onEmail = await page
+        .getByLabel("Email")
+        .evaluate((el) => el === document.activeElement);
+      if (onEmail) break;
+    }
+    await expect(page.getByLabel("Email")).toBeFocused();
+    expect(await css(page.getByLabel("Email"), "box-shadow")).not.toBe("none");
+  });
+});
+
 // ───────────────────────── 404, eroare, încărcare ─────────────────────────
 
 test.describe("404, eroare, încărcare", () => {
@@ -164,6 +192,14 @@ test.describe("404, eroare, încărcare", () => {
     await expect(page.getByRole("heading", { name: "Pagina nu a fost găsită" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Panou", exact: true }).first()).toBeVisible();
     expect(await primaryControls(page)).toEqual(["Înapoi la panou"]);
+    // firimitura nu arată slug-ul brut al adresei, ci o etichetă fixă
+    const crumb = page
+      .getByRole("navigation", { name: "Poziția în pagină" })
+      .locator("[aria-current=page]");
+    await expect(crumb).toHaveText("Pagină negăsită");
+    await expect(page.getByRole("navigation", { name: "Poziția în pagină" })).not.toContainText(
+      "pagina-care-nu-exista",
+    );
   });
 
   test("eroare în admin: titlu, o frază, «Reîncearcă» ca singur buton principal și cadrul adminului păstrat", async ({

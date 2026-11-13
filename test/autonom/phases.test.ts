@@ -8,7 +8,7 @@ import {
 } from "../../scripts/autonom/phases";
 
 /** Tabelul din docs/20 §3, scris a doua oară aici: o modificare accidentală a modurilor pică testul. */
-const MODE_A = ["redesign-final", "11", "12", "14", "16", "17", "19", "20"];
+const MODE_A = ["redesign-final", "redesign-finisaje", "11", "12", "14", "16", "17", "19", "20"];
 const MODE_B = ["8", "9", "10", "13", "14b", "15", "15b"];
 const MODE_C = ["6", "7", "18", "22"];
 
@@ -66,5 +66,16 @@ describe("identificatorul fazei (intră în comenzi git și gh)", () => {
     ]) {
       expect(isValidPhaseId(bad), JSON.stringify(bad)).toBe(false);
     }
+  });
+});
+
+describe("faza redesign-finisaje", () => {
+  it("modul A; ramura redesign-finisaje, etichetele cu numele fazei", () => {
+    expect(modeOf("redesign-finisaje")).toBe("A");
+    expect(branchOf("redesign-finisaje")).toBe("redesign-finisaje");
+    expect(tagsOf("redesign-finisaje")).toEqual({
+      pre: "pre-faza-redesign-finisaje",
+      done: "faza-redesign-finisaje-completa",
+    });
   });
 });

@@ -13,3 +13,4 @@ export { netFromGross, percentToBasisPoints, vatFromGross } from "./vat";
 export * from "./quantity";
 export * from "./price-display";
 export * from "./zoned-time";
+export { pluralRo } from "./plural";

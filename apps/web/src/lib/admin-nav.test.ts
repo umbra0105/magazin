@@ -129,6 +129,29 @@ describe("breadcrumbsFor", () => {
       { label: "ABC 123", href: null },
     ]);
   });
+  it("o cale care nu aparține niciunei secțiuni (404) are o singură migă fixă, nu slug-ul brut", () => {
+    expect(
+      breadcrumbsFor(
+        "/admin/pagina-care-nu-exista",
+        label,
+        "Panou",
+        undefined,
+        undefined,
+        "Pagină negăsită",
+      ),
+    ).toEqual([
+      { label: "Panou", href: "/admin" },
+      { label: "Pagină negăsită", href: null },
+    ]);
+    // mai multe segmente necunoscute dau tot o singură migă
+    expect(
+      breadcrumbsFor("/admin/a/b/c", label, "Panou", undefined, undefined, "Pagină negăsită").map(
+        (crumb) => crumb.label,
+      ),
+    ).toEqual(["Panou", "Pagină negăsită"]);
+    // fără eticheta de 404, comportamentul vechi (segmentele decodate) rămâne
+    expect(breadcrumbsFor("/admin/zzz", label, "Panou")[1]).toEqual({ label: "zzz", href: null });
+  });
   it("un etichetator de segmente poate înlocui „nou” și id-urile tehnice", () => {
     const labeler = (section: string | null, raw: string) =>
       section === "allProducts" ? (raw === "nou" ? "Produs nou" : "Editare produs") : null;

@@ -295,6 +295,38 @@ test.describe("import: pagina și pașii", () => {
   });
 });
 
+test.describe("import: telefon", () => {
+  test("390 px: pașii pe un singur rând derulabil, descrierile formatului în greutate normală, selecturile de mapare cu tooltip, fără derulare orizontală a paginii", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page, account, "/admin/produse/import");
+    const items = page.locator("[data-import-steps] li");
+    await expect(items).toHaveCount(4);
+    const tops = await items.evaluateAll((els) =>
+      els.map((el) => Math.round(el.getBoundingClientRect().top)),
+    );
+    expect(new Set(tops).size, "pașii pe un singur rând").toBe(1);
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
+    const help = page.locator("[data-import-profile] label span.text-label").first();
+    await expect(help).toBeVisible();
+    expect(await css(help, "font-weight"), "descrierea opțiunii radio").toBe("400");
+    const phoneFile = `e2e-${tag}-telefon.csv`;
+    trackE2eImportFile(phoneFile);
+    await page.getByLabel("Fișier CSV sau XLSX").setInputFiles({
+      name: phoneFile,
+      mimeType: "application/octet-stream",
+      buffer: Buffer.from("SKU;Titlu\r\nE2E-TEL-1;Test\r\n", "utf8"),
+    });
+    await page.getByRole("button", { name: "Încarcă și analizează" }).click();
+    await expect(page.getByRole("heading", { name: "Mapează coloanele" })).toBeVisible();
+    await expect(page.getByLabel("Importă în câmpul: SKU")).toHaveAttribute("title", "SKU");
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
+    const first = await items.first().evaluate((el) => el.getBoundingClientRect().height);
+    expect(first).toBeLessThanOrEqual(44);
+  });
+});
+
 // ───────────────────────── Părțile WooCommerce și imaginile (pagina-harness) ─────────────────────────
 
 test.describe("import: WooCommerce și imagini", () => {
@@ -380,6 +412,12 @@ test.describe("import: WooCommerce și imagini", () => {
     );
     expect(await css(tile.locator("dd"), "font-size")).toBe("22px");
     await expectTable(page, page.getByRole("table", { name: "Imagini eșuate" }), "eșecurile");
+    // pe desktop numărul rândului e sub antetul «Rând»; pe telefon (carduri) are eticheta «Rând» în față
+    const failure = page.locator('[data-image-failure="17"]');
+    expect(await failure.evaluate((el) => (el as HTMLElement).innerText)).not.toContain("Rând 17");
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await failure.evaluate((el) => (el as HTMLElement).innerText)).toContain("Rând 17");
+    await page.setViewportSize({ width: 1440, height: 900 });
     await expect(page.getByRole("button", { name: "Reia imaginile" })).toBeVisible();
     expect(await primaryControls(page)).toEqual([]);
     await expectPhoneFits(page, "progresul imaginilor");
@@ -440,6 +478,33 @@ test.describe("import: istoric", () => {
     await expectPhoneFits(page, "exporturile");
   });
 
+  test("fila Exporturi e paginată: cu limita 1 apare un singur rând și «Încarcă mai multe», care aduce restul", async ({
+    page,
+    baseURL,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, account, "/admin/produse");
+    for (let index = 0; index < 2; index += 1) {
+      const exported = await page.request.post("/api/admin/product-exports", {
+        headers: { origin: baseURL as string },
+        data: { format: "csv", scope: "filters", filters: { q: tag } },
+      });
+      expect(exported.status()).toBe(200);
+      await exported.body();
+    }
+    await page.goto("/admin/produse/import/istoric?fila=exporturi&limita=1");
+    await expect(page.locator("[data-export-row]")).toHaveCount(1);
+    await expect(page.locator("[data-exports-shown]")).toHaveText(
+      "Se afișează cel mai nou export.",
+    );
+    const more = page.locator("[data-exports-more]");
+    await expect(more).toBeVisible();
+    expect(await primaryControls(page)).toEqual([]);
+    await more.click();
+    await page.waitForURL(/limita=26/);
+    expect(await page.locator("[data-export-row]").count()).toBeGreaterThanOrEqual(2);
+  });
+
   test("detaliile unui import: antet cu stare în pastilă, contoare în chenar-token, filtre ca tab-uri, raport pe Table, descărcarea secundară, fără buton principal; fără derulare orizontală la 390 px", async ({
     page,
   }) => {
@@ -492,6 +557,11 @@ test.describe("import: istoric", () => {
         const box = await control.boundingBox();
         expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
       }
+      // legătura «Detalii» din istoric (card pe telefon) are și ea 44 px pe ecran tactil
+      await page.goto("/admin/produse/import/istoric");
+      const details = page.locator("[data-history-details]").first();
+      await expect(details).toBeVisible();
+      expect((await details.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     } finally {
       await context.close();
     }

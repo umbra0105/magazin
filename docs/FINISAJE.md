@@ -22,6 +22,7 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 
 ## Rezolvate
 
+- [x] S3 | Faza redesign-finisaje | pluralul din raportul Woo și din mesaje, breadcrumb-ul 404, inelul de focus al alertelor de autentificare, stepperul și selecturile importului pe telefon, istoricul exporturilor paginat, eticheta «Rând» pe cardurile de telefon, ținta tactilă a legăturii «Detalii» | local-data/capturi-redesign/finisaje-dupa
 - [x] S3 | Fișe explodate, lista pe telefon | numărătorile «N hotspot-uri» și «N produse» din card sunt în culoarea textului principal; în `docs/17` valorile de context sunt `text-ink-secondary` | local-data/capturi-redesign/lot3b2-dupa/fise-lista-light-390.png
 - [x] S3 | Import, raportul de verificare | coloana SKU e îngustă și un cod scurt se rupe în mijloc («E2E-218C25-BA / D»); coloana Motiv ia aproape tot locul | local-data/capturi-redesign/lot3b2-dupa/import-3-verificare-dark-1440.png
 - [x] S3 | Autentificare și 404 public | paginile publice stau pe suprafața adminului (tokeni, tema sistemului) până când vitrina (Faza 7) își face propria suprafață; decizie notată în `docs/17` §8, punctul 1e, nu un defect | local-data/capturi-redesign/lot4-dupa/404-public-light-1440.png
