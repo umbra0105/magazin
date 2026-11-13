@@ -2752,6 +2752,10 @@ export const ro = {
       },
       open: (title: string) => `Deschide fișa ${title}`,
       noImage: "Fără imagine",
+      counts: {
+        hotspots: (n: number) => countOf(n, "hotspot", "hotspot-uri", "de hotspot-uri"),
+        products: (n: number) => produse(n),
+      },
       create: {
         title: "Fișă explodată nouă",
         titleField: "Titlu",

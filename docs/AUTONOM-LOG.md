@@ -22,3 +22,5 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 
 | data | faza | pas | commit | verificare | S3 notate |
 | ---- | ---- | --- | ------ | ---------- | --------- |
+| 2026-11-13 | redesign-final | început de fază | - | copie bază: local-data/backups/ecom-20261113-142651.sql | - |
+| 2026-11-13 | redesign-final | Lot 3b-2 / pasul 1: Fișe explodate (lista și shell-ul editorului) | commit-ul pasului | per pas: 12 teste noi de design (roșu pe 9), parts-diagrams 3/3, arhitectură, typecheck OK; verify:full în rândul de mai jos | S3: 1 (FINISAJE.md) |

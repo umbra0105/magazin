@@ -64,6 +64,18 @@ const MEDIA_WAREHOUSE_SCREENS = [
   },
 ] as const;
 
+/** Fișe explodate (Lotul 3b-2): componentele și cele două pagini. */
+const DIAGRAM_SCREENS = [
+  {
+    components: "apps/web/src/components/admin/diagrams",
+    page: "apps/web/src/app/(admin)/admin/produse/fise-explodate/page.tsx",
+  },
+  {
+    components: "apps/web/src/components/admin/diagrams",
+    page: "apps/web/src/app/(admin)/admin/produse/fise-explodate/[id]/page.tsx",
+  },
+] as const;
+
 /** Fișierele migrate: editarea produsului (Lotul 2b), cele 4 ecrane de catalog (3a), Media și Depozite (3b-1), fără importul de produse (3b-2). */
 export function migratedFiles(): SourceFile[] {
   const dir = join(root, "apps/web/src/components/admin/products");
@@ -84,6 +96,7 @@ export function migratedFiles(): SourceFile[] {
       (screen) => `apps/web/src/app/(admin)/admin/produse/${screen.page}/page.tsx`,
     ),
     ...MEDIA_WAREHOUSE_SCREENS.map((screen) => screen.page),
+    ...DIAGRAM_SCREENS.map((screen) => screen.page),
   ]) {
     out.push({ path: page, content: readFileSync(join(root, page), "utf8") });
   }
@@ -97,7 +110,7 @@ export function migratedFiles(): SourceFile[] {
       });
     }
   }
-  for (const screen of MEDIA_WAREHOUSE_SCREENS) {
+  for (const screen of [...MEDIA_WAREHOUSE_SCREENS, DIAGRAM_SCREENS[0]]) {
     const dir = join(root, screen.components);
     for (const name of readdirSync(dir)) {
       if (!name.endsWith(".tsx")) continue;
@@ -169,6 +182,10 @@ describe("lista fișierelor migrate", () => {
       "apps/web/src/components/admin/warehouses/warehouse-manager.tsx",
       "apps/web/src/app/(admin)/admin/media/page.tsx",
       "apps/web/src/app/(admin)/admin/produse/depozite/page.tsx",
+      "apps/web/src/components/admin/diagrams/diagram-editor.tsx",
+      "apps/web/src/components/admin/diagrams/diagram-list.tsx",
+      "apps/web/src/app/(admin)/admin/produse/fise-explodate/page.tsx",
+      "apps/web/src/app/(admin)/admin/produse/fise-explodate/[id]/page.tsx",
     ]) {
       expect(paths, expected).toContain(expected);
     }

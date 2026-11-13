@@ -318,17 +318,17 @@ function Editor({ diagram, canWrite }: { diagram: DiagramEditorData; canWrite: b
   );
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex max-w-4xl flex-col gap-6">
       <header className="flex flex-col gap-2">
         <Link
           href="/admin/produse/fise-explodate"
-          className="text-sm text-link underline-offset-2 hover:underline"
+          className="text-body text-link underline-offset-2 hover:underline"
         >
           {e.back}
         </Link>
-        <h1 className="text-2xl font-semibold">{savedTitle}</h1>
+        <h1 className="text-title wrap-anywhere">{savedTitle}</h1>
         <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-[16rem] flex-1">
+          <div className="min-w-64 flex-1">
             <Field id="diagram-title" label={e.titleField}>
               {(control) => (
                 <Input
@@ -352,23 +352,26 @@ function Editor({ diagram, canWrite }: { diagram: DiagramEditorData; canWrite: b
             </Button>
           )}
         </div>
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-body text-ink-secondary empty:hidden">
           {status}
         </p>
         {problem && (
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>
         )}
       </header>
 
-      <section aria-labelledby="diagram-image" className="flex flex-col gap-3">
+      <section
+        aria-labelledby="diagram-image"
+        className="flex flex-col gap-3 border-t border-line-subtle pt-6"
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="diagram-image" className="text-lg font-semibold">
+          <h2 id="diagram-image" className="text-section">
             {e.image}
           </h2>
           {canWrite && (
@@ -377,13 +380,13 @@ function Editor({ diagram, canWrite }: { diagram: DiagramEditorData; canWrite: b
             </Button>
           )}
         </div>
-        <p className="text-sm text-muted-foreground">{e.canvasHelp}</p>
+        <p className="text-body text-ink-secondary">{e.canvasHelp}</p>
         {/* click pe imagine = alternativă la mouse-ul-doar; tastatura: marcajele (săgeți) și câmpurile numerice */}
         {image.url ? (
           <div
             data-diagram-canvas
             onClick={onImageClick}
-            className="relative w-full max-w-3xl select-none overflow-hidden rounded-md border border-border"
+            className="relative w-full max-w-3xl select-none overflow-hidden rounded-lg border border-line-subtle"
             style={{ cursor: canWrite && selected ? "crosshair" : "default" }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- imagine din /media (variante generate) */}
@@ -415,10 +418,10 @@ function Editor({ diagram, canWrite }: { diagram: DiagramEditorData; canWrite: b
                   }}
                   onKeyDown={(ev) => onMarkerKey(ev, row)}
                   className={
-                    "absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand " +
+                    "absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-label font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand pointer-coarse:size-11 " +
                     (isSelected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-primary bg-background text-foreground")
+                      ? "border-brand bg-brand text-on-brand"
+                      : "border-brand bg-surface-page text-ink")
                   }
                   style={{ left: `${(x as number) / 100}%`, top: `${(y as number) / 100}%` }}
                 >
@@ -428,29 +431,32 @@ function Editor({ diagram, canWrite }: { diagram: DiagramEditorData; canWrite: b
             })}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">{e.noImage}</p>
+          <p className="text-body text-ink-secondary">{e.noImage}</p>
         )}
         <p aria-live="polite" className="sr-only">
           {announcement}
         </p>
       </section>
 
-      <section aria-labelledby="diagram-hotspots" className="flex flex-col gap-3">
+      <section
+        aria-labelledby="diagram-hotspots"
+        className="flex flex-col gap-3 border-t border-line-subtle pt-6"
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="diagram-hotspots" className="text-lg font-semibold">
+          <h2 id="diagram-hotspots" className="text-section">
             {e.hotspots}
           </h2>
           {canWrite && (
-            <Button type="button" variant="outline" onClick={addRow}>
+            <Button type="button" onClick={addRow}>
               {e.addHotspot}
             </Button>
           )}
         </div>
-        <p className="text-sm text-muted-foreground">{e.hotspotsHelp}</p>
-        <p className="text-xs text-muted-foreground">{e.positionHelp}</p>
+        <p className="text-body text-ink-secondary">{e.hotspotsHelp}</p>
+        <p className="text-label text-ink-secondary">{e.positionHelp}</p>
 
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{e.noHotspots}</p>
+          <p className="text-body text-ink-secondary">{e.noHotspots}</p>
         ) : (
           <ul className="flex flex-col gap-3" aria-label={e.tableLabel}>
             {rows.map((row) => (
@@ -486,9 +492,9 @@ function Editor({ diagram, canWrite }: { diagram: DiagramEditorData; canWrite: b
       />
 
       {canWrite && (
-        <section className="border-t border-border pt-6">
-          <Button type="button" variant="outline" onClick={() => setDeleting(true)}>
-            <Trash2 aria-hidden className="mr-2 h-4 w-4" />
+        <section className="border-t border-line-subtle pt-6">
+          <Button type="button" variant="destructive" onClick={() => setDeleting(true)}>
+            <Trash2 aria-hidden="true" className="size-4" />
             {e.delete}
           </Button>
         </section>
@@ -578,8 +584,8 @@ function HotspotRow({
     <li
       data-hotspot-row={row.number}
       className={
-        "flex flex-col gap-3 rounded-md border p-3 " +
-        (selected ? "border-primary bg-border/20" : "border-border")
+        "flex flex-col gap-3 rounded-lg border p-3 " +
+        (selected ? "border-brand bg-surface-subtle" : "border-line-subtle")
       }
     >
       <div className="flex flex-wrap items-center gap-3">
@@ -588,33 +594,37 @@ function HotspotRow({
           onClick={onSelect}
           aria-pressed={selected}
           aria-label={e.select(n)}
-          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-primary text-xs font-bold"
+          className="flex size-8 items-center justify-center rounded-full border-2 border-brand text-label font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand pointer-coarse:size-11"
         >
           {row.number}
         </button>
-        <span className="min-w-0 flex-1 text-sm">
+        <span className="min-w-0 flex-1 text-body wrap-anywhere">
           {row.product ? (
             <>
               <span className="font-medium">{row.product.title}</span>
-              {row.product.sku && (
-                <span className="text-muted-foreground"> · {row.product.sku}</span>
+              {row.product.sku && <span className="text-ink-secondary"> · {row.product.sku}</span>}
+              {row.product.deleted && (
+                <span className="text-tone-problem-fg"> · {e.productDeleted}</span>
               )}
-              {row.product.deleted && <span className="text-danger"> · {e.productDeleted}</span>}
             </>
           ) : (
-            <span className="text-muted-foreground">{e.noProduct}</span>
+            <span className="text-ink-secondary">{e.noProduct}</span>
           )}
         </span>
       </div>
 
       {row.product?.deleted && (
-        <p role="note" className="text-xs text-danger">
+        <p role="note" className="text-label text-tone-problem-fg">
           {e.productMissingWarning}
         </p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-[6rem_1fr_8rem_8rem]">
-        <Field id={id("number")} label={e.columns.number}>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-12">
+        <Field
+          id={id("number")}
+          label={e.columns.number}
+          className="col-span-2 flex flex-col gap-1.5 sm:col-span-2"
+        >
           {(control) => (
             <Input
               {...control}
@@ -626,7 +636,11 @@ function HotspotRow({
             />
           )}
         </Field>
-        <Field id={id("label")} label={e.columns.label}>
+        <Field
+          id={id("label")}
+          label={e.columns.label}
+          className="col-span-2 flex flex-col gap-1.5 sm:col-span-6"
+        >
           {(control) => (
             <Input
               {...control}
@@ -638,7 +652,11 @@ function HotspotRow({
             />
           )}
         </Field>
-        <Field id={id("x")} label={e.columns.x}>
+        <Field
+          id={id("x")}
+          label={e.columns.x}
+          className="col-span-1 flex flex-col gap-1.5 sm:col-span-2"
+        >
           {(control) => (
             <Input
               {...control}
@@ -651,7 +669,11 @@ function HotspotRow({
             />
           )}
         </Field>
-        <Field id={id("y")} label={e.columns.y}>
+        <Field
+          id={id("y")}
+          label={e.columns.y}
+          className="col-span-1 flex flex-col gap-1.5 sm:col-span-2"
+        >
           {(control) => (
             <Input
               {...control}
@@ -667,9 +689,9 @@ function HotspotRow({
       </div>
 
       {canWrite && (
-        <div className="flex flex-col gap-2 rounded-md border border-border p-2">
+        <div className="flex flex-col gap-2 rounded-lg border border-line-subtle p-3">
           <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[14rem] flex-1">
+            <div className="min-w-56 flex-1">
               <Field id={id("search")} label={e.productSearch}>
                 {(control) => (
                   <Input
@@ -703,13 +725,13 @@ function HotspotRow({
             )}
           </div>
           {searchProblem && (
-            <p data-problem className="text-sm text-danger">
+            <p data-problem className="text-body text-tone-problem-fg">
               {searchProblem}
             </p>
           )}
           {hits !== null &&
             (hits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{e.noResults}</p>
+              <p className="text-body text-ink-secondary">{e.noResults}</p>
             ) : (
               <ul className="flex flex-col gap-1">
                 {hits.map((hit) => (
@@ -730,12 +752,10 @@ function HotspotRow({
                         setHits(null);
                         setQuery("");
                       }}
-                      className="w-full rounded-md px-2 py-1 text-left text-sm hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      className="w-full rounded-md px-2 py-1 text-left text-body hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand pointer-coarse:min-h-11"
                     >
                       {hit.title}
-                      <span className="text-muted-foreground">
-                        {hit.sku ? ` · ${hit.sku}` : ""}
-                      </span>
+                      <span className="text-ink-secondary">{hit.sku ? ` · ${hit.sku}` : ""}</span>
                     </button>
                   </li>
                 ))}
@@ -745,15 +765,16 @@ function HotspotRow({
       )}
 
       {row.error && (
-        <p role="alert" data-problem className="text-sm text-danger">
+        <p role="alert" data-problem className="text-body text-tone-problem-fg">
           {row.error}
         </p>
       )}
 
       {canWrite && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
+            variant="outline"
             disabled={pending || (!row.dirty && row.saved)}
             aria-label={e.save(n)}
             onClick={onSave}
@@ -762,12 +783,14 @@ function HotspotRow({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
+            size="icon"
             aria-label={e.remove(n)}
+            title={e.remove(n)}
             disabled={pending}
             onClick={onRemove}
           >
-            <Trash2 aria-hidden className="h-4 w-4" />
+            <Trash2 aria-hidden="true" className="size-4" />
           </Button>
         </div>
       )}
@@ -825,38 +848,43 @@ function ProductsSection({
   };
 
   return (
-    <section aria-labelledby="diagram-products" className="flex flex-col gap-3">
-      <h2 id="diagram-products" className="text-lg font-semibold">
+    <section
+      aria-labelledby="diagram-products"
+      className="flex flex-col gap-3 border-t border-line-subtle pt-6"
+    >
+      <h2 id="diagram-products" className="text-section">
         {e.productsHeading}
       </h2>
-      <p className="text-sm text-muted-foreground">{e.productsHelp}</p>
+      <p className="text-body text-ink-secondary">{e.productsHelp}</p>
 
       {products.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{e.noProducts}</p>
+        <p className="text-body text-ink-secondary">{e.noProducts}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {products.map((p) => (
             <li
               key={p.id}
               data-diagram-product={p.title}
-              className="flex flex-wrap items-center gap-3 rounded-md border border-border p-2"
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-line-subtle p-2"
             >
-              <span className="min-w-0 flex-1 text-sm">
+              <span className="min-w-0 flex-1 text-body wrap-anywhere">
                 <Link
                   href={`/admin/produse/${p.id}`}
                   className="font-medium text-link underline-offset-2 hover:underline"
                 >
                   {p.title}
                 </Link>
-                <span className="text-muted-foreground">{p.sku ? ` · ${p.sku}` : ""}</span>
-                {p.deleted && <span className="text-danger"> · {e.productDeleted}</span>}
+                <span className="text-ink-secondary">{p.sku ? ` · ${p.sku}` : ""}</span>
+                {p.deleted && <span className="text-tone-problem-fg"> · {e.productDeleted}</span>}
               </span>
               {canWrite && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
+                  size="icon"
                   disabled={pending}
                   aria-label={e.detach(p.title)}
+                  title={e.detach(p.title)}
                   onClick={() =>
                     run(
                       () => detachDiagramProduct({ diagramId, productId: p.id }),
@@ -865,7 +893,7 @@ function ProductsSection({
                     )
                   }
                 >
-                  <Trash2 aria-hidden className="h-4 w-4" />
+                  <Trash2 aria-hidden="true" className="size-4" />
                 </Button>
               )}
             </li>
@@ -874,9 +902,9 @@ function ProductsSection({
       )}
 
       {canWrite && (
-        <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+        <div className="flex flex-col gap-2 rounded-lg border border-line-subtle p-3">
           <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[14rem] flex-1">
+            <div className="min-w-56 flex-1">
               <Field id="diagram-attach-search" label={e.attachSearch}>
                 {(control) => (
                   <Input
@@ -906,7 +934,7 @@ function ProductsSection({
           </div>
           {hits !== null &&
             (hits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{e.noResults}</p>
+              <p className="text-body text-ink-secondary">{e.noResults}</p>
             ) : (
               <ul className="flex flex-col gap-1">
                 {hits.map((hit) => (
@@ -933,12 +961,10 @@ function ProductsSection({
                         setHits(null);
                         setQuery("");
                       }}
-                      className="w-full rounded-md px-2 py-1 text-left text-sm hover:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      className="w-full rounded-md px-2 py-1 text-left text-body hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand pointer-coarse:min-h-11"
                     >
                       {hit.title}
-                      <span className="text-muted-foreground">
-                        {hit.sku ? ` · ${hit.sku}` : ""}
-                      </span>
+                      <span className="text-ink-secondary">{hit.sku ? ` · ${hit.sku}` : ""}</span>
                     </button>
                   </li>
                 ))}
@@ -982,7 +1008,7 @@ function DeleteDialog({
           <p
             role="alert"
             data-problem
-            className="rounded-md border border-danger p-3 text-sm text-danger"
+            className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
           >
             {problem}
           </p>
@@ -993,6 +1019,7 @@ function DeleteDialog({
           </Button>
           <Button
             type="button"
+            variant="destructive"
             disabled={pending}
             onClick={() =>
               startTransition(async () => {

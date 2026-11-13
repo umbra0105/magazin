@@ -18,7 +18,7 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 
 ## Deschise
 
-(nicio intrare)
+- [ ] S3 | Fișe explodate, lista pe telefon | numărătorile «N hotspot-uri» și «N produse» din card sunt în culoarea textului principal; în `docs/17` valorile de context sunt `text-ink-secondary` | local-data/capturi-redesign/lot3b2-dupa/fise-lista-light-390.png
 
 ## Rezolvate
 

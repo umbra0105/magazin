@@ -38,8 +38,6 @@ export interface SourceFile {
 export const LEGACY_ARBITRARY_LENGTHS: Readonly<Record<string, number>> = {
   "apps/web/src/app/(admin)/admin/produse/import/istoric/page.tsx": 2,
   "apps/web/src/app/(admin)/admin/produse/import/istoric/[id]/page.tsx": 1,
-  "apps/web/src/components/admin/diagrams/diagram-editor.tsx": 4,
-  "apps/web/src/components/admin/diagrams/diagram-list.tsx": 1,
   "apps/web/src/components/admin/inventory/movements-table.tsx": 1,
   "apps/web/src/components/admin/products/product-import-images.tsx": 1,
   "apps/web/src/components/admin/products/product-import-wizard.tsx": 2,
