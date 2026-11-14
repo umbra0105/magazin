@@ -30,7 +30,7 @@ const LAZY_SOURCES = [
   ATTRIBUTE("data-lazy-src"),
   ATTRIBUTE("data-original"),
 ];
-const SAFE_MEDIA_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const SAFE_MEDIA_ID = /^[A-Za-z0-9_-]{8,40}$/;
 
 export interface DescriptionImageCandidate {
   /** sha256 hex al adresei normalizate (cheia de idempotență, ca la imaginile produsului). */
@@ -134,6 +134,16 @@ export function extractDescriptionImages(
   return { html: out, images, issues, total };
 }
 
+/** Adresele imaginilor dintr-un HTML brut (doar pentru căutarea fișierelor deja aduse; nu se verifică domeniile). */
+export function descriptionImageUrls(html: string): string[] {
+  const urls: string[] = [];
+  for (const match of html.matchAll(IMG_TAG)) {
+    const source = sourceOf(match[0]);
+    if (source !== "") urls.push(source);
+  }
+  return urls;
+}
+
 /** Marcajele dintr-un HTML, în ordinea apariției, fără dubluri. */
 export function descriptionTokensIn(html: string | null): string[] {
   if (!html) return [];
@@ -209,6 +219,11 @@ export interface PlannedDescriptionImages {
   tasks: DescriptionImageCandidate[];
   issues: DescriptionImageIssue[];
   stats: DescriptionImageStats;
+  /**
+   * Fișierele deja din bibliotecă pe care planul le-a pus în HTML (`<img data-media-id>`): singurele id-uri de media pe care
+   * sanitizatorul are voie să le păstreze din acest HTML (un `<img data-media-id>` scris de mână în fișier se elimină ÎNAINTE).
+   */
+  mediaIds: string[];
 }
 
 /**
@@ -231,13 +246,7 @@ export function planDescriptionImages(
     byHost: {},
     rejectedByReason: {},
   };
-  if (!policy)
-    return {
-      html: extractDescriptionImages(html, REJECT_ALL, { maxPerProduct: 0 }).html,
-      tasks: [],
-      issues: [],
-      stats,
-    };
+  if (!policy) return { html, tasks: [], issues: [], stats, mediaIds: [] };
 
   // imaginile acceptate ale importului (limita pe import); aceeași adresă de două ori în descriere se numără o dată
   const counted = new Set<string>();
@@ -274,7 +283,41 @@ export function planDescriptionImages(
     const mediaId = image ? mediaBySourceHash.get(image.hash) : undefined;
     return mediaId ? { kind: "media", mediaId } : { kind: "keep" };
   });
-  return { html: resolved.html, tasks, issues: extracted.issues, stats };
+  const mediaIds = extracted.images
+    .map((image) => mediaBySourceHash.get(image.hash))
+    .filter((id): id is string => id !== undefined);
+  return { html: resolved.html, tasks, issues: extracted.issues, stats, mediaIds };
 }
 
-const REJECT_ALL = (): DescriptionImageCheck => ({ ok: false, reason: "invalid", host: null });
+export const emptyDescriptionStats = (): DescriptionImageStats => ({
+  total: 0,
+  accepted: 0,
+  rejected: 0,
+  alreadyInLibrary: 0,
+  byHost: {},
+  rejectedByReason: {},
+});
+
+/** Adaugă planul unei descrieri la planul de ansamblu al importului (numărători și respingeri, fără adrese). */
+export function mergeDescriptionImagePlan(
+  target: {
+    stats: DescriptionImageStats;
+    issues: { row: number; sku: string; position: number; host: string | null; reason: string }[];
+  },
+  prepared: PlannedDescriptionImages,
+  row: number,
+  sku: string,
+): void {
+  const { stats } = prepared;
+  target.stats.total += stats.total;
+  target.stats.accepted += stats.accepted;
+  target.stats.rejected += stats.rejected;
+  target.stats.alreadyInLibrary += stats.alreadyInLibrary;
+  for (const [host, count] of Object.entries(stats.byHost)) {
+    target.stats.byHost[host] = (target.stats.byHost[host] ?? 0) + count;
+  }
+  for (const [reason, count] of Object.entries(stats.rejectedByReason)) {
+    target.stats.rejectedByReason[reason] = (target.stats.rejectedByReason[reason] ?? 0) + count;
+  }
+  for (const issue of prepared.issues) target.issues.push({ row, sku, ...issue });
+}

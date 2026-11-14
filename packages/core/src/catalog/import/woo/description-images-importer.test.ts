@@ -144,7 +144,7 @@ function world(
     media: {
       async upload(input) {
         mediaCounter += 1;
-        const id = `m${mediaCounter}`;
+        const id = `media_${String(mediaCounter).padStart(4, "0")}`;
         fake.media.set((input as { sourceHash: string }).sourceHash, id);
         return { id } as never;
       },
@@ -193,7 +193,7 @@ describe("imaginile din descrieri: marcajul devine <img data-media-id>", () => {
     expect(f.updates).toEqual([
       {
         productId: "p1",
-        description: `<p>Înainte</p><p><img data-media-id="m1" alt=""></p><p>După</p>`,
+        description: `<p>Înainte</p><p><img data-media-id="media_0001" alt=""></p><p>După</p>`,
       },
     ]);
     expect(summary).toMatchObject({ downloaded: 1, descriptions: 1, descriptionImages: 1 });
@@ -205,7 +205,7 @@ describe("imaginile din descrieri: marcajul devine <img data-media-id>", () => {
       p1: `<p>${marker("a")}</p>`,
     });
     const summary = await f.importer.run("imp1");
-    expect(f.productMedia.get("p1")).toEqual(["m2"]);
+    expect(f.productMedia.get("p1")).toEqual(["media_0002"]);
     expect(summary.attached).toBe(1);
   });
 
@@ -216,16 +216,16 @@ describe("imaginile din descrieri: marcajul devine <img data-media-id>", () => {
     });
     await f.importer.run("imp1");
     expect(f.fetched).toHaveLength(1);
-    expect(f.descriptions.get("p1")).toBe(`<p><img data-media-id="m1" alt=""></p>`);
-    expect(f.descriptions.get("p2")).toBe(`<p>x<img data-media-id="m1" alt=""></p>`);
+    expect(f.descriptions.get("p1")).toBe(`<p><img data-media-id="media_0001" alt=""></p>`);
+    expect(f.descriptions.get("p2")).toBe(`<p>x<img data-media-id="media_0001" alt=""></p>`);
   });
 
   it("fișierul deja în bibliotecă (aceeași adresă adusă înainte) se folosește fără descărcare", async () => {
     const f = world([task("a")], { p1: `<p>${marker("a")}</p>` });
-    f.media.set(hashOf("a"), "m_existent");
+    f.media.set(hashOf("a"), "media_existent");
     await f.importer.run("imp1");
     expect(f.fetched).toEqual([]);
-    expect(f.descriptions.get("p1")).toBe(`<p><img data-media-id="m_existent" alt=""></p>`);
+    expect(f.descriptions.get("p1")).toBe(`<p><img data-media-id="media_existent" alt=""></p>`);
     expect(f.tasks[0]?.status).toBe("existing");
   });
 
@@ -233,7 +233,7 @@ describe("imaginile din descrieri: marcajul devine <img data-media-id>", () => {
     const f = world([task("a")], { p1: `<p>${marker("a")}</p><p>${marker("a")}</p>` });
     const summary = await f.importer.run("imp1");
     expect(f.descriptions.get("p1")).toBe(
-      `<p><img data-media-id="m1" alt=""></p><p><img data-media-id="m1" alt=""></p>`,
+      `<p><img data-media-id="media_0001" alt=""></p><p><img data-media-id="media_0001" alt=""></p>`,
     );
     expect(summary.descriptionImages).toBe(2);
   });
@@ -247,7 +247,7 @@ describe("eșec, reluare și idempotență", () => {
     f.failing.add("https://exemplu.invalid/b.png");
     const summary = await f.importer.run("imp1");
     expect(f.descriptions.get("p1")).toBe(
-      `<p><img data-media-id="m1" alt=""></p><p>${marker("b")}</p>`,
+      `<p><img data-media-id="media_0001" alt=""></p><p>${marker("b")}</p>`,
     );
     expect(summary).toMatchObject({ downloaded: 1, failed: 1, descriptionImages: 1 });
     expect(f.tasks.find((t) => t.sourceUrl.endsWith("b.png"))).toMatchObject({
@@ -268,7 +268,7 @@ describe("eșec, reluare și idempotență", () => {
     await f.importer.run("imp1");
     expect(f.fetched).toEqual(["https://exemplu.invalid/b.png"]);
     expect(f.descriptions.get("p1")).toBe(
-      `<p><img data-media-id="m1" alt=""></p><p><img data-media-id="m2" alt=""></p>`,
+      `<p><img data-media-id="media_0001" alt=""></p><p><img data-media-id="media_0002" alt=""></p>`,
     );
   });
 
@@ -287,7 +287,7 @@ describe("eșec, reluare și idempotență", () => {
     const f = world([task("a")], { p1: `<p>Text scris de mână</p><p>${marker("a")}</p>` });
     await f.importer.run("imp1");
     expect(f.descriptions.get("p1")).toBe(
-      `<p>Text scris de mână</p><p><img data-media-id="m1" alt=""></p>`,
+      `<p>Text scris de mână</p><p><img data-media-id="media_0001" alt=""></p>`,
     );
   });
 
@@ -303,7 +303,7 @@ describe("eșec, reluare și idempotență", () => {
     const f = world([task("a")], { p1: `<p>${marker("a")}</p><p>${marker("necunoscut")}</p>` });
     await f.importer.run("imp1");
     expect(f.descriptions.get("p1")).toBe(
-      `<p><img data-media-id="m1" alt=""></p><p>${marker("necunoscut")}</p>`,
+      `<p><img data-media-id="media_0001" alt=""></p><p>${marker("necunoscut")}</p>`,
     );
   });
 });

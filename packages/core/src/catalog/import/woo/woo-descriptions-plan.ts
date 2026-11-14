@@ -12,10 +12,23 @@ import {
   type RowOutcome,
 } from "../import-plan";
 import { sanitizeDescription, summarizeDescriptionLosses } from "../../rich-text/description";
+import {
+  emptyDescriptionStats,
+  mergeDescriptionImagePlan,
+  planDescriptionImages,
+  type DescriptionImageCandidate,
+} from "./description-images";
 import { stripWpShortcodes } from "./html-to-text";
 import { detectWooColumns, looksLikeWooExport, type WooRole } from "./woo-columns";
 import { zeroStats, type WooSnapshot } from "./woo-plan";
-import type { WooDescriptionInfo, WooOptions, WooUpdateOp } from "./woo-types";
+import type {
+  WooContext,
+  WooDescriptionImagesPlan,
+  WooDescriptionInfo,
+  WooImageTask,
+  WooOptions,
+  WooUpdateOp,
+} from "./woo-types";
 
 /**
  * Planificarea modului «doar descrieri» al importului WooCommerce (15c, pasul 8): aceeași idee ca `planWoo` (funcție PURĂ,
@@ -45,8 +58,11 @@ const shortValue = (raw: string): string => (raw.length > 30 ? `${raw.slice(0, 3
 
 export function planWooDescriptions(
   table: ParsedTable,
-  options: Pick<WooOptions, "overwriteEditedDescriptions">,
+  options: Pick<WooOptions, "overwriteEditedDescriptions"> &
+    Partial<Pick<WooOptions, "importDescriptionImages">>,
   snapshot: WooSnapshot,
+  /** Politica imaginilor (domenii, limite) când contul are `media.write`; `null`/lipsă = imaginile din descrieri nu se aduc. */
+  context: { images: WooContext["images"] } = { images: null },
 ): ImportPlan {
   const columns = detectWooColumns(table.headers);
   if (!looksLikeWooExport(columns)) {
@@ -64,6 +80,13 @@ export function planWooDescriptions(
   }
   const extras = snapshot.woo;
   const stats = zeroStats();
+  // imaginile din descrieri (15d): marcaje în descriere + sarcini, doar pentru rândurile care chiar se actualizează
+  const imagePolicy = options.importDescriptionImages ? context.images : null;
+  const imageBudget = { accepted: 0 };
+  const imageTasks: WooImageTask[] = [];
+  const descriptionImages: WooDescriptionImagesPlan | null = options.importDescriptionImages
+    ? { enabled: imagePolicy !== null, stats: emptyDescriptionStats(), issues: [] }
+    : null;
   const fileWarnings: string[] = [
     ...table.warnings,
     "Mod «doar descrierile produselor existente»: se actualizează numai descrierea; produsele care nu există nu se creează, iar prețurile, titlurile, categoriile, brandurile, atributele și imaginile din fișier nu se citesc.",
@@ -220,8 +243,30 @@ export function planWooDescriptions(
     const stripped = stripWpShortcodes(long);
     stats.descriptionShortcodes += stripped.count;
     let next: string | null;
+    let draftTasks: DescriptionImageCandidate[] = [];
     try {
-      const result = sanitizeDescription(stripped.text);
+      const prepared = planDescriptionImages(
+        stripped.text,
+        imagePolicy,
+        extras.mediaBySourceHash,
+        imageBudget,
+      );
+      if (descriptionImages && imagePolicy) {
+        mergeDescriptionImagePlan(descriptionImages, prepared, r.row, display);
+        stats.descriptionImages += prepared.stats.rejected;
+        if (prepared.stats.rejected > 0) {
+          messages.push(
+            warning(
+              `Descriere: ${prepared.stats.rejected} ${prepared.stats.rejected === 1 ? "imagine nu se aduce" : "imagini nu se aduc"} (adresă sau domeniu nepermis, ori limită depășită)`,
+            ),
+          );
+        }
+        draftTasks = prepared.tasks;
+      }
+      const result = sanitizeDescription(
+        prepared.html,
+        prepared.mediaIds.length > 0 ? { allowedMediaIds: new Set(prepared.mediaIds) } : undefined,
+      );
       stats.descriptionTables += result.stats.tables;
       stats.descriptionLinks += result.stats.links;
       stats.descriptionImages += result.stats.removedImages;
@@ -273,6 +318,18 @@ export function planWooDescriptions(
       emit(r, display, "skipped", messages);
       continue;
     }
+    for (const draft of draftTasks) {
+      imageTasks.push({
+        kind: "description",
+        productId,
+        row: r.row,
+        sku: display,
+        position: draft.position,
+        url: draft.url,
+        sourceHash: draft.hash,
+        host: draft.host,
+      });
+    }
     emit(r, display, "updated", messages, {
       kind: "woo-update",
       productId,
@@ -319,8 +376,9 @@ export function planWooDescriptions(
     fingerprint,
     woo: {
       images: {
+        ...(descriptionImages && { description: descriptionImages }),
         enabled: false,
-        tasks: [],
+        tasks: imageTasks,
         issues: [],
         stats: {
           total: 0,

@@ -956,6 +956,214 @@ describe("pe stocarea S3 reală (MinIO, bucket de test)", () => {
   });
 });
 
+describe("imaginile din descrieri (15d), pe baza reală", () => {
+  const DESCRIPTION_OPTIONS = { importImages: false, importDescriptionImages: true };
+  const withDescription = (sku: string, html: string): WooFixtureRow => ({
+    ID: String(200 + Number(sku.replace(/\D/g, "") || 0)),
+    Tip: "simple",
+    SKU: sku,
+    Nume: `Produs ${sku}`,
+    "Preț obișnuit": "100",
+    Descriere: html,
+  });
+  const descriptionOf = async (tx: TestTx, sku: string) => {
+    const variant = await tx.productVariant.findFirstOrThrow({ where: { sku } });
+    const product = await tx.product.findUniqueOrThrow({
+      where: { id: variant.productId },
+      select: { id: true, description: true },
+    });
+    return product;
+  };
+  const MEDIA_IMG = /<img alt="" data-media-id="([A-Za-z0-9_-]+)" \/>/g;
+
+  it("aplicare + descărcare: marcajul devine <img data-media-id> în același loc, imaginea e în media, legată de produs prin ProductDescriptionMedia, nu în galerie; a doua rulare nu schimbă nimic", async () => {
+    await withImages(async ({ tx, world, service, importer, as, page }) => {
+      page("/poze/a.png", await png(255, 0, 0));
+      const owner = await as("owner");
+      const { validation } = await check(
+        service,
+        owner,
+        [withDescription("D-1", `<p>Înainte</p><p><img src="${url("a")}" alt="x"></p><p>După</p>`)],
+        DESCRIPTION_OPTIONS,
+      );
+      expect(validation.report.woo?.images?.description).toMatchObject({
+        enabled: true,
+        stats: { total: 1, accepted: 1, rejected: 0 },
+      });
+      await apply(service, owner, validation);
+
+      // înainte de descărcare: textul rămâne, imaginea e un marcaj (nu se vede imagine externă)
+      const before = await descriptionOf(tx, "D-1");
+      expect(before.description).toMatch(/\{\{img:[a-f0-9]{24}\}\}/);
+      expect(before.description).not.toContain("exemplu.invalid");
+      expect(world.net.connects).toBe(0);
+
+      const summary = await importer.run(validation.importId);
+      expect(summary).toMatchObject({
+        downloaded: 1,
+        failed: 0,
+        attached: 0,
+        descriptions: 1,
+        descriptionImages: 1,
+      });
+
+      const after = await descriptionOf(tx, "D-1");
+      const ids = [...(after.description ?? "").matchAll(MEDIA_IMG)].map((m) => m[1] as string);
+      expect(ids).toHaveLength(1);
+      expect(after.description).toMatch(/^<p>Înainte<\/p><p><img [^>]*\/><\/p><p>După<\/p>$/);
+      expect(after.description).not.toContain("{{img:");
+      const media = await tx.media.findUniqueOrThrow({ where: { id: ids[0] as string } });
+      expect(media).toMatchObject({ status: "ready" });
+      expect(media.sourceHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(
+        await tx.productDescriptionMedia.count({
+          where: { productId: after.id, mediaId: media.id },
+        }),
+      ).toBe(1);
+      // imaginea din descriere nu intră în galeria produsului
+      expect((await mediaOf(tx, "D-1")).links).toHaveLength(0);
+
+      // idempotență: a doua rulare nu descarcă nimic și nu schimbă descrierea
+      const connects = world.net.connects;
+      const second = await importer.run(validation.importId);
+      expect(second).toMatchObject({ downloaded: 0, descriptions: 0, descriptionImages: 0 });
+      expect(world.net.connects).toBe(connects);
+      expect((await descriptionOf(tx, "D-1")).description).toBe(after.description);
+    });
+  });
+
+  it("o a doua verificare a aceluiași fișier dă «neschimbat»: imaginea există deja, descrierea nu mai e de actualizat", async () => {
+    await withImages(async ({ tx, service, importer, as, page }) => {
+      page("/poze/a.png", await png(255, 0, 0));
+      const owner = await as("owner");
+      const rows = [withDescription("D-2", `<p><img src="${url("a")}"></p>`)];
+      const first = await check(service, owner, rows, DESCRIPTION_OPTIONS);
+      await apply(service, owner, first.validation);
+      await importer.run(first.validation.importId);
+      const again = await check(service, owner, rows, DESCRIPTION_OPTIONS);
+      expect(again.validation.report.counts).toMatchObject({ new: 0, updated: 0, unchanged: 1 });
+      expect(again.validation.report.woo?.images?.description?.stats.alreadyInLibrary).toBe(1);
+      expect((await descriptionOf(tx, "D-2")).description).toMatch(MEDIA_IMG);
+    });
+  });
+
+  it("imaginea care eșuează își păstrează marcajul; reluarea o aduce în același loc; celelalte imagini nu se ating", async () => {
+    await withImages(async ({ tx, service, importer, as, page }) => {
+      page("/poze/a.png", await png(255, 0, 0));
+      // «b» lipsește la prima rulare (404)
+      const owner = await as("owner");
+      const { validation } = await check(
+        service,
+        owner,
+        [
+          withDescription(
+            "D-3",
+            `<p><img src="${url("a")}"></p><p>mijloc</p><p><img src="${url("b")}"></p>`,
+          ),
+        ],
+        DESCRIPTION_OPTIONS,
+      );
+      await apply(service, owner, validation);
+      const first = await importer.run(validation.importId);
+      expect(first).toMatchObject({
+        downloaded: 1,
+        failed: 1,
+        descriptions: 1,
+        descriptionImages: 1,
+      });
+      const mid = (await descriptionOf(tx, "D-3")).description ?? "";
+      expect([...mid.matchAll(MEDIA_IMG)]).toHaveLength(1);
+      expect(mid).toMatch(/\{\{img:[a-f0-9]{24}\}\}/);
+      expect(mid).toContain("mijloc");
+
+      // reluarea: acum «b» răspunde
+      page("/poze/b.png", await png(0, 255, 0));
+      await service.retryImages(owner, validation.importId);
+      const second = await importer.run(validation.importId);
+      expect(second).toMatchObject({
+        downloaded: 1,
+        failed: 0,
+        descriptions: 1,
+        descriptionImages: 1,
+      });
+      const done = (await descriptionOf(tx, "D-3")).description ?? "";
+      expect([...done.matchAll(MEDIA_IMG)]).toHaveLength(2);
+      expect(done).not.toContain("{{img:");
+      expect(done.indexOf("mijloc")).toBeGreaterThan(done.indexOf("data-media-id"));
+    });
+  });
+
+  it("modul «doar descrieri»: produsul existent își primește imaginile din descriere, fără să-i schimbe altceva", async () => {
+    await withImages(async ({ tx, service, importer, as, page }) => {
+      page("/poze/a.png", await png(255, 0, 0));
+      const owner = await as("owner");
+      // produsul există deja (fără descriere)
+      const base = await check(service, owner, [withDescription("D-4", "")], {
+        importImages: false,
+      });
+      await apply(service, owner, base.validation);
+
+      const analysis = await service.register(owner, {
+        bytes: wooCsv([withDescription("D-4", `<p>Text nou</p><p><img src="${url("a")}"></p>`)]),
+        fileName: "woo-descrieri.csv",
+      });
+      const validation = await service.validate(owner, {
+        importId: analysis.importId,
+        profile: "woocommerce",
+        options: {
+          ...(analysis.woo?.defaults as object),
+          mode: "descriptionsOnly",
+          importDescriptionImages: true,
+        },
+      });
+      expect(validation.report.counts).toMatchObject({ updated: 1 });
+      expect(validation.report.woo?.images?.description?.stats.accepted).toBe(1);
+      await apply(service, owner, validation);
+      expect((await descriptionOf(tx, "D-4")).description).toMatch(/\{\{img:/);
+
+      const summary = await importer.run(validation.importId);
+      expect(summary).toMatchObject({ downloaded: 1, descriptions: 1, descriptionImages: 1 });
+      const after = (await descriptionOf(tx, "D-4")).description ?? "";
+      expect(after).toMatch(/^<p>Text nou<\/p><p><img [^>]*\/><\/p>$/);
+      expect(after).not.toContain("{{img:");
+    });
+  });
+
+  it("imaginile respinse (domeniu nepermis) nu produc nicio cerere în rețea și apar în raport, fără adresa completă", async () => {
+    await withImages(async ({ tx, world, service, as }) => {
+      const owner = await as("owner");
+      const { validation } = await check(
+        service,
+        owner,
+        [withDescription("D-5", `<p>x</p><img src="https://alt-domeniu.invalid/secret/poza.png">`)],
+        DESCRIPTION_OPTIONS,
+      );
+      const description = validation.report.woo?.images?.description;
+      expect(description?.stats).toMatchObject({ total: 1, accepted: 0, rejected: 1 });
+      expect(description?.issues.map((issue) => issue.message)).toEqual(["domeniu nepermis"]);
+      expect(JSON.stringify(validation.report)).not.toContain("secret/poza");
+      expect(world.net.connects).toBe(0);
+      expect(world.net.resolves).toBe(0);
+      expect(await tx.productImportImage.count()).toBe(0);
+    });
+  });
+
+  it("tabela sarcinilor: tipul e validat de baza de date (doar «product» sau «description»)", async () => {
+    await withImages(async ({ tx, service, as }) => {
+      const owner = await as("owner");
+      const { validation } = await check(service, owner, [row("K-1", url("a"))]);
+      await apply(service, owner, validation);
+      const task = await tx.productImportImage.findFirstOrThrow();
+      expect(task.kind).toBe("product");
+      await expect(
+        tx.$executeRawUnsafe(
+          `UPDATE product_import_image SET kind = 'altceva' WHERE id = '${task.id}'`,
+        ),
+      ).rejects.toThrow(/product_import_image_kind_check/);
+    });
+  });
+});
+
 describe("mesaje", () => {
   it("fiecare cod de eșec are un mesaj în română, fără adrese sau detalii tehnice", () => {
     for (const code of [

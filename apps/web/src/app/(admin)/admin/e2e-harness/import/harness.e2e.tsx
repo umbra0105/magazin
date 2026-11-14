@@ -21,6 +21,7 @@ const OPTIONS: WooOptions = {
   shippingClassMap: { "clasa mare": "oversized" },
   attributeTargets: {},
   importImages: true,
+  importDescriptionImages: false,
   mode: "full",
   overwriteEditedDescriptions: false,
 };

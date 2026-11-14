@@ -39,6 +39,13 @@ import {
   sanitizeDescription,
   summarizeDescriptionLosses,
 } from "../../rich-text/description";
+import {
+  descriptionImageUrls,
+  emptyDescriptionStats,
+  mergeDescriptionImagePlan,
+  planDescriptionImages,
+  type DescriptionImageCandidate,
+} from "./description-images";
 import { htmlToPlainText, stripWpShortcodes } from "./html-to-text";
 import { detectWooColumns, looksLikeWooExport, type WooRole } from "./woo-columns";
 import type {
@@ -121,6 +128,7 @@ export const DEFAULT_WOO_OPTIONS: WooOptions = {
   },
   attributeTargets: {},
   importImages: false,
+  importDescriptionImages: false,
   mode: "full",
   overwriteEditedDescriptions: false,
 };
@@ -261,6 +269,22 @@ export function planWoo(
       rejectedByReason: {},
     },
   };
+  // imaginile din descrieri (15d): aceeași politică și același drept (media.write) ca imaginile produsului
+  const descriptionImagePolicy = options.importDescriptionImages ? ctx.images : null;
+  const descriptionBudget = { accepted: 0 };
+  const descriptionDrafts = new Map<number, DescriptionImageCandidate[]>();
+  if (options.importDescriptionImages) {
+    imagePlan.description = {
+      enabled: descriptionImagePolicy !== null,
+      stats: emptyDescriptionStats(),
+      issues: [],
+    };
+    if (ctx.images === null) {
+      fileWarnings.push(
+        "Imaginile din descrieri nu se importă: contul nu are dreptul de a încărca fișiere în biblioteca media (media.write).",
+      );
+    }
+  }
   if (columns.roles.images !== undefined && ctx.images === null) {
     // lipsa dreptului are prioritate: contul nu poate porni opțiunea, deci explicația corectă e cea despre drept
     fileWarnings.push(
@@ -565,7 +589,29 @@ export function planWoo(
       const stripped = stripWpShortcodes(long);
       stats.descriptionShortcodes += stripped.count;
       try {
-        const result = sanitizeDescription(stripped.text);
+        const prepared = planDescriptionImages(
+          stripped.text,
+          descriptionImagePolicy,
+          extras.mediaBySourceHash,
+          descriptionBudget,
+        );
+        if (imagePlan.description && descriptionImagePolicy) {
+          mergeDescriptionImagePlan(imagePlan.description, prepared, r.row, r.sku);
+          stats.descriptionImages += prepared.stats.rejected;
+          if (prepared.stats.rejected > 0) {
+            warn(
+              r,
+              `Descriere: ${prepared.stats.rejected} ${prepared.stats.rejected === 1 ? "imagine nu se aduce" : "imagini nu se aduc"} (adresă sau domeniu nepermis, ori limită depășită)`,
+            );
+          }
+          if (prepared.tasks.length > 0) descriptionDrafts.set(r.i, prepared.tasks);
+        }
+        const result = sanitizeDescription(
+          prepared.html,
+          prepared.mediaIds.length > 0
+            ? { allowedMediaIds: new Set(prepared.mediaIds) }
+            : undefined,
+        );
         stats.descriptionTables += result.stats.tables;
         stats.descriptionLinks += result.stats.links;
         stats.descriptionImages += result.stats.removedImages;
@@ -815,6 +861,25 @@ export function planWoo(
       }
       accepted += 1;
     });
+  }
+
+  /** Sarcinile imaginilor din descrierea rândului (15d): se creează o singură dată, cu SKU-ul produsului ca la imaginile produsului. */
+  function planDescriptionTasks(r: RowInfo, productSku: string, productId: string | null): void {
+    const drafts = descriptionDrafts.get(r.i);
+    if (!drafts) return;
+    descriptionDrafts.delete(r.i);
+    for (const draft of drafts) {
+      imagePlan.tasks.push({
+        kind: "description",
+        row: r.row,
+        sku: productSku,
+        position: draft.position,
+        url: draft.url,
+        sourceHash: draft.hash,
+        host: draft.host,
+        ...(productId && { productId }),
+      });
+    }
   }
 
   /** Imaginile de pe rândurile de variație nu se importă: se spune explicit, o dată pe rând. */
@@ -1067,6 +1132,7 @@ export function planWoo(
     const variant = variantLevel(r, isNew);
     if (hasError(r)) return failRow(r);
     planImages(r, r.sku, existing?.productId ?? null);
+    planDescriptionTasks(r, r.sku, existing?.productId ?? null);
 
     if (existing) {
       const prod = productPatch(existing.product, existing.productId, product, new Set(), r);
@@ -1213,6 +1279,7 @@ export function planWoo(
         return failRow(parent);
       }
       planImages(parent, kids[0]?.sku ?? parent.sku, null);
+      planDescriptionTasks(parent, kids[0]?.sku ?? parent.sku, null);
       const op: WooCreateOp = {
         kind: "woo-create",
         product: draftOf(product),
@@ -1291,6 +1358,7 @@ export function planWoo(
     }
     if (hasError(parent)) return failRow(parent);
     planImages(parent, anyExisting.sku, anyExisting.productId);
+    planDescriptionTasks(parent, anyExisting.sku, anyExisting.productId);
     if (prod.changed.length === 0) return emit(parent, "unchanged");
     const op: WooUpdateOp = {
       ...prod.op,
@@ -1450,6 +1518,10 @@ export function collectWooLookups(table: ParsedTable): {
     else if (id) skus.add(`WC-${id}`);
     if (id) legacyIds.add(id);
     for (const raw of splitImageCell(cell(cells, "images"))) {
+      const parsed = parseImageUrl(raw, 4000);
+      if (parsed.ok) imageHashes.add(parsed.sourceHash);
+    }
+    for (const raw of descriptionImageUrls(cell(cells, "description"))) {
       const parsed = parseImageUrl(raw, 4000);
       if (parsed.ok) imageHashes.add(parsed.sourceHash);
     }

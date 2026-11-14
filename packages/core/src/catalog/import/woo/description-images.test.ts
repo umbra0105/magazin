@@ -130,20 +130,22 @@ describe("resolveDescriptionTokens", () => {
 
   it("media → <img data-media-id>, drop → dispare, keep → rămâne; numără fiecare caz", () => {
     const out = resolveDescriptionTokens(html, (tokenId) => {
-      if (tokenId === prefix("a")) return { kind: "media", mediaId: "m_1" };
+      if (tokenId === prefix("a")) return { kind: "media", mediaId: "media_0001" };
       if (tokenId === prefix("b")) return { kind: "drop" };
       return { kind: "keep" };
     });
     expect(out.html).toBe(
-      `<p><img data-media-id="m_1" alt=""></p><p>text</p><p></p><p>${token("c")}</p>`,
+      `<p><img data-media-id="media_0001" alt=""></p><p>text</p><p></p><p>${token("c")}</p>`,
     );
     expect(out).toMatchObject({ replaced: 1, dropped: 1, kept: 1 });
   });
 
   it("același marcaj de două ori → ambele locuri se înlocuiesc", () => {
     const twice = `${token("a")}-${token("a")}`;
-    const out = resolveDescriptionTokens(twice, () => ({ kind: "media", mediaId: "m_1" }));
-    expect(out.html).toBe(`<img data-media-id="m_1" alt="">-<img data-media-id="m_1" alt="">`);
+    const out = resolveDescriptionTokens(twice, () => ({ kind: "media", mediaId: "media_0001" }));
+    expect(out.html).toBe(
+      `<img data-media-id="media_0001" alt="">-<img data-media-id="media_0001" alt="">`,
+    );
     expect(out.replaced).toBe(2);
   });
 
@@ -176,14 +178,16 @@ describe("descriptionTokensIn și stripDescriptionTokens", () => {
 
 describe("appendDescriptionImages", () => {
   it("adaugă la sfârșit imaginile care nu sunt deja în descriere; nu dublează", () => {
-    const base = `<p>x</p><p><img data-media-id="m_1" alt=""></p>`;
-    const out = appendDescriptionImages(base, ["m_1", "m_2"]);
-    expect(out).toBe(`${base}<p><img data-media-id="m_2" alt=""></p>`);
-    expect(appendDescriptionImages(base, ["m_1"])).toBe(base);
+    const base = `<p>x</p><p><img data-media-id="media_0001" alt=""></p>`;
+    const out = appendDescriptionImages(base, ["media_0001", "media_0002"]);
+    expect(out).toBe(`${base}<p><img data-media-id="media_0002" alt=""></p>`);
+    expect(appendDescriptionImages(base, ["media_0001"])).toBe(base);
   });
 
   it("pe o descriere goală (null) pornește de la imagini; ignoră id-uri invalide", () => {
-    expect(appendDescriptionImages(null, ["m_1"])).toBe(`<p><img data-media-id="m_1" alt=""></p>`);
+    expect(appendDescriptionImages(null, ["media_0001"])).toBe(
+      `<p><img data-media-id="media_0001" alt=""></p>`,
+    );
     expect(appendDescriptionImages("<p>x</p>", [`a"b`])).toBe("<p>x</p>");
   });
 });
@@ -198,10 +202,10 @@ describe("planDescriptionImages (planul unei descrieri, fără rețea)", () => {
   const fresh = () => ({ accepted: 0 });
 
   it("imaginile noi rămân ca marcaje cu sarcini; cele deja în bibliotecă se înlocuiesc pe loc, fără sarcină", () => {
-    const known = new Map([[hashOf("a"), "m_a"]]);
+    const known = new Map([[hashOf("a"), "media_aaaa"]]);
     const html = `<p><img src="${u("a")}"></p><p><img src="${u("b")}"></p>`;
     const out = planDescriptionImages(html, policy, known, fresh());
-    expect(out.html).toBe(`<p><img data-media-id="m_a" alt=""></p><p>${token("b")}</p>`);
+    expect(out.html).toBe(`<p><img data-media-id="media_aaaa" alt=""></p><p>${token("b")}</p>`);
     expect(out.tasks.map((task) => task.hash)).toEqual([hashOf("b")]);
     expect(out.stats).toMatchObject({ total: 2, accepted: 2, rejected: 0, alreadyInLibrary: 1 });
     expect(out.stats.byHost).toEqual({ "exemplu.invalid": 2 });
@@ -237,9 +241,10 @@ describe("planDescriptionImages (planul unei descrieri, fără rețea)", () => {
     expect(out.issues[0]?.reason).toBe("too_many_for_product");
   });
 
-  it("fără politică (opțiunea oprită): imaginile se elimină ca înainte (fără sarcini, fără marcaje)", () => {
-    const out = planDescriptionImages(`<p><img src="${u("a")}"></p>`, null, new Map(), fresh());
-    expect(out.html).toBe("<p></p>");
+  it("fără politică (opțiunea oprită): HTML-ul rămâne neatins, iar sanitizatorul elimină imaginile ca în 15c (fără sarcini, fără marcaje)", () => {
+    const html = `<p><img src="${u("a")}"></p>`;
+    const out = planDescriptionImages(html, null, new Map(), fresh());
+    expect(out.html).toBe(html);
     expect(out.tasks).toEqual([]);
     expect(out.stats.total).toBe(0);
   });
