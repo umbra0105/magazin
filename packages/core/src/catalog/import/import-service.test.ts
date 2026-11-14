@@ -73,6 +73,7 @@ class MemoryStore implements ProductImportStore {
     findMediaBySourceHashes: async () => new Map(),
     productMediaIds: async () => [],
     productTitles: async () => new Map(),
+    productDescriptions: async () => new Map(),
   };
   /** Profilul WooCommerce nu e acoperit de aceste teste (are testele lui); magazinul de test nu-l folosește. */
   async loadWooSnapshot(): Promise<never> {

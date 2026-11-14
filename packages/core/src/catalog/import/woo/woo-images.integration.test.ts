@@ -39,6 +39,8 @@ import {
   ProductAssignmentsService,
   createPrismaProductAssignmentStore,
 } from "../../product-assignments";
+import { ProductService } from "../../product-service";
+import { createPrismaProductStore } from "../../product-store";
 import { createProductImportService } from "../import-runtime";
 import { createPrismaProductImportStore } from "../import-store";
 import type { ImageJobQueue, ImportValidation } from "../import-service";
@@ -192,6 +194,12 @@ async function withImages<T>(
     // Blocul C, C-12: atașarea imaginilor la produse lasă urme pe entitate, marcate cu importul
     const rowAudit = new RowAuditCollector(new AuditService(createPrismaAuditStore(tx)), silent);
     const importer = new ProductImageImporter({
+      products: new ProductService({
+        store: createPrismaProductStore(dbx),
+        audit: rowAudit.audit,
+        defaultManageStock: async () => true,
+        logger: silent,
+      }),
       rowAudit,
       tasks: store.images,
       imports: store,

@@ -951,6 +951,8 @@ model ProductImportImage {
   /// Rândul din fișier și SKU-ul, pentru raport
   row        Int
   sku        String
+  /// "product" (coloana «Imagini», se atașează produsului) | "description" (din descriere, intră în HTML) (CHECK în migrație)
+  kind       String        @default("product")
   /// Ordinea în fișier, în cadrul produsului (prima = principală dacă produsul nu are imagini)
   position   Int
   sourceUrl  String
