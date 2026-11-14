@@ -68,6 +68,19 @@ function analysis(stare: string): WooAnalysis {
 
 const REPORT: WooReportSection = {
   images: {
+    description: {
+      enabled: true,
+      stats: {
+        total: 4,
+        accepted: 2,
+        rejected: 2,
+        alreadyInLibrary: 1,
+        byHost: { "cdn.exemplu.ro": 2 },
+        rejectedByReason: { host_not_allowed: 1, scheme: 1 },
+      },
+      issues: [],
+      issuesTruncated: false,
+    },
     enabled: true,
     stats: {
       total: 20,

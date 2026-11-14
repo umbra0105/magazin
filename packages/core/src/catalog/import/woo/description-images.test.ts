@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkImageUrl } from "../../../media/image-url";
+import { renderRichText } from "../../rich-text/render";
 import {
   DESCRIPTION_TOKEN_LENGTH,
   appendDescriptionImages,
@@ -247,5 +248,18 @@ describe("planDescriptionImages (planul unei descrieri, fără rețea)", () => {
     expect(out.html).toBe(html);
     expect(out.tasks).toEqual([]);
     expect(out.stats.total).toBe(0);
+  });
+});
+
+describe("randarea (storefront) nu arată marcajele imaginilor încă neaduse", () => {
+  it("renderRichText scoate marcajele produse de planul de import, păstrând restul textului", async () => {
+    const html = await renderRichText(
+      `<p>Înainte ${token("a")} după</p><p>${token("b")}</p>`,
+      async () => new Map(),
+      { tableLabel: "Tabel", imageSizes: "100vw" },
+    );
+    expect(html).not.toContain("{{img:");
+    expect(html).toContain("Înainte");
+    expect(html).toContain("după");
   });
 });

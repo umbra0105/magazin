@@ -2540,6 +2540,12 @@ export const ro = {
             `${host}: ${imagini(count)} — ${allowed ? "domeniu permis" : "domeniu NEPERMIS (imaginile de aici se vor respinge)"}`,
           noRight:
             "Contul tău nu poate încărca fișiere în biblioteca media (drept lipsă), deci imaginile nu se vor importa. Produsele se importă normal.",
+          descriptionHeading: "Imagini din descrieri",
+          descriptionCheckbox: "Aduce și imaginile din descrieri, în fundal",
+          descriptionHelp:
+            "Imaginile de pe domenii permise intră în biblioteca media și apar în descriere, în același loc; la verificare NU se face nicio cerere în rețea. Până se aduc, în descriere stă un marcaj tehnic (nu se vede cumpărătorilor); o imagine care nu se poate aduce își păstrează marcajul până la reluare (butonul «Reia imaginile» din istoricul importului). Fără bifă, imaginile externe din descrieri se elimină.",
+          descriptionNoHosts:
+            "Lista de domenii permise e goală, deci nicio imagine din descrieri nu se va aduce.",
           noHosts:
             "Lista de domenii permise este goală, deci nicio imagine nu se va descărca. Lista este o setare de securitate: o poate completa doar un Administrator sau Proprietar, din setări (nu din acest formular).",
           checkbox: "Aduce imaginile din adrese, în fundal, după ce produsele sunt create",
@@ -2610,6 +2616,15 @@ export const ro = {
               too_many_for_product: "Prea multe imagini pe produs",
               too_many_for_import: "Prea multe imagini în import",
             } as Record<string, string>,
+            description: {
+              heading: "Imagini din descrieri",
+              summary: (total: number, accepted: number, rejected: number) =>
+                `${total} adrese: ${accepted} acceptate, ${rejected} respinse.`,
+              alreadyInLibrary: (n: number) =>
+                n === 1 ? "1 e deja în bibliotecă" : `${n} sunt deja în bibliotecă`,
+              issuesHeading: "Imagini din descrieri respinse (fără adresa completă)",
+              off: "Imaginile din descrieri nu se aduc pentru acest fișier.",
+            },
             issuesHeading: "Imagini respinse (fără adresa completă)",
             row: "Rând",
             sku: "SKU",

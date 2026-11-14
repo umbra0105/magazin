@@ -85,10 +85,65 @@ export function WooOptionsPanel({
         )}
       </fieldset>
 
+      <DescriptionImagesOption analysis={analysis} options={options} update={update} />
+
       {options.mode === "full" && (
         <WooFullOptions analysis={analysis} options={options} update={update} />
       )}
     </div>
+  );
+}
+
+/** Imaginile din descrieri (15d): bifa se arată în ambele moduri; cere dreptul de media și o listă de domenii permise. */
+function DescriptionImagesOption({
+  analysis,
+  options,
+  update,
+}: {
+  analysis: WooAnalysis;
+  options: WooOptions;
+  update: (patch: Partial<WooOptions>) => void;
+}) {
+  const canImport = analysis.images.canImport;
+  return (
+    <fieldset className="flex flex-col gap-2" data-woo-description-images>
+      <legend className="mb-1 text-body font-semibold">{m.images.descriptionHeading}</legend>
+      <label className="flex items-start gap-2 text-body font-medium">
+        <input
+          type="checkbox"
+          className="mt-1 size-4 shrink-0 accent-brand"
+          checked={options.importDescriptionImages}
+          disabled={!canImport}
+          onChange={(event) => update({ importDescriptionImages: event.target.checked })}
+          aria-describedby="woo-description-images-help"
+          data-woo-import-description-images
+        />
+        <span>{m.images.descriptionCheckbox}</span>
+      </label>
+      <p
+        id="woo-description-images-help"
+        className="pl-6 text-label font-normal text-ink-secondary"
+      >
+        {m.images.descriptionHelp}
+      </p>
+      {!canImport ? (
+        <p
+          role="note"
+          className="rounded-lg bg-surface-subtle p-3 text-body"
+          data-description-images-no-right
+        >
+          {m.images.noRight}
+        </p>
+      ) : analysis.images.allowedHosts.length === 0 ? (
+        <p
+          role="note"
+          className="rounded-lg bg-tone-problem-bg p-3 text-body text-tone-problem-fg"
+          data-description-images-no-hosts
+        >
+          {m.images.descriptionNoHosts}
+        </p>
+      ) : null}
+    </fieldset>
   );
 }
 
@@ -484,6 +539,35 @@ function WooImageReport({ images }: { images: NonNullable<WooReportSection["imag
   );
 }
 
+/** Imaginile din descrieri (15d): câte, câte respinse și de ce; fără nicio adresă completă. */
+function WooDescriptionImagesReport({
+  images,
+}: {
+  images: NonNullable<NonNullable<WooReportSection["images"]>["description"]>;
+}) {
+  const r = m.report.images.description;
+  const { stats } = images;
+  const reasons = Object.entries(stats.rejectedByReason);
+  return (
+    <div className="flex flex-col gap-2" data-woo-description-images-report>
+      <h4 className="text-body font-medium">{r.heading}</h4>
+      <p className="text-body" data-description-images-summary>
+        {r.summary(stats.total, stats.accepted, stats.rejected)}
+        {stats.alreadyInLibrary > 0 ? ` ${r.alreadyInLibrary(stats.alreadyInLibrary)}.` : ""}
+      </p>
+      {reasons.length > 0 && (
+        <ul className="list-disc pl-5 text-body" data-description-images-rejected>
+          {reasons.map(([reason, count]) => (
+            <li key={reason} data-images-reason={reason}>
+              {m.report.images.reasons[reason] ?? reason}: {count}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /** Ce creează importul WooCommerce și constatările lui, în raport (la verificare și după aplicare). */
 export function WooReportExtras({ woo }: { woo: WooReportSection }) {
   const nothing =
@@ -558,6 +642,9 @@ export function WooReportExtras({ woo }: { woo: WooReportSection }) {
         </>
       )}
       {woo.images && woo.images.stats.total > 0 && <WooImageReport images={woo.images} />}
+      {woo.images?.description?.enabled && (
+        <WooDescriptionImagesReport images={woo.images.description} />
+      )}
       <div>
         <h4 className="text-body font-medium">{m.report.rowTypes}</h4>
         <p className="text-body">{describeRowTypes(woo.rowTypes)}</p>
