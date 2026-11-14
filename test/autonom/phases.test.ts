@@ -8,7 +8,18 @@ import {
 } from "../../scripts/autonom/phases";
 
 /** Tabelul din docs/20 §3, scris a doua oară aici: o modificare accidentală a modurilor pică testul. */
-const MODE_A = ["redesign-final", "redesign-finisaje", "11", "12", "14", "16", "17", "19", "20"];
+const MODE_A = [
+  "redesign-final",
+  "redesign-finisaje",
+  "15d",
+  "11",
+  "12",
+  "14",
+  "16",
+  "17",
+  "19",
+  "20",
+];
 const MODE_B = ["8", "9", "10", "13", "14b", "15", "15b"];
 const MODE_C = ["6", "7", "18", "22"];
 
@@ -77,5 +88,14 @@ describe("faza redesign-finisaje", () => {
       pre: "pre-faza-redesign-finisaje",
       done: "faza-redesign-finisaje-completa",
     });
+  });
+});
+
+describe("faza 15d (mini-fază, modul A)", () => {
+  it("modul A; ramura faza-15d, etichetele pre-faza-15d și faza-15d-completa", () => {
+    expect(modeOf("15d")).toBe("A");
+    expect(branchOf("15d")).toBe("faza-15d");
+    expect(tagsOf("15d")).toEqual({ pre: "pre-faza-15d", done: "faza-15d-completa" });
+    expect(isValidPhaseId("15d")).toBe(true);
   });
 });

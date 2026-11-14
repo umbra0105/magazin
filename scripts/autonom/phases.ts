@@ -9,6 +9,7 @@ export type Mode = "A" | "B" | "C";
 export const PHASE_MODES: Readonly<Record<string, Mode>> = {
   "redesign-final": "A",
   "redesign-finisaje": "A",
+  "15d": "A",
   "11": "A",
   "12": "A",
   "14": "A",

@@ -34,3 +34,4 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 | 2026-11-13 | redesign-finisaje | grup 3: import pe telefon (stepper pe un rând, descrieri în greutate normală, tooltip la selecturi) | b33dea6 | per pas: typecheck, lint, arhitectură 173/173 | - |
 | 2026-11-13 | redesign-finisaje | grup 4: istoricul exporturilor paginat («Încarcă mai multe») | d9f3be5 | per pas: 4 teste unitare pe serviciu roșii apoi verzi, typecheck, lint | - |
 | 2026-11-13 | redesign-finisaje | grup 5: eticheta «Rând» pe carduri, țintă tactilă pentru «Detalii» | f2a8d23 | per pas: typecheck, lint, specuri import-design și states-design verzi (1 test de Tab corectat în commit-ul de documentație) | - |
+| 2026-11-14 | 15d | început de fază | - | copie bază: local-data/backups/ecom-20261114-210947.sql | - |
