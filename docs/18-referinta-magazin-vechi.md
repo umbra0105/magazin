@@ -1,5 +1,7 @@
 # 18 — Referință: magazinul vechi (piscine-concept.ro / totalwater.ro)
 
+> **Referință neobligatorie (decizia utilizatorului, 2026-11-15).** Proiectul e white-label, construit de la zero; magazinul vechi nu e sursă de adevăr, iar produsele din arhivă sunt DOAR date de test. **Nicio regulă din acest document nu se aplică fără aprobarea explicită a utilizatorului**, dată pentru acea regulă, la faza care o folosește; până atunci documentele normative (`CLAUDE.md`, `03`–`17`) câștigă fără excepție.
+
 > **Statut:** document de referință, nu specificație. Nu copiem cod din magazinul vechi. Preluăm regulile de business care s-au dovedit utile și evităm capcanele documentate de autorii lui.
 > **Sursa:** arhiva `magazin next js.zip` (primită 2026-11-13), citită direct din zip. Fișierele utile sunt extrase în `local-data/arhiva-piscine-concept/` (în `.gitignore`; nu se comit, nu se tipăresc, nu se folosesc ca fixture-uri). `DEPLOY.md`, `.env`, logurile și `.claude/` din arhivă NU au fost extrase (conțin credențiale și date de server).
 > **Document-pereche:** [19-seo-si-migrare-merchant.md](19-seo-si-migrare-merchant.md).

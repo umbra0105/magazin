@@ -18,7 +18,8 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 
 ## Deschise
 
-(nicio intrare)
+- [ ] S3 | Import WooCommerce, imagini din descrieri (15d) | cât o imagine din descriere e în așteptare sau a eșuat, în editorul de descriere se vede marcajul `{{img:…}}` ca text (cumpărătorii nu îl văd: se scoate la randare); de decis dacă editorul îl arată ca un chip «imagine în așteptare» | -
+- [ ] S3 | Import WooCommerce, istoric (15d) | nu există buton de renunțare pentru o imagine de descriere eșuată: marcajul rămâne până la reluare («Reia imaginile») sau până îl șterge editorul de mână | -
 
 ## Rezolvate
 

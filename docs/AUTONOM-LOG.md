@@ -41,3 +41,4 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 | 2026-11-15 | 15d | mutanți pe idempotență, reluare, înlocuire în HTML | 2ee53c1 | 22 mutanți, toți uciși în afară de unul echivalent | - |
 | 2026-11-15 | 15d | migrația kind pe baza de dezvoltare (autorizată) și încărcarea demo (29 de produse, prețuri de test) | - | copie bază: local-data/backups/ecom-20261115-142933.sql; doar migrația 20261115090000 aplicată; demo: 29 produse, 15 branduri, 40 media | - |
 | 2026-11-15 | 15d | documentație: nota din (15d) în docs/06, clasificarea fazelor în docs/20 §3 | commit-ul docs | arhitectură și autonom 274/274 | - |
+| 2026-11-15 | 6 | început de fază (mod C), ramura faza-6 din main `328c3c8`; poarta și garda acceptă faza-6 (teste) | - | copie bază: local-data/backups/ecom-20261115-175051.sql | - |
