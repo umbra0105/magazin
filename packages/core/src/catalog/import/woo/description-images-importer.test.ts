@@ -318,3 +318,25 @@ describe("drepturi", () => {
     expect(summary.failed).toBe(1);
   });
 });
+
+describe("fișierul există deja în bibliotecă", () => {
+  it("o sarcină eșuată sau în așteptare nu împiedică punerea imaginii dacă fișierul există (după hash-ul adresei)", async () => {
+    const f = world([task("a")], { p1: `<p>${marker("a")}</p>` });
+    f.media.set(hashOf("a"), "media_deja01");
+    // sarcina nu se mai execută în această rulare: rămâne «eșuată»
+    f.tasks[0]!.status = "failed";
+    f.tasks[0]!.reason = "download_failed";
+    await f.importer.run("imp1");
+    expect(f.descriptions.get("p1")).toBe(`<p><img data-media-id="media_deja01" alt=""></p>`);
+  });
+});
+
+describe("descrierea lipsește (null)", () => {
+  it("produs fără descriere: imaginea se aduce, nu se scrie nimic și sarcina nu se marchează ca eșuată", async () => {
+    const f = world([task("a")], { p1: null });
+    const summary = await f.importer.run("imp1");
+    expect(f.updates).toEqual([]);
+    expect(f.tasks[0]).toMatchObject({ status: "downloaded", reason: null });
+    expect(summary).toMatchObject({ downloaded: 1, failed: 0, descriptions: 0 });
+  });
+});

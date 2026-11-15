@@ -9,7 +9,7 @@ import { SafeFetchError, type SafeFetchPolicy } from "../../../media/safe-fetch"
 import { CATALOG_TAG } from "../../catalog-support";
 import type { ProductAssignmentsService } from "../../product-assignments";
 import type { ProductService } from "../../product-service";
-import { descriptionTokensIn, resolveDescriptionTokens } from "./description-images";
+import { resolveDescriptionTokens } from "./description-images";
 import type { ProductImportStore } from "../import-store";
 import type { ImageTask, ImageTaskStore } from "./image-store";
 
@@ -401,12 +401,10 @@ export class ProductImageImporter {
       await deps.tasks.listTasks(importId, ["downloaded", "existing", "failed", "pending"])
     ).filter((task) => task.kind === "description");
     if (all.length === 0) return { descriptions: 0, images: 0 };
+    // fișierele se regăsesc prin hash-ul adresei sursă; contează doar dacă fișierul există (nu starea sarcinii): o imagine
+    // deja în bibliotecă se pune în descriere chiar dacă sarcina ei a eșuat sau încă așteaptă
     const mediaByHash = await deps.tasks.findMediaBySourceHashes([
-      ...new Set(
-        all
-          .filter((t) => t.status === "downloaded" || t.status === "existing")
-          .map((t) => t.sourceHash),
-      ),
+      ...new Set(all.map((t) => t.sourceHash)),
     ]);
     const byProduct = new Map<string, ImageTask[]>();
     for (const task of all)
@@ -416,19 +414,16 @@ export class ProductImageImporter {
     let images = 0;
     for (const [productId, tasks] of byProduct) {
       const current = descriptions.get(productId) ?? null;
-      if (!current || descriptionTokensIn(current).length === 0) continue;
+      if (!current) continue;
       try {
         const out = resolveDescriptionTokens(current, (token) => {
           const task = tasks.find((candidate) => candidate.sourceHash.startsWith(token));
           if (!task) return { kind: "keep" };
-          if (task.status === "downloaded" || task.status === "existing") {
-            const media = mediaByHash.get(task.sourceHash);
-            // fișierul a dispărut din bibliotecă între timp: marcajul rămâne, imaginea se reia la următoarea rulare
-            return media ? { kind: "media", mediaId: media.id } : { kind: "keep" };
-          }
-          return { kind: "keep" };
+          const media = mediaByHash.get(task.sourceHash);
+          // fișier încă neadus (în așteptare, eșuat) sau dispărut din bibliotecă: marcajul rămâne, imaginea se reia
+          return media ? { kind: "media", mediaId: media.id } : { kind: "keep" };
         });
-        if (out.replaced === 0 || out.html === current) continue;
+        if (out.replaced === 0) continue;
         await deps.products.update(subject, productId, { description: out.html });
         updated += 1;
         images += out.replaced;

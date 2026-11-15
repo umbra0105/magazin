@@ -263,3 +263,19 @@ describe("randarea (storefront) nu arată marcajele imaginilor încă neaduse", 
     expect(html).toContain("după");
   });
 });
+
+describe("planDescriptionImages: buget", () => {
+  it("aceeași imagine de două ori la limita importului: nu se respinge a doua oară (adresa e deja numărată)", () => {
+    const policy = {
+      allowedHosts: ["exemplu.invalid"],
+      maxUrlLength: 2000,
+      maxImagesPerProduct: 20,
+      maxImagesPerImport: 1,
+    };
+    const html = `<img src="${u("a")}"><img src="${u("a")}">`;
+    const out = planDescriptionImages(html, policy, new Map(), { accepted: 0 });
+    expect(out.html).toBe(`${token("a")}${token("a")}`);
+    expect(out.issues).toEqual([]);
+    expect(out.tasks).toHaveLength(1);
+  });
+});
