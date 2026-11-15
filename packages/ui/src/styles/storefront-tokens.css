@@ -1,0 +1,70 @@
+/*
+ * Tokenii VITRINEI (Faza 6, docs/21 §2), separați de cei ai adminului (admin-tokens.css). Aici stau doar valori care NU sunt culori
+ * de brand: ritmul vertical, mărimile controalelor, scara tipografică fluidă și cele două valori fixe de pe fotografii (text
+ * alb și strat negru: indiferent de temă, textul de pe o imagine e deschis pe un strat întunecat). Culorile de brand, razele,
+ * fonturile și forma vin din `Branding` (preset), prin `/theme.css`, deci vitrina arată bine și fără niciun brand configurat.
+ * Componentele citesc doar numele semantice; nicio valoare nu se repetă în `.tsx`.
+ */
+:root {
+  /* valori implicite (dacă /theme.css nu se încarcă); presetul le suprascrie prin html:root */
+  --radius-card: 1.5rem;
+  --radius-button: 9999px;
+  --heading-weight: 700;
+  --heading-tracking: -0.02em;
+  --hero-scrim: 55%;
+}
+
+html [data-surface="storefront"] {
+  /* ritm și aerisire */
+  --sf-section: clamp(3rem, 2rem + 4vw, 6rem);
+  --sf-gutter: clamp(1rem, 0.5rem + 2vw, 2rem);
+  --sf-stack: clamp(1.5rem, 1rem + 1.5vw, 2.5rem);
+  --sf-header-h: 4.5rem;
+
+  /* controale: ținte tactile generoase, text de 16 px (fără zoom pe iOS) */
+  --control-h: 3rem;
+  --control-h-compact: 2.5rem;
+  --control-text: 1rem;
+  --button-text: 1rem;
+  --sf-control-h: 3rem;
+  --sf-control-h-lg: 3.5rem;
+
+  /* suprafața cardurilor: pagina amestecată cu bordura (aceeași pe orice preset și temă; verificată AA în teste) */
+  --sf-card: color-mix(in srgb, var(--color-border) 35%, var(--color-bg));
+  --sf-card-hover: color-mix(in srgb, var(--color-border) 55%, var(--color-bg));
+
+  /* peste fotografii: text deschis pe strat întunecat, în ambele teme */
+  --sf-on-image: oklch(1 0 0);
+  --sf-image-scrim: oklch(0 0 0);
+  --sf-image-scrim-fill: color-mix(in srgb, var(--sf-image-scrim) var(--hero-scrim), transparent);
+  --sf-accent-on-image: color-mix(in srgb, var(--color-accent) 45%, var(--sf-on-image));
+
+  --motion: 150ms;
+}
+
+html [data-surface="storefront"][data-container="lg"] {
+  --container-width: 72rem;
+}
+html [data-surface="storefront"][data-container="xl"] {
+  --container-width: 80rem;
+}
+html [data-surface="storefront"][data-container="2xl"] {
+  --container-width: 90rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html [data-surface="storefront"] {
+    --motion: 0ms;
+  }
+}
+
+/* Panoul de navigare de pe telefon: intră din stânga (dialog nativ), fără animație la prefers-reduced-motion. */
+.sheet-panel {
+  transition: transform var(--motion) ease-out;
+  transform: translateX(0);
+}
+@starting-style {
+  .sheet-panel[open] {
+    transform: translateX(-100%);
+  }
+}
