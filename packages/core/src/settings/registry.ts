@@ -307,6 +307,12 @@ export const settingGroups = {
       .refine((v) => v === "" || /^https?:\/\/\S+$/.test(v), "DSN invalid")
       .default(""),
   },
+  /** Modul de mentenanță al vitrinei: cât e pornit, vizitatorii primesc pagina de mentenanță (503); adminul rămâne accesibil. */
+  maintenance: {
+    enabled: z.boolean().default(false),
+    /** Textul afișat vizitatorilor; gol = textul implicit din mesajele aplicației. */
+    message: z.string().trim().max(300).default(""),
+  },
   appearance: {
     headerVariant: z.enum(HEADER_VARIANTS).default("default"),
     footerVariant: z.enum(FOOTER_VARIANTS).default("default"),

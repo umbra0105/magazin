@@ -89,3 +89,18 @@ describe("valori necunoscute cad pe implicit", () => {
     expect(CONTAINER_WIDTHS).toContain("xl");
   });
 });
+
+describe("setările de mentenanță din registru", () => {
+  it("oprit implicit, cu mesaj gol (se folosește textul din mesajele aplicației)", () => {
+    expect(settingGroups.maintenance.enabled.parse(undefined)).toBe(false);
+    expect(settingGroups.maintenance.message.parse(undefined)).toBe("");
+  });
+
+  it("mesajul are plafon și se curăță de spații la capete; pornirea cere o valoare booleană", () => {
+    const message = getSettingSchema("maintenance.message");
+    expect(message?.parse("  Revenim la 18:00  ")).toBe("Revenim la 18:00");
+    expect(message?.safeParse("a".repeat(301)).success).toBe(false);
+    expect(getSettingSchema("maintenance.enabled")?.safeParse("da").success).toBe(false);
+    expect(getSettingSchema("maintenance.enabled")?.safeParse(true).success).toBe(true);
+  });
+});

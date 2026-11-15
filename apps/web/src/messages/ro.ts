@@ -198,6 +198,7 @@ export const ro = {
       partsDiagrams: "Fișe explodate",
       warehouses: "Depozite",
       appearance: "Aspect",
+      maintenance: "Mentenanță",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {
@@ -336,6 +337,28 @@ export const ro = {
         brandName: "Magazinul tău",
         imageCaption: "Imagine demonstrativă",
       },
+    },
+    /** Modul de mentenanță: `/admin/setari/mentenanta`. */
+    maintenance: {
+      title: "Mentenanță",
+      description:
+        "Cât modul e pornit, vizitatorii vitrinei văd pagina de mentenanță (răspuns 503, temporar pentru motoarele de căutare). Adminul, autentificarea și API-ul rămân accesibile, ca tu să poți opri modul.",
+      readOnly: "Poți vedea starea mentenanței, dar nu o poți modifica.",
+      enabled: "Pornește modul de mentenanță",
+      enabledOn: "Vitrina este în mentenanță acum.",
+      enabledOff: "Vitrina este deschisă vizitatorilor.",
+      message: "Mesaj pentru vizitatori",
+      messageHelp:
+        "Gol = textul implicit: «Magazinul este în mentenanță. Revino peste puțin timp.»",
+      messageHint: (used: number, max: number) => `${used} din ${max} de caractere`,
+      messageInvalid: "Mesajul este prea lung.",
+      save: "Salvează",
+      saving: "Se salvează…",
+      saved: "Setările mentenanței au fost salvate.",
+      unsaved: "Modificări nesalvate",
+      saveFailed: "Nu am putut salva. Încearcă din nou.",
+      fixErrors: "Corectează câmpurile marcate, apoi salvează.",
+      delayNote: "Schimbarea ajunge la vizitatori în câteva secunde.",
     },
     userMenu: {
       button: "Meniul utilizatorului",

@@ -17,7 +17,8 @@ import { DEFAULT_ROLES, type PermissionKey } from "../rbac/catalog";
 import { createPrismaSettingsStore } from "../settings/prisma-store";
 import { SettingsService } from "../settings/settings-service";
 import { createFakeCache } from "../test-utils/fake-cache";
-import { inRolledBackTransaction, type TestTx } from "../test-utils/rollback";
+import type { TestTx } from "../test-utils/rollback";
+import { inAuditScope, newAuditRows } from "../test-utils/audit-baseline";
 import { createAdminWrites, recordDeniedAttempt } from "./admin-writes";
 
 const db = getDb();
@@ -176,7 +177,7 @@ describe("matricea de securitate: scrieri din admin × roluri (Postgres real)", 
 
   for (const { label, subject } of subjects) {
     it(`${label}: poate doar ce are în catalog; refuzurile nu modifică nimic și se înregistrează`, async () => {
-      await inRolledBackTransaction(db, async (tx) => {
+      await inAuditScope(db, async (tx) => {
         const { settings, flags, branding, run } = setup(tx, subject);
         await settings.set("general.storeName", "Nume vechi");
         await flags.setEnabled("blog", false);
@@ -192,9 +193,7 @@ describe("matricea de securitate: scrieri din admin × roluri (Postgres real)", 
             expect(await a.changed(tx), `${label} ar fi trebuit să modifice ${a.action}`).toBe(
               true,
             );
-            const success = await tx.auditLog.findMany({
-              where: { action: a.action, outcome: "success" },
-            });
+            const success = await newAuditRows(tx, { action: a.action, outcome: "success" });
             expect(success).toHaveLength(1);
             expect(success[0]?.actorId).toBe(subject?.userId);
           } else {
@@ -202,18 +201,16 @@ describe("matricea de securitate: scrieri din admin × roluri (Postgres real)", 
               subject ? ForbiddenError : UnauthenticatedError,
             );
             expect(await a.changed(tx), `${label} NU trebuia să modifice ${a.action}`).toBe(false);
-            const denied = await tx.auditLog.findMany({
-              where: { action: a.action, outcome: "denied" },
-            });
+            const denied = await newAuditRows(tx, { action: a.action, outcome: "denied" });
             expect(denied).toHaveLength(1);
             expect(denied[0]?.actorId ?? null).toBe(subject?.userId ?? null);
             expect(denied[0]?.after).toMatchObject({
               permission: a.permission,
               reason: subject ? "forbidden" : "unauthenticated",
             });
-            expect(
-              await tx.auditLog.count({ where: { action: a.action, outcome: "success" } }),
-            ).toBe(0);
+            expect(await newAuditRows(tx, { action: a.action, outcome: "success" })).toHaveLength(
+              0,
+            );
           }
         }
       });

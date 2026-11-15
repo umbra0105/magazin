@@ -38,7 +38,8 @@ export type AdminNavItemId =
   | "partsDiagrams"
   | "inventory"
   | "warehouses"
-  | "appearance";
+  | "appearance"
+  | "maintenance";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -118,6 +119,7 @@ export function itemHref(
 /** Ecranele grupului «Setări», în ordinea din meniu (altele se adaugă aici, odată cu paginile lor). */
 export const SETTINGS_ITEMS: readonly AdminNavItem[] = [
   { id: "appearance", href: "/admin/setari/aspect", permission: "settings.read" },
+  { id: "maintenance", href: "/admin/setari/mentenanta", permission: "settings.read" },
 ];
 
 export const ADMIN_NAV: readonly AdminNavEntry[] = [

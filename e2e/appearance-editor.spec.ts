@@ -235,3 +235,79 @@ test("captură a editorului (doar când E2E_CAPTURES_DIR e setat; pentru verific
     fullPage: true,
   });
 });
+
+test.describe("mod de mentenanță (503 pentru vizitatori, adminul rămâne accesibil)", () => {
+  const MESSAGE = "Revenim la ora 18:00, după inventar";
+
+  test("fără mentenanță, adresa /mentenanta nu există (404) și vitrina răspunde 200", async ({
+    request,
+  }) => {
+    expect((await request.get("/mentenanta")).status()).toBe(404);
+    expect((await request.get("/")).status()).toBe(200);
+  });
+
+  test("pornit din admin: vizitatorii primesc 503 cu Retry-After și mesajul; admin, autentificare, tema și API rămân accesibile", async ({
+    page,
+    request,
+  }) => {
+    await login(page, owner, "/admin/setari/mentenanta");
+    await expect(page.getByRole("heading", { level: 1, name: "Mentenanță" })).toHaveCount(1);
+    await page.getByLabel("Pornește modul de mentenanță").check();
+    await page.getByLabel("Mesaj pentru vizitatori").fill(MESSAGE);
+    await page.getByRole("button", { name: "Salvează", exact: true }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Setările mentenanței au fost salvate." }),
+    ).toBeVisible();
+    await expect(page.locator("[data-maintenance-state]")).toHaveText(
+      "Vitrina este în mentenanță acum.",
+    );
+
+    // middleware-ul citește flagul cu un cache de câteva secunde
+    await expect
+      .poll(async () => (await request.get("/", { maxRedirects: 0 })).status(), { timeout: 20_000 })
+      .toBe(503);
+    const home = await request.get("/", { maxRedirects: 0 });
+    expect(home.headers()["retry-after"]).toBe("3600");
+    expect(home.headers()["cache-control"]).toBe("no-store");
+    const html = await home.text();
+    expect(html).toContain("Revenim în curând");
+    expect(html).toContain(MESSAGE);
+    expect(html).toMatch(/<meta name="robots" content="noindex/);
+
+    // orice pagină a vitrinei, nu doar prima
+    expect((await request.get("/produs/pompa", { maxRedirects: 0 })).status()).toBe(503);
+    expect((await request.get("/pagina-care-nu-exista", { maxRedirects: 0 })).status()).toBe(503);
+
+    // ce rămâne accesibil
+    expect((await request.get("/autentificare")).status()).toBe(200);
+    expect((await request.get("/theme.css")).status()).toBe(200);
+    expect((await request.get("/api/health")).status()).toBe(200);
+    expect((await request.get("/admin", { maxRedirects: 0 })).status()).toBe(307);
+
+    // adminul autentificat își vede în continuare paginile
+    await page.goto("/admin/setari/mentenanta");
+    await expect(page.getByRole("heading", { level: 1, name: "Mentenanță" })).toBeVisible();
+  });
+
+  test("oprit din admin: vitrina se redeschide (200), iar /mentenanta redevine 404", async ({
+    page,
+    request,
+  }) => {
+    await login(page, owner, "/admin/setari/mentenanta");
+    await page.getByLabel("Pornește modul de mentenanță").uncheck();
+    await page.getByRole("button", { name: "Salvează", exact: true }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Setările mentenanței au fost salvate." }),
+    ).toBeVisible();
+    await expect
+      .poll(async () => (await request.get("/", { maxRedirects: 0 })).status(), { timeout: 20_000 })
+      .toBe(200);
+    expect((await request.get("/mentenanta")).status()).toBe(404);
+  });
+
+  test("Managerul (fără settings.read) nu vede pagina de mentenanță", async ({ page }) => {
+    await login(page, manager, "/admin");
+    await page.goto("/admin/setari/mentenanta");
+    await expect(page).toHaveURL(/\/admin\/acces-interzis$/);
+  });
+});
