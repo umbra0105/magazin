@@ -8,6 +8,9 @@ import {
   StoreButton,
   StoreImage,
   StoreSearch,
+  StoreSkeleton,
+  StorefrontLoading,
+  StorefrontState,
   TrustBar,
   storeButtonVariants,
 } from "@ecom/ui";
@@ -177,5 +180,53 @@ describe("ProductCard: layout orizontal (listă)", () => {
 describe("HeroBanner: marcaj pentru header-ul transparent", () => {
   it("secțiunea poartă data-hero, ca header-ul «sticlă» să o poată trage sub el", () => {
     expect(render(h(HeroBanner, { image: img, title: "A" }))).toContain("data-hero");
+  });
+});
+
+describe("StorefrontState (404, 500, mentenanță)", () => {
+  it("are exact un h1 cu titlul, descrierea și acțiunile", () => {
+    const html = render(
+      h(StorefrontState, {
+        title: "Pagina nu a fost găsită",
+        description: "Adresa nu există.",
+        actions: h("a", { href: "/" }, "Acasă"),
+      }),
+    );
+    expect(html.match(/<h1/g)).toHaveLength(1);
+    expect(html).toContain("Pagina nu a fost găsită");
+    expect(html).toContain("Adresa nu există.");
+    expect(html).toContain('href="/"');
+  });
+
+  it("starea de eroare e anunțată cititoarelor de ecran (role=alert), cea obișnuită nu", () => {
+    expect(render(h(StorefrontState, { title: "x", role: "alert" }))).toContain('role="alert"');
+    expect(render(h(StorefrontState, { title: "x" }))).not.toContain("role=");
+  });
+
+  it("culorile vin din tokeni (fără valori fixe)", () => {
+    expect(render(h(StorefrontState, { title: "x" }))).not.toMatch(/#[0-9a-f]{3,6}\b/i);
+  });
+});
+
+describe("StorefrontLoading (schelete)", () => {
+  it("o regiune `status` cu textul de încărcare pentru cititoarele de ecran și blocuri ascunse lor", () => {
+    const html = render(h(StorefrontLoading, { label: "Se încarcă…" }));
+    expect(html).toContain('role="status"');
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain("Se încarcă…");
+    expect(html).toContain("sr-only");
+    // blocurile de schelet nu sunt citite
+    expect((html.match(/aria-hidden="true"/g) ?? []).length).toBeGreaterThan(3);
+  });
+
+  it("animația de puls se oprește la prefers-reduced-motion (motion-safe) și nu are text vizibil în blocuri", () => {
+    const block = render(h(StoreSkeleton, { className: "h-4 w-40" }));
+    expect(block).toContain("motion-safe:animate-pulse");
+    expect(block).toContain("bg-card");
+    expect(block).toContain("h-4 w-40");
+  });
+
+  it("nu conține niciun heading (titlul paginii îl pune pagina)", () => {
+    expect(render(h(StorefrontLoading, { label: "x" }))).not.toMatch(/<h[1-6]/);
   });
 });

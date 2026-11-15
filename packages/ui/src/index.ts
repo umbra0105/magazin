@@ -85,4 +85,6 @@ export { TrustBar, type TrustItem } from "./storefront/trust-bar";
 export { StoreSearch, type StoreSearchProps } from "./storefront/store-search";
 export { SectionHeading } from "./storefront/section-heading";
 export { AnnouncementBar, type AnnouncementBarProps } from "./storefront/announcement-bar";
+export { StorefrontState, type StorefrontStateProps } from "./storefront/storefront-state";
+export { StoreSkeleton, StorefrontLoading } from "./storefront/store-skeleton";
 export { NavSheet, type NavSheetProps } from "./storefront/nav-sheet";

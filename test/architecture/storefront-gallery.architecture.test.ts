@@ -119,3 +119,55 @@ describe("sursa reală", () => {
     expect(findChromeH1(files)).toEqual([]);
   });
 });
+
+/**
+ * Harness-urile vitrinei (`(storefront)/harness-vitrina/**`): tot `*.e2e.tsx` (extensie inclusă doar în dezvoltare sau cu
+ * `E2E_HARNESS=1`), fiecare pagină cu bariera a doua, nimic din afară nu le importă.
+ */
+const HARNESS_DIR = "apps/web/src/app/(storefront)/harness-vitrina";
+
+export function findStorefrontHarnessViolations(files: readonly SourceFile[]): string[] {
+  const problems: string[] = [];
+  const inside = files.filter((f) => f.path.startsWith(`${HARNESS_DIR}/`));
+  for (const file of inside) {
+    if (!file.path.endsWith(".e2e.tsx")) {
+      problems.push(`${file.path}: în harness-urile vitrinei sunt permise doar fișiere *.e2e.tsx`);
+    } else if (/\/page\.e2e\.tsx$/.test(file.path)) {
+      if (!BARRIER.test(file.content) || !/notFound\(\)/.test(file.content)) {
+        problems.push(`${file.path}: lipsește bariera (producție fără E2E_HARNESS=1 → notFound())`);
+      }
+    }
+  }
+  for (const file of files) {
+    if (file.path.startsWith(`${HARNESS_DIR}/`)) continue;
+    if (/\bfrom\s+["'][^"']*harness-vitrina/.test(file.content)) {
+      problems.push(
+        `${file.path}: importă din harness-urile vitrinei (ar intra în bundle-ul de producție)`,
+      );
+    }
+  }
+  return problems;
+}
+
+describe("harness-urile vitrinei (cazuri sintetice)", () => {
+  const f = (path: string, content: string): SourceFile => ({ path, content });
+  it("acceptă pagina cu barieră și prinde un page.tsx obișnuit, bariera lipsă și importul din afară", () => {
+    expect(findStorefrontHarnessViolations([f(`${HARNESS_DIR}/x/page.e2e.tsx`, GOOD)])).toEqual([]);
+    const out = findStorefrontHarnessViolations([
+      f(`${HARNESS_DIR}/x/page.tsx`, "x"),
+      f(`${HARNESS_DIR}/y/page.e2e.tsx`, "export default function P() {}"),
+      f("app/alt.tsx", 'import x from "@/app/(storefront)/harness-vitrina/x/page.e2e"'),
+    ]).join("\n");
+    expect(out).toContain("doar fișiere *.e2e.tsx");
+    expect(out).toContain("lipsește bariera");
+    expect(out).toContain("importă din harness-urile vitrinei");
+  });
+});
+
+describe("harness-urile reale ale vitrinei", () => {
+  it("sunt doar pentru dezvoltare și teste", () => {
+    const files = listFiles(join(root, "apps/web/src"));
+    expect(files.some((f) => f.path.startsWith(`${HARNESS_DIR}/`))).toBe(true);
+    expect(findStorefrontHarnessViolations(files)).toEqual([]);
+  });
+});

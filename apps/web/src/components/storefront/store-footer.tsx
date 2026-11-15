@@ -3,6 +3,7 @@ import type { FooterVariant, MenuNode } from "@ecom/core";
 import { Container } from "@ecom/ui";
 import { getMessages } from "@/messages";
 import { FOOTER_INFO_LINKS, FOOTER_LEGAL_LINKS, telHref } from "@/lib/storefront-chrome-rules";
+import { ConsentSettingsButton } from "./consent-banner";
 import { ALL_PRODUCTS_HREF } from "./store-header";
 
 const m = getMessages().storefront.footer;
@@ -75,6 +76,9 @@ export function StoreFooter({
             </Link>
           </li>
         ))}
+        <li>
+          <ConsentSettingsButton className={LINK} />
+        </li>
         {external.map((link) => (
           <li key={link.key}>
             <a href={link.href} target="_blank" rel="noopener noreferrer" className={LINK}>

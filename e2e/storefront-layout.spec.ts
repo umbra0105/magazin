@@ -351,3 +351,150 @@ test.describe("variante de aspect: header sticlă, footer compact, bară de anun
     await expect(page.getByRole("complementary", { name: "Anunț" })).toHaveCount(0);
   });
 });
+
+test.describe("consimțământ pentru cookie-uri (implicit refuzat)", () => {
+  const banner = (page: Page) => page.locator("[data-consent-banner]");
+  const consentCookie = async (page: Page) =>
+    (await page.context().cookies()).find((cookie) => cookie.name === "ecom_consent");
+
+  test("prima vizită: bannerul e în HTML-ul serverului, cu trei butoane, și nu s-a salvat nicio alegere", async ({
+    page,
+    request,
+  }) => {
+    const html = await (await request.get("/")).text();
+    expect(html).toContain("data-consent-banner");
+    await page.goto("/");
+    await expect(banner(page)).toBeVisible();
+    await expect(banner(page).getByRole("button")).toHaveText([
+      "Refuz",
+      "Acceptă tot",
+      "Preferințe",
+    ]);
+    expect(await consentCookie(page)).toBeUndefined();
+  });
+
+  test("«Refuz» și «Acceptă tot» au exact același stil și aceeași înălțime (refuzul e la fel de ușor ca acceptul)", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const style = (name: string) =>
+      banner(page)
+        .getByRole("button", { name, exact: true })
+        .evaluate((el) => {
+          const s = getComputedStyle(el);
+          const box = el.getBoundingClientRect();
+          return {
+            background: s.backgroundColor,
+            color: s.color,
+            fontSize: s.fontSize,
+            fontWeight: s.fontWeight,
+            border: s.borderTopWidth,
+            radius: s.borderTopLeftRadius,
+            height: box.height,
+          };
+        });
+    expect(await style("Refuz")).toEqual(await style("Acceptă tot"));
+  });
+
+  test("«Refuz»: cookie cu totul refuzat, bannerul dispare și nu mai revine după reîncărcare", async ({
+    page,
+    request,
+  }) => {
+    await page.goto("/");
+    await banner(page).getByRole("button", { name: "Refuz", exact: true }).click();
+    await expect(banner(page)).toHaveCount(0);
+    expect((await consentCookie(page))?.value).toBe("v1.a0.m0");
+    await page.reload();
+    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(banner(page)).toHaveCount(0);
+    const cookie = await consentCookie(page);
+    expect(cookie?.sameSite).toBe("Lax");
+    // cu cookie-ul, HTML-ul serverului nu mai conține bannerul
+    const html = await (
+      await request.get("/", { headers: { cookie: "ecom_consent=v1.a0.m0" } })
+    ).text();
+    expect(html).not.toContain("data-consent-banner");
+  });
+
+  test("«Acceptă tot» salvează alegerea completă", async ({ page }) => {
+    await page.goto("/");
+    await banner(page).getByRole("button", { name: "Acceptă tot", exact: true }).click();
+    await expect(banner(page)).toHaveCount(0);
+    expect((await consentCookie(page))?.value).toBe("v1.a1.m1");
+  });
+
+  test("«Preferințe»: categoriile cer acord și pornesc oprite; salvarea scrie doar ce s-a bifat", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await banner(page).getByRole("button", { name: "Preferințe", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Preferințele pentru cookie-uri" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("checkbox", { name: /Necesare/ })).toBeChecked();
+    await expect(dialog.getByRole("checkbox", { name: /Necesare/ })).toBeDisabled();
+    await expect(dialog.getByRole("checkbox", { name: /Statistici/ })).not.toBeChecked();
+    await expect(dialog.getByRole("checkbox", { name: /Marketing/ })).not.toBeChecked();
+    await dialog.getByRole("checkbox", { name: /Statistici/ }).check();
+    await dialog.getByRole("button", { name: "Salvează alegerea" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(banner(page)).toHaveCount(0);
+    expect((await consentCookie(page))?.value).toBe("v1.a1.m0");
+  });
+
+  test("din subsol alegerea se poate schimba oricând, pornind de la alegerea curentă", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await banner(page).getByRole("button", { name: "Acceptă tot", exact: true }).click();
+    await page
+      .getByRole("contentinfo")
+      .getByRole("button", { name: "Setările cookie-urilor" })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Preferințele pentru cookie-uri" });
+    await expect(dialog.getByRole("checkbox", { name: /Marketing/ })).toBeChecked();
+    await dialog.getByRole("checkbox", { name: /Marketing/ }).uncheck();
+    await dialog.getByRole("button", { name: "Salvează alegerea" }).click();
+    await expect(dialog).toBeHidden();
+    expect((await consentCookie(page))?.value).toBe("v1.a1.m0");
+  });
+
+  test("un cookie stricat sau de altă versiune nu e o alegere: apare din nou bannerul", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("/");
+    await context.addCookies([{ name: "ecom_consent", value: "v9.a1.m1", url: page.url() }]);
+    await page.goto("/");
+    await expect(banner(page)).toBeVisible();
+  });
+});
+
+test.describe("stările vitrinei: eroare și încărcare", () => {
+  test("o eroare într-o pagină păstrează cadrul și arată starea de eroare, cu «Reîncearcă»", async ({
+    page,
+  }) => {
+    await page.goto("/harness-vitrina/eroare?arunca=1");
+    const alert = page.getByRole("alert").filter({ hasText: "Ceva nu a mers bine" });
+    await expect(alert).toBeVisible();
+    await expect(alert.getByRole("heading", { level: 1 })).toHaveText("Ceva nu a mers bine");
+    await expect(alert.getByRole("button", { name: "Reîncearcă" })).toBeVisible();
+    await expect(alert.getByRole("link", { name: "Prima pagină" })).toHaveAttribute("href", "/");
+    // header și footer rămân; textul erorii nu se arată
+    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("Eroare de probă");
+  });
+
+  test("cât se încarcă pagina apare scheletul (regiune status, ocupat), apoi conținutul", async ({
+    page,
+  }) => {
+    await page.goto("/harness-vitrina/incarcare", { waitUntil: "commit" });
+    const skeleton = page.getByRole("status").filter({ hasText: "Se încarcă pagina…" });
+    await expect(skeleton).toBeVisible();
+    await expect(skeleton).toHaveAttribute("aria-busy", "true");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Pagina s-a încărcat" }),
+    ).toBeVisible();
+    await expect(skeleton).toHaveCount(0);
+  });
+});

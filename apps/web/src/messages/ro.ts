@@ -3212,6 +3212,57 @@ export const ro = {
       tradeRegister: (value: string) => `Reg. com.: ${value}`,
       copyright: (year: number, name: string) => `© ${year} ${name}`,
     },
+    /** Stările de pagină întreagă ale vitrinei: 404, eroare, mentenanță, încărcare. */
+    states: {
+      notFound: {
+        title: "Pagina nu a fost găsită",
+        description: "Adresa nu există sau pagina a fost mutată. Poți începe de la prima pagină.",
+        home: "Înapoi la prima pagină",
+        categories: "Sau alege o categorie",
+      },
+      error: {
+        title: "Ceva nu a mers bine",
+        description:
+          "Pagina nu a putut fi încărcată. Încearcă din nou; dacă problema continuă, revino puțin mai târziu.",
+        retry: "Reîncearcă",
+        home: "Prima pagină",
+        reference: (digest: string) => `Cod de referință: ${digest}`,
+      },
+      maintenance: {
+        title: "Revenim în curând",
+        description:
+          "Magazinul este în mentenanță. Revino peste puțin timp; mulțumim pentru răbdare.",
+      },
+      loading: "Se încarcă pagina…",
+    },
+    /** Consimțământul pentru cookie-uri: implicit refuzat; butoanele «Refuz» și «Acceptă tot» sunt egale ca importanță. */
+    consent: {
+      region: "Cookie-uri",
+      title: "Folosim cookie-uri",
+      body: "Cookie-urile necesare fac site-ul să funcționeze și sunt mereu active. Pentru statistici și marketing avem nevoie de acordul tău; până atunci rămân oprite.",
+      policy: "Politica de cookie-uri",
+      reject: "Refuz",
+      accept: "Acceptă tot",
+      preferences: "Preferințe",
+      dialogTitle: "Preferințele pentru cookie-uri",
+      dialogBody: "Alege ce categorii permiți. Poți schimba oricând alegerea din subsolul paginii.",
+      close: "Închide fereastra",
+      save: "Salvează alegerea",
+      necessary: {
+        title: "Necesare",
+        description:
+          "Sesiune, coș, securitate. Fără ele site-ul nu funcționează; sunt mereu active.",
+      },
+      analytics: {
+        title: "Statistici",
+        description: "Ne arată cum este folosit magazinul, ca să îl îmbunătățim.",
+      },
+      marketing: {
+        title: "Marketing",
+        description: "Reclame și mesaje potrivite intereselor tale, pe alte site-uri.",
+      },
+      footerLink: "Setările cookie-urilor",
+    },
     /** Pagina principală provizorie până la Faza 7: doar numele magazinului și o frază din setări. */
     home: {
       heading: (storeName: string) => storeName,
