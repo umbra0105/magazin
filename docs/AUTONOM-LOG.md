@@ -42,3 +42,6 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 | 2026-11-15 | 15d | migrația kind pe baza de dezvoltare (autorizată) și încărcarea demo (29 de produse, prețuri de test) | - | copie bază: local-data/backups/ecom-20261115-142933.sql; doar migrația 20261115090000 aplicată; demo: 29 produse, 15 branduri, 40 media | - |
 | 2026-11-15 | 15d | documentație: nota din (15d) în docs/06, clasificarea fazelor în docs/20 §3 | commit-ul docs | arhitectură și autonom 274/274 | - |
 | 2026-11-15 | 6 | început de fază (mod C), ramura faza-6 din main `328c3c8`; poarta și garda acceptă faza-6 (teste) | - | copie bază: local-data/backups/ecom-20261115-175051.sql | - |
+| 2026-11-15 | 6 | documentația A (19, 06, 18), docs/21 cu planul de design și referințele | 60c538f, 95330a3 | prettier pe docs | - |
+| 2026-11-15 | 6 | tokeni și presets (Minimal echilibrat), meniu de categorii, componente ui, header/footer/drawer, galerie dev-only | 6f756c6…7ec3793 | typecheck, lint, lint:root, prettier, unitare 3385, integrare branding, 17 E2E noi pe server propriu | 2 S3 din 15d |
+| 2026-11-15 | 6 | PUNCT DE CONTROL: oprit pentru «aprobat, continuă» | - | capturi în local-data/capturi-faza6/checkpoint | - |
