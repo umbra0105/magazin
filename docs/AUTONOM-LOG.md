@@ -35,3 +35,9 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 | 2026-11-13 | redesign-finisaje | grup 4: istoricul exporturilor paginat («Încarcă mai multe») | d9f3be5 | per pas: 4 teste unitare pe serviciu roșii apoi verzi, typecheck, lint | - |
 | 2026-11-13 | redesign-finisaje | grup 5: eticheta «Rând» pe carduri, țintă tactilă pentru «Detalii» | f2a8d23 | per pas: typecheck, lint, specuri import-design și states-design verzi (1 test de Tab corectat în commit-ul de documentație) | - |
 | 2026-11-14 | 15d | început de fază | - | copie bază: local-data/backups/ecom-20261114-210947.sql | - |
+| 2026-11-15 | 15d | nucleul: marcaje, sarcini cu tip (migrație), înlocuire idempotentă în importator | fcc3bab | per pas: teste unitare scrise întâi, typecheck, lint | - |
+| 2026-11-15 | 15d | plan în ambele moduri, raport, integrare pe baza reală | 3b02e81 | per pas: 6 teste de integrare noi (rețea simulată), unitare | - |
+| 2026-11-15 | 15d | bifa și raportul în interfață; marcaje scoase la randare | f527827 | per pas: E2E import-design, product-import-woo, product-import: 27 verzi | - |
+| 2026-11-15 | 15d | mutanți pe idempotență, reluare, înlocuire în HTML | 2ee53c1 | 22 mutanți, toți uciși în afară de unul echivalent | - |
+| 2026-11-15 | 15d | migrația kind pe baza de dezvoltare (autorizată) și încărcarea demo (29 de produse, prețuri de test) | - | copie bază: local-data/backups/ecom-20261115-142933.sql; doar migrația 20261115090000 aplicată; demo: 29 produse, 15 branduri, 40 media | - |
+| 2026-11-15 | 15d | documentație: nota din (15d) în docs/06, clasificarea fazelor în docs/20 §3 | commit-ul docs | arhitectură și autonom 274/274 | - |
