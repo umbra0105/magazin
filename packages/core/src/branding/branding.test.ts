@@ -141,8 +141,8 @@ describe("renderThemeCss", () => {
       expect(css).toContain(name);
     }
     expect(css).toContain("--color-bg:#ffffff");
-    expect(css).toContain("--radius:0.5rem");
-    expect(css).toContain("var(--font-inter)");
+    expect(css).toContain("--radius:0.75rem");
+    expect(css).toContain("var(--font-manrope)");
     expect(css).not.toContain("prefers-color-scheme");
   });
 
@@ -236,16 +236,18 @@ describe("BrandingService", () => {
 describe("renderThemeCss: referință și caractere permise", () => {
   it("CSS-ul presetului Minimal este exact cel de referință (golden)", () => {
     expect(renderThemeCss(configFromPreset("minimal"))).toBe(
-      "html:root{--color-bg:#ffffff;--color-fg:#1a1a1a;--color-muted:#595959;--color-border:#e5e5e5;" +
-        "--color-primary:#1f1f1f;--color-primary-fg:#ffffff;--color-accent:#2563eb;" +
-        "--color-success:#15803d;--color-danger:#b91c1c;--radius:0.5rem;" +
-        "--font-heading:var(--font-inter), ui-sans-serif, system-ui, sans-serif;" +
-        "--font-body:var(--font-inter), ui-sans-serif, system-ui, sans-serif}",
+      "html:root{--color-bg:#ffffff;--color-fg:#12171c;--color-muted:#55606b;--color-border:#dfe5ea;" +
+        "--color-primary:#0b5cad;--color-primary-fg:#ffffff;--color-accent:#0e7490;" +
+        "--color-success:#15803d;--color-danger:#b91c1c;--radius:0.75rem;" +
+        "--font-heading:var(--font-manrope), ui-sans-serif, system-ui, sans-serif;" +
+        "--font-body:var(--font-manrope), ui-sans-serif, system-ui, sans-serif;" +
+        "--radius-button:9999px;--radius-card:1.5rem;--heading-weight:700;--heading-tracking:-0.02em;" +
+        "--hero-scrim:55%}",
     );
   });
 
   it("toate presetele (cu și fără dark mode) produc doar caractere dintr-o listă permisă", () => {
-    const allowed = /^[A-Za-z0-9#:;,.()@{}\s-]+$/;
+    const allowed = /^[A-Za-z0-9#:;,.()@{}%\s-]+$/;
     for (const key of PRESET_KEYS) {
       for (const darkMode of [false, true]) {
         const css = renderThemeCss({ ...configFromPreset(key), darkMode });

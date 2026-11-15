@@ -79,6 +79,32 @@ export const RADIUS_KEYS = Object.keys(RADIUS_VALUES) as [RadiusKey, ...RadiusKe
 export const PRESET_KEYS = ["minimal", "bold", "editorial"] as const;
 export type PresetKey = (typeof PRESET_KEYS)[number];
 
+/**
+ * Forma vitrinei, proprietate a presetului (nu a coloanei din `Branding`): fiecare valoare e o cheie într-un tabel fix, deci în CSS
+ * ajung doar șirurile de mai jos, niciodată text liber. Componentele din `@ecom/ui` citesc doar variabilele rezultate.
+ */
+export const BUTTON_SHAPES = {
+  pill: "9999px",
+  round: "var(--radius)",
+  square: "0.125rem",
+} as const;
+export type ButtonShape = keyof typeof BUTTON_SHAPES;
+export const CARD_RADII = { sm: "0.25rem", md: "0.75rem", lg: "1.25rem", xl: "1.5rem" } as const;
+export type CardRadius = keyof typeof CARD_RADII;
+export const HEADING_TRACKING = { normal: "0", tight: "-0.02em", tighter: "-0.035em" } as const;
+export type HeadingTracking = keyof typeof HEADING_TRACKING;
+export type HeadingWeight = 600 | 700 | 800;
+/** Cât de întunecat e stratul de pe fotografia din hero, în procente (text alb peste: contrast AA pe orice imagine). */
+export type HeroScrim = 45 | 55 | 65;
+
+export interface PresetShape {
+  button: ButtonShape;
+  card: CardRadius;
+  headingWeight: HeadingWeight;
+  headingTracking: HeadingTracking;
+  heroScrim: HeroScrim;
+}
+
 /** URL de imagine: https absolut sau cale locală, fără caractere care ar putea ieși dintr-un atribut/URL. */
 const assetUrl = z
   .string()

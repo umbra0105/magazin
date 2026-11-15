@@ -53,7 +53,7 @@ describe("GET /theme.css (integrare)", () => {
     const css = await after.text();
     expect(after.status).toBe(200);
     expect(after.headers.get("etag")).not.toBe(oldEtag);
-    expect(css).toContain("--color-bg:#faf7f2");
+    expect(css).toContain("--color-bg:#f6f7f9");
     expect(css).toContain("var(--font-playfair-display)");
   });
 

@@ -23,7 +23,7 @@ describe("BrandingService (Postgres + Redis reale)", () => {
   });
 
   it("fără rând: tema Minimal; după save: tema salvată, cache invalidat", async () => {
-    expect((await service.getTheme()).css).toContain("--color-primary:#1f1f1f");
+    expect((await service.getTheme()).css).toContain("--color-primary:#0b5cad");
     expect(await redis.exists(BRANDING_CACHE_KEY)).toBe(1);
 
     const config = { ...configFromPreset("bold"), darkMode: true };

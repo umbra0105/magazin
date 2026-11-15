@@ -1,42 +1,55 @@
-import type { BrandingConfig, ColorSet, PresetKey } from "./tokens";
+import type { BrandingConfig, ColorSet, PresetKey, PresetShape } from "./tokens";
 
 interface Preset {
   label: string;
   colors: { light: ColorSet; dark: ColorSet };
   fonts: BrandingConfig["fonts"];
   radius: BrandingConfig["radius"];
+  /** Forma vitrinei (butoane, carduri, titluri, strat pe fotografie): tokeni derivați, vezi `tokens.ts`. */
+  shape: PresetShape;
 }
 
-/** Cele 3 presets. Toate trec verificarea de contrast AA (testată în `branding.test.ts`). */
+/**
+ * Cele 3 presets (planul de design: `docs/21-referinte-vitrina.md` §2). Toate trec verificarea de contrast AA, inclusiv pe
+ * suprafața cardurilor (testată în `branding.test.ts` și `storefront-shape.test.ts`). **Minimal** e presetul implicit și
+ * poartă direcția «echilibrat»: pagină luminoasă, carduri mari, butoane pastilă, o singură familie de font pe greutăți.
+ */
 export const PRESETS: Record<PresetKey, Preset> = {
   minimal: {
     label: "Minimal",
     colors: {
       light: {
         bg: "#ffffff",
-        fg: "#1a1a1a",
-        muted: "#595959",
-        border: "#e5e5e5",
-        primary: "#1f1f1f",
+        fg: "#12171c",
+        muted: "#55606b",
+        border: "#dfe5ea",
+        primary: "#0b5cad",
         primaryFg: "#ffffff",
-        accent: "#2563eb",
+        accent: "#0e7490",
         success: "#15803d",
         danger: "#b91c1c",
       },
       dark: {
-        bg: "#0f0f10",
-        fg: "#f5f5f5",
-        muted: "#a3a3a3",
-        border: "#2a2a2a",
-        primary: "#f5f5f5",
-        primaryFg: "#111111",
-        accent: "#60a5fa",
+        bg: "#0d1217",
+        fg: "#f1f5f8",
+        muted: "#9aa6b1",
+        border: "#25303a",
+        primary: "#5aa9f2",
+        primaryFg: "#08121c",
+        accent: "#4fd1e0",
         success: "#4ade80",
         danger: "#f87171",
       },
     },
-    fonts: { heading: "inter", body: "inter" },
-    radius: "md",
+    fonts: { heading: "manrope", body: "manrope" },
+    radius: "lg",
+    shape: {
+      button: "pill",
+      card: "xl",
+      headingWeight: 700,
+      headingTracking: "tight",
+      heroScrim: 55,
+    },
   },
   bold: {
     label: "Bold",
@@ -66,35 +79,49 @@ export const PRESETS: Record<PresetKey, Preset> = {
     },
     fonts: { heading: "montserrat", body: "openSans" },
     radius: "lg",
+    shape: {
+      button: "round",
+      card: "lg",
+      headingWeight: 800,
+      headingTracking: "tighter",
+      heroScrim: 65,
+    },
   },
   editorial: {
     label: "Editorial",
     colors: {
       light: {
-        bg: "#faf7f2",
-        fg: "#1c1917",
-        muted: "#57534e",
-        border: "#e7e0d5",
-        primary: "#292524",
-        primaryFg: "#faf7f2",
-        accent: "#9a3412",
+        bg: "#f6f7f9",
+        fg: "#151a26",
+        muted: "#525a6b",
+        border: "#dde1e8",
+        primary: "#1b2a49",
+        primaryFg: "#ffffff",
+        accent: "#8a5d0b",
         success: "#166534",
         danger: "#991b1b",
       },
       dark: {
-        bg: "#1c1917",
-        fg: "#f5f0e8",
-        muted: "#a8a29e",
-        border: "#3a342f",
-        primary: "#f5f0e8",
-        primaryFg: "#1c1917",
-        accent: "#fdba74",
+        bg: "#12151d",
+        fg: "#eef0f4",
+        muted: "#a0a8b8",
+        border: "#2b3140",
+        primary: "#e6eaf2",
+        primaryFg: "#12151d",
+        accent: "#e2b45a",
         success: "#86efac",
         danger: "#fca5a5",
       },
     },
-    fonts: { heading: "playfairDisplay", body: "lora" },
+    fonts: { heading: "playfairDisplay", body: "inter" },
     radius: "sm",
+    shape: {
+      button: "square",
+      card: "sm",
+      headingWeight: 600,
+      headingTracking: "normal",
+      heroScrim: 45,
+    },
   },
 };
 
