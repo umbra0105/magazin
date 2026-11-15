@@ -45,3 +45,8 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 | 2026-11-15 | 6 | documentația A (19, 06, 18), docs/21 cu planul de design și referințele | 60c538f, 95330a3 | prettier pe docs | - |
 | 2026-11-15 | 6 | tokeni și presets (Minimal echilibrat), meniu de categorii, componente ui, header/footer/drawer, galerie dev-only | 6f756c6…7ec3793 | typecheck, lint, lint:root, prettier, unitare 3385, integrare branding, 17 E2E noi pe server propriu | 2 S3 din 15d |
 | 2026-11-15 | 6 | PUNCT DE CONTROL: oprit pentru «aprobat, continuă» | - | capturi în local-data/capturi-faza6/checkpoint | - |
+| 2026-11-16 | 6 | aprobat direcția «echilibrat»; corecții 1–6 (panou telefon, Bold fără degrade, galerie cu imagini reale, header sticlă, plăci de meniu) | 08800c9 | unitare 3407, E2E vitrină (dev) verzi | - |
+| 2026-11-16 | 6 | editorul de temă Nivel 2 + CSS personalizat validat, setări de aspect, grup «Setări» | 32e481b | unitare 3466, integrare branding, 9 E2E editor pe build de producție | - |
+| 2026-11-16 | 6 | 404/500/schelete + consimțământ implicit refuzat | 171858d | unitare 3474, 9 E2E noi (dev) | - |
+| 2026-11-16 | 6 | mentenanță 503 + pagina admin; teste de audit robuste la rânduri E2E | 6cff19d | unitare 3490, integrare admin 28, E2E complet pe producție: 421 trecute (1 de mentenanță reparat) | - |
+

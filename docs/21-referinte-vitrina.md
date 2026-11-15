@@ -151,3 +151,15 @@ Reguli ale utilizatorului, aplicate: (a) identitatea vizuală stă în valorile 
 | HTML complet pentru produs/categorie, canonical, 301, filtre `noindex`, paginare, JSON-LD de produs, sitemap cu imagini, slug-uri | **7** (și 16/17 pentru redirecturi, sitemap, `llms.txt`) | aparțin paginilor de catalog |
 | texte unice, nume de brand consistent, pagini obligatorii (conținut) | **16** (CMS) și înainte de lansare | conținut |
 | feed Merchant: preț = preț pe pagină, plafon | **17** | generatorul de feed |
+
+## 6. Ce s-a construit după aprobarea direcției (partea F)
+
+Direcția «echilibrat» (Minimal ca implicit) a fost aprobată la punctul de control. Completările cerute și ce a ieșit:
+
+- **Header «sticlă»** (varianta de header translucid peste hero, ca la lumeapiscinelor.ro): setarea `appearance.headerVariant = glass`. Bara e translucidă cu estompare (strat de 75% din culoarea paginii, deci textul rămâne AA peste orice fotografie), iar hero-ul care deschide pagina urcă sub ea printr-o regulă CSS din `storefront-tokens.css` (`--sf-header-total`). Pe paginile fără hero bara stă peste fundalul paginii.
+- **Mega menu cu plăci de categorie**: subcategoria cu imagine în biblioteca media devine placă (imagine mare + nume, un singur link), cea fără rămâne text; plăcile sunt grupate înaintea linkurilor text. Imaginea vine din varianta `medium` procesată (`pickVariantImage`), niciodată din originalul necomprimat.
+- **Preset Bold**: fără degrade în hero și carduri; fundal rece (`#f4f7fb`, bordură `#cdd6e2`), accent portocaliu păstrat.
+- **Editorul de temă Nivel 2** (`/admin/setari/aspect`): preset, culori cu avertismente de contrast, fonturi, rază, logo/favicon/OG, header, footer, lățimea containerului, layout-ul cardului de produs, bara de anunț, **CSS personalizat** (singurul text liber din temă: listă scurtă de reguli permise, fără `url()`, fără `@import`, împachetat în selectorul vitrinei prin imbricare CSS, deci nu poate atinge adminul), previzualizare live prin server.
+- **Stări**: 404 în cadrul vitrinei (status 404), `error.tsx` și `loading.tsx` pentru vitrină, mentenanță cu 503 și `Retry-After` (middleware), schelete.
+- **Consimțământ implicit «refuzat»**: banner cu «Refuz» și «Acceptă tot» de același stil, preferințe pe categorii, redeschidere din subsol, cookie propriu cu versiune (12 luni, `SameSite=Lax`).
+- **Referința a cincea (leslies.com)**: neanalizată, la cererea utilizatorului.
