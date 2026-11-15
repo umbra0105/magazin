@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { renderCustomCss } from "./custom-css";
 import { PRESETS } from "./presets";
 import {
   BUTTON_SHAPES,
@@ -52,8 +53,12 @@ export function renderThemeCss(config: BrandingConfig): string {
     `--font-heading:${fontStack(config.fonts.heading)};` +
     `--font-body:${fontStack(config.fonts.body)};` +
     `${shapeDeclarations(config)}}`;
-  if (!config.darkMode) return base;
-  return `${base}\n@media (prefers-color-scheme:dark){html:root{${colorDeclarations(config.colors.dark)}}}`;
+  const dark = config.darkMode
+    ? `\n@media (prefers-color-scheme:dark){html:root{${colorDeclarations(config.colors.dark)}}}`
+    : "";
+  // singurul text liber din temă: validat și împachetat în selectorul vitrinei (vezi `custom-css.ts`)
+  const custom = renderCustomCss(config.customCss);
+  return `${base}${dark}${custom ? `\n${custom}` : ""}`;
 }
 
 /**
@@ -79,11 +84,12 @@ export const PREVIEW_SCOPE = "[data-theme-preview]";
  * singur bloc `{…}`.
  */
 export function renderScopedThemeCss(config: BrandingConfig, mode: "light" | "dark"): string {
-  return (
+  const theme =
     `${PREVIEW_SCOPE}{${colorDeclarations(config.colors[mode])};` +
     `--radius:${RADIUS_VALUES[config.radius]};` +
     `--font-heading:${fontStack(config.fonts.heading)};` +
     `--font-body:${fontStack(config.fonts.body)};` +
-    `${shapeDeclarations(config)};color-scheme:${mode}}`
-  );
+    `${shapeDeclarations(config)};color-scheme:${mode}}`;
+  // regulile personalizate se aplică doar în elementul de previzualizare, nu în vitrina reală
+  return `${theme}${renderCustomCss(config.customCss, PREVIEW_SCOPE)}`;
 }

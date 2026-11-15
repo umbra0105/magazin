@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_NAV,
   CATALOG_ITEMS,
+  SETTINGS_ITEMS,
   activeItemId,
   pathInGroup,
 } from "../../apps/web/src/lib/admin-nav";
@@ -102,7 +103,7 @@ describe("grupul «Catalog» din meniu", () => {
   });
 
   it("meniul are un singur grup pentru tot catalogul, iar niciun element nu e și intrare separată", () => {
-    expect(ADMIN_NAV.filter((e) => e.children).map((e) => e.id)).toEqual(["catalog"]);
+    expect(ADMIN_NAV.filter((e) => e.children).map((e) => e.id)).toEqual(["catalog", "settings"]);
     const hrefs = ADMIN_NAV.map((e) => e.href);
     for (const item of CATALOG_ITEMS.filter((i) => i.href !== group?.href)) {
       expect(hrefs, item.href).not.toContain(item.href);
@@ -111,6 +112,43 @@ describe("grupul «Catalog» din meniu", () => {
     for (const item of CATALOG_ITEMS) {
       expect(pathInGroup(item.href, group?.href ?? ""), item.href).toBe(true);
     }
+  });
+});
+
+describe("grupul «Setări» din meniu (același model ca «Catalog»)", () => {
+  const group = ADMIN_NAV.find((entry) => entry.id === "settings");
+  const pages = adminPages();
+
+  it("fiecare element are o pagină care există, sub adresa grupului, iar adresa grupului duce la o pagină", () => {
+    const urls = new Set(pages.map((p) => p.url));
+    expect(urls.has(group?.href ?? "/nu-exista")).toBe(true);
+    for (const item of SETTINGS_ITEMS) {
+      expect(urls.has(item.href), item.href).toBe(true);
+      expect(pathInGroup(item.href, group?.href ?? ""), item.href).toBe(true);
+      expect(
+        ADMIN_NAV.map((e) => e.href),
+        item.href,
+      ).not.toContain(item.href);
+    }
+  });
+
+  it("fiecare pagină de sub adresa grupului are un element evidențiat (în afară de pagina grupului, care redirecționează)", () => {
+    const underGroup = pages.filter(
+      (p) => pathInGroup(p.url, group?.href ?? "/nu-exista") && p.url !== group?.href,
+    );
+    expect(underGroup.length).toBeGreaterThanOrEqual(SETTINGS_ITEMS.length);
+    for (const page of underGroup) {
+      expect(
+        activeItemId(page.url.replace(/[[^]]+]/g, "x"), SETTINGS_ITEMS),
+        page.file,
+      ).toBeDefined();
+    }
+  });
+
+  it("elementul Aspect cere settings.read (ca pagina lui)", () => {
+    expect(SETTINGS_ITEMS.find((item) => item.id === "appearance")?.permission).toBe(
+      "settings.read",
+    );
   });
 });
 

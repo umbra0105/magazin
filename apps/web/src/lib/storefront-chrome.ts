@@ -9,6 +9,7 @@ import {
   settingGroups,
   type AnnouncementTone,
   type CardLayout,
+  type ContainerWidth,
   type FooterVariant,
   type HeaderVariant,
   type MenuNode,
@@ -17,12 +18,7 @@ import { getDb } from "@ecom/db";
 import { getLogger } from "@ecom/shared";
 import { getStorage } from "./media";
 import { getBranding, getFeatureFlags, getSettings } from "./services";
-import {
-  STOREFRONT_READINESS,
-  headerSlots,
-  type ContainerWidth,
-  type HeaderSlots,
-} from "./storefront-chrome-rules";
+import { STOREFRONT_READINESS, headerSlots, type HeaderSlots } from "./storefront-chrome-rules";
 
 /** Nivelurile de categorii din meniu: rădăcini, subcategorii, sub-subcategorii (mai adânc nu se afișează în meniu). */
 const MENU_LEVELS = 3;

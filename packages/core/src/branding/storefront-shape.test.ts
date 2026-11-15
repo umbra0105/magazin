@@ -139,3 +139,28 @@ describe("renderScopedThemeCss (previzualizarea din galeria de dezvoltare)", () 
     expect(css.match(/\}/g)?.length).toBe(1);
   });
 });
+
+describe("renderScopedThemeCss: CSS personalizat în previzualizare", () => {
+  it("se aplică doar în elementul de previzualizare (nu în html:root și nu în vitrina reală)", () => {
+    const css = renderScopedThemeCss(
+      { ...configFromPreset("minimal"), customCss: ".card{border-radius:2px}" },
+      "light",
+    );
+    expect(css).toContain(`${PREVIEW_SCOPE}{.card{border-radius:2px}}`);
+    expect(css).not.toContain("data-surface");
+    expect(css).not.toContain("html:root");
+  });
+
+  it("CSS invalid sau gol nu adaugă nimic", () => {
+    const base = renderScopedThemeCss(configFromPreset("minimal"), "light");
+    expect(renderScopedThemeCss({ ...configFromPreset("minimal"), customCss: "" }, "light")).toBe(
+      base,
+    );
+    expect(
+      renderScopedThemeCss(
+        { ...configFromPreset("minimal"), customCss: ".x{background:url(a)}" },
+        "light",
+      ),
+    ).toBe(base);
+  });
+});

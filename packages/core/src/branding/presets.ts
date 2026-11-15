@@ -139,6 +139,7 @@ export function configFromPreset(key: PresetKey): BrandingConfig {
     logoUrl: null,
     faviconUrl: null,
     ogImageUrl: null,
+    customCss: "",
   };
 }
 

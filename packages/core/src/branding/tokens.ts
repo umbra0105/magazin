@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CUSTOM_CSS_MAX_LENGTH, validateCustomCss } from "./custom-css";
 
 /**
  * Tokens de temă. Tot ce ajunge în CSS trece prin aceste scheme STRICTE: culori doar hex,
@@ -124,5 +125,16 @@ export const brandingConfigSchema = z.strictObject({
   logoUrl: assetUrl.nullable(),
   faviconUrl: assetUrl.nullable(),
   ogImageUrl: assetUrl.nullable(),
+  /** CSS personalizat (Nivel 2): singurul text liber din temă; validat strict și împachetat în selectorul vitrinei (`custom-css.ts`). */
+  customCss: z
+    .string()
+    .max(CUSTOM_CSS_MAX_LENGTH, `CSS-ul depășește ${CUSTOM_CSS_MAX_LENGTH} de caractere`)
+    .superRefine((value, ctx) => {
+      const result = validateCustomCss(value);
+      if (!result.ok)
+        ctx.addIssue({ code: "custom", message: result.message, params: { code: result.code } });
+    })
+    .nullish()
+    .transform((value) => value ?? ""),
 });
 export type BrandingConfig = z.output<typeof brandingConfigSchema>;

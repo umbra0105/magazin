@@ -24,3 +24,9 @@ export {
   type FooterVariant,
   type HeaderVariant,
 } from "./appearance";
+export {
+  appearanceInputSchema,
+  issuesByField,
+  type AppearanceInput,
+  type AppearanceValues,
+} from "./appearance-input";

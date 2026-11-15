@@ -103,7 +103,7 @@ describe("validare strictă (fără injecție de CSS)", () => {
   });
 
   it("respinge chei necunoscute (nu intră câmpuri libere)", () => {
-    expect(brandingConfigSchema.safeParse({ ...valid(), customCss: "body{}" }).success).toBe(false);
+    expect(brandingConfigSchema.safeParse({ ...valid(), css: "body{}" }).success).toBe(false);
     const input = valid();
     (input.colors.light as Record<string, string>)["extra"] = "#ffffff";
     expect(brandingConfigSchema.safeParse(input).success).toBe(false);
@@ -289,5 +289,58 @@ describe("contrast: praguri exacte și erori de validare", () => {
       code: "VALIDATION_ERROR",
       details: { issues: [expect.objectContaining({ path: ["colors", "light", "accent"] })] },
     });
+  });
+});
+
+describe("CSS personalizat în temă (Nivel 2)", () => {
+  const withCss = (customCss: string) => ({ ...configFromPreset("minimal"), customCss });
+
+  it("presetul pornește fără CSS personalizat, iar un rând vechi (fără câmp sau cu `null`) cade pe gol", () => {
+    expect(configFromPreset("minimal").customCss).toBe("");
+    const legacy: Record<string, unknown> = { ...configFromPreset("minimal") };
+    delete legacy["customCss"];
+    expect(brandingConfigSchema.parse(legacy).customCss).toBe("");
+  });
+
+  it("schema respinge CSS-ul cu adrese sau acolade nebalansate, cu calea câmpului în eroare", () => {
+    for (const css of [
+      ".x{background:url(https://evil.test/a.png)}",
+      "@import 'a.css';",
+      ".x{color:red",
+    ]) {
+      const parsed = brandingConfigSchema.safeParse(withCss(css));
+      expect(parsed.success, css).toBe(false);
+      if (!parsed.success) expect(parsed.error.issues[0]?.path).toEqual(["customCss"]);
+    }
+    expect(brandingConfigSchema.safeParse(withCss(".card{border-radius:2px}")).success).toBe(true);
+  });
+
+  it("renderThemeCss adaugă regulile, împachetate în selectorul vitrinei, după paletă; fără ele nu schimbă nimic", () => {
+    const base = renderThemeCss(configFromPreset("minimal"));
+    expect(renderThemeCss(withCss(""))).toBe(base);
+    const css = renderThemeCss(withCss(".card{border-radius:2px}"));
+    expect(css.startsWith(base)).toBe(true);
+    expect(css.slice(base.length)).toContain(
+      'html [data-surface="storefront"]{.card{border-radius:2px}}',
+    );
+  });
+
+  it("un CSS invalid ajuns în bază nu ajunge în temă (a doua barieră)", () => {
+    const css = renderThemeCss(withCss(".x{background:url(https://evil.test/a.png)}"));
+    expect(css).not.toContain("url(");
+    expect(css).toBe(renderThemeCss(configFromPreset("minimal")));
+  });
+
+  it("save scrie și citește CSS-ul personalizat; rândul fără el funcționează", async () => {
+    const f = fakes();
+    const service = new BrandingService(f.store, f.cache);
+    await service.save(withCss(".a{color:red}"));
+    expect((await service.getConfig()).customCss).toBe(".a{color:red}");
+    expect((await service.getTheme()).css).toContain(".a{color:red}");
+    const row: Record<string, unknown> = { ...configFromPreset("bold") };
+    delete row["customCss"];
+    f.setRow(row as unknown as BrandingRow);
+    await service.invalidate();
+    expect((await service.getConfig()).customCss).toBe("");
   });
 });

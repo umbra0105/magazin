@@ -1,6 +1,6 @@
+import { containerWidthOf } from "@ecom/core";
 import { describe, expect, it } from "vitest";
 import {
-  containerWidthOf,
   headerSlots,
   telHref,
   STOREFRONT_READINESS,

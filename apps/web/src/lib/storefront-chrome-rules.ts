@@ -32,9 +32,6 @@ export function headerSlots(input: {
   };
 }
 
-/** Lățimea containerului și celelalte alegeri de aspect: un singur loc (`@ecom/core`), validate și la scriere. */
-export { containerWidthOf, type ContainerWidth } from "@ecom/core";
-
 /** `tel:` doar dintr-un număr cu cel puțin 6 cifre; păstrează plusul de la început și cifrele, nimic altceva. */
 export function telHref(phone: string): string | null {
   const trimmed = phone.trim();

@@ -55,4 +55,30 @@ describe("BrandingService (Postgres + Redis reale)", () => {
     expect(css).not.toContain("display:none");
     expect(css).toContain("--color-bg:#ffffff");
   });
+
+  it("CSS-ul personalizat se păstrează în baza reală și ajunge în temă, împachetat în selectorul vitrinei", async () => {
+    await service.save({ ...configFromPreset("minimal"), customCss: ".card{border-radius:2px}" });
+    const row = await db.branding.findUniqueOrThrow({ where: { id: "default" } });
+    expect(row.customCss).toBe(".card{border-radius:2px}");
+    const { css } = await service.getTheme();
+    expect(css).toContain('html [data-surface="storefront"]{.card{border-radius:2px}}');
+  });
+
+  it("CSS personalizat periculos scris direct în DB nu ajunge în temă (și nu strică restul)", async () => {
+    const config = configFromPreset("minimal");
+    await db.branding.create({
+      data: {
+        id: "default",
+        preset: "minimal",
+        colors: config.colors,
+        fonts: config.fonts,
+        radius: config.radius,
+        customCss: ".x{background:url(https://evil.test/a.png)}",
+      },
+    });
+    // rândul nu trece de schema strictă: se cade pe presetul implicit, fără CSS-ul rău
+    const { css } = await service.getTheme();
+    expect(css).not.toContain("url(");
+    expect(css).not.toContain("evil.test");
+  });
 });
