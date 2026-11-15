@@ -222,20 +222,6 @@ test("anunț cu destinație periculoasă: respins pe câmp, nimic nu se salveaz�
   ).toHaveAttribute("href", "/livrare-si-plata");
 });
 
-test("captură a editorului (doar când E2E_CAPTURES_DIR e setat; pentru verificarea vizuală)", async ({
-  page,
-}) => {
-  test.skip(!process.env["E2E_CAPTURES_DIR"], "doar la cerere");
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await login(page, owner, "/admin/setari/aspect");
-  await expect(page.locator("[data-appearance-preview]")).toBeVisible();
-  await page.waitForTimeout(1200);
-  await page.screenshot({
-    path: `${process.env["E2E_CAPTURES_DIR"]}/editor-aspect.png`,
-    fullPage: true,
-  });
-});
-
 test.describe("mod de mentenanță (503 pentru vizitatori, adminul rămâne accesibil)", () => {
   const MESSAGE = "Revenim la ora 18:00, după inventar";
 
