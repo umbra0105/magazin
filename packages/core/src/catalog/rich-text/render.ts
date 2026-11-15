@@ -89,6 +89,12 @@ function imageTag(media: RenderedMedia, alt: string, options: RenderOptions): st
   return `<img ${parts.join(" ")} />`;
 }
 
+/**
+ * Marcajul unei imagini din descriere încă neadusă (15d, `{{img:<24 hex>}}`, vezi `import/woo/description-images.ts`): text tehnic
+ * care nu trebuie văzut niciodată de cumpărător; se scoate la randare. Același tipar ca în `description-images.ts` (păzit de test).
+ */
+const PENDING_IMAGE_TOKEN = /\{\{img:[a-f0-9]{24}\}\}/g;
+
 export async function renderRichText(
   value: string | null | undefined,
   resolve: MediaResolver,
@@ -102,6 +108,7 @@ export async function renderRichText(
     entry.mediaIds.length > 0 ? await resolve(entry.mediaIds) : new Map<string, RenderedMedia>();
   const scrollOpen = `<div class="rich-text__scroll" role="region" tabindex="0" aria-label="${escapeAttribute(options.tableLabel)}">`;
   const html = entry.html
+    .replace(PENDING_IMAGE_TOKEN, "")
     .replace(SANITIZED_IMG, (_match, alt: string, id: string) => {
       const found = media.get(id);
       return found && SAFE_SRC.test(found.src) ? imageTag(found, alt, options) : "";

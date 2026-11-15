@@ -18,7 +18,7 @@ import {
 
 describe("isPhaseBranch", () => {
   it("recunoaște ramurile de fază: faza-N și redesign-…", () => {
-    for (const name of ["faza-9", "faza-15b", "redesign-final", "redesign-lot4"]) {
+    for (const name of ["faza-9", "faza-15b", "faza-15d", "redesign-final", "redesign-lot4"]) {
       expect(isPhaseBranch(name), name).toBe(true);
     }
   });

@@ -10,6 +10,9 @@ type Db = PrismaClient | Prisma.TransactionClient;
 
 export type ImageTaskStatus = "pending" | "downloaded" | "existing" | "failed";
 
+/** `product` = imaginea din coloana «Imagini» (se atașează produsului); `description` = imaginea dintr-o descriere (15d). */
+export type ImageTaskKind = "product" | "description";
+
 export interface ImageTask {
   id: string;
   importId: string;
@@ -22,9 +25,12 @@ export interface ImageTask {
   host: string;
   status: ImageTaskStatus;
   reason: string | null;
+  kind: ImageTaskKind;
 }
 
 export interface NewImageTask {
+  /** Implicit `product`. */
+  kind?: ImageTaskKind;
   productId: string;
   row: number;
   sku: string;
@@ -44,6 +50,7 @@ export interface ImageProgress {
 }
 
 export interface ImageFailure {
+  kind: ImageTaskKind;
   row: number;
   sku: string;
   host: string;
@@ -73,6 +80,8 @@ export interface ImageTaskStore {
   /** Fișierele media ale produsului (fără cele ale variantelor), în ordinea afișării. */
   productMediaIds(productId: string): Promise<string[]>;
   productTitles(productIds: readonly string[]): Promise<Map<string, string>>;
+  /** Descrierile curente ale produselor (HTML sanitizat sau `null`), pentru înlocuirea marcajelor imaginilor (15d). */
+  productDescriptions(productIds: readonly string[]): Promise<Map<string, string | null>>;
 }
 
 const CHUNK = 1000;
@@ -90,7 +99,12 @@ export function createImageTaskStore(db: Db): ImageTaskStore {
     host: string;
     status: string;
     reason: string | null;
-  }): ImageTask => ({ ...row, status: row.status as ImageTaskStatus });
+    kind: string;
+  }): ImageTask => ({
+    ...row,
+    status: row.status as ImageTaskStatus,
+    kind: row.kind as ImageTaskKind,
+  });
 
   return {
     async insertTasks(importId, tasks) {
@@ -121,6 +135,7 @@ export function createImageTaskStore(db: Db): ImageTaskStore {
           host: true,
           status: true,
           reason: true,
+          kind: true,
         },
       });
       return rows.map(toTask);
@@ -174,7 +189,7 @@ export function createImageTaskStore(db: Db): ImageTaskStore {
         where: { importId, status: "failed" },
         orderBy: [{ row: "asc" }, { position: "asc" }],
         take: limit,
-        select: { row: true, sku: true, host: true, reason: true },
+        select: { kind: true, row: true, sku: true, host: true, reason: true },
       }) as Promise<ImageFailure[]>;
     },
 
@@ -206,6 +221,18 @@ export function createImageTaskStore(db: Db): ImageTaskStore {
         select: { mediaId: true },
       });
       return rows.map((row) => row.mediaId);
+    },
+
+    async productDescriptions(productIds) {
+      const out = new Map<string, string | null>();
+      for (let i = 0; i < productIds.length; i += CHUNK) {
+        const rows = await db.product.findMany({
+          where: { id: { in: productIds.slice(i, i + CHUNK) } },
+          select: { id: true, description: true },
+        });
+        for (const row of rows) out.set(row.id, row.description);
+      }
+      return out;
     },
 
     async productTitles(productIds) {

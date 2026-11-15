@@ -19,6 +19,11 @@ export interface WooOptions {
   /** Imaginile din coloana «Imagini» se descarcă în fundal, după produse (cere `media.write`). */
   importImages: boolean;
   /**
+   * Imaginile din DESCRIERI (15d): se aduc în fundal, ca cele din coloana «Imagini», și intră în descriere prin
+   * `<img data-media-id>`. Oprit = imaginile externe din descrieri se elimină, cu avertisment (15c). Lipsa câmpului = oprit.
+   */
+  importDescriptionImages: boolean;
+  /**
    * «full» = importul obișnuit (creează și actualizează tot); «descriptionsOnly» = reimport al descrierilor: schimbă DOAR
    * descrierea produselor care există deja (15c, pasul 8). Mapările salvate înainte de pasul 8 nu au câmpul: lipsa = «full».
    */
@@ -218,6 +223,10 @@ export interface WooRefs {
 
 /** O imagine acceptată de verificările fără rețea, de adus în fundal după produse. */
 export interface WooImageTask {
+  /** `product` (implicit): coloana «Imagini»; `description`: o imagine din descriere (15d). */
+  kind?: "product" | "description";
+  /** Produsul, când se știe deja (modul «doar descrieri»); altfel se regăsește după SKU. */
+  productId?: string;
   row: number;
   /** SKU-ul primei variante a produsului (cu el se regăsește produsul după aplicare). */
   sku: string;
@@ -239,7 +248,23 @@ export interface WooImageIssue {
   rawHash: string;
 }
 
+/** Imaginile din descrieri (15d): numărătorile planului și respingerile, fără adrese. */
+export interface WooDescriptionImagesPlan {
+  enabled: boolean;
+  stats: {
+    total: number;
+    accepted: number;
+    rejected: number;
+    alreadyInLibrary: number;
+    byHost: Record<string, number>;
+    rejectedByReason: Record<string, number>;
+  };
+  issues: { row: number; sku: string; position: number; host: string | null; reason: string }[];
+}
+
 export interface WooImagePlan {
+  /** Imaginile din descrieri (15d); lipsește când opțiunea n-a fost cerută. */
+  description?: WooDescriptionImagesPlan;
   enabled: boolean;
   tasks: WooImageTask[];
   issues: WooImageIssue[];
@@ -279,6 +304,13 @@ export interface WooReportSection {
     /** Imaginile respinse fără rețea, cu motivul în română (fără adrese); tăiat la `REPORT_IMAGE_ISSUES`. */
     issues: { row: number; sku: string; host: string | null; message: string }[];
     issuesTruncated: boolean;
+    /** Imaginile din descrieri (15d). */
+    description?: {
+      enabled: boolean;
+      stats: WooDescriptionImagesPlan["stats"];
+      issues: { row: number; sku: string; host: string | null; message: string }[];
+      issuesTruncated: boolean;
+    };
   };
   categoriesToCreate: string[];
   brandsToCreate: string[];

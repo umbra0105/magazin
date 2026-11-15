@@ -12,6 +12,8 @@ import {
   ProductAssignmentsService,
   createPrismaProductAssignmentStore,
 } from "../product-assignments";
+import { ProductService } from "../product-service";
+import { createPrismaProductStore } from "../product-store";
 import { ProductImageImporter, type ImageProcessOutcome } from "./woo/image-importer";
 import { createPrismaProductImportStore } from "./import-store";
 import { RowAuditCollector } from "./row-audit";
@@ -57,6 +59,14 @@ export function createProductImageImporter(
       // fără `onCreated`: procesarea o face importatorul direct (are nevoie de fișierul `ready` ca să-l atașeze)
     }),
     processMedia: deps.processMedia,
+    // imaginile din descrieri (15d): descrierea se scrie doar prin serviciul produsului (sanitizare, media, audit marcat cu importul)
+    products: new ProductService({
+      store: createPrismaProductStore(db),
+      audit: rowAudit.audit,
+      defaultManageStock: async () => (await settings.getGroup("inventory")).manageStock,
+      defaultWarrantyMonths: async () => (await settings.getGroup("catalog")).defaultWarrantyMonths,
+      logger: deps.logger,
+    }),
     assignments: new ProductAssignmentsService({
       store: createPrismaProductAssignmentStore(db),
       audit: rowAudit.audit,

@@ -8,6 +8,8 @@ import { sanitizeFileName } from "../../../media/file-name";
 import { SafeFetchError, type SafeFetchPolicy } from "../../../media/safe-fetch";
 import { CATALOG_TAG } from "../../catalog-support";
 import type { ProductAssignmentsService } from "../../product-assignments";
+import type { ProductService } from "../../product-service";
+import { resolveDescriptionTokens } from "./description-images";
 import type { ProductImportStore } from "../import-store";
 import type { ImageTask, ImageTaskStore } from "./image-store";
 
@@ -24,6 +26,10 @@ import type { ImageTask, ImageTaskStore } from "./image-store";
  *  - Atașarea: în ordinea din fișier, DUPĂ imaginile existente (prima devine principală doar dacă produsul n-are
  *    nicio imagine); nu șterge și nu înlocuiește nimic.
  *  - Permisiunea (`products.write` ȘI `media.write`) se reverifică la rulare, pe utilizatorul care a pornit importul.
+ *  - Imaginile din DESCRIERI (15d, `kind = "description"`) trec prin aceeași descărcare, dar NU se atașează galeriei produsului:
+ *    marcajul `{{img:<hash>}}` din descriere devine `<img data-media-id>`, prin `ProductService.update` (singura cale spre
+ *    descriere: sanitizare, legăturile cu media, audit). Se înlocuiesc DOAR marcajele din descrierea curentă, deci o descriere
+ *    editată între timp nu se suprascrie; imaginea eșuată își păstrează marcajul (pentru reluare); o a doua rulare nu schimbă nimic.
  * Motivele eșecului sunt coduri stabile; nu se scriu IP-uri, anteturi, corpuri de răspuns sau căi interne.
  */
 
@@ -49,6 +55,8 @@ export interface ImageImporterDeps {
   /** Generează variantele unui fișier proaspăt încărcat (procesorul media); întoarce starea finală. */
   processMedia: (mediaId: string) => Promise<ImageProcessOutcome>;
   assignments: Pick<ProductAssignmentsService, "setMedia">;
+  /** Singura cale spre `Product.description` (15d): înlocuirea marcajelor imaginilor din descriere. */
+  products: Pick<ProductService, "update">;
   getPolicy: () => Promise<ImageImportPolicy>;
   getMediaLimits: () => Promise<ImageLimits>;
   loadSubject: (userId: string) => Promise<PermissionSubject | null>;
@@ -64,6 +72,10 @@ export interface ImageImportSummary {
   existing: number;
   failed: number;
   attached: number;
+  /** Descrieri de produs actualizate (15d). */
+  descriptions: number;
+  /** Imagini puse în descrieri (un marcaj înlocuit = una; aceeași imagine de două ori = două). */
+  descriptionImages: number;
 }
 
 /** Mesajele pentru administrator, pe cod (fără adrese, IP-uri sau detalii interne). */
@@ -176,7 +188,14 @@ export class ProductImageImporter {
 
   private async runInner(importId: string): Promise<ImageImportSummary> {
     const { deps } = this;
-    const summary: ImageImportSummary = { downloaded: 0, existing: 0, failed: 0, attached: 0 };
+    const summary: ImageImportSummary = {
+      downloaded: 0,
+      existing: 0,
+      failed: 0,
+      attached: 0,
+      descriptions: 0,
+      descriptionImages: 0,
+    };
     const record = await deps.imports.get(importId);
     if (!record || record.status !== "completed") return summary;
 
@@ -262,6 +281,9 @@ export class ProductImageImporter {
     }
 
     summary.attached = await this.attach(importId, subject);
+    const placed = await this.placeDescriptionImages(importId, subject);
+    summary.descriptions = placed.descriptions;
+    summary.descriptionImages = placed.images;
     await this.audit(importId, subject, summary);
     try {
       await deps.invalidate?.([CATALOG_TAG]);
@@ -322,7 +344,9 @@ export class ProductImageImporter {
   /** Imaginile sarcinilor terminate, în ordinea din fișier, după cele existente ale produsului. */
   private async attach(importId: string, subject: PermissionSubject): Promise<number> {
     const { deps } = this;
-    const done = await deps.tasks.listTasks(importId, ["downloaded", "existing"]);
+    const done = (await deps.tasks.listTasks(importId, ["downloaded", "existing"])).filter(
+      (task) => task.kind === "product",
+    );
     // fișierele se regăsesc prin hash-ul adresei sursă (unic pe `Media`); sarcinile nu au cheie străină spre media
     const mediaByHash = await deps.tasks.findMediaBySourceHashes([
       ...new Set(done.map((task) => task.sourceHash)),
@@ -362,6 +386,62 @@ export class ProductImageImporter {
     return attached;
   }
 
+  /**
+   * Înlocuiește marcajele imaginilor din descrieri (15d). Pentru fiecare produs cu sarcini `description`: citește descrierea
+   * CURENTĂ, înlocuiește marcajul fiecărei imagini gata (`downloaded` / `existing`) cu `<img data-media-id>`, lasă marcajele
+   * imaginilor încă în așteptare sau eșuate și marcajele care nu sunt ale acestui import, apoi scrie descrierea doar dacă
+   * s-a schimbat ceva.
+   */
+  private async placeDescriptionImages(
+    importId: string,
+    subject: PermissionSubject,
+  ): Promise<{ descriptions: number; images: number }> {
+    const { deps } = this;
+    const all = (
+      await deps.tasks.listTasks(importId, ["downloaded", "existing", "failed", "pending"])
+    ).filter((task) => task.kind === "description");
+    if (all.length === 0) return { descriptions: 0, images: 0 };
+    // fișierele se regăsesc prin hash-ul adresei sursă; contează doar dacă fișierul există (nu starea sarcinii): o imagine
+    // deja în bibliotecă se pune în descriere chiar dacă sarcina ei a eșuat sau încă așteaptă
+    const mediaByHash = await deps.tasks.findMediaBySourceHashes([
+      ...new Set(all.map((t) => t.sourceHash)),
+    ]);
+    const byProduct = new Map<string, ImageTask[]>();
+    for (const task of all)
+      byProduct.set(task.productId, [...(byProduct.get(task.productId) ?? []), task]);
+    const descriptions = await deps.tasks.productDescriptions([...byProduct.keys()]);
+    let updated = 0;
+    let images = 0;
+    for (const [productId, tasks] of byProduct) {
+      const current = descriptions.get(productId) ?? null;
+      if (!current) continue;
+      try {
+        const out = resolveDescriptionTokens(current, (token) => {
+          const task = tasks.find((candidate) => candidate.sourceHash.startsWith(token));
+          if (!task) return { kind: "keep" };
+          const media = mediaByHash.get(task.sourceHash);
+          // fișier încă neadus (în așteptare, eșuat) sau dispărut din bibliotecă: marcajul rămâne, imaginea se reia
+          return media ? { kind: "media", mediaId: media.id } : { kind: "keep" };
+        });
+        if (out.replaced === 0) continue;
+        await deps.products.update(subject, productId, { description: out.html });
+        updated += 1;
+        images += out.replaced;
+      } catch (error) {
+        deps.logger.warn(
+          { importId, kind: error instanceof Error ? error.name : "necunoscut" },
+          "import imagini: descrierea unui produs nu s-a putut actualiza",
+        );
+        for (const task of tasks) {
+          if (task.status === "downloaded" || task.status === "existing") {
+            await deps.tasks.setResult(task.id, { status: "failed", reason: "attach_failed" });
+          }
+        }
+      }
+    }
+    return { descriptions: updated, images };
+  }
+
   private async audit(
     importId: string,
     subject: PermissionSubject | null,
@@ -378,6 +458,8 @@ export class ProductImageImporter {
         existing: summary.existing,
         failed: summary.failed,
         attached: summary.attached,
+        descriptions: summary.descriptions,
+        descriptionImages: summary.descriptionImages,
       },
     });
   }

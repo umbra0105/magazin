@@ -26,9 +26,12 @@ La întrebarea «e S2 sau S3?», alegi nivelul mai grav.
 
 | Mod | Ce permite | Faze (din `06-todo-master.md`) |
 |---|---|---|
-| **A — autonom** | Toată faza fără oprire, cu raport la final | Rest din Redesign admin (3b-2, Lot 4), 11 (admin comenzi, emailuri), 12 (AWB, după deciziile de transport), 14 (cont și retururi, fără partea de bani), 16 (CMS), 17 (SEO, redirecturi, fără prețuri), 19 (extensii), 20 (rapoarte, hardening) |
-| **B — autonom cu poartă umană** | Lucrul merge singur, dar faza **nu se îmbină** până nu verifici manual pașii marcați | 8 (motor de prețuri, coș), 9 (checkout), 10 (plăți), 13 (facturare), 14b (produse digitale, acces), 15 (grupuri de clienți, prețuri NIR), 15b (loialitate, vouchere) |
-| **C — cu punct de control** | Autonom, cu o oprire planificată la mijloc | 6 și 7 (storefront): oprire după primul șablon (acasă, categorie, produs), pentru aprobarea direcției vizuale; apoi restul autonom. 18 (instalator) și 22 (lansare): verificare umană cap-coadă obligatorie |
+| **A — autonom** | Toată faza fără oprire, cu raport la final | Rest din Redesign admin (3b-2, Lot 4), 15d (imagini din descrieri, mini-fază), 11 (admin comenzi, emailuri), 12 (AWB, după deciziile de transport), 14 (cont și retururi, fără partea de bani), 16 (CMS), 17 (SEO, redirecturi, fără prețuri), 19 (extensii), 20 (rapoarte, hardening) |
+| **B — autonom cu poartă umană** | Lucrul merge singur, dar faza **nu se îmbină** până nu verifici manual pașii marcați | 8 (motor de prețuri, coș), 9 (checkout), 10 (plăți), 13 (facturare), 14b (produse digitale, acces), 15 (grupuri de clienți, prețuri NIR), 15b (loialitate, vouchere), 22b (eMAG Marketplace: bani, comenzi și stoc externe) |
+| **C — cu punct de control** | Autonom, cu o oprire planificată la mijloc | 6 (design system și layout): oprire după tokeni, preseturi și layout (header, footer, meniu, 404/500), pentru aprobarea direcției vizuale; apoi restul autonom. 7 (storefront catalog): oprire după primele șabloane (acasă, categorie, produs), pentru aprobarea lor; apoi restul autonom. 18 (instalator), 21 (împachetare și distribuție) și 22 (lansare): verificare umană cap-coadă obligatorie |
+| **Continuu** | Fără fază de executat dintr-o dată | 23 (post-lansare): fiecare punct se execută ca mini-fază, în modul A sau B după zona pe care o atinge |
+
+Tabelul din `scripts/autonom/phases.ts` (`PHASE_MODES`) se completează cu faza respectivă în primul commit al ramurii ei (cu test), ca poarta să o recunoască; fazele de mai sus fără intrare acolo (21, 22b) se adaugă atunci.
 
 Pașii de verificare manuală din `13-protocol-de-lucru.md` §6 rămân obligatorii pentru fazele 9, 10, 13 și 18.
 

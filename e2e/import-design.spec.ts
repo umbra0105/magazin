@@ -348,6 +348,12 @@ test.describe("import: WooCommerce și imagini", () => {
       await tokenStyle(page, "border-line-subtle", "border-top-color"),
     );
     expect(await primaryControls(page)).toEqual([]);
+    // bifa «Imagini din descrieri» (15d): activă când contul poate importa imagini
+    const descriptionImages = page.locator("[data-woo-import-description-images]");
+    await expect(descriptionImages).toBeEnabled();
+    await expect(descriptionImages).not.toBeChecked();
+    await descriptionImages.check();
+    await expect(descriptionImages).toBeChecked();
     await expect(page.getByLabel("Clasa din aplicație: Clasa mare")).toBeVisible();
     await expectPhoneFits(page, "opțiunile Woo");
     await page.setViewportSize({ width: 390, height: 844 });
@@ -361,6 +367,9 @@ test.describe("import: WooCommerce și imagini", () => {
     await login(page, account, HARNESS("woo", "fara-drept"));
     const noRight = page.locator("[data-images-no-right]");
     await expect(noRight).toBeVisible();
+    // fără dreptul de media, bifa pentru imaginile din descrieri e dezactivată și are propria explicație
+    await expect(page.locator("[data-woo-import-description-images]")).toBeDisabled();
+    await expect(page.locator("[data-description-images-no-right]")).toBeVisible();
     expect(await css(noRight, "background-color")).toBe(
       await tokenStyle(page, "bg-surface-subtle", "background-color"),
     );
@@ -388,6 +397,11 @@ test.describe("import: WooCommerce și imagini", () => {
     expect(await css(report, "border-top-color")).toBe(
       await tokenStyle(page, "border-line-subtle", "border-top-color"),
     );
+    // imaginile din descrieri (15d): numărătorile fără nicio adresă
+    await expect(page.locator("[data-description-images-summary]")).toContainText(
+      "4 adrese: 2 acceptate, 2 respinse. 1 e deja în bibliotecă.",
+    );
+    await expect(page.locator("[data-description-images-rejected] li")).toHaveCount(2);
     await page.getByText("Imagini respinse (fără adresa completă)").click();
     await expectTable(
       page,

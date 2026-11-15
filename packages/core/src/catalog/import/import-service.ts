@@ -249,6 +249,7 @@ const wooOptionsSchema = z.strictObject({
   shippingClassMap: z.record(z.string().min(1).max(100), z.enum(SHIPPING_CLASSES)),
   attributeTargets: z.record(z.string().min(1).max(100), z.string().min(1).max(60)),
   importImages: z.boolean().default(false),
+  importDescriptionImages: z.boolean().default(false),
   mode: z.enum(["full", "descriptionsOnly"]).default("full"),
   overwriteEditedDescriptions: z.boolean().default(false),
 });
@@ -270,6 +271,7 @@ function normalizeWooOptions(options: z.output<typeof wooOptionsSchema>): WooOpt
     shippingClassMap: fold(options.shippingClassMap) as WooOptions["shippingClassMap"],
     attributeTargets: fold(options.attributeTargets),
     importImages: options.importImages,
+    importDescriptionImages: options.importDescriptionImages,
     mode: options.mode,
     overwriteEditedDescriptions: options.overwriteEditedDescriptions,
   };
@@ -343,6 +345,21 @@ export function buildReport(
             message: WOO_IMAGE_MESSAGES[issue.reason] ?? "adresă respinsă",
           })),
           issuesTruncated: plan.woo.images.issues.length > REPORT_IMAGE_ISSUES,
+          ...(plan.woo.images.description && {
+            description: {
+              enabled: plan.woo.images.description.enabled,
+              stats: plan.woo.images.description.stats,
+              issues: plan.woo.images.description.issues
+                .slice(0, REPORT_IMAGE_ISSUES)
+                .map((issue) => ({
+                  row: issue.row,
+                  sku: issue.sku,
+                  host: issue.host,
+                  message: WOO_IMAGE_MESSAGES[issue.reason] ?? "adresă respinsă",
+                })),
+              issuesTruncated: plan.woo.images.description.issues.length > REPORT_IMAGE_ISSUES,
+            },
+          }),
         },
         stats: plan.woo.stats,
         ...(plan.woo.descriptionsOnly && { descriptionsOnly: { updated: counts.updated } }),
@@ -648,18 +665,28 @@ export class ProductImportService {
         );
       }
       // mapările salvate înainte de pasul 8 din 15c nu au `mode`: lipsa înseamnă importul obișnuit
+      const imageSettings =
+        can(subject, "media.write") && this.deps.getImageSettings
+          ? await this.deps.getImageSettings()
+          : null;
       if (mapping.options.mode === "descriptionsOnly") {
         const snapshot = await this.deps.store.loadWooSnapshot({
           ...collectWooLookups(table),
           descriptionInfo: true,
         });
-        return { table, plan: planWooDescriptions(table, mapping.options, snapshot) };
+        return {
+          table,
+          plan: planWooDescriptions(table, mapping.options, snapshot, {
+            images: imageSettings && {
+              allowedHosts: imageSettings.allowedHosts,
+              maxUrlLength: imageSettings.maxUrlLength,
+              maxImagesPerProduct: imageSettings.maxImagesPerProduct,
+              maxImagesPerImport: imageSettings.maxImagesPerImport,
+            },
+          }),
+        };
       }
       const snapshot = await this.deps.store.loadWooSnapshot(collectWooLookups(table));
-      const imageSettings =
-        can(subject, "media.write") && this.deps.getImageSettings
-          ? await this.deps.getImageSettings()
-          : null;
       const plan = planWoo(table, mapping.options, snapshot, {
         images: imageSettings && {
           allowedHosts: imageSettings.allowedHosts,
@@ -1008,13 +1035,14 @@ export class ProductImportService {
       if (existing.has(importId)) return 0;
       const failedRows = new Set(finalRows.filter((r) => r.outcome === "error").map((r) => r.row));
       const productBySku = await this.deps.store.woo.findProductIdsBySku([
-        ...new Set(tasks.map((task) => task.sku)),
+        ...new Set(tasks.filter((task) => !task.productId).map((task) => task.sku)),
       ]);
       const rows = [];
       for (const task of tasks) {
-        const productId = productBySku.get(task.sku.toLowerCase());
+        const productId = task.productId ?? productBySku.get(task.sku.toLowerCase());
         if (!productId || failedRows.has(task.row)) continue;
         rows.push({
+          kind: task.kind ?? ("product" as const),
           productId,
           row: task.row,
           sku: task.sku,

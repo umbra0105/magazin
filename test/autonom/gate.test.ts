@@ -593,3 +593,17 @@ describe("fără mod de a ocoli o condiție", () => {
     expect(parseGateArgs(["--faza", "../x"]).ok).toBe(false);
   });
 });
+
+describe("faza 15d (ramura faza-15d, modul A)", () => {
+  it("poarta acceptă numele ramurii și pune etichetele pre-faza-15d / faza-15d-completa", async () => {
+    const { result, calls } = await run({ branch: "faza-15d" }, "15d");
+    expect(result).toEqual({ ok: true, dryRun: false, mergeCommit: MERGE });
+    expect(calls.some((c) => c.startsWith("git tag -a pre-faza-15d"))).toBe(true);
+    expect(calls.some((c) => c.startsWith("git tag -a faza-15d-completa"))).toBe(true);
+  });
+
+  it("pe altă ramură decât faza-15d poarta se oprește la condiția 0", async () => {
+    const r = await run({ branch: "redesign-final" }, "15d");
+    expectStopsAt(r, 0);
+  });
+});
