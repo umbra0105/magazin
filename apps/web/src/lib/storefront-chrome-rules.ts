@@ -32,12 +32,8 @@ export function headerSlots(input: {
   };
 }
 
-export type ContainerWidth = "lg" | "xl" | "2xl";
-
-/** Setarea `appearance.containerWidth` e text liber în registru; aici se reduce la una dintre valorile cunoscute (implicit `xl`). */
-export function containerWidthOf(value: string): ContainerWidth {
-  return value === "lg" || value === "xl" || value === "2xl" ? value : "xl";
-}
+/** Lățimea containerului și celelalte alegeri de aspect: un singur loc (`@ecom/core`), validate și la scriere. */
+export { containerWidthOf, type ContainerWidth } from "@ecom/core";
 
 /** `tel:` doar dintr-un număr cu cel puțin 6 cifre; păstrează plusul de la început și cifrele, nimic altceva. */
 export function telHref(phone: string): string | null {

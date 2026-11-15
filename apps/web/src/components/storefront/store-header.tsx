@@ -2,7 +2,7 @@ import { Heart, Phone, ShoppingBag, User } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Container, StoreSearch, cn, storeButtonVariants } from "@ecom/ui";
-import type { MenuNode } from "@ecom/core";
+import type { HeaderVariant, MenuNode } from "@ecom/core";
 import { getMessages } from "@/messages";
 import { telHref, type SlotState } from "@/lib/storefront-chrome-rules";
 import { MegaMenu, type MegaMenuItem } from "./mega-menu";
@@ -18,6 +18,8 @@ export interface StoreHeaderProps {
   menu: MenuNode[];
   phone: string;
   slots: { search: SlotState; cart: SlotState; wishlist: SlotState };
+  /** `default`: bară opacă; `glass`: translucid cu estompare, hero-ul paginii urcă sub el (regula din `storefront-tokens.css`). */
+  variant?: HeaderVariant;
   /** Adresa contului (`/cont`: cere autentificare și trimite la login). */
   accountHref?: string;
   className?: string;
@@ -36,6 +38,9 @@ function toItems(menu: MenuNode[]): MegaMenuItem[] {
       id: child.id,
       name: child.name,
       href: child.href,
+      image: child.image
+        ? { src: child.image.src, width: child.image.width, height: child.image.height }
+        : null,
       children: child.children.map((grand) => ({
         id: grand.id,
         name: grand.name,
@@ -94,6 +99,7 @@ export function StoreHeader({
   menu,
   phone,
   slots,
+  variant = "default",
   accountHref = "/cont",
   className,
   menuInitiallyOpen = false,
@@ -105,7 +111,10 @@ export function StoreHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b border-line-subtle bg-surface-page text-ink",
+        "sticky top-0 z-40 border-b text-ink",
+        variant === "glass"
+          ? "border-line-subtle/60 bg-surface-page/75 backdrop-blur-md"
+          : "border-line-subtle bg-surface-page",
         className,
       )}
     >

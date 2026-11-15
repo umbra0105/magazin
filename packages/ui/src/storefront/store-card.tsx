@@ -25,6 +25,8 @@ export interface ProductCardProps {
   status?: { label: string; tone: StorePillTone } | undefined;
   /** Nivelul titlului în pagină (h2 sub un h1 de listă, h3 sub un h2 de secțiune). */
   headingLevel?: 2 | 3;
+  /** `vertical`: imaginea sus (grilă); `horizontal`: imaginea în stânga, textul în dreapta (listă). Vine din setarea de aspect. */
+  layout?: "vertical" | "horizontal";
   className?: string;
 }
 
@@ -42,18 +44,27 @@ export function ProductCard({
   oldPrice,
   status,
   headingLevel = 3,
+  layout = "vertical",
   className,
 }: ProductCardProps) {
+  const horizontal = layout === "horizontal";
   const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <article
+      data-layout={layout}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-card bg-card text-ink transition-colors duration-(--motion) " +
+        "group relative flex overflow-hidden rounded-card bg-card text-ink transition-colors duration-(--motion) " +
           "hover:bg-card-hover has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-brand",
+        horizontal ? "flex-row" : "flex-col",
         className,
       )}
     >
-      <div className="relative aspect-square overflow-hidden bg-surface-page [&_img]:size-full [&_img]:object-contain">
+      <div
+        className={cn(
+          "relative aspect-square overflow-hidden bg-surface-page [&_img]:size-full [&_img]:object-contain",
+          horizontal && "w-2/5 shrink-0 sm:w-1/3",
+        )}
+      >
         {media}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-5">

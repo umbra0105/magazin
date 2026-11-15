@@ -55,10 +55,10 @@ export const PRESETS: Record<PresetKey, Preset> = {
     label: "Bold",
     colors: {
       light: {
-        bg: "#ffffff",
+        bg: "#f4f7fb",
         fg: "#111827",
         muted: "#4b5563",
-        border: "#d1d5db",
+        border: "#cdd6e2",
         primary: "#c2410c",
         primaryFg: "#ffffff",
         accent: "#0f766e",

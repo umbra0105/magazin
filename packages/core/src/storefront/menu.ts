@@ -16,12 +16,24 @@ export interface MenuCategory {
   sortOrder: number;
   /** Produse active (nesterse) direct în această categorie. */
   productCount: number;
+  /** Imaginea categoriei din biblioteca media (adresa variantei procesate); lipsă = categoria se afișează doar cu text. */
+  image?: MenuImage | null;
+}
+
+/** Imaginea unei plăci de meniu: variantă gata procesată, cu dimensiuni explicite și text alternativ. */
+export interface MenuImage {
+  src: string;
+  width: number;
+  height: number;
+  alt: string;
 }
 
 export interface MenuNode {
   id: string;
   name: string;
   href: string;
+  /** `null` cât categoria nu are imagine: meniul o desenează ca text, nu ca placă. */
+  image: MenuImage | null;
   children: MenuNode[];
 }
 
@@ -48,6 +60,7 @@ export function buildMenuTree(
         id: category.id,
         name: category.name,
         href: `${CATEGORY_URL_PREFIX}${category.path}`,
+        image: category.image ?? null,
         children: level < options.maxLevels ? build(category.id, level + 1) : [],
       });
     }

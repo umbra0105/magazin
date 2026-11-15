@@ -2,6 +2,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
+  AnnouncementBar,
   HeroBanner,
   ProductCard,
   StoreButton,
@@ -127,5 +128,54 @@ describe("TrustBar și butoane", () => {
   it("forma butonului vine din token (rounded-button), nu dintr-o rază fixă", () => {
     expect(storeButtonVariants()).toContain("rounded-button");
     expect(storeButtonVariants({ size: "icon" })).toContain("rounded-full");
+  });
+});
+
+describe("AnnouncementBar (bara de anunț)", () => {
+  it("fără destinație: doar text, fără link; cu cale locală: un singur link, fără target", () => {
+    const plain = render(h(AnnouncementBar, { text: "Livrare gratuită" }));
+    expect(plain).toContain("Livrare gratuită");
+    expect(plain).not.toContain("<a ");
+    const local = render(h(AnnouncementBar, { text: "Oferte", href: "/oferte" }));
+    expect(local.match(/<a /g)).toHaveLength(1);
+    expect(local).toContain('href="/oferte"');
+    expect(local).not.toContain("target=");
+  });
+
+  it("adresa https externă se deschide în filă nouă, cu rel de siguranță", () => {
+    const html = render(h(AnnouncementBar, { text: "Vezi", href: "https://exemplu.ro/x" }));
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  it("textul se afișează ca text (nu se interpretează ca HTML) și bara e o regiune numită", () => {
+    const html = render(h(AnnouncementBar, { text: "<b>x</b>", label: "Anunț" }));
+    expect(html).toContain("&lt;b&gt;x&lt;/b&gt;");
+    expect(html).not.toContain("<b>");
+    expect(html).toContain('aria-label="Anunț"');
+  });
+
+  it("tonul alege culorile din tokeni, fără valori fixe", () => {
+    expect(render(h(AnnouncementBar, { text: "a", tone: "brand" }))).toContain("bg-action");
+    expect(render(h(AnnouncementBar, { text: "a", tone: "neutral" }))).toContain("bg-card");
+    expect(render(h(AnnouncementBar, { text: "a" }))).not.toMatch(/#[0-9a-f]{3,6}/i);
+  });
+});
+
+describe("ProductCard: layout orizontal (listă)", () => {
+  const props = { href: "/produs/p", name: "P", media: h(StoreImage, img), price: "1 leu" };
+
+  it("vertical e implicit; orizontal pune imaginea lângă text și rămâne cu un singur link", () => {
+    const vertical = render(h(ProductCard, props));
+    expect(vertical).toContain("flex-col");
+    const horizontal = render(h(ProductCard, { ...props, layout: "horizontal" }));
+    expect(horizontal).toContain('data-layout="horizontal"');
+    expect(horizontal.match(/<a /g)).toHaveLength(1);
+  });
+});
+
+describe("HeroBanner: marcaj pentru header-ul transparent", () => {
+  it("secțiunea poartă data-hero, ca header-ul «sticlă» să o poată trage sub el", () => {
+    expect(render(h(HeroBanner, { image: img, title: "A" }))).toContain("data-hero");
   });
 });

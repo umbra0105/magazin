@@ -14,7 +14,7 @@ export interface NavSheetProps {
 }
 
 /**
- * Panoul de navigare de pe telefon: vine din stânga, pe elementul nativ `<dialog>` modal (focusul rămâne în panou, Esc îl închide
+ * Panoul de navigare de pe telefon: vine din stânga, pe tot ecranul sub 40rem (altfel o fâșie din pagină rămâne la margine) și cu pagina de sub el blocată la derulare, pe elementul nativ `<dialog>` modal (focusul rămâne în panou, Esc îl închide
  * și focusul se întoarce la buton, click pe fundal îl închide). Intrarea e o tranziție scurtă, oprită la `prefers-reduced-motion`.
  * Linkurile din interior sunt `<a href>` obișnuite: același meniu ca pe desktop, citit și fără JavaScript din HTML-ul serverului.
  */
@@ -42,7 +42,7 @@ export function NavSheet({ open, onClose, title, closeLabel, children, className
         if (event.target === ref.current) onClose();
       }}
       className={cn(
-        "sheet-panel m-0 mr-auto h-dvh max-h-dvh w-full max-w-sm overflow-hidden bg-surface-page p-0 text-ink shadow-drawer backdrop:bg-scrim",
+        "sheet-panel m-0 mr-auto h-dvh max-h-dvh w-full max-w-full overflow-hidden sm:max-w-sm bg-surface-page p-0 text-ink shadow-drawer backdrop:bg-scrim",
         className,
       )}
     >

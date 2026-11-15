@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AnnouncementBar } from "@ecom/ui";
 import { getMessages } from "@/messages";
 import type { StorefrontChrome } from "@/lib/storefront-chrome";
 import { StoreFooter } from "./store-footer";
@@ -23,6 +24,8 @@ export function StorefrontShell({
     <div
       data-surface="storefront"
       data-container={chrome.container}
+      data-header={chrome.headerVariant}
+      data-card-layout={chrome.cardLayout}
       className="flex min-h-dvh flex-col bg-surface-page text-ink"
     >
       <a
@@ -31,7 +34,16 @@ export function StorefrontShell({
       >
         {m.skipToContent}
       </a>
+      {chrome.announcement ? (
+        <AnnouncementBar
+          label={m.announcementLabel}
+          text={chrome.announcement.text}
+          href={chrome.announcement.href || undefined}
+          tone={chrome.announcement.tone}
+        />
+      ) : null}
       <StoreHeader
+        variant={chrome.headerVariant}
         storeName={chrome.storeName}
         logoUrl={chrome.logoUrl}
         menu={chrome.menu}
@@ -48,6 +60,7 @@ export function StorefrontShell({
         company={chrome.company}
         legal={chrome.legal}
         year={year}
+        variant={chrome.footerVariant}
       />
     </div>
   );

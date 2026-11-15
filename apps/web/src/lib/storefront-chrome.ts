@@ -1,11 +1,24 @@
 import { cache } from "react";
-import { buildMenuTree, createPrismaMenuStore, settingGroups, type MenuNode } from "@ecom/core";
+import {
+  buildMenuTree,
+  cardLayoutOf,
+  containerWidthOf,
+  createPrismaMenuStore,
+  footerVariantOf,
+  headerVariantOf,
+  settingGroups,
+  type AnnouncementTone,
+  type CardLayout,
+  type FooterVariant,
+  type HeaderVariant,
+  type MenuNode,
+} from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { getLogger } from "@ecom/shared";
+import { getStorage } from "./media";
 import { getBranding, getFeatureFlags, getSettings } from "./services";
 import {
   STOREFRONT_READINESS,
-  containerWidthOf,
   headerSlots,
   type ContainerWidth,
   type HeaderSlots,
@@ -21,6 +34,12 @@ export interface StorefrontChrome {
   menu: MenuNode[];
   slots: HeaderSlots;
   container: ContainerWidth;
+  headerVariant: HeaderVariant;
+  footerVariant: FooterVariant;
+  /** Layout-ul cardului de produs (îl folosesc listele din Faza 7; aici ajunge pe carcasă ca `data-card-layout`). */
+  cardLayout: CardLayout;
+  /** Bara de anunț: `null` când e oprită sau fără text. */
+  announcement: { text: string; href: string; tone: AnnouncementTone } | null;
   company: {
     legalName: string;
     vatId: string;
@@ -39,6 +58,10 @@ const defaults = (): StorefrontChrome => ({
   menu: [],
   slots: headerSlots({ wishlistFlag: false, readiness: STOREFRONT_READINESS }),
   container: "xl",
+  headerVariant: "default",
+  footerVariant: "default",
+  cardLayout: "vertical",
+  announcement: null,
   company: { legalName: "", vatId: "", tradeRegisterNo: "", address: "", phone: "", email: "" },
   legal: { anpcUrl: "", salUrl: "", odrUrl: "" },
 });
@@ -58,7 +81,7 @@ export async function loadStorefrontChrome(): Promise<StorefrontChrome> {
         settings.getGroup("appearance"),
         getBranding().getConfig(),
         getFeatureFlags().isEnabled("wishlist"),
-        createPrismaMenuStore(getDb()).listCategories(),
+        createPrismaMenuStore(getDb(), { storage: getStorage() }).listCategories(),
       ]);
     const { street, city, county, postalCode } = company.address;
     return {
@@ -68,6 +91,17 @@ export async function loadStorefrontChrome(): Promise<StorefrontChrome> {
       menu: buildMenuTree(categories, { maxLevels: MENU_LEVELS }),
       slots: headerSlots({ wishlistFlag, readiness: STOREFRONT_READINESS }),
       container: containerWidthOf(appearance.containerWidth),
+      headerVariant: headerVariantOf(appearance.headerVariant),
+      footerVariant: footerVariantOf(appearance.footerVariant),
+      cardLayout: cardLayoutOf(appearance.cardLayout),
+      announcement:
+        appearance.announcementEnabled && appearance.announcementText
+          ? {
+              text: appearance.announcementText,
+              href: appearance.announcementHref,
+              tone: appearance.announcementTone,
+            }
+          : null,
       company: {
         legalName: company.legalName,
         vatId: company.vatId,

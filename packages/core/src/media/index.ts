@@ -48,7 +48,14 @@ export {
   type MediaLockHandle,
 } from "./media-lock";
 export { serveSignedObject, servePublicObject, type SignedServeOptions } from "./serve";
-export { buildMediaUrls, type MediaUrlSource, type MediaUrls, type MediaVariantUrl } from "./urls";
+export {
+  buildMediaUrls,
+  pickVariantImage,
+  type MediaUrlSource,
+  type MediaUrls,
+  type MediaVariantUrl,
+  type PickedImage,
+} from "./urls";
 export {
   DEFAULT_PAGE_SIZE,
   MAX_FOLDER_DEPTH,

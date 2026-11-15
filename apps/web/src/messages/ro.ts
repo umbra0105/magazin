@@ -3028,6 +3028,8 @@ export const ro = {
    */
   storefront: {
     skipToContent: "Sari la conținut",
+    /** Numele regiunii bara de anunț (cititoare de ecran). */
+    announcementLabel: "Anunț",
     header: {
       mainNav: "Navigare principală",
       openMenu: "Deschide meniul",
@@ -3083,6 +3085,8 @@ export const ro = {
       themeLabel: "Temă",
       light: "Deschisă",
       dark: "Închisă",
+      announcementDemo: "Livrare gratuită la comenzile peste suma din setări",
+      announcementLinkDemo: "/livrare-si-plata",
       sections: {
         header: "Header și meniu",
         hero: "Hero fotografic",

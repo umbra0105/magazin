@@ -155,6 +155,7 @@
   --color-on-image: var(--sf-on-image);
   --color-image-ink: var(--sf-image-scrim);
   --color-image-scrim: var(--sf-image-scrim-fill);
+  --color-photo-fallback: var(--sf-photo-fallback);
   --color-accent-on-image: var(--sf-accent-on-image);
 }
 

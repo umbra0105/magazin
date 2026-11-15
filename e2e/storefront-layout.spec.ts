@@ -100,6 +100,49 @@ test.describe("mega menu (desktop)", () => {
   });
 });
 
+test.describe("mega menu: plăci de categorie cu imagine (opționale)", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("categoriile cu imagine sunt plăci, celelalte rămân text; fiecare e un singur link", async ({
+    page,
+  }) => {
+    await page.goto(gallery("minimal", "deschisa", "&meniu=deschis"));
+    const panel = page.locator(
+      "#" + (await page.getByRole("button", { name: "Produse" }).getAttribute("aria-controls")),
+    );
+    const tiles = panel.locator("a:has(img)");
+    const tileCount = await tiles.count();
+    expect(tileCount).toBeGreaterThan(0);
+    // o categorie fără imagine există și rămâne link text (fără <img>)
+    const textOnly = panel.getByRole("link", { name: "Filtre cu nisip", exact: true });
+    await expect(textOnly).toBeVisible();
+    await expect(textOnly.locator("img")).toHaveCount(0);
+    // placa e vizibilă, cu dimensiuni explicite și încărcare leneșă
+    const first = tiles.first();
+    await expect(first).toBeVisible();
+    const attrs = await first.locator("img").evaluate((img: HTMLImageElement) => ({
+      width: img.getAttribute("width"),
+      height: img.getAttribute("height"),
+      loading: img.getAttribute("loading"),
+      alt: img.getAttribute("alt"),
+    }));
+    expect(Number(attrs.width)).toBeGreaterThan(0);
+    expect(Number(attrs.height)).toBeGreaterThan(0);
+    expect(attrs.loading).toBe("lazy");
+    expect(attrs.alt).toBe("");
+    // fără link în link
+    expect(await panel.locator("a a").count()).toBe(0);
+  });
+
+  test("imaginile din meniu sunt în HTML-ul serverului, în panoul ascuns, alături de toate linkurile text", async ({
+    request,
+  }) => {
+    const out = await (await request.get(gallery("minimal"))).text();
+    expect(out).toMatch(/<a [^>]*href="\/categorie\/demo-0\/demo-0-0"[^>]*><span[^>]*><img /);
+    expect(out).toContain('href="/categorie/demo-0/demo-0-1"');
+  });
+});
+
 test.describe("meniul de pe telefon", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
@@ -119,6 +162,48 @@ test.describe("meniul de pe telefon", () => {
     await expect(dialog.getByRole("link", { name: "Pompe de căldură" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
+  });
+
+  test("panoul acoperă tot ecranul (nicio fâșie din pagină la dreapta sau jos) și blochează derularea paginii", async ({
+    page,
+  }) => {
+    await page.goto(gallery("minimal"));
+    await page.getByRole("button", { name: "Deschide meniul" }).click();
+    const dialog = page.getByRole("dialog", { name: "Meniu" });
+    await expect(dialog).toBeVisible();
+    // panoul intră printr-o tranziție scurtă: se așteaptă poziția finală, apoi se compară cu ecranul întreg
+    const view = page.viewportSize();
+    await expect
+      .poll(async () => {
+        const box = await dialog.boundingBox();
+        return box && [box.x, box.y, box.width, box.height];
+      })
+      .toEqual([0, 0, view?.width, view?.height]);
+    const overflow = await page.evaluate(
+      () => getComputedStyle(document.documentElement).overflowY,
+    );
+    expect(overflow).toBe("hidden");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    const after = await page.evaluate(() => getComputedStyle(document.documentElement).overflowY);
+    expect(after).not.toBe("hidden");
+  });
+});
+
+test.describe("galeria: fără degrade pe substituenții de imagine", () => {
+  test("nicio imagine-substituent nu are fundal degrade (reflexul «cărămiziu spre turcoaz»)", async ({
+    page,
+  }) => {
+    for (const preset of PRESETS) {
+      await page.goto(gallery(preset));
+      const gradients = await page.evaluate(
+        () =>
+          [...document.querySelectorAll('[role="img"]')].filter((el) =>
+            getComputedStyle(el).backgroundImage.includes("gradient"),
+          ).length,
+      );
+      expect(gradients, preset).toBe(0);
+    }
   });
 });
 
@@ -194,5 +279,75 @@ test.describe("cardurile de produs", () => {
     for (const article of await page.locator("article").all()) {
       await expect(article.getByRole("link")).toHaveCount(1);
     }
+  });
+});
+
+test.describe("variante de aspect: header sticlă, footer compact, bară de anunț", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("header «sticlă»: translucid cu estompare, iar hero-ul urcă sub el (aceeași margine de sus)", async ({
+    page,
+  }) => {
+    await page.goto(gallery("minimal", "deschisa", "&header=glass"));
+    const header = page.locator('[data-header="glass"] header').first();
+    const hero = page.locator('[data-header="glass"] [data-hero]').first();
+    await expect(header).toBeVisible();
+    const style = await header.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { bg: s.backgroundColor, blur: s.backdropFilter };
+    });
+    expect(style.blur).toContain("blur");
+    // culoare cu canal alfa sub 1 (rgba/color(... / a))
+    expect(style.bg).toMatch(/\/\s*0?\.\d+\)|rgba\([^)]*,\s*0?\.\d+\)/);
+    const h = await header.boundingBox();
+    const g = await hero.boundingBox();
+    expect(Math.abs((g?.y ?? 0) - (h?.y ?? 99))).toBeLessThanOrEqual(1);
+    expect(g?.height).toBeGreaterThan((h?.height ?? 0) + 200);
+  });
+
+  test("header standard: opac, hero-ul începe sub el", async ({ page }) => {
+    await page.goto(gallery("minimal", "deschisa", "&header=default"));
+    const header = page.locator("header").first();
+    const bg = await header.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(bg).not.toMatch(/\/\s*0?\.\d+\)|rgba\([^)]*,\s*0?\.\d+\)/);
+    const blur = await header.evaluate((el) => getComputedStyle(el).backdropFilter);
+    expect(blur).toBe("none");
+  });
+
+  test("footer compact: fără coloanele de linkuri, dar cu date firmă, linkuri legale și ANPC/SAL", async ({
+    page,
+  }) => {
+    await page.goto(gallery("minimal", "deschisa", "&footer=compact"));
+    const footer = page.locator("footer");
+    await expect(footer.getByRole("heading")).toHaveCount(0);
+    for (const href of [
+      "/termeni-si-conditii",
+      "/politica-de-confidentialitate",
+      "/politica-cookie-uri",
+    ]) {
+      await expect(footer.locator(`a[href="${href}"]`)).toHaveCount(1);
+    }
+    await expect(footer.getByRole("link", { name: /ANPC/ })).toHaveCount(1);
+    await expect(footer).toContainText("RO00000000");
+    const compact = (await footer.boundingBox())?.height ?? 0;
+    await page.goto(gallery("minimal", "deschisa", "&footer=default"));
+    const full = (await page.locator("footer").boundingBox())?.height ?? 0;
+    expect(compact).toBeLessThan(full);
+  });
+
+  test("bara de anunț: deasupra header-ului, cu text și un singur link, în ambele tonuri", async ({
+    page,
+  }) => {
+    await page.goto(gallery("minimal", "deschisa", "&anunt=brand"));
+    const bar = page.getByRole("complementary", { name: "Anunț" });
+    await expect(bar).toBeVisible();
+    await expect(bar.getByRole("link")).toHaveCount(1);
+    const barBox = await bar.boundingBox();
+    const headerBox = await page.locator("header").first().boundingBox();
+    expect((barBox?.y ?? 0) + (barBox?.height ?? 0)).toBeLessThanOrEqual((headerBox?.y ?? 0) + 1);
+    await page.goto(gallery("minimal", "deschisa", "&anunt=neutral"));
+    await expect(page.getByRole("complementary", { name: "Anunț" })).toBeVisible();
+    await page.goto(gallery("minimal", "deschisa"));
+    await expect(page.getByRole("complementary", { name: "Anunț" })).toHaveCount(0);
   });
 });

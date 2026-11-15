@@ -87,6 +87,35 @@ describe("renderThemeCss: variabilele de formă", () => {
   });
 });
 
+describe("Bold: accent portocaliu pe fundal rece (fără reflexul «teracotă»)", () => {
+  const channel = (hex: string, shift: number) =>
+    (Number.parseInt(hex.slice(1), 16) >> shift) & 255;
+
+  it("fundalul deschis nu e alb pur și are albastrul peste roșu; bordura la fel", () => {
+    const { bg, border, primary } = PRESETS.bold.colors.light;
+    expect(bg).not.toBe("#ffffff");
+    expect(channel(bg, 0)).toBeGreaterThan(channel(bg, 16));
+    expect(channel(border, 0)).toBeGreaterThan(channel(border, 16));
+    // accentul de acțiune rămâne portocaliu: roșul domină albastrul
+    expect(channel(primary, 16)).toBeGreaterThan(channel(primary, 0) * 2);
+  });
+
+  it("fundalul închis rămâne rece (albastrul domină roșul)", () => {
+    const { bg } = PRESETS.bold.colors.dark;
+    expect(channel(bg, 0)).toBeGreaterThan(channel(bg, 16));
+  });
+
+  it("trece AA pe pagină și pe suprafața cardurilor, în ambele teme", () => {
+    expect(checkContrast(configFromPreset("bold"))).toEqual([]);
+    for (const mode of ["light", "dark"] as const) {
+      const c = PRESETS.bold.colors[mode];
+      const card = tinted(c.bg, c.border);
+      expect(contrastRatio(c.fg, card)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(c.muted, card)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
+
 describe("renderScopedThemeCss (previzualizarea din galeria de dezvoltare)", () => {
   it("scoate culorile, fonturile și forma într-un selector fix, fără `html:root`", () => {
     const css = renderScopedThemeCss(configFromPreset("bold"), "light");

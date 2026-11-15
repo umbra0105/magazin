@@ -1,5 +1,6 @@
 import type { StorageDriver } from "@ecom/integrations";
 import type { StoredVariant } from "./processing";
+import type { VariantName } from "./variants";
 
 export interface MediaUrlSource {
   storageKey: string;
@@ -31,6 +32,33 @@ export interface MediaUrls {
 
 function parseVariants(value: unknown): StoredVariant[] {
   return Array.isArray(value) ? (value as StoredVariant[]) : [];
+}
+
+export interface PickedImage {
+  url: string;
+  width: number;
+  height: number;
+}
+
+/** Ordinea preferinței formatului pentru un `<img>` simplu (fără `<picture>`): WebP, apoi JPEG, apoi AVIF. */
+const FORMAT_PREFERENCE = ["webp", "jpeg", "avif"] as const;
+
+/**
+ * O singură variantă generată (nu originalul), în formatul cel mai potrivit pentru un `<img>`; `null` cât timp fișierul nu a fost
+ * procesat (vitrina nu servește niciodată originalul necomprimat). Singurul loc care alege varianta pentru carduri, plăci de
+ * meniu și galerii.
+ */
+export function pickVariantImage(
+  media: MediaUrlSource,
+  storage: StorageDriver,
+  name: VariantName,
+): PickedImage | null {
+  const named = buildMediaUrls(media, storage).variants.filter((v) => v.name === name);
+  for (const format of FORMAT_PREFERENCE) {
+    const found = named.find((v) => v.format === format);
+    if (found) return { url: found.url, width: found.width, height: found.height };
+  }
+  return null;
 }
 
 /**

@@ -2,7 +2,14 @@
 
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { Container, cn } from "@ecom/ui";
+import { Container, StoreImage, cn } from "@ecom/ui";
+
+/** Imaginea unei plăci de categorie (varianta procesată din biblioteca media); lipsă = categoria rămâne text. */
+export interface MegaMenuImage {
+  src: string;
+  width: number;
+  height: number;
+}
 
 export interface MegaMenuItem {
   id: string;
@@ -14,6 +21,7 @@ export interface MegaMenuItem {
     id: string;
     name: string;
     href: string;
+    image: MegaMenuImage | null;
     children: { id: string; name: string; href: string }[];
   }[];
 }
@@ -34,7 +42,7 @@ const LINK =
 /**
  * Mega menu-ul de pe desktop (docs/21 §3.3): lista categoriilor în stânga, subcategoriile categoriei active în dreapta. TOATE
  * linkurile sunt `<a href>` în HTML-ul serverului (panourile inactive sunt doar ascunse), deci crawlerele le văd fără JavaScript.
- * Se deschide la cursor sau la click pe buton; Esc, click în afară sau ieșirea focusului îl închid. Butonul are `aria-expanded`.
+ * Subcategoria cu imagine devine placă (imagine mare + nume, un singur link), cea fără rămâne text. Se deschide la cursor sau la click pe buton; Esc, click în afară sau ieșirea focusului îl închid. Butonul are `aria-expanded`.
  */
 export function MegaMenu({
   label,
@@ -158,32 +166,106 @@ export function MegaMenu({
                 >
                   {item.seeAllLabel}
                 </a>
-                <ul className="mt-6 grid grid-cols-3 gap-x-8 gap-y-6">
-                  {item.children.map((child) => (
-                    <li key={child.id}>
-                      <a href={child.href} className={cn(LINK, "font-semibold hover:underline")}>
-                        {child.name}
-                      </a>
-                      {child.children.length > 0 ? (
-                        <ul className="mt-2 flex flex-col gap-1.5">
-                          {child.children.map((grand) => (
-                            <li key={grand.id}>
-                              <a
-                                href={grand.href}
-                                className={cn(
-                                  LINK,
-                                  "text-sm text-ink-secondary hover:text-ink hover:underline",
-                                )}
-                              >
-                                {grand.name}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
+                {item.children.filter((child) => child.image).length > 0 ? (
+                  <ul className="mt-6 grid grid-cols-3 gap-x-8 gap-y-6">
+                    {item.children
+                      .filter((child) => child.image)
+                      .map((child) => (
+                        <li key={child.id}>
+                          {child.image ? (
+                            <a href={child.href} className={cn(LINK, "group block")}>
+                              <span className="block overflow-hidden rounded-card bg-card">
+                                <StoreImage
+                                  src={child.image.src}
+                                  alt=""
+                                  width={child.image.width}
+                                  height={child.image.height}
+                                  className="aspect-4/3 w-full object-cover transition-transform duration-(--motion) group-hover:scale-105"
+                                />
+                              </span>
+                              <span className="mt-3 block font-semibold group-hover:underline">
+                                {child.name}
+                              </span>
+                            </a>
+                          ) : (
+                            <a
+                              href={child.href}
+                              className={cn(LINK, "font-semibold hover:underline")}
+                            >
+                              {child.name}
+                            </a>
+                          )}
+                          {child.children.length > 0 ? (
+                            <ul className="mt-2 flex flex-col gap-1.5">
+                              {child.children.map((grand) => (
+                                <li key={grand.id}>
+                                  <a
+                                    href={grand.href}
+                                    className={cn(
+                                      LINK,
+                                      "text-sm text-ink-secondary hover:text-ink hover:underline",
+                                    )}
+                                  >
+                                    {grand.name}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </li>
+                      ))}
+                  </ul>
+                ) : null}
+                {item.children.filter((child) => !child.image).length > 0 ? (
+                  <ul className="mt-8 grid grid-cols-3 gap-x-8 gap-y-6 first:mt-6">
+                    {item.children
+                      .filter((child) => !child.image)
+                      .map((child) => (
+                        <li key={child.id}>
+                          {child.image ? (
+                            <a href={child.href} className={cn(LINK, "group block")}>
+                              <span className="block overflow-hidden rounded-card bg-card">
+                                <StoreImage
+                                  src={child.image.src}
+                                  alt=""
+                                  width={child.image.width}
+                                  height={child.image.height}
+                                  className="aspect-4/3 w-full object-cover transition-transform duration-(--motion) group-hover:scale-105"
+                                />
+                              </span>
+                              <span className="mt-3 block font-semibold group-hover:underline">
+                                {child.name}
+                              </span>
+                            </a>
+                          ) : (
+                            <a
+                              href={child.href}
+                              className={cn(LINK, "font-semibold hover:underline")}
+                            >
+                              {child.name}
+                            </a>
+                          )}
+                          {child.children.length > 0 ? (
+                            <ul className="mt-2 flex flex-col gap-1.5">
+                              {child.children.map((grand) => (
+                                <li key={grand.id}>
+                                  <a
+                                    href={grand.href}
+                                    className={cn(
+                                      LINK,
+                                      "text-sm text-ink-secondary hover:text-ink hover:underline",
+                                    )}
+                                  >
+                                    {grand.name}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </li>
+                      ))}
+                  </ul>
+                ) : null}
               </div>
             ))}
           </div>

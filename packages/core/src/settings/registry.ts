@@ -1,3 +1,12 @@
+import {
+  ANNOUNCEMENT_MAX_LENGTH,
+  ANNOUNCEMENT_TONES,
+  CARD_LAYOUTS,
+  CONTAINER_WIDTHS,
+  FOOTER_VARIANTS,
+  HEADER_VARIANTS,
+  isSafeAnnouncementHref,
+} from "../storefront/appearance";
 import { z } from "zod";
 import { normalizeHostname } from "../media/host";
 
@@ -299,9 +308,18 @@ export const settingGroups = {
       .default(""),
   },
   appearance: {
-    headerVariant: z.string().default("default"),
-    footerVariant: z.string().default("default"),
-    containerWidth: z.string().default("xl"),
+    headerVariant: z.enum(HEADER_VARIANTS).default("default"),
+    footerVariant: z.enum(FOOTER_VARIANTS).default("default"),
+    containerWidth: z.enum(CONTAINER_WIDTHS).default("xl"),
+    cardLayout: z.enum(CARD_LAYOUTS).default("vertical"),
+    /** Bara de anunț de deasupra header-ului (o frază scurtă, opțional cu link). Oprită implicit. */
+    announcementEnabled: z.boolean().default(false),
+    announcementText: z.string().trim().max(ANNOUNCEMENT_MAX_LENGTH).default(""),
+    announcementHref: z
+      .string()
+      .refine(isSafeAnnouncementHref, "Folosește o cale locală (/…) sau o adresă https://")
+      .default(""),
+    announcementTone: z.enum(ANNOUNCEMENT_TONES).default("brand"),
   },
 } as const;
 

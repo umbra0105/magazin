@@ -84,4 +84,5 @@ export { HeroBanner, type HeroBannerProps } from "./storefront/hero-banner";
 export { TrustBar, type TrustItem } from "./storefront/trust-bar";
 export { StoreSearch, type StoreSearchProps } from "./storefront/store-search";
 export { SectionHeading } from "./storefront/section-heading";
+export { AnnouncementBar, type AnnouncementBarProps } from "./storefront/announcement-bar";
 export { NavSheet, type NavSheetProps } from "./storefront/nav-sheet";

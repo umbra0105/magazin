@@ -20,6 +20,8 @@ html [data-surface="storefront"] {
   --sf-gutter: clamp(1rem, 0.5rem + 2vw, 2rem);
   --sf-stack: clamp(1.5rem, 1rem + 1.5vw, 2.5rem);
   --sf-header-h: 4.5rem;
+  /* înălțimea totală a header-ului: pe telefon rândul principal + rândul căutării; de la 48rem un singur rând */
+  --sf-header-total: calc(var(--sf-header-h) + var(--sf-control-h) + 0.75rem + 1px);
 
   /* controale: ținte tactile generoase, text de 16 px (fără zoom pe iOS) */
   --control-h: 3rem;
@@ -37,9 +39,26 @@ html [data-surface="storefront"] {
   --sf-on-image: oklch(1 0 0);
   --sf-image-scrim: oklch(0 0 0);
   --sf-image-scrim-fill: color-mix(in srgb, var(--sf-image-scrim) var(--hero-scrim), transparent);
+  /* fundalul plat de sub fotografia din hero cât timp nu s-a încărcat (sau lipsește): închis, ca textul deschis să rămână lizibil */
+  --sf-photo-fallback: oklch(0.3 0.03 250);
   --sf-accent-on-image: color-mix(in srgb, var(--color-accent) 45%, var(--sf-on-image));
 
   --motion: 150ms;
+}
+
+@media (min-width: 48rem) {
+  html [data-surface="storefront"] {
+    --sf-header-total: calc(var(--sf-header-h) + 1px);
+  }
+}
+
+/*
+ * Header-ul «sticlă» (setarea de aspect): e translucid, iar hero-ul care deschide pagina (primul element din `main`) urcă sub el.
+ * Pe paginile fără hero, header-ul rămâne peste fundalul paginii, deci textul rămâne lizibil în orice caz.
+ */
+html [data-surface="storefront"][data-header="glass"] main > [data-hero]:first-child {
+  margin-top: calc(var(--sf-header-total) * -1);
+  padding-top: var(--sf-header-total);
 }
 
 html [data-surface="storefront"][data-container="lg"] {
@@ -56,6 +75,11 @@ html [data-surface="storefront"][data-container="2xl"] {
   html [data-surface="storefront"] {
     --motion: 0ms;
   }
+}
+
+/* Cât timp un panou modal (dialog nativ) e deschis, pagina de sub el nu se derulează și nu arată bara de derulare. */
+html:has(dialog.sheet-panel[open]) {
+  overflow: hidden;
 }
 
 /* Panoul de navigare de pe telefon: intră din stânga (dialog nativ), fără animație la prefers-reduced-motion. */

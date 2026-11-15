@@ -40,12 +40,13 @@ export function HeroBanner({
 }: HeroBannerProps) {
   return (
     <section
+      data-hero
       className={cn(
         "relative isolate flex min-h-128 items-end overflow-hidden text-on-image",
         className,
       )}
     >
-      <div className="absolute inset-0 -z-20 bg-card [&_img]:size-full [&_img]:object-cover">
+      <div className="absolute inset-0 -z-20 bg-photo-fallback [&_img]:size-full [&_img]:object-cover">
         {image ? <StoreImage {...image} priority /> : media}
       </div>
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-image-scrim" />

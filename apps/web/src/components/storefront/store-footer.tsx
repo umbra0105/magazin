@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { MenuNode } from "@ecom/core";
+import type { FooterVariant, MenuNode } from "@ecom/core";
 import { Container } from "@ecom/ui";
 import { getMessages } from "@/messages";
 import { FOOTER_INFO_LINKS, FOOTER_LEGAL_LINKS, telHref } from "@/lib/storefront-chrome-rules";
@@ -22,6 +22,8 @@ export interface StoreFooterProps {
   /** Adresele ANPC, SAL și SOL din setări; un câmp gol nu produce legătură. */
   legal: { anpcUrl: string; salUrl: string; odrUrl: string };
   year: number;
+  /** `default`: coloane de linkuri + bara legală; `compact`: un singur bloc (firmă și linkuri legale). */
+  variant?: FooterVariant;
 }
 
 const LINK =
@@ -41,13 +43,75 @@ function Column({ title, children }: { title: string; children: React.ReactNode 
  * ANPC / SAL / SOL din setări (cele goale nu apar). Toate sunt `<a href>`; categoriile din footer sunt și plasa de siguranță a
  * navigării fără JavaScript. Titlurile coloanelor sunt `h2` (pagina are un singur `h1`, pus de pagină).
  */
-export function StoreFooter({ storeName, tagline, menu, company, legal, year }: StoreFooterProps) {
+export function StoreFooter({
+  storeName,
+  tagline,
+  menu,
+  company,
+  legal,
+  year,
+  variant = "default",
+}: StoreFooterProps) {
   const tel = telHref(company.phone);
   const external = [
     { key: "anpc", label: m.anpc, href: legal.anpcUrl },
     { key: "sal", label: m.sal, href: legal.salUrl },
     { key: "odr", label: m.odr, href: legal.odrUrl },
   ].filter((link) => /^https?:\/\//.test(link.href));
+  const companyLines = (
+    <div className="flex flex-col gap-1 text-ink-secondary">
+      <p>{m.copyright(year, company.legalName || storeName)}</p>
+      {company.vatId ? <p>{m.vatId(company.vatId)}</p> : null}
+      {company.tradeRegisterNo ? <p>{m.tradeRegister(company.tradeRegisterNo)}</p> : null}
+    </div>
+  );
+  const legalNav = (
+    <nav aria-label={m.legal}>
+      <ul className="flex flex-wrap gap-x-6 gap-y-2 lg:justify-end">
+        {FOOTER_LEGAL_LINKS.map((link) => (
+          <li key={link.key}>
+            <Link href={link.href} className={LINK}>
+              {m.links[link.key]}
+            </Link>
+          </li>
+        ))}
+        {external.map((link) => (
+          <li key={link.key}>
+            <a href={link.href} target="_blank" rel="noopener noreferrer" className={LINK}>
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+  if (variant === "compact") {
+    return (
+      <footer aria-label={m.label} className="mt-section bg-card text-ink">
+        <Container className="flex flex-col gap-6 py-8 text-sm lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-1 text-ink-secondary lg:w-1/2">
+            <p className="heading-display text-xl text-ink">{storeName}</p>
+            {companyLines}
+            {tel || company.email ? (
+              <p className="flex flex-wrap gap-x-4">
+                {tel ? (
+                  <a href={tel} className={LINK}>
+                    {company.phone}
+                  </a>
+                ) : null}
+                {company.email ? (
+                  <a href={`mailto:${company.email}`} className={LINK}>
+                    {company.email}
+                  </a>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+          {legalNav}
+        </Container>
+      </footer>
+    );
+  }
   return (
     <footer aria-label={m.label} className="mt-section bg-card text-ink">
       <Container className="grid gap-x-10 gap-y-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
@@ -98,29 +162,8 @@ export function StoreFooter({ storeName, tagline, menu, company, legal, year }: 
       </Container>
       <div className="border-t border-line-subtle">
         <Container className="flex flex-col gap-6 py-8 text-sm lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-col gap-1 text-ink-secondary lg:w-1/3 lg:shrink-0">
-            <p>{m.copyright(year, company.legalName || storeName)}</p>
-            {company.vatId ? <p>{m.vatId(company.vatId)}</p> : null}
-            {company.tradeRegisterNo ? <p>{m.tradeRegister(company.tradeRegisterNo)}</p> : null}
-          </div>
-          <nav aria-label={m.legal}>
-            <ul className="flex flex-wrap gap-x-6 gap-y-2 lg:justify-end">
-              {FOOTER_LEGAL_LINKS.map((link) => (
-                <li key={link.key}>
-                  <Link href={link.href} className={LINK}>
-                    {m.links[link.key]}
-                  </Link>
-                </li>
-              ))}
-              {external.map((link) => (
-                <li key={link.key}>
-                  <a href={link.href} target="_blank" rel="noopener noreferrer" className={LINK}>
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <div className="lg:w-1/3 lg:shrink-0">{companyLines}</div>
+          {legalNav}
         </Container>
       </div>
     </footer>

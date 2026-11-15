@@ -29,7 +29,10 @@ describe("buildMenuTree", () => {
         id: "a",
         name: "a",
         href: "/categorie/pompe",
-        children: [{ id: "b", name: "b", href: "/categorie/pompe/de-caldura", children: [] }],
+        image: null,
+        children: [
+          { id: "b", name: "b", href: "/categorie/pompe/de-caldura", image: null, children: [] },
+        ],
       },
     ]);
   });
@@ -70,6 +73,16 @@ describe("buildMenuTree", () => {
   it("un copil cu părinte necunoscut nu devine rădăcină (date incoerente nu strică meniul)", () => {
     const tree = buildMenuTree([cat("o", "lipsa", "x/o")], { maxLevels: 3 });
     expect(tree).toEqual([]);
+  });
+
+  it("imaginea categoriei (opțională) ajunge pe nod; lipsa ei rămâne `null`, deci varianta text", () => {
+    const image = { src: "https://cdn.test/a.webp", width: 800, height: 600, alt: "Pompe" };
+    const tree = buildMenuTree(
+      [cat("a", null, "a", { image }), cat("b", "a", "a/b"), cat("c", "a", "a/c", { image })],
+      { maxLevels: 3 },
+    );
+    expect(tree[0]?.image).toEqual(image);
+    expect(tree[0]?.children.map((n) => n.image)).toEqual([null, image]);
   });
 
   it("numele cu caractere speciale rămân text (nu se interpretează aici)", () => {
