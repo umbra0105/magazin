@@ -17,6 +17,8 @@ const port = 3100;
 const s3Port = 3101;
 // `E2E_TARGET=s3` (scriptul `test:e2e:s3`): rulează DOAR specul S3, cu DOAR serverul S3 pornit. Un singur
 // server de test o dată (RAM), iar suita obișnuită nu depinde de MinIO.
+/** Specurile care cer driverul S3 (MinIO, imagini pe altă origine decât aplicația), ca la dezvoltarea locală. */
+const s3SpecPattern = /(media-s3|storefront-images-s3).spec.ts/;
 const s3Only = process.env["E2E_TARGET"] === "s3";
 
 // Fișierele încărcate de testele E2E stau într-un director temporar (șters de global-teardown), nu în
@@ -131,14 +133,14 @@ export default defineConfig({
     ? [
         {
           name: "chromium-s3",
-          testMatch: /media-s3.spec.ts/,
+          testMatch: s3SpecPattern,
           use: { ...devices["Desktop Chrome"], baseURL: `http://localhost:${s3Port}` },
         },
       ]
     : [
         {
           name: "chromium",
-          testIgnore: [/media-s3.spec.ts/, globalStateSpecPattern],
+          testIgnore: [s3SpecPattern, globalStateSpecPattern],
           use: { ...devices["Desktop Chrome"] },
         },
         {

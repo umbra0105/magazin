@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StorageDriver } from "@ecom/integrations";
-import { pickVariantImage } from "./urls";
+import { pickBestVariantImage, pickVariantImage } from "./urls";
 
 /** Driver minim: doar `publicUrl` contează pentru alegerea variantei. */
 const storage = {
@@ -49,5 +49,36 @@ describe("pickVariantImage", () => {
     expect(pickVariantImage(source([variant("thumb", "webp", 320)]), storage, "large")).toBeNull();
     expect(pickVariantImage(source([]), storage, "medium")).toBeNull();
     expect(pickVariantImage(source("nu-e-lista"), storage, "medium")).toBeNull();
+  });
+});
+
+describe("pickBestVariantImage (imagini mici: fără variantă «large»)", () => {
+  // Pipeline-ul nu mărește imaginile: un original de 600 px sau mai mic are doar «thumb» și «medium» (cazul real din baza de dezvoltare)
+  const small = [variant("thumb", "webp", 320), variant("medium", "webp", 600)];
+
+  it("când varianta cerută lipsește, cade pe cea mai apropiată disponibilă (large → medium → thumb)", () => {
+    expect(pickBestVariantImage(source(small), storage, "large")?.url).toBe(
+      "https://cdn.test/m/medium.webp",
+    );
+    expect(
+      pickBestVariantImage(source([variant("thumb", "webp", 320)]), storage, "large")?.url,
+    ).toBe("https://cdn.test/m/thumb.webp");
+  });
+
+  it("varianta cerută are prioritate când există", () => {
+    const all = [...small, variant("large", "webp", 1200)];
+    expect(pickBestVariantImage(source(all), storage, "large")?.url).toBe(
+      "https://cdn.test/m/large.webp",
+    );
+    expect(pickBestVariantImage(source(all), storage, "medium")?.url).toBe(
+      "https://cdn.test/m/medium.webp",
+    );
+    expect(pickBestVariantImage(source(all), storage, "thumb")?.url).toBe(
+      "https://cdn.test/m/thumb.webp",
+    );
+  });
+
+  it("fără nicio variantă procesată: null (niciodată originalul)", () => {
+    expect(pickBestVariantImage(source([]), storage, "large")).toBeNull();
   });
 });

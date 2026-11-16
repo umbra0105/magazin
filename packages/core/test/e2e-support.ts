@@ -265,6 +265,60 @@ export async function attachProductToE2eBrand(
   });
 }
 
+/**
+ * Publică în vitrină un produs de test (activ, o variantă, în stoc, brand și categorie proprii, `e2e-…`) cu fișierul media
+ * încărcat în test (după numele original). Pentru testele vitrinei cu imagini REALE (procesate, în storage). Întoarce adresele.
+ */
+export async function publishE2eStorefrontProduct(
+  originalName: string,
+  tag: string,
+): Promise<{ productSlug: string; categoryPath: string; title: string }> {
+  const productSlug = `e2e-vitrina-${tag}`;
+  const categorySlug = `e2e-cat-${tag}`;
+  const brandSlug = `e2e-brand-${tag}`;
+  const title = `Produs vitrină ${tag}`;
+  trackedProducts.add(productSlug);
+  trackedCategories.add(categorySlug);
+  trackedBrands.add(brandSlug);
+  await withClient(async (db) => {
+    const media = await db.query(
+      `select id from media where "originalName" = $1 and status = 'ready' order by "createdAt" desc limit 1`,
+      [originalName],
+    );
+    const mediaId = media.rows[0]?.id as string | undefined;
+    if (!mediaId) throw new Error(`Fișierul media „${originalName}” nu e procesat în baza de test`);
+    const category = await db.query(
+      `insert into category (id, name, slug, path, depth, "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $2, 0, 0, now()) returning id`,
+      [`E2E Categorie ${tag}`, categorySlug],
+    );
+    const brand = await db.query(
+      `insert into brand (id, name, slug, "updatedAt") values (gen_random_uuid()::text, $1, $2, now()) returning id`,
+      [`E2E Brand ${tag}`, brandSlug],
+    );
+    const product = await db.query(
+      `insert into product (id, slug, title, status, "manageStock", "stockStatus", "brandId", "publishedAt", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, 'active', false, 'instock', $3, now(), now()) returning id`,
+      [productSlug, title, brand.rows[0]?.id as string],
+    );
+    const productId = product.rows[0]?.id as string;
+    await db.query(
+      `insert into product_variant (id, "productId", sku, price, "isDefault", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, 12345, true, now())`,
+      [productId, `E2E-VITRINA-${tag}`.toUpperCase()],
+    );
+    await db.query(
+      `insert into product_media (id, "productId", "mediaId", position) values (gen_random_uuid()::text, $1, $2, 0)`,
+      [productId, mediaId],
+    );
+    await db.query(
+      `insert into product_category ("productId", "categoryId", "isPrimary") values ($1, $2, true)`,
+      [productId, category.rows[0]?.id as string],
+    );
+  });
+  return { productSlug, categoryPath: categorySlug, title };
+}
+
 /** Prețul de achiziție pus pe produsele de probă: valoare-santinelă, căutată în paginile randate. */
 export const E2E_COST_SENTINEL = 777777;
 

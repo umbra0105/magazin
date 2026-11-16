@@ -6,7 +6,7 @@ import {
   createPrismaStockOverviewStore,
   type StockOverviewStore,
 } from "../inventory/stock-overview-store";
-import { pickVariantImage } from "../media/urls";
+import { pickBestVariantImage } from "../media/urls";
 import {
   listingPrice,
   displayedPrice,
@@ -406,7 +406,7 @@ export class CatalogReader {
     fallbackAlt: string,
   ): StorefrontImage | null {
     if (!media || media.status !== "ready") return null;
-    const picked = pickVariantImage(media, this.storage, name);
+    const picked = pickBestVariantImage(media, this.storage, name);
     return picked
       ? {
           src: picked.url,
