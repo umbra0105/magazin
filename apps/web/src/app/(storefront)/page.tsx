@@ -3,24 +3,31 @@ import Link from "next/link";
 import { Headset, ShieldCheck, Truck, Wallet } from "lucide-react";
 import {
   Container,
-  HeroBanner,
+  HeroSplit,
   SectionHeading,
   StoreImage,
   TrustBar,
   storeButtonVariants,
 } from "@ecom/ui";
 import { ProductGrid } from "@/components/storefront/catalog/product-grid";
-import { getStorefrontFormat, listProductsCached } from "@/lib/storefront-catalog";
+import {
+  formatPrice,
+  getStorefrontFormat,
+  listBrandsCached,
+  listProductsCached,
+} from "@/lib/storefront-catalog";
 import { getStorefrontChrome } from "@/lib/storefront-chrome";
-import { SHOP_PATH } from "@/lib/storefront-urls";
+import { SHOP_PATH, productHref } from "@/lib/storefront-urls";
 import { getMessages } from "@/messages";
 
 const m = getMessages().storefront.home;
 
 const TRUST_ICONS = [Truck, ShieldCheck, Wallet, Headset];
 
-/** Câte produse noi arată pagina de start (două rânduri pe un ecran lat). */
-const NEWEST_COUNT = 8;
+/** Câte produse recomandate arată pagina de start (două rânduri pe un ecran lat). */
+const FEATURED_COUNT = 8;
+/** Câte mărci arată banda de mărci. */
+const BRANDS_COUNT = 12;
 
 // Pagina de start e statică și regenerată (ISR): cadrul și catalogul vin din cache cu etichete, invalidate la schimbări.
 // valoare literală (Next o citește static); aceeași cu CATALOG_REVALIDATE_SECONDS din lib/storefront-catalog
@@ -37,25 +44,60 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function HomePage() {
   const [chrome, format] = await Promise.all([getStorefrontChrome(), getStorefrontFormat()]);
-  const newest = await listProductsCached({}, "new", 0, NEWEST_COUNT, format);
+  const [featured, brands] = await Promise.all([
+    listProductsCached({}, "recommended", 0, FEATURED_COUNT, format),
+    listBrandsCached(BRANDS_COUNT),
+  ]);
   const categories = chrome.menu.slice(0, 6);
+  // produsul din hero: dintre recomandatele cu imagine, cel cu prețul cel mai mare (un echipament, nu un consumabil)
+  const star = featured.items
+    .filter((item) => item.image)
+    .sort((a, b) => (b.price?.amount ?? 0) - (a.price?.amount ?? 0))[0];
 
   return (
     <>
-      <HeroBanner
+      <HeroSplit
         title={m.heading(chrome.storeName)}
         lede={chrome.tagline || undefined}
         actions={
           <Link
             href={SHOP_PATH}
-            className={storeButtonVariants({ variant: "onImage", size: "lg" })}
+            className={storeButtonVariants({ variant: "primary", size: "lg" })}
           >
             {m.allProducts}
           </Link>
         }
+        aside={
+          star?.image ? (
+            <Link
+              href={productHref(star.slug)}
+              className="group flex flex-col gap-4 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <span className="relative isolate block overflow-hidden rounded-card bg-media p-6 sm:p-10 [&_img]:mix-blend-multiply">
+                <StoreImage
+                  src={star.image.src}
+                  alt={star.image.alt}
+                  width={star.image.width}
+                  height={star.image.height}
+                  sizes="(min-width: 64rem) 40vw, 100vw"
+                  priority
+                  className="mx-auto aspect-square w-full max-w-lg object-contain"
+                />
+              </span>
+              <span className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <span className="max-w-md text-lg font-semibold leading-snug">{star.title}</span>
+                {star.price ? (
+                  <span className="text-lg text-ink-secondary">
+                    {formatPrice(star.price.amount, format)}
+                  </span>
+                ) : null}
+              </span>
+            </Link>
+          ) : null
+        }
       />
 
-      <Container className="flex flex-col gap-section py-section">
+      <Container className="flex flex-col gap-section pb-section">
         <TrustBar
           label={m.trust.label}
           items={m.trust.items.map((item, index) => {
@@ -67,7 +109,7 @@ export default async function HomePage() {
         {categories.length > 0 ? (
           <section className="flex flex-col gap-8">
             <SectionHeading title={m.categories.title} lede={m.categories.lede} />
-            <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+            <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
               {categories.map((category) => (
                 <li key={category.id} className="contents">
                   <Link
@@ -75,17 +117,17 @@ export default async function HomePage() {
                     className="group flex flex-col overflow-hidden rounded-card bg-card transition-colors duration-(--motion) hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   >
                     {category.image ? (
-                      <span className="relative isolate block aspect-4/3 overflow-hidden bg-media p-4 [&_img]:size-full [&_img]:object-contain [&_img]:mix-blend-multiply">
+                      <span className="relative isolate block aspect-4/3 overflow-hidden bg-media p-3 [&_img]:size-full [&_img]:object-contain [&_img]:mix-blend-multiply">
                         <StoreImage
                           src={category.image.src}
                           alt=""
                           width={category.image.width}
                           height={category.image.height}
-                          sizes="(min-width: 48rem) 33vw, 50vw"
+                          sizes="(min-width: 64rem) 30vw, 50vw"
                         />
                       </span>
                     ) : null}
-                    <span className="p-5 text-lg font-semibold">{category.name}</span>
+                    <span className="p-5 text-lg font-semibold leading-snug">{category.name}</span>
                   </Link>
                 </li>
               ))}
@@ -93,23 +135,36 @@ export default async function HomePage() {
           </section>
         ) : null}
 
-        {newest.items.length > 0 ? (
+        {featured.items.length > 0 ? (
           <section className="flex flex-col gap-8">
             <SectionHeading
-              title={m.newest.title}
-              lede={m.newest.lede}
+              title={m.featured.title}
+              lede={m.featured.lede}
               action={
                 <Link href={SHOP_PATH} className={storeButtonVariants({ variant: "secondary" })}>
-                  {m.newest.all}
+                  {m.featured.all}
                 </Link>
               }
             />
             <ProductGrid
-              products={newest.items}
+              products={featured.items}
               format={format}
               layout={chrome.cardLayout}
-              label={m.newest.title}
+              label={m.featured.title}
             />
+          </section>
+        ) : null}
+
+        {brands.length > 0 ? (
+          <section aria-label={m.brands.label} className="flex flex-col gap-4">
+            <h2 className="text-lg font-semibold">{m.brands.title}</h2>
+            <ul className="flex flex-wrap gap-x-8 gap-y-3 text-ink-secondary">
+              {brands.map((brand) => (
+                <li key={brand.slug} className="text-lg font-medium">
+                  {brand.name}
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
       </Container>

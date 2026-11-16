@@ -417,6 +417,24 @@ export class CatalogReader {
       : null;
   }
 
+  // ---------------------------------------------------------------- mărci
+
+  /** Mărcile cu cel puțin un produs ACTIV, cele cu mai multe produse întâi (apoi alfabetic). */
+  async listBrands(limit: number): Promise<{ name: string; slug: string; productCount: number }[]> {
+    const rows = await this.db.brand.findMany({
+      where: { products: { some: { status: "active", deletedAt: null } } },
+      select: {
+        name: true,
+        slug: true,
+        _count: { select: { products: { where: { status: "active", deletedAt: null } } } },
+      },
+    });
+    return rows
+      .map((row) => ({ name: row.name, slug: row.slug, productCount: row._count.products }))
+      .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name, "ro"))
+      .slice(0, limit);
+  }
+
   // ---------------------------------------------------------------- categorie
 
   async getCategory(path: string): Promise<CategoryPageData | null> {

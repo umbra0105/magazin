@@ -120,14 +120,19 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
         current={product.title}
       />
 
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
-        <ProductGallery items={product.gallery.map((g) => ({ thumb: g.thumb, large: g.large }))} />
-        <div className="flex flex-col gap-6">
+      <div className="grid gap-8 lg:grid-cols-12 lg:gap-14">
+        <div className="lg:col-span-7">
+          <ProductGallery
+            items={product.gallery.map((g) => ({ thumb: g.thumb, large: g.large }))}
+          />
+        </div>
+        {/* panoul de informații rămâne în ecran cât se derulează galeria și descrierea (doar pe calculator) */}
+        <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:col-span-5 lg:self-start">
           <header className="flex flex-col gap-2">
             {product.brand ? (
               <p className="text-sm font-medium text-ink-secondary">{product.brand.name}</p>
             ) : null}
-            <h1 className="heading-display text-headline text-balance">{product.title}</h1>
+            <h1 className="heading-display text-3xl text-balance sm:text-4xl">{product.title}</h1>
             {product.subtitle ? (
               <p className="text-lede text-ink-secondary">{product.subtitle}</p>
             ) : null}

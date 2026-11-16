@@ -454,12 +454,13 @@ test.describe("consimțământ pentru cookie-uri (implicit refuzat)", () => {
   const consentCookie = async (page: Page) =>
     (await page.context().cookies()).find((cookie) => cookie.name === "ecom_consent");
 
-  test("prima vizită: bannerul e în HTML-ul serverului, cu trei butoane, și nu s-a salvat nicio alegere", async ({
+  test("prima vizită: bannerul apare după hidratare (cookie-ul se citește în browser, pagina rămâne în cache), cu trei butoane, și nu s-a salvat nicio alegere", async ({
     page,
     request,
   }) => {
+    // pagina din cache e aceeași pentru toți vizitatorii: bannerul nu e în HTML-ul serverului, ci îl desenează browserul
     const html = await (await request.get("/")).text();
-    expect(html).toContain("data-consent-banner");
+    expect(html).not.toContain("data-consent-banner");
     await page.goto("/");
     await expect(banner(page)).toBeVisible();
     await expect(banner(page).getByRole("button")).toHaveText([

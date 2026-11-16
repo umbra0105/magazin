@@ -123,6 +123,23 @@ export function PurchasePanel({
 
   return (
     <div className="flex flex-col gap-6" data-purchase-panel>
+      <div className="flex flex-col gap-2">
+        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1" data-price>
+          <span className="heading-display text-5xl">{selected.priceText}</span>
+          {selected.compareAtText ? (
+            <s className="text-lg text-ink-secondary">{selected.compareAtText}</s>
+          ) : null}
+        </p>
+        <p className="text-sm text-ink-secondary">{m.priceVat}</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2" data-availability>
+        <StorePill tone={selected.tone}>{selected.availabilityLabel}</StorePill>
+        {selected.availabilityDetail ? (
+          <span className="text-sm text-ink-secondary">{selected.availabilityDetail}</span>
+        ) : null}
+      </div>
+
       {options.length > 0 && variants.length > 1 ? (
         <div className="flex flex-col gap-5">
           {options.map((option) => (
@@ -156,40 +173,33 @@ export function PurchasePanel({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1" data-price>
-          <span className="heading-display text-4xl">{selected.priceText}</span>
-          {selected.compareAtText ? (
-            <s className="text-lg text-ink-secondary">{selected.compareAtText}</s>
+      {contact && (contact.phone || contact.email) ? (
+        <section
+          className="flex flex-col gap-1.5 rounded-card bg-card p-5 text-sm"
+          aria-label={m.orderTitle}
+        >
+          <p className="font-semibold">{m.orderTitle}</p>
+          <p className="text-ink-secondary">{m.orderLine}</p>
+          {contact.phone ? (
+            <p>
+              {contact.telHref ? (
+                <a href={contact.telHref} className="underline underline-offset-2">
+                  {m.orderPhone(contact.phone)}
+                </a>
+              ) : (
+                m.orderPhone(contact.phone)
+              )}
+            </p>
           ) : null}
-        </p>
-        <p className="text-sm text-ink-secondary">{m.priceVat}</p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2" data-availability>
-        <StorePill tone={selected.tone}>{selected.availabilityLabel}</StorePill>
-        {selected.availabilityDetail ? (
-          <span className="text-sm text-ink-secondary">{selected.availabilityDetail}</span>
-        ) : null}
-      </div>
-
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-ink-secondary">{m.sku}</dt>
-        <dd data-sku>{selected.sku}</dd>
-        {selected.partNumber ? (
-          <>
-            <dt className="text-ink-secondary">{m.partNumber}</dt>
-            <dd>{selected.partNumber}</dd>
-          </>
-        ) : null}
-        {selected.warrantyText ? (
-          <>
-            <dt className="text-ink-secondary">{m.warrantyLabel}</dt>
-            <dd>{selected.warrantyText}</dd>
-          </>
-        ) : null}
-      </dl>
-
+          {contact.email ? (
+            <p>
+              <a href={`mailto:${contact.email}`} className="underline underline-offset-2">
+                {m.orderEmail(contact.email)}
+              </a>
+            </p>
+          ) : null}
+        </section>
+      ) : null}
       {!selected.purchasable ? (
         <form
           noValidate
@@ -254,33 +264,22 @@ export function PurchasePanel({
         </form>
       ) : null}
 
-      {contact && (contact.phone || contact.email) ? (
-        <section
-          className="flex flex-col gap-1.5 rounded-card bg-card p-5 text-sm"
-          aria-label={m.orderTitle}
-        >
-          <p className="font-semibold">{m.orderTitle}</p>
-          <p className="text-ink-secondary">{m.orderLine}</p>
-          {contact.phone ? (
-            <p>
-              {contact.telHref ? (
-                <a href={contact.telHref} className="underline underline-offset-2">
-                  {m.orderPhone(contact.phone)}
-                </a>
-              ) : (
-                m.orderPhone(contact.phone)
-              )}
-            </p>
-          ) : null}
-          {contact.email ? (
-            <p>
-              <a href={`mailto:${contact.email}`} className="underline underline-offset-2">
-                {m.orderEmail(contact.email)}
-              </a>
-            </p>
-          ) : null}
-        </section>
-      ) : null}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt className="text-ink-secondary">{m.sku}</dt>
+        <dd data-sku>{selected.sku}</dd>
+        {selected.partNumber ? (
+          <>
+            <dt className="text-ink-secondary">{m.partNumber}</dt>
+            <dd>{selected.partNumber}</dd>
+          </>
+        ) : null}
+        {selected.warrantyText ? (
+          <>
+            <dt className="text-ink-secondary">{m.warrantyLabel}</dt>
+            <dd>{selected.warrantyText}</dd>
+          </>
+        ) : null}
+      </dl>
     </div>
   );
 }

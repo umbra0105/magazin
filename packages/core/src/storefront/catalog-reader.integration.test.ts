@@ -226,6 +226,37 @@ describe("CatalogReader: liste", () => {
   });
 });
 
+describe("CatalogReader: mărci", () => {
+  it("doar mărcile cu produse active; cele cu mai multe produse întâi, cu numărul lor; limitate", async () => {
+    await withReader(async (reader, tx) => {
+      const tag = uid();
+      const big = await tx.brand.create({ data: { slug: `b-big-${tag}`, name: `Zeta ${tag}` } });
+      const small = await tx.brand.create({
+        data: { slug: `b-small-${tag}`, name: `Alfa ${tag}` },
+      });
+      const empty = await tx.brand.create({ data: { slug: `b-empty-${tag}`, name: `Gol ${tag}` } });
+      const draftOnly = await tx.brand.create({
+        data: { slug: `b-draft-${tag}`, name: `Ciorna ${tag}` },
+      });
+      for (let i = 0; i < 2; i++) {
+        const p = await makeProduct(tx);
+        await tx.product.update({ where: { id: p.id }, data: { brandId: big.id } });
+      }
+      const one = await makeProduct(tx);
+      await tx.product.update({ where: { id: one.id }, data: { brandId: small.id } });
+      const draft = await makeProduct(tx, { status: "draft" });
+      await tx.product.update({ where: { id: draft.id }, data: { brandId: draftOnly.id } });
+      const all = await reader.listBrands(1000);
+      const mine = all.filter((b) => [big, small, empty, draftOnly].some((x) => x.slug === b.slug));
+      expect(mine.map((b) => [b.slug, b.productCount])).toEqual([
+        [big.slug, 2],
+        [small.slug, 1],
+      ]);
+      expect((await reader.listBrands(1)).length).toBe(1);
+    });
+  });
+});
+
 describe("CatalogReader: adrese și redirecționări", () => {
   it("produs: adresa exactă e ok; altă scriere (litere mari) și adresa veche duc la cea canonică; ciorna e inexistentă", async () => {
     await withReader(async (reader, tx) => {

@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../lib/cn";
-import { StorePill, type StorePillTone } from "./store-pill";
+import type { StorePillTone } from "./store-pill";
 
 /**
  * Cardul mare al vitrinei: fundal înclinat (`--sf-card`), rază mare din preset, fără bordură și fără umbră (umbra e doar a
@@ -11,6 +11,15 @@ export function StoreCard({ className, ...props }: HTMLAttributes<HTMLDivElement
     <div className={cn("overflow-hidden rounded-card bg-card text-ink", className)} {...props} />
   );
 }
+
+/** Punctul stării (discret, lângă text): culoarea vine din tonul semantic al vitrinei. */
+const DOT: Record<StorePillTone, string> = {
+  neutral: "bg-tone-neutral-fg",
+  success: "bg-tone-success-fg",
+  warning: "bg-tone-warning-fg",
+  problem: "bg-tone-problem-fg",
+  info: "bg-tone-info-fg",
+};
 
 export interface ProductCardProps {
   /** Adresa produsului (`/produs/<slug>`): legătură reală, în HTML-ul de pe server. */
@@ -64,14 +73,14 @@ export function ProductCard({
           // masa foto (`--sf-media-surface`): aceeași suprafață, același raport și aceeași umplutură la toate cardurile;
           // fotografia se vede întreagă (object-contain), nu tăiată
           // `multiply`: albul fotografiei devine culoarea mesei foto, deci fundalul alb al fotografiei nu se mai vede ca un dreptunghi
-          "relative isolate aspect-square overflow-hidden bg-media p-4 [&_img]:size-full [&_img]:object-contain [&_img]:mix-blend-multiply",
+          "relative isolate aspect-square overflow-hidden bg-media p-2 [&_img]:size-full [&_img]:object-contain [&_img]:mix-blend-multiply",
           horizontal && "w-2/5 shrink-0 sm:w-1/3",
         )}
       >
         {media}
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-5">
-        {brand ? <p className="text-sm text-ink-secondary">{brand}</p> : null}
+      <div className="flex flex-1 flex-col gap-1 p-4 sm:p-5">
+        {brand ? <p className="text-xs font-medium text-ink-secondary">{brand}</p> : null}
         <Heading className="text-lg font-semibold leading-snug">
           <a
             href={href}
@@ -81,13 +90,20 @@ export function ProductCard({
           </a>
         </Heading>
         <div className="mt-auto flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-3">
-          <span className="text-xl font-semibold">{price}</span>
+          <span className="text-2xl font-semibold tracking-tight">{price}</span>
           {oldPrice ? <s className="text-sm text-ink-secondary">{oldPrice}</s> : null}
         </div>
         {status ? (
-          <div className="pt-1">
-            <StorePill tone={status.tone}>{status.label}</StorePill>
-          </div>
+          <p
+            className="flex items-center gap-2 pt-1 text-sm text-ink-secondary"
+            data-status={status.tone}
+          >
+            <span
+              aria-hidden="true"
+              className={cn("size-2 shrink-0 rounded-full", DOT[status.tone])}
+            />
+            {status.label}
+          </p>
         ) : null}
       </div>
     </article>

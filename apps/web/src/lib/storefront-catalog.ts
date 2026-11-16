@@ -70,6 +70,12 @@ export const listProductsCached = unstable_cache(
   CACHE,
 );
 
+export const listBrandsCached = unstable_cache(
+  (limit: number) => getCatalogReader().listBrands(limit),
+  ["catalog-brands"],
+  CACHE,
+);
+
 export const getCategoryCached = unstable_cache(
   (path: string) => getCatalogReader().getCategory(path),
   ["catalog-category"],

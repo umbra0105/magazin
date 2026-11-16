@@ -3292,11 +3292,13 @@ export const ro = {
       browse: "Vezi categoriile",
       allProducts: "Toate produsele",
       categories: { title: "Categorii", lede: "Alege după ce ai nevoie." },
-      newest: {
-        title: "Produse noi",
-        lede: "Cele mai recente intrări din magazin.",
+      featured: {
+        title: "Produse recomandate",
+        lede: "Alese din catalogul magazinului.",
         all: "Vezi toate produsele",
       },
+      brands: { title: "Mărci din magazin", label: "Mărcile produselor din magazin" },
+      heroProduct: "Produs în vitrină",
       trust: {
         label: "De ce să alegi acest magazin",
         items: [

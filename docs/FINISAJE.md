@@ -29,8 +29,8 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Consimțământ cookie (Faza 6) | categoriile Statistici și Marketing sunt structură: încă nu există funcții care să depindă de ele (se leagă când apar, în fazele lor) | -
 - [ ] S3 | Galeria de design (Faza 6) | fără fișiere în `local-data/foto-hero/` (nu se comit), galeria folosește ca hero cea mai bună imagine de produs din baza de dezvoltare (doar în galerie, nu în producție); aspectul final al hero-ului și al header-ului «sticlă» se judecă cu o fotografie reală a magazinului, nu cu o fotografie de produs | local-data/capturi-faza6/final/minimal-deschisa-sticla-1440.png
 
-- [ ] S3 | Pagina de start (Faza 7) | hero-ul nu are fotografie (nu există încă o imagine de hero configurabilă; vine cu CMS-ul din Faza 16): bloc întunecat înalt, cu titlul magazinului | local-data/capturi-faza7/checkpoint/acasa-deschis-1440.png
-- [ ] S3 | Carduri de produs (Faza 7) | produsele demo fără imagine arată doar masa gri, fără text; de decis dacă un card fără imagine primește un substituent | local-data/capturi-faza7/checkpoint/acasa-deschis-1440.png
+- [x] S3 | Pagina de start (Faza 7) | hero-ul fără fotografie: recompus în două coloane, cu produsul cu cel mai mare preț dintre cele recomandate pe masa foto (fără bloc negru); o imagine de hero configurabilă (și `local-data/foto-hero/`) vine cu CMS-ul din Faza 16 | local-data/capturi-faza7/checkpoint/acasa-deschis-1440.png
+- [x] S3 | Carduri de produs (Faza 7) | cardurile fără imagine: produsele demo au acum imagini (refolosite de la produse asemănătoare); un produs real fără imagine rămâne cu masa gri, fără text | local-data/capturi-faza7/checkpoint/magazin-deschis-1440.png
 - [ ] S3 | Pagina de produs (Faza 7) | descrierile importate din datele demo conțin «&nbsp;» ca text vizibil (date importate dublu-codificate, nu un defect de afișare); de curățat la import | local-data/capturi-faza7/checkpoint/produs-deschis-1440.png
 - [ ] S3 | Liste (Faza 7) | pe telefon sortarea ocupă trei rânduri de pastile; de comprimat (de exemplu un rând derulabil) | local-data/capturi-faza7/checkpoint/categorie-inchis-390.png
 - [ ] S3 | Redirecționări (Faza 7) | adresa veche și forma cu litere mari redirecționează cu 308 (permanent, echivalent pentru Google cu 301), cum face Next din pagini; același comportament ca redirecturile adminului | -
@@ -39,6 +39,8 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Pagina de produs (Faza 7) | blocul «Cum comanzi» nu apare cât telefonul și emailul firmei sunt goale în setări: produsul nu are atunci nicio cale de comandă vizibilă (până la coș, Faza 8); de completat datele firmei | local-data/capturi-faza7/checkpoint/produs-deschis-1440.png
 - [ ] S3 | Liste (Faza 7) | pe telefon, grila de 2 coloane strânge numele lungi de produs (6–7 rânduri într-un card) | local-data/capturi-faza7/checkpoint/magazin-deschis-390.png
 - [ ] S3 | «Anunță-mă când revine» (Faza 7) | o adresă care a atins plafonul de cereri în așteptare (10, setabil) primește un refuz la o cerere pentru încă o variantă, în timp ce o adresă deja înscrisă primește «Gata»: răspunsul diferă și trădează existența cererilor pe adresă; de uniformizat (răspuns identic, cu mesaj generic) | -
+- [ ] S3 | Pagina de produs (Faza 7) | blocul «Cum comanzi» apare și la produsele indisponibile, lângă «Anunță-mă»; de decis dacă la «Indisponibil» se arată doar formularul | local-data/capturi-faza7/checkpoint/produs-epuizat-deschis-1440.png
+- [ ] S3 | Pagina de start (Faza 7) | banda de mărci e text simplu (fără legături) până există paginile de mărci (pasul C); mărcile nu au logo în datele demo | local-data/capturi-faza7/checkpoint/acasa-deschis-1440.png
 
 ## Rezolvate
 
