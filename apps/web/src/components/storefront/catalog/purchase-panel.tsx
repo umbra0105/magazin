@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { StoreButton, StorePill, type StorePillTone } from "@ecom/ui";
 import { getMessages } from "@/messages";
 
@@ -59,7 +59,19 @@ export function PurchasePanel({
   const emailId = useId();
   const [email, setEmail] = useState("");
   const [notify, setNotify] = useState<NotifyState>("idle");
+  const priceRef = useRef<HTMLParagraphElement>(null);
+  const [priceVisible, setPriceVisible] = useState(true);
+  useEffect(() => {
+    const node = priceRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) =>
+      setPriceVisible(entry?.isIntersecting ?? true),
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   if (!selected) return null;
+  const hasOrderBlock = Boolean(contact && (contact.phone || contact.email));
 
   const choose = (optionId: string, valueId: string) => {
     const wanted = { ...selected.optionValues, [optionId]: valueId };
@@ -124,7 +136,7 @@ export function PurchasePanel({
   return (
     <div className="flex flex-col gap-6" data-purchase-panel>
       <div className="flex flex-col gap-2">
-        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1" data-price>
+        <p ref={priceRef} className="flex flex-wrap items-baseline gap-x-3 gap-y-1" data-price>
           <span className="heading-display text-5xl">{selected.priceText}</span>
           {selected.compareAtText ? (
             <s className="text-lg text-ink-secondary">{selected.compareAtText}</s>
@@ -177,6 +189,7 @@ export function PurchasePanel({
         <section
           className="flex flex-col gap-1.5 rounded-card bg-card p-5 text-sm"
           aria-label={m.orderTitle}
+          id="cum-comanzi"
         >
           <p className="font-semibold">{m.orderTitle}</p>
           <p className="text-ink-secondary">{m.orderLine}</p>
@@ -206,6 +219,7 @@ export function PurchasePanel({
           onSubmit={submit}
           className="flex flex-col gap-3 rounded-card bg-card p-5"
           aria-labelledby={`${emailId}-title`}
+          id="anunta-ma"
         >
           <p id={`${emailId}-title`} className="font-semibold">
             {m.notifyTitle}
@@ -280,6 +294,25 @@ export function PurchasePanel({
           </>
         ) : null}
       </dl>
+      {priceVisible ? null : (
+        <div
+          data-sticky-bar
+          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-4 border-t border-line-subtle bg-surface-page px-gutter py-3 lg:hidden"
+        >
+          <p className="flex flex-col leading-tight">
+            <span className="text-xl font-semibold">{selected.priceText}</span>
+            <span className="text-sm text-ink-secondary">{selected.availabilityLabel}</span>
+          </p>
+          {!selected.purchasable || hasOrderBlock ? (
+            <a
+              href={selected.purchasable ? "#cum-comanzi" : "#anunta-ma"}
+              className="inline-flex h-12 items-center rounded-full bg-action px-6 font-semibold text-action-fg"
+            >
+              {selected.purchasable ? m.stickyOrder : m.stickyNotify}
+            </a>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

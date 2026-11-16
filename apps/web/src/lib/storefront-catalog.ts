@@ -61,7 +61,7 @@ const CACHE = { tags: [CATALOG_TAG], revalidate: 60 };
 export const listProductsCached = unstable_cache(
   (
     scope: ListingScope,
-    sort: ListingSort,
+    sort: ListingSort | "relevance",
     offset: number,
     limit: number,
     format: StorefrontFormat,
@@ -70,9 +70,27 @@ export const listProductsCached = unstable_cache(
   CACHE,
 );
 
+export const getFacetsCached = unstable_cache(
+  (scope: ListingScope) => getCatalogReader().getFacets(scope),
+  ["catalog-facets"],
+  CACHE,
+);
+
 export const listBrandsCached = unstable_cache(
   (limit: number) => getCatalogReader().listBrands(limit),
   ["catalog-brands"],
+  CACHE,
+);
+
+export const getBrandCached = unstable_cache(
+  (slug: string) => getCatalogReader().getBrand(slug),
+  ["catalog-brand"],
+  CACHE,
+);
+
+export const getCollectionCached = unstable_cache(
+  (slug: string) => getCatalogReader().getCollection(slug),
+  ["catalog-collection"],
   CACHE,
 );
 
@@ -83,7 +101,8 @@ export const getCategoryCached = unstable_cache(
 );
 
 export const getProductCached = unstable_cache(
-  (slug: string, format: StorefrontFormat) => getCatalogReader().getProduct(slug, format),
+  (slug: string, format: StorefrontFormat, includeDiagram: boolean) =>
+    getCatalogReader().getProduct(slug, format, { includeDiagram }),
   ["catalog-product"],
   CACHE,
 );

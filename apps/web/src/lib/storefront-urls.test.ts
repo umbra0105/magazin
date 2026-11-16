@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { categoryHref, listingHref, productHref } from "./storefront-urls";
+import { parseListingFilters } from "@ecom/core";
+import { brandHref, categoryHref, listingHref, productHref } from "./storefront-urls";
 
 describe("adresele catalogului", () => {
   it("produsul și categoria au adrese simple", () => {
@@ -18,5 +19,16 @@ describe("adresele catalogului", () => {
     expect(listingHref("/categorie/pompe", { sort: "new", page: 2 })).toBe(
       "/categorie/pompe?sortare=new&pagina=2",
     );
+  });
+
+  it("filtrele intră în adresă în ordine stabilă, înaintea sortării și a paginii; căutarea e prima", () => {
+    const filters = parseListingFilters({ marca: "b,a", f_debit: "10-50" });
+    expect(listingHref("/categorie/pompe", { filters })).toBe(
+      "/categorie/pompe?marca=a%2Cb&f_debit=10-50",
+    );
+    expect(listingHref("/cautare", { query: "pompa", filters, sort: "new", page: 2 })).toBe(
+      "/cautare?q=pompa&marca=a%2Cb&f_debit=10-50&sortare=new&pagina=2",
+    );
+    expect(brandHref("astralpool")).toBe("/brand/astralpool");
   });
 });

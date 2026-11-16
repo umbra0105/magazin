@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import { Container, SectionHeading } from "@ecom/ui";
+import { loadEnv } from "@ecom/config";
+import { Container, EnergyLabel, SectionHeading } from "@ecom/ui";
 import { RichTextView } from "@/components/rich-text/rich-text";
 import { Breadcrumbs } from "@/components/storefront/catalog/breadcrumbs";
 import {
@@ -13,6 +14,10 @@ import { ProductGrid } from "@/components/storefront/catalog/product-grid";
 import { ProductTabs, type ProductTab } from "@/components/storefront/catalog/product-tabs";
 import { PurchasePanel } from "@/components/storefront/catalog/purchase-panel";
 import { SpecsTable } from "@/components/storefront/catalog/specs-table";
+import { DownloadsList, PartsTab } from "@/components/storefront/catalog/product-extras";
+import { JsonLdScript } from "@/components/storefront/json-ld";
+import { getFeatureFlags } from "@/lib/services";
+import { breadcrumbList, productLd } from "@/lib/structured-data";
 import { renderDescriptionHtml } from "@/lib/rich-text";
 import {
   formatPrice,
@@ -54,7 +59,8 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const resolved = await getCatalogReader().resolveProduct(slug);
   if (resolved.kind !== "ok" || !resolved.canonical) return {};
   const [format, chrome] = await Promise.all([getStorefrontFormat(), getStorefrontChrome()]);
-  const product = await getProductCached(resolved.canonical, format);
+  const includeDiagram = await getFeatureFlags().isEnabled("partsDiagrams");
+  const product = await getProductCached(resolved.canonical, format, includeDiagram);
   if (!product) return {};
   const image = product.gallery[0]?.large;
   return {
@@ -81,7 +87,8 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
   if (resolved.kind === "redirect") permanentRedirect(productHref(resolved.canonical));
 
   const [format, chrome] = await Promise.all([getStorefrontFormat(), getStorefrontChrome()]);
-  const product = await getProductCached(resolved.canonical, format);
+  const includeDiagram = await getFeatureFlags().isEnabled("partsDiagrams");
+  const product = await getProductCached(resolved.canonical, format, includeDiagram);
   if (!product) notFound();
 
   const descriptionHtml = product.descriptionHtml
@@ -104,13 +111,63 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
       label: m.product.tabs.specs,
       content: <SpecsTable rows={product.specs} locale={format.locale} />,
     },
+    ...(product.documents.length > 0
+      ? [
+          {
+            id: "descarcari",
+            label: m.product.tabs.downloads,
+            content: <DownloadsList documents={product.documents} locale={format.locale} />,
+          },
+        ]
+      : []),
+    ...(product.spareParts.length > 0 || product.diagram
+      ? [
+          {
+            id: "piese",
+            label: m.product.tabs.parts,
+            content: (
+              <PartsTab diagram={product.diagram} spareParts={product.spareParts} format={format} />
+            ),
+          },
+        ]
+      : []),
     ...(hasGpsr(product.gpsr)
       ? [{ id: "siguranta", label: m.product.tabs.safety, content: <Gpsr gpsr={product.gpsr} /> }]
       : []),
   ];
 
+  const appUrl = loadEnv().APP_URL;
+  const trail = [
+    { name: m.breadcrumbs.home, href: "/" },
+    { name: m.breadcrumbs.shop, href: SHOP_PATH },
+    ...product.trail.map((c) => ({ name: c.name, href: categoryHref(c.path) })),
+  ];
+
   return (
     <Container className="flex flex-col gap-10 py-8 sm:py-12">
+      <JsonLdScript
+        data={[
+          breadcrumbList(appUrl, [
+            ...trail,
+            { name: product.title, href: productHref(product.slug) },
+          ]),
+          productLd({
+            base: appUrl,
+            href: productHref(product.slug),
+            name: product.title,
+            description: product.subtitle || excerpt(product.descriptionHtml),
+            images: product.gallery.map((g) => g.large.src),
+            brand: product.brand?.name ?? null,
+            currency: format.currency,
+            variants: product.variants.map((v) => ({
+              sku: v.sku,
+              ean: v.ean,
+              amount: v.price.amount,
+              availability: v.availability,
+            })),
+          }),
+        ]}
+      />
       <Breadcrumbs
         items={[
           { name: m.breadcrumbs.home, href: "/" },
@@ -133,6 +190,25 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               <p className="text-sm font-medium text-ink-secondary">{product.brand.name}</p>
             ) : null}
             <h1 className="heading-display text-3xl text-balance sm:text-4xl">{product.title}</h1>
+            {product.energyClass ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <EnergyLabel
+                  energyClass={product.energyClass}
+                  label={m.product.energy.label(product.energyClass)}
+                  size="lg"
+                />
+                {product.eprelUrl ? (
+                  <a
+                    href={product.eprelUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm underline underline-offset-2 hover:no-underline"
+                  >
+                    {m.product.energy.eprel}
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
             {product.subtitle ? (
               <p className="text-lede text-ink-secondary">{product.subtitle}</p>
             ) : null}
@@ -167,6 +243,18 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
       </div>
 
       <ProductTabs tabs={tabs} />
+
+      {product.compatible.length > 0 ? (
+        <section className="flex flex-col gap-6">
+          <SectionHeading title={m.product.compatible.title} lede={m.product.compatible.lede} />
+          <ProductGrid
+            products={product.compatible}
+            format={format}
+            layout={chrome.cardLayout}
+            label={m.product.compatible.title}
+          />
+        </section>
+      ) : null}
 
       {product.related.length > 0 ? (
         <section className="flex flex-col gap-6">

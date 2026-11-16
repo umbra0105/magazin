@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { pageWindow, parseListingPage, parseListingSort } from "@ecom/core";
-import { Container, StoreButton, StorefrontState } from "@ecom/ui";
-import { Breadcrumbs } from "@/components/storefront/catalog/breadcrumbs";
 import {
-  ListingPagination,
-  ListingSortLinks,
-} from "@/components/storefront/catalog/listing-controls";
-import { ProductGrid } from "@/components/storefront/catalog/product-grid";
-import { getStorefrontFormat, listProductsCached } from "@/lib/storefront-catalog";
+  hasActiveFilters,
+  parseListingFilters,
+  parseListingPage,
+  parseListingSort,
+} from "@ecom/core";
+import { loadEnv } from "@ecom/config";
+import { Container } from "@ecom/ui";
+import { Breadcrumbs } from "@/components/storefront/catalog/breadcrumbs";
+import { CatalogListing } from "@/components/storefront/catalog/catalog-listing";
+import { JsonLdScript } from "@/components/storefront/json-ld";
 import { getStorefrontChrome } from "@/lib/storefront-chrome";
+import { breadcrumbList } from "@/lib/structured-data";
 import { SHOP_PATH, listingHref } from "@/lib/storefront-urls";
 import { getMessages } from "@/messages";
 
@@ -26,64 +28,45 @@ export async function generateMetadata({
   const query = await searchParams;
   const { storeName } = await getStorefrontChrome();
   const page = parseListingPage(query["pagina"]);
-  const sorted = parseListingSort(query["sortare"]) !== "recommended";
+  const variant =
+    parseListingSort(query["sortare"]) !== "recommended" ||
+    hasActiveFilters(parseListingFilters(query));
   return {
     title: page > 1 ? `${m.shop.title} - ${m.pagination.page(page)}` : m.shop.title,
     description: m.shop.metaDescription(storeName),
     alternates: { canonical: listingHref(SHOP_PATH, { page }) },
-    robots: sorted ? { index: false, follow: true } : undefined,
+    robots: variant ? { index: false, follow: true } : undefined,
   };
 }
 
 export default async function ShopPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const query = await searchParams;
-  const sort = parseListingSort(query["sortare"]);
-  const [chrome, format] = await Promise.all([getStorefrontChrome(), getStorefrontFormat()]);
-  const first = await listProductsCached({}, sort, 0, 1, format);
-  const window = pageWindow(parseListingPage(query["pagina"]), first.total, format.productsPerPage);
-  if (window.outOfRange) notFound();
-  const { items } = await listProductsCached(
-    {},
-    sort,
-    window.offset,
-    format.productsPerPage,
-    format,
-  );
-
+  const chrome = await getStorefrontChrome();
   return (
     <Container className="flex flex-col gap-8 py-8 sm:py-12">
+      <JsonLdScript
+        data={breadcrumbList(loadEnv().APP_URL, [
+          { name: m.breadcrumbs.home, href: "/" },
+          { name: m.breadcrumbs.shop, href: SHOP_PATH },
+        ])}
+      />
       <Breadcrumbs items={[{ name: m.breadcrumbs.home, href: "/" }]} current={m.breadcrumbs.shop} />
-      <header className="flex flex-col gap-3">
-        <h1 className="heading-display text-headline text-balance">{m.shop.title}</h1>
-        <p className="text-sm text-ink-secondary">{m.total(first.total)}</p>
-      </header>
-      {items.length === 0 ? (
-        <StorefrontState
-          title={m.empty.title}
-          description={m.empty.description}
-          actions={
-            <Link href="/">
-              <StoreButton>{m.breadcrumbs.home}</StoreButton>
-            </Link>
-          }
-        />
-      ) : (
-        <>
-          <ListingSortLinks base={SHOP_PATH} current={sort} />
-          <ProductGrid
-            products={items}
-            format={format}
-            layout={chrome.cardLayout}
-            label={m.shop.title}
-          />
-          <ListingPagination
-            base={SHOP_PATH}
-            sort={sort}
-            page={window.page}
-            pageCount={window.pageCount}
-          />
-        </>
-      )}
+      <h1 className="heading-display text-headline text-balance">{m.shop.title}</h1>
+      <CatalogListing
+        base={SHOP_PATH}
+        scope={{}}
+        params={query}
+        layout={chrome.cardLayout}
+        gridLabel={m.shop.title}
+        emptyActions={
+          <Link
+            href="/"
+            className="inline-flex h-12 items-center rounded-full bg-action px-6 font-semibold text-action-fg"
+          >
+            {m.breadcrumbs.home}
+          </Link>
+        }
+      />
     </Container>
   );
 }

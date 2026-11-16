@@ -32,6 +32,8 @@ export interface ProductCardProps {
   price: string;
   oldPrice?: string | undefined;
   status?: { label: string; tone: StorePillTone } | undefined;
+  /** Marcajul din colțul imaginii (eticheta energetică), desenat de apelant. */
+  badge?: ReactNode;
   /** Nivelul titlului în pagină (h2 sub un h1 de listă, h3 sub un h2 de secțiune). */
   headingLevel?: 2 | 3;
   /** `vertical`: imaginea sus (grilă); `horizontal`: imaginea în stânga, textul în dreapta (listă). Vine din setarea de aspect. */
@@ -52,6 +54,7 @@ export function ProductCard({
   price,
   oldPrice,
   status,
+  badge,
   headingLevel = 3,
   layout = "vertical",
   className,
@@ -78,6 +81,7 @@ export function ProductCard({
         )}
       >
         {media}
+        {badge ? <span className="absolute left-3 top-3 z-10">{badge}</span> : null}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-4 sm:p-5">
         {brand ? <p className="text-xs font-medium text-ink-secondary">{brand}</p> : null}

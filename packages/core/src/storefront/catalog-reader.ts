@@ -84,6 +84,24 @@ export interface ListingFacets {
   options: FacetOptions[];
 }
 
+export interface BrandPageData {
+  name: string;
+  slug: string;
+  description: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  logo: StorefrontImage | null;
+}
+
+export interface CollectionPageData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+}
+
 export interface ListingResult {
   items: ListedProduct[];
   total: number;
@@ -93,6 +111,34 @@ export interface ResolvedKey {
   kind: "ok" | "redirect" | "missing";
   /** Adresa canonică curentă (la `ok` și `redirect`). */
   canonical: string | null;
+}
+
+export interface PageDocument {
+  id: string;
+  title: string;
+  /** energy_label | product_sheet | manual | ce_declaration | datasheet | warranty | other */
+  type: string;
+  mime: string;
+  sizeBytes: number;
+  language: string;
+}
+
+export interface PageDiagram {
+  title: string;
+  image: StorefrontImage | null;
+  /** Rândurile numerotate ale fișei: punctul de pe imagine (sutimi de procent) e opțional, tabelul le are mereu. */
+  parts: {
+    number: number;
+    xBp: number | null;
+    yBp: number | null;
+    label: string | null;
+    product: {
+      slug: string;
+      title: string;
+      price: ListingPrice | null;
+      availability: PublicAvailability;
+    } | null;
+  }[];
 }
 
 export interface PageVariant {
@@ -155,6 +201,13 @@ export interface ProductPageData {
   gallery: GalleryImage[];
   specs: SpecRow[];
   related: ListedProduct[];
+  /** Documentele din tabul «Descărcări» (doar cele marcate să apară acolo). */
+  documents: PageDocument[];
+  /** Piesele de schimb (relația `spare_part`) și produsele cu care se montează (`compatible_with`). */
+  spareParts: ListedProduct[];
+  compatible: ListedProduct[];
+  /** Prima fișă explodată atașată, doar când funcționalitatea e pornită (`options.includeDiagram`). */
+  diagram: PageDiagram | null;
   /** ISO 8601 (șir, nu `Date`: datele trec prin cache-ul serializat al vitrinei). */
   updatedAt: string;
 }
@@ -600,6 +653,73 @@ export class CatalogReader {
 
   // ---------------------------------------------------------------- mărci
 
+  async resolveBrand(slug: string): Promise<ResolvedKey> {
+    return this.resolve(
+      "brand",
+      slug,
+      async (key) => {
+        const row = await this.db.brand.findFirst({
+          where: { slug: { equals: key, mode: "insensitive" } },
+          select: { slug: true },
+        });
+        return row ? { key: row.slug, live: true } : null;
+      },
+      async (id) => {
+        const row = await this.db.brand.findUnique({ where: { id }, select: { slug: true } });
+        return row?.slug ?? null;
+      },
+    );
+  }
+
+  async getBrand(slug: string): Promise<BrandPageData | null> {
+    const row = await this.db.brand.findFirst({
+      where: { slug: normalizeKey(slug) },
+      select: {
+        name: true,
+        slug: true,
+        description: true,
+        seoTitle: true,
+        seoDescription: true,
+        logoMedia: {
+          select: {
+            status: true,
+            alt: true,
+            storageKey: true,
+            width: true,
+            height: true,
+            blurhash: true,
+            variants: true,
+          },
+        },
+      },
+    });
+    if (!row) return null;
+    return {
+      name: row.name,
+      slug: row.slug,
+      description: row.description,
+      seoTitle: row.seoTitle,
+      seoDescription: row.seoDescription,
+      logo: this.imageOf(row.logoMedia, "medium", row.name),
+    };
+  }
+
+  /** Colecția după adresă. Colecțiile automate (reguli) nu au încă motor de reguli: arată doar produsele atașate explicit. */
+  async getCollection(slug: string): Promise<CollectionPageData | null> {
+    const row = await this.db.collection.findFirst({
+      where: { slug: normalizeKey(slug) },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        seoTitle: true,
+        seoDescription: true,
+      },
+    });
+    return row ?? null;
+  }
+
   /** Mărcile cu cel puțin un produs ACTIV, cele cu mai multe produse întâi (apoi alfabetic). */
   async listBrands(limit: number): Promise<{ name: string; slug: string; productCount: number }[]> {
     const rows = await this.db.brand.findMany({
@@ -664,7 +784,11 @@ export class CatalogReader {
 
   // ---------------------------------------------------------------- produs
 
-  async getProduct(slug: string, settings: CatalogSettings): Promise<ProductPageData | null> {
+  async getProduct(
+    slug: string,
+    settings: CatalogSettings,
+    options: { includeDiagram?: boolean } = {},
+  ): Promise<ProductPageData | null> {
     const row = await this.db.product.findFirst({
       where: { slug: normalizeKey(slug), status: "active", deletedAt: null },
       select: {
@@ -840,6 +964,27 @@ export class CatalogReader {
     });
     const relatedIds = [...new Set(relatedRows.map((r) => r.relatedProductId))].slice(0, 8);
 
+    const [documents, partRelations, compatibleRelations] = await Promise.all([
+      this.db.productDocument.findMany({
+        where: { productId: row.id, showInTab: true },
+        orderBy: [{ position: "asc" }, { id: "asc" }],
+        select: { id: true, title: true, type: true, mime: true, sizeBytes: true, language: true },
+      }),
+      this.db.productRelation.findMany({
+        where: { productId: row.id, type: "spare_part" },
+        orderBy: [{ position: "asc" }, { id: "asc" }],
+        select: { relatedProductId: true },
+        take: 50,
+      }),
+      this.db.productRelation.findMany({
+        where: { productId: row.id, type: "compatible_with" },
+        orderBy: [{ position: "asc" }, { id: "asc" }],
+        select: { relatedProductId: true },
+        take: 12,
+      }),
+    ]);
+    const diagram = options.includeDiagram ? await this.diagramOf(row.id, settings) : null;
+
     return {
       id: row.id,
       slug: row.slug,
@@ -866,7 +1011,75 @@ export class CatalogReader {
       gallery,
       specs,
       related: await this.listedByIds(relatedIds, settings),
+      documents,
+      spareParts: await this.listedByIds(
+        [...new Set(partRelations.map((r) => r.relatedProductId))],
+        settings,
+      ),
+      compatible: await this.listedByIds(
+        [...new Set(compatibleRelations.map((r) => r.relatedProductId))],
+        settings,
+      ),
+      diagram,
       updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private async diagramOf(
+    productId: string,
+    settings: CatalogSettings,
+  ): Promise<PageDiagram | null> {
+    const link = await this.db.partsDiagramProduct.findFirst({
+      where: { productId },
+      orderBy: { diagramId: "asc" },
+      select: {
+        diagram: {
+          select: {
+            title: true,
+            media: {
+              select: {
+                status: true,
+                alt: true,
+                storageKey: true,
+                width: true,
+                height: true,
+                blurhash: true,
+                variants: true,
+              },
+            },
+            hotspots: {
+              orderBy: { number: "asc" },
+              select: { number: true, xBp: true, yBp: true, label: true, productId: true },
+            },
+          },
+        },
+      },
+    });
+    if (!link) return null;
+    const partIds = link.diagram.hotspots.flatMap((h) => (h.productId ? [h.productId] : []));
+    const listed = new Map(
+      (await this.listedByIds([...new Set(partIds)], settings)).map((p) => [p.id, p]),
+    );
+    return {
+      title: link.diagram.title,
+      image: this.imageOf(link.diagram.media, "large", link.diagram.title),
+      parts: link.diagram.hotspots.map((h) => {
+        const part = h.productId ? listed.get(h.productId) : undefined;
+        return {
+          number: h.number,
+          xBp: h.xBp,
+          yBp: h.yBp,
+          label: h.label,
+          product: part
+            ? {
+                slug: part.slug,
+                title: part.title,
+                price: part.price,
+                availability: part.availability,
+              }
+            : null,
+        };
+      }),
     };
   }
 

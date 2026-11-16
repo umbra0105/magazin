@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LISTING_SORTS, type ListingSort } from "@ecom/core";
+import { LISTING_SORTS, type ListingFilters, type ListingSort } from "@ecom/core";
 import { listingHref } from "@/lib/storefront-urls";
 import { getMessages } from "@/messages";
 
@@ -13,7 +13,17 @@ const PILL =
  * Sortarea ca legături (merge și fără JavaScript, fără `<select>` nativ): fiecare legătură duce la prima pagină cu sortarea
  * aleasă. Adresele cu `?sortare=…` sunt `noindex` (pagina o declară), iar canonicul rămâne lista fără parametri.
  */
-export function ListingSortLinks({ base, current }: { base: string; current: ListingSort }) {
+export function ListingSortLinks({
+  base,
+  current,
+  filters,
+  query,
+}: {
+  base: string;
+  current: ListingSort;
+  filters?: ListingFilters;
+  query?: string;
+}) {
   return (
     <nav aria-label={m.sort.label} className="flex flex-wrap items-center gap-2">
       <span className="text-sm text-ink-secondary">{m.sort.label}</span>
@@ -22,7 +32,7 @@ export function ListingSortLinks({ base, current }: { base: string; current: Lis
         return (
           <Link
             key={sort}
-            href={listingHref(base, { sort })}
+            href={listingHref(base, { sort, ...(filters && { filters }), ...(query && { query }) })}
             rel="nofollow"
             {...(active ? { "aria-current": "true" as const } : {})}
             className={`${PILL} ${active ? "bg-action text-action-fg" : "bg-card text-ink hover:bg-card-hover"}`}
@@ -44,14 +54,19 @@ export function ListingPagination({
   sort,
   page,
   pageCount,
+  filters,
+  query,
 }: {
   base: string;
   sort: ListingSort;
   page: number;
   pageCount: number;
+  filters?: ListingFilters;
+  query?: string;
 }) {
   if (pageCount <= 1) return null;
-  const link = (target: number) => listingHref(base, { sort, page: target });
+  const link = (target: number) =>
+    listingHref(base, { sort, page: target, ...(filters && { filters }), ...(query && { query }) });
   return (
     <nav
       aria-label={m.pagination.label}

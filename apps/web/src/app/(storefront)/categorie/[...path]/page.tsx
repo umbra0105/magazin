@@ -1,27 +1,27 @@
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
-import { parseListingPage, parseListingSort, pageWindow } from "@ecom/core";
-import { Container, StorefrontState, StoreButton } from "@ecom/ui";
-import { Breadcrumbs } from "@/components/storefront/catalog/breadcrumbs";
-import {
-  ListingPagination,
-  ListingSortLinks,
-} from "@/components/storefront/catalog/listing-controls";
-import { ProductGrid } from "@/components/storefront/catalog/product-grid";
-import {
-  getCatalogReader,
-  getCategoryCached,
-  getStorefrontFormat,
-  listProductsCached,
-} from "@/lib/storefront-catalog";
-import { getStorefrontChrome } from "@/lib/storefront-chrome";
-import { SHOP_PATH, categoryHref, listingHref } from "@/lib/storefront-urls";
-import { getMessages } from "@/messages";
 import Link from "next/link";
+import { notFound, permanentRedirect } from "next/navigation";
+import {
+  hasActiveFilters,
+  parseListingFilters,
+  parseListingPage,
+  parseListingSort,
+} from "@ecom/core";
+import { loadEnv } from "@ecom/config";
+import { Container } from "@ecom/ui";
+import { Breadcrumbs } from "@/components/storefront/catalog/breadcrumbs";
+import { CatalogListing } from "@/components/storefront/catalog/catalog-listing";
+import { JsonLdScript } from "@/components/storefront/json-ld";
+import { getCatalogReader, getCategoryCached, listProductsCached } from "@/lib/storefront-catalog";
+import { getStorefrontFormat } from "@/lib/storefront-catalog";
+import { getStorefrontChrome } from "@/lib/storefront-chrome";
+import { breadcrumbList, itemList } from "@/lib/structured-data";
+import { SHOP_PATH, categoryHref, listingHref, productHref } from "@/lib/storefront-urls";
+import { getMessages } from "@/messages";
 
 const m = getMessages().storefront.catalog;
 
-// Pagina citește `searchParams` (sortare, pagină), deci e randată la cerere; datele ei vin din cache-ul cu etichete al catalogului.
+// Pagina citește `searchParams` (filtre, sortare, pagină), deci e randată la cerere; datele ei vin din cache-ul cu etichete al catalogului.
 
 type Params = { path: string[] };
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -42,14 +42,16 @@ export async function generateMetadata({
   if (!category) return {};
   const { storeName } = await getStorefrontChrome();
   const page = parseListingPage(query["pagina"]);
-  const sorted = parseListingSort(query["sortare"]) !== "recommended";
+  // sortările și filtrele sunt aceeași listă în alt fel: nu se indexează (docs/19 §1); paginile se indexează, cu canonical propriu
+  const variant =
+    parseListingSort(query["sortare"]) !== "recommended" ||
+    hasActiveFilters(parseListingFilters(query));
   const title = category.seoTitle || category.name;
   return {
     title: page > 1 ? `${title} - ${m.pagination.page(page)}` : title,
     description: category.seoDescription || category.description?.slice(0, 160) || undefined,
     alternates: { canonical: listingHref(categoryHref(category.path), { page }) },
-    // sortările sunt aceeași listă în altă ordine: nu se indexează (docs/19 §1); paginile se indexează, cu canonical propriu
-    robots: sorted ? { index: false, follow: true } : undefined,
+    robots: variant ? { index: false, follow: true } : undefined,
     openGraph: { siteName: storeName, title },
   };
 }
@@ -67,14 +69,16 @@ export default async function CategoryPage({
 
   const resolved = await reader.resolveCategory(path);
   if (resolved.kind === "missing" || !resolved.canonical) notFound();
-  // O singură adresă per categorie: altă scriere sau o cale veche duc (301) la cea curentă, cu sortarea și pagina păstrate.
+  // O singură adresă per categorie: altă scriere sau o cale veche duc (308) la cea curentă, cu parametrii păstrați.
   if (resolved.kind === "redirect") {
-    permanentRedirect(
-      listingHref(categoryHref(resolved.canonical), {
-        sort: parseListingSort(query["sortare"]),
-        page: parseListingPage(query["pagina"]),
-      }),
-    );
+    const keep = new URLSearchParams();
+    for (const [name, value] of Object.entries(query)) {
+      for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) {
+        keep.append(name, item);
+      }
+    }
+    const text = keep.toString();
+    permanentRedirect(`${categoryHref(resolved.canonical)}${text ? `?${text}` : ""}`);
   }
 
   const [category, chrome, format] = await Promise.all([
@@ -84,36 +88,39 @@ export default async function CategoryPage({
   ]);
   if (!category) notFound();
 
-  const sort = parseListingSort(query["sortare"]);
-  const requestedPage = parseListingPage(query["pagina"]);
-  const first = await listProductsCached({ categoryPath: category.path }, sort, 0, 1, format);
-  const window = pageWindow(requestedPage, first.total, format.productsPerPage);
-  // o pagină peste capăt nu se «repară»: ar crea adrese multiple cu același conținut
-  if (window.outOfRange) notFound();
-  const { items } = await listProductsCached(
-    { categoryPath: category.path },
-    sort,
-    window.offset,
-    format.productsPerPage,
-    format,
-  );
-
   const base = categoryHref(category.path);
   const node = findNode(chrome.menu, base);
   const crumbs = category.trail
     .slice(0, -1)
     .map((c) => ({ name: c.name, href: categoryHref(c.path) }));
+  const trail = [
+    { name: m.breadcrumbs.home, href: "/" },
+    { name: m.breadcrumbs.shop, href: SHOP_PATH },
+    ...crumbs,
+  ];
+  const appUrl = loadEnv().APP_URL;
+  const page = parseListingPage(query["pagina"]);
+  const first = await listProductsCached(
+    { categoryPath: category.path },
+    "recommended",
+    (page - 1) * format.productsPerPage,
+    format.productsPerPage,
+    format,
+  );
 
   return (
     <Container className="flex flex-col gap-8 py-8 sm:py-12">
-      <Breadcrumbs
-        items={[
-          { name: m.breadcrumbs.home, href: "/" },
-          { name: m.breadcrumbs.shop, href: SHOP_PATH },
-          ...crumbs,
+      <JsonLdScript
+        data={[
+          breadcrumbList(appUrl, [...trail, { name: category.name, href: base }]),
+          itemList(
+            appUrl,
+            first.items.map((item) => ({ name: item.title, href: productHref(item.slug) })),
+            (page - 1) * format.productsPerPage,
+          ),
         ]}
-        current={category.name}
       />
+      <Breadcrumbs items={trail} current={category.name} />
       <header className="flex flex-col gap-3">
         <h1 className="heading-display text-headline text-balance">{category.name}</h1>
         {category.description ? (
@@ -121,7 +128,6 @@ export default async function CategoryPage({
             {category.description}
           </p>
         ) : null}
-        <p className="text-sm text-ink-secondary">{m.total(first.total)}</p>
       </header>
 
       {node && node.children.length > 0 ? (
@@ -138,33 +144,21 @@ export default async function CategoryPage({
         </nav>
       ) : null}
 
-      {items.length === 0 ? (
-        <StorefrontState
-          title={m.empty.title}
-          description={m.empty.description}
-          actions={
-            <Link href={SHOP_PATH}>
-              <StoreButton>{m.empty.action}</StoreButton>
-            </Link>
-          }
-        />
-      ) : (
-        <>
-          <ListingSortLinks base={base} current={sort} />
-          <ProductGrid
-            products={items}
-            format={format}
-            layout={chrome.cardLayout}
-            label={category.name}
-          />
-          <ListingPagination
-            base={base}
-            sort={sort}
-            page={window.page}
-            pageCount={window.pageCount}
-          />
-        </>
-      )}
+      <CatalogListing
+        base={base}
+        scope={{ categoryPath: category.path }}
+        params={query}
+        layout={chrome.cardLayout}
+        gridLabel={category.name}
+        emptyActions={
+          <Link
+            href={SHOP_PATH}
+            className="inline-flex h-12 items-center rounded-full bg-action px-6 font-semibold text-action-fg"
+          >
+            {m.empty.action}
+          </Link>
+        }
+      />
     </Container>
   );
 }

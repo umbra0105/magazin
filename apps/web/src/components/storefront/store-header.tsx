@@ -2,6 +2,7 @@ import { Heart, Phone, ShoppingBag, User } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Container, StoreSearch, cn, storeButtonVariants } from "@ecom/ui";
+import { HeaderSearch } from "./header-search";
 import type { HeaderVariant, MenuNode } from "@ecom/core";
 import { getMessages } from "@/messages";
 import { telHref, type SlotState } from "@/lib/storefront-chrome-rules";
@@ -149,13 +150,17 @@ export function StoreHeader({
             initiallyOpen={menuInitiallyOpen}
           />
         </nav>
-        <StoreSearch
-          label={m.searchLabel}
-          placeholder={m.searchPlaceholder}
-          disabled={searchDisabled}
-          disabledHint={m.searchSoon}
-          className="mx-auto hidden w-full max-w-xl flex-1 md:block"
-        />
+        {searchDisabled ? (
+          <StoreSearch
+            label={m.searchLabel}
+            placeholder={m.searchPlaceholder}
+            disabled
+            disabledHint={m.searchSoon}
+            className="mx-auto hidden w-full max-w-xl flex-1 md:block"
+          />
+        ) : (
+          <HeaderSearch className="mx-auto hidden w-full max-w-xl flex-1 md:block" />
+        )}
         <div className="ml-auto flex items-center gap-1 md:ml-0">
           {tel ? (
             <a
@@ -187,12 +192,16 @@ export function StoreHeader({
         </div>
       </Container>
       <Container className="pb-3 md:hidden">
-        <StoreSearch
-          label={m.searchLabel}
-          placeholder={m.searchPlaceholder}
-          disabled={searchDisabled}
-          disabledHint={m.searchSoon}
-        />
+        {searchDisabled ? (
+          <StoreSearch
+            label={m.searchLabel}
+            placeholder={m.searchPlaceholder}
+            disabled
+            disabledHint={m.searchSoon}
+          />
+        ) : (
+          <HeaderSearch />
+        )}
       </Container>
     </header>
   );

@@ -1,4 +1,4 @@
-import { ProductCard, StoreImage } from "@ecom/ui";
+import { EnergyLabel, ProductCard, StoreImage } from "@ecom/ui";
 import type { CardLayout, ListedProduct } from "@ecom/core";
 import { formatPrice, type StorefrontFormat } from "@/lib/storefront-catalog";
 import { productHref } from "@/lib/storefront-urls";
@@ -53,6 +53,14 @@ export function ProductCardView({
         label: detail ? `${label} · ${detail}` : label,
         tone: availabilityTone(product.availability.state),
       }}
+      badge={
+        product.energyClass ? (
+          <EnergyLabel
+            energyClass={product.energyClass}
+            label={m.product.energy.label(product.energyClass)}
+          />
+        ) : undefined
+      }
       headingLevel={headingLevel}
       layout={layout}
     />
@@ -66,12 +74,15 @@ export function ProductGrid({
   layout,
   headingLevel = 3,
   label,
+  narrow = false,
 }: {
   products: readonly ListedProduct[];
   format: Format;
   layout: CardLayout;
   headingLevel?: 2 | 3;
   label: string;
+  /** Lista stă lângă panoul de filtre (mai puține coloane). */
+  narrow?: boolean;
 }) {
   return (
     <ul
@@ -79,7 +90,9 @@ export function ProductGrid({
       className={
         layout === "horizontal"
           ? "grid gap-4"
-          : "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4"
+          : narrow
+            ? "grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3"
+            : "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4"
       }
     >
       {products.map((product, index) => (

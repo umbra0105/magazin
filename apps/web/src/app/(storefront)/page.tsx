@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Headset, ShieldCheck, Truck, Wallet } from "lucide-react";
+import { loadEnv } from "@ecom/config";
 import {
   Container,
   HeroSplit,
@@ -9,6 +10,9 @@ import {
   TrustBar,
   storeButtonVariants,
 } from "@ecom/ui";
+import { JsonLdScript } from "@/components/storefront/json-ld";
+import { getSettings } from "@/lib/services";
+import { organizationLd, websiteLd } from "@/lib/structured-data";
 import { ProductGrid } from "@/components/storefront/catalog/product-grid";
 import {
   formatPrice,
@@ -49,6 +53,12 @@ export default async function HomePage() {
     listBrandsCached(BRANDS_COUNT),
   ]);
   const categories = chrome.menu.slice(0, 6);
+  const company = await getSettings().getGroup("company");
+  const appUrl = loadEnv().APP_URL;
+  const origin = new URL(appUrl).origin;
+  const logo = chrome.logoUrl?.startsWith("/")
+    ? `${origin}${chrome.logoUrl}`
+    : (chrome.logoUrl ?? null);
   // produsul din hero: dintre recomandatele cu imagine, cel cu prețul cel mai mare (un echipament, nu un consumabil)
   const star = featured.items
     .filter((item) => item.image)
@@ -56,6 +66,20 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLdScript
+        data={[
+          organizationLd({
+            base: appUrl,
+            name: chrome.storeName,
+            legalName: company.legalName,
+            logo,
+            address: company.address,
+            phone: company.phone,
+            email: company.email,
+          }),
+          websiteLd(appUrl, chrome.storeName),
+        ]}
+      />
       <HeroSplit
         title={m.heading(chrome.storeName)}
         lede={chrome.tagline || undefined}
