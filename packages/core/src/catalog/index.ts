@@ -419,3 +419,4 @@ export {
 } from "./rich-text/render";
 export { createDbMediaResolver } from "./rich-text/media-resolver";
 export { classifyHref, type ClassifiedHref } from "./rich-text/href";
+export * from "./slug-redirect";

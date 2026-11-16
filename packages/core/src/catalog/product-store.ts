@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from "@ecom/db";
 import { DEFAULT_MEASURE_UNIT_CODE } from "../inventory/constants";
 import { prepareDescription, syncDescriptionMedia } from "./rich-text/description";
 import type { OptionInput } from "./variant-generator";
+import { applyRedirectPlan, planSlugRedirects } from "./slug-redirect";
 import { combinationKey } from "./variant-generator";
 
 /**
@@ -415,11 +416,24 @@ export function createPrismaProductStore(db: Db): ProductStore {
           payload = { ...data, description: prepared.html };
           descriptionMedia = prepared.mediaIds;
         }
+        // adresa veche rămâne în istoric, în aceeași tranzacție cu schimbarea (C-43)
+        const oldSlug =
+          data.slug === undefined
+            ? null
+            : ((await tx.product.findUnique({ where: { id }, select: { slug: true } }))?.slug ??
+              null);
         const row = await tx.product.update({
           where: { id },
           data: payload,
           select: productSelect,
         });
+        if (oldSlug !== null && data.slug !== undefined) {
+          await applyRedirectPlan(
+            tx,
+            "product",
+            planSlugRedirects("product", id, oldSlug, data.slug),
+          );
+        }
         if (descriptionMedia) await syncDescriptionMedia(tx, id, descriptionMedia);
         return row;
       });

@@ -7,6 +7,7 @@ import { CATALOG_TAG, CatalogError, changedFields } from "./catalog-support";
 import { FieldAccessGuard } from "./field-guard";
 import { parseInput } from "./product-schemas";
 import { generateUniqueSlug, isValidSlug, SLUG_MAX_LENGTH, SLUG_PATTERN } from "./slug";
+import { applyRedirectPlan, planSlugRedirects } from "./slug-redirect";
 
 /**
  * Brandurile: nume, adresă unică (fără diferență de majuscule), descriere, SEO, logo din bibliotecă.
@@ -105,6 +106,15 @@ const select = {
   legacyUrl: true,
 } satisfies Prisma.BrandSelect;
 
+/** Rulează `fn` într-o tranzacție; dacă `db` e deja o tranzacție (teste), rulează direct. */
+async function inTransaction<T>(
+  db: PrismaClient | Prisma.TransactionClient,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  if ("$transaction" in db) return db.$transaction(fn);
+  return fn(db);
+}
+
 export function createPrismaBrandStore(db: PrismaClient | Prisma.TransactionClient): BrandStore {
   return {
     async listAll() {
@@ -129,7 +139,21 @@ export function createPrismaBrandStore(db: PrismaClient | Prisma.TransactionClie
         select: { id: true, name: true },
       }),
     create: (data) => db.brand.create({ data, select }),
-    update: (id, data) => db.brand.update({ where: { id }, data, select }),
+    async update(id, data) {
+      // adresa veche rămâne în istoric, în aceeași tranzacție cu schimbarea (C-43)
+      return inTransaction(db, async (tx) => {
+        const oldSlug =
+          data.slug === undefined
+            ? null
+            : ((await tx.brand.findUnique({ where: { id }, select: { slug: true } }))?.slug ??
+              null);
+        const row = await tx.brand.update({ where: { id }, data, select });
+        if (oldSlug !== null && data.slug !== undefined) {
+          await applyRedirectPlan(tx, "brand", planSlugRedirects("brand", id, oldSlug, data.slug));
+        }
+        return row;
+      });
+    },
     async countProducts(id) {
       const [active, deleted] = await Promise.all([
         db.product.count({ where: { brandId: id, deletedAt: null } }),
