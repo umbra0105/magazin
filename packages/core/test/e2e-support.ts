@@ -2308,7 +2308,7 @@ export async function seedE2eFilterCatalog(tag: string): Promise<{
     {
       brand: brandB,
       value: 30,
-      title: `Pompă Beta ${tag} mare, de filtrare pentru piscine publice și private, cu prefiltru, motor monofazat 230 V, protecție termică, racorduri incluse și garanție extinsă`,
+      title: `Pompă Beta ${tag} mare, de filtrare pentru piscine, cu prefiltru, motor monofazat 230 V, protecție termică și racorduri incluse`,
     },
   ];
   const products: { slug: string; title: string; value: number }[] = [];

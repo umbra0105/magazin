@@ -6,10 +6,12 @@ describe("mărimea titlului de produs", () => {
     expect(productTitleSize("Pompă de filtrare")).toBe("text-2xl sm:text-3xl");
     expect(productTitleSize("x".repeat(61))).toBe("text-xl sm:text-2xl");
     expect(productTitleSize("x".repeat(111))).toBe("text-lg sm:text-xl");
+    expect(productTitleSize("x".repeat(151))).toBe("text-lg sm:text-lg");
   });
   it("limitele sunt exacte: 60 rămâne mare, 110 rămâne la treapta mijlocie", () => {
     expect(productTitleSize("x".repeat(60))).toBe("text-2xl sm:text-3xl");
     expect(productTitleSize("x".repeat(110))).toBe("text-xl sm:text-2xl");
+    expect(productTitleSize("x".repeat(150))).toBe("text-lg sm:text-xl");
   });
 });
 

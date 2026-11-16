@@ -4,10 +4,11 @@
 
 /**
  * Mărimea titlului de produs după lungime: numele scurte rămân mari, cele de peste ~60 de caractere coboară o treaptă, iar cele
- * foarte lungi (denumiri de import cu model, cod și specificații) încă una, ca să nu umple patru rânduri pe ecran lat.
+ * foarte lungi (denumiri de import cu model, cod și specificații) încă una, peste 150 încă o treaptă (18 px), ca să nu umple patru rânduri pe ecran lat.
  */
 export function productTitleSize(title: string): string {
   const length = title.trim().length;
+  if (length > 150) return "text-lg sm:text-lg";
   if (length > 110) return "text-lg sm:text-xl";
   if (length > 60) return "text-xl sm:text-2xl";
   return "text-2xl sm:text-3xl";
