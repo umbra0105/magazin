@@ -7,6 +7,20 @@ import { getMessages } from "@/messages";
 
 const m = getMessages().storefront.catalog.product;
 
+function typeLabelOf(type: string): string {
+  return m.downloads.types[type] ?? m.downloads.types["other"] ?? "";
+}
+
+/** Tipul documentului și limba, ca text; tipul se omite când repetă titlul (ex. «Eticheta energetică»). */
+function subtitleOf(doc: PageDocument): string {
+  const type = typeLabelOf(doc.type);
+  const parts = [
+    type.toLowerCase() === doc.title.trim().toLowerCase() ? "" : type,
+    doc.language !== "ro" ? m.downloads.language(doc.language) : "",
+  ].filter((part) => part !== "");
+  return parts.join(", ");
+}
+
 function sizeText(bytes: number, locale: string): string {
   const fmt = (n: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(n);
   return bytes >= 1024 * 1024
@@ -35,11 +49,13 @@ export function DownloadsList({
         >
           <div className="min-w-0">
             <p className="font-medium">{doc.title}</p>
-            <p className="text-sm text-ink-secondary">
-              {m.downloads.types[doc.type] ?? m.downloads.types["other"]} ·{" "}
-              {doc.language.toUpperCase()} · {sizeText(doc.sizeBytes, locale)}
-            </p>
+            {subtitleOf(doc) ? (
+              <p className="text-sm text-ink-secondary">{subtitleOf(doc)}</p>
+            ) : null}
           </div>
+          <span className="ml-auto text-sm text-ink-secondary">
+            {sizeText(doc.sizeBytes, locale)}
+          </span>
           <a
             href={`/descarca/${doc.id}`}
             rel="nofollow"
@@ -83,7 +99,7 @@ export function PartsTab({
   return (
     <div className="flex flex-col gap-8">
       {diagram?.image ? (
-        <figure className="relative mx-auto w-full max-w-3xl">
+        <figure className="relative w-full max-w-4xl">
           <div className="relative isolate overflow-hidden rounded-card bg-media p-3 [&_img]:mix-blend-multiply">
             <StoreImage
               src={diagram.image.src}
@@ -138,8 +154,10 @@ export function PartsTab({
                 id={`piesa-${row.number}`}
                 className="border-b border-line-subtle"
               >
-                <th scope="row" className="py-3 pr-4 align-top font-semibold">
-                  {row.number}
+                <th scope="row" className="py-3 pr-4 align-top">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-action text-sm font-semibold text-action-fg">
+                    {row.number}
+                  </span>
                 </th>
                 <td className="py-3 pr-4 align-top">{row.title}</td>
                 <td className="whitespace-nowrap py-3 pr-4 align-top">

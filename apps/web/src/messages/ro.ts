@@ -3450,6 +3450,15 @@ export const ro = {
         downloads: {
           empty: "Pentru acest produs nu sunt documente de descărcat.",
           download: "Descarcă",
+          language: (code: string) =>
+            (
+              ({
+                en: "în engleză",
+                ro: "în română",
+                de: "în germană",
+                fr: "în franceză",
+              }) as Record<string, string>
+            )[code] ?? `limba ${code}`,
           sizeKb: (kb: string) => `${kb} KB`,
           sizeMb: (mb: string) => `${mb} MB`,
           types: {

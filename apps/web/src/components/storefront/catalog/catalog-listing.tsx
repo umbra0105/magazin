@@ -93,7 +93,10 @@ export async function CatalogListing({
     Object.keys(filters.ranges).length +
     Object.values(filters.options).flat().length;
   const showPanel =
-    active || facets.brands.length > 1 || facets.ranges.length > 0 || facets.options.length > 0;
+    active ||
+    facets.brands.length > 1 ||
+    facets.ranges.some((r) => r.min !== r.max) ||
+    facets.options.length > 0;
 
   const hidden = [
     ...(query ? [{ name: "q", value: query }] : []),
@@ -135,8 +138,9 @@ export async function CatalogListing({
     ),
   ];
 
-  const panel = (
+  const panel = (framed: boolean) => (
     <FilterPanel
+      framed={framed}
       action={base}
       facets={facets}
       hidden={hidden}
@@ -223,7 +227,7 @@ export async function CatalogListing({
             className="hidden lg:col-span-3 lg:block"
             data-filter-panel
           >
-            {panel}
+            {panel(true)}
           </aside>
         ) : null}
         <div className={showPanel ? "flex flex-col gap-6 lg:col-span-9" : "flex flex-col gap-6"}>
@@ -232,7 +236,7 @@ export async function CatalogListing({
               <summary className="flex min-h-12 cursor-pointer items-center px-5 font-semibold">
                 {m.filters.openSheet(activeCount)}
               </summary>
-              <div className="px-5 pb-6 pt-2">{panel}</div>
+              <div className="px-5 pb-6 pt-2">{panel(false)}</div>
             </details>
           ) : null}
           {relevance ? null : (

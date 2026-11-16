@@ -21,22 +21,35 @@ export function FilterPanel({
   hidden,
   clearHref,
   hasActive,
+  framed = false,
 }: {
   action: string;
   facets: ListingFacets;
   hidden: { name: string; value: string }[];
   clearHref: string;
   hasActive: boolean;
+  /** Panou propriu (pe calculator: card cu titlu); în sertar, fără cadru dublu. */
+  framed?: boolean;
 }) {
   const showBrands = facets.brands.length > 1 || facets.brands.some((b) => b.selected);
   return (
-    <FilterForm action={action} className="flex flex-col gap-7">
+    <FilterForm
+      action={action}
+      className={framed ? "flex flex-col gap-6 rounded-card bg-card p-6" : "flex flex-col gap-6"}
+    >
+      {framed ? <h2 className="text-lg font-semibold">{m.title}</h2> : null}
       {hidden.map((field) => (
         <input key={field.name} type="hidden" name={field.name} value={field.value} />
       ))}
       {showBrands ? (
-        <fieldset className="flex flex-col gap-1">
-          <legend className="mb-2 text-sm font-semibold">{m.brand}</legend>
+        <div
+          role="group"
+          aria-label={m.brand}
+          className="flex flex-col gap-1 border-t border-line-subtle pt-6 first:border-t-0 first:pt-0"
+        >
+          <p aria-hidden="true" className="mb-1 text-sm font-semibold">
+            {m.brand}
+          </p>
           {facets.brands.map((brand) => (
             <label key={brand.slug} className={CHECK}>
               <input
@@ -50,24 +63,38 @@ export function FilterPanel({
               <span className="text-ink-secondary">({brand.count})</span>
             </label>
           ))}
-        </fieldset>
+        </div>
       ) : null}
-      {facets.ranges.map((range) => (
-        <RangeFilter
-          key={range.code}
-          code={range.code}
-          name={range.name}
-          unit={range.unit}
-          min={range.min}
-          max={range.max}
-          selectedMin={range.selected?.min ?? null}
-          selectedMax={range.selected?.max ?? null}
-          count={range.count}
-        />
-      ))}
+      {/* un interval cu o singură valoare în listă (minim = maxim) nu filtrează nimic: nu se arată, decât dacă e deja ales */}
+      {facets.ranges
+        .filter((range) => range.min !== range.max || range.selected !== null)
+        .map((range) => (
+          <div
+            key={range.code}
+            className="border-t border-line-subtle pt-6 first:border-t-0 first:pt-0"
+          >
+            <RangeFilter
+              code={range.code}
+              name={range.name}
+              unit={range.unit}
+              min={range.min}
+              max={range.max}
+              selectedMin={range.selected?.min ?? null}
+              selectedMax={range.selected?.max ?? null}
+              count={range.count}
+            />
+          </div>
+        ))}
       {facets.options.map((group) => (
-        <fieldset key={group.code} className="flex flex-col gap-1">
-          <legend className="mb-2 text-sm font-semibold">{group.name}</legend>
+        <div
+          key={group.code}
+          role="group"
+          aria-label={group.name}
+          className="flex flex-col gap-1 border-t border-line-subtle pt-6 first:border-t-0 first:pt-0"
+        >
+          <p aria-hidden="true" className="mb-1 text-sm font-semibold">
+            {group.name}
+          </p>
           {group.options.map((option) => (
             <label key={option.id} className={CHECK}>
               <input
@@ -81,9 +108,9 @@ export function FilterPanel({
               <span className="text-ink-secondary">({option.count})</span>
             </label>
           ))}
-        </fieldset>
+        </div>
       ))}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 border-t border-line-subtle pt-6">
         <StoreButton type="submit">{m.apply}</StoreButton>
         {hasActive ? (
           <Link

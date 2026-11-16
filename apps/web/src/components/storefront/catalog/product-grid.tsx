@@ -50,7 +50,8 @@ export function ProductCardView({
       price={price?.isRange ? m.card.from(amount) : amount}
       oldPrice={price?.compareAt ? formatPrice(price.compareAt, format) : undefined}
       status={{
-        label: detail ? `${label} · ${detail}` : label,
+        label,
+        ...(detail ? { detail } : {}),
         tone: availabilityTone(product.availability.state),
       }}
       badge={

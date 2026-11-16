@@ -32,9 +32,6 @@ export function availabilityDetail(availability: PublicAvailability): string | n
 }
 
 export function AvailabilityPill({ availability }: { availability: PublicAvailability }) {
-  const detail = availabilityDetail(availability);
   const label = availabilityLabel(availability.state);
-  return (
-    <StorePill tone={TONE[availability.state]}>{detail ? `${label} · ${detail}` : label}</StorePill>
-  );
+  return <StorePill tone={TONE[availability.state]}>{label}</StorePill>;
 }

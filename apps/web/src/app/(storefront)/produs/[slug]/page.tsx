@@ -191,7 +191,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
             ) : null}
             <h1 className="heading-display text-2xl text-balance sm:text-3xl">{product.title}</h1>
             {product.energyClass ? (
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="mt-1 flex flex-wrap items-center gap-3">
                 <EnergyLabel
                   energyClass={product.energyClass}
                   label={m.product.energy.label(product.energyClass)}
@@ -246,7 +246,11 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
       {product.compatible.length > 0 ? (
         <section className="flex flex-col gap-6">
-          <SectionHeading title={m.product.compatible.title} lede={m.product.compatible.lede} />
+          <SectionHeading
+            compact
+            title={m.product.compatible.title}
+            lede={m.product.compatible.lede}
+          />
           <ProductGrid
             products={product.compatible}
             format={format}
@@ -258,7 +262,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
       {product.related.length > 0 ? (
         <section className="flex flex-col gap-6">
-          <SectionHeading title={m.product.related.title} lede={m.product.related.lede} />
+          <SectionHeading compact title={m.product.related.title} lede={m.product.related.lede} />
           <ProductGrid
             products={product.related}
             format={format}

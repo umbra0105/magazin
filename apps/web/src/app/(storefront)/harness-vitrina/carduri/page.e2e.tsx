@@ -18,7 +18,8 @@ const CARDS = [
   {
     name: "Produs la comandă cu un nume destul de lung ca să ocupe mai multe rânduri în card",
     price: "1.890,00 RON",
-    label: "La comandă · livrare în aproximativ 21 de zile",
+    label: "La comandă",
+    detail: "livrare în aproximativ 21 de zile",
     tone: "info" as const,
   },
   {
@@ -30,7 +31,8 @@ const CARDS = [
   {
     name: "Produs cu stoc limitat",
     price: "1.290,00 RON",
-    label: "Stoc limitat · Mai sunt 2",
+    label: "Stoc limitat",
+    detail: "Mai sunt 2",
     tone: "warning" as const,
   },
 ];
@@ -48,7 +50,11 @@ export default function ProductCardsHarness() {
               name={card.name}
               price={card.price}
               media={null}
-              status={{ label: card.label, tone: card.tone }}
+              status={{
+                label: card.label,
+                ...(card.detail ? { detail: card.detail } : {}),
+                tone: card.tone,
+              }}
             />
           </li>
         ))}

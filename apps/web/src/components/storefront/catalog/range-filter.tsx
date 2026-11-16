@@ -40,26 +40,31 @@ export function RangeFilter({
   const step = max - min > 50 ? 1 : max - min > 5 ? 0.5 : 0.1;
   const label = m.rangeLabel(name, unit);
 
-  const slider = (side: "lo" | "hi") => {
-    const value = side === "lo" ? Math.min(numLo, numHi) : Math.max(numLo, numHi);
-    return (
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={Number.isFinite(value) ? value : min}
-        aria-label={side === "lo" ? m.sliderMin(name) : m.sliderMax(name)}
-        onChange={(event) => {
-          const next = event.target.value;
-          if (side === "lo") setLo(Number(next) <= min ? "" : next);
-          else setHi(Number(next) >= max ? "" : next);
-        }}
-        className="h-6 w-full accent-brand"
-        data-range-slider={side}
-      />
-    );
-  };
+  const low = Math.min(numLo, numHi);
+  const high = Math.max(numLo, numHi);
+  const span = max - min || 1;
+  const left = Math.max(0, Math.min(100, ((low - min) / span) * 100));
+  const right = Math.max(0, Math.min(100, ((high - min) / span) * 100));
+
+  const slider = (side: "lo" | "hi") => (
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={
+        side === "lo" ? (Number.isFinite(low) ? low : min) : Number.isFinite(high) ? high : max
+      }
+      aria-label={side === "lo" ? m.sliderMin(name) : m.sliderMax(name)}
+      onChange={(event) => {
+        const next = event.target.value;
+        if (side === "lo") setLo(Number(next) <= min ? "" : next);
+        else setHi(Number(next) >= max ? "" : next);
+      }}
+      className="range-dual absolute inset-0 w-full"
+      data-range-slider={side}
+    />
+  );
 
   return (
     <fieldset className="flex flex-col gap-3" data-range-filter={code}>
@@ -71,7 +76,16 @@ export function RangeFilter({
         </span>
       </legend>
       {enhanced ? (
-        <div className="flex flex-col gap-1">
+        <div className="relative h-8">
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-line-control"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-brand"
+            style={{ left: `${left}%`, width: `${Math.max(right - left, 0)}%` }}
+          />
           {slider("lo")}
           {slider("hi")}
         </div>

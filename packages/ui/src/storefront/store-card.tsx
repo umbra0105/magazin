@@ -31,7 +31,7 @@ export interface ProductCardProps {
   /** Prețul gata formatat de apelant: cardul nu calculează și nu formatează bani (motorul de prețuri e în Faza 8). */
   price: string;
   oldPrice?: string | undefined;
-  status?: { label: string; tone: StorePillTone } | undefined;
+  status?: { label: string; detail?: string | undefined; tone: StorePillTone } | undefined;
   /** Marcajul din colțul imaginii (eticheta energetică), desenat de apelant. */
   badge?: ReactNode;
   /** Nivelul titlului în pagină (h2 sub un h1 de listă, h3 sub un h2 de secțiune). */
@@ -85,7 +85,7 @@ export function ProductCard({
       </div>
       <div className="flex flex-1 flex-col gap-1 p-4 sm:p-5">
         {brand ? <p className="text-xs font-medium text-ink-secondary">{brand}</p> : null}
-        <Heading className="text-lg font-semibold leading-snug">
+        <Heading className="break-words text-lg font-semibold leading-snug">
           <a
             href={href}
             className="rounded-sm outline-none after:absolute after:inset-0 after:content-['']"
@@ -110,7 +110,10 @@ export function ProductCard({
               aria-hidden="true"
               className={cn("mt-1.5 size-2 shrink-0 rounded-full", DOT[status.tone])}
             />
-            {status.label}
+            <span>
+              <span className="font-medium text-ink">{status.label}</span>
+              {status.detail ? <span> {status.detail}</span> : null}
+            </span>
           </p>
         ) : null}
       </div>

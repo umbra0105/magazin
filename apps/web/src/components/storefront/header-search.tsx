@@ -93,11 +93,17 @@ export function HeaderSearch({ className }: { className?: string }) {
   };
 
   let index = -1;
-  const row = (href: string, content: ReactNode) => {
+  const row = (href: string, content: ReactNode, groupStart = false) => {
     index += 1;
     const current = index;
     return (
-      <li key={href} role="option" aria-selected={current === active} id={`${id}-o${current}`}>
+      <li
+        key={href}
+        data-group-start={groupStart ? "" : undefined}
+        role="option"
+        aria-selected={current === active}
+        id={`${id}-o${current}`}
+      >
         <a
           href={href}
           tabIndex={-1}
@@ -148,7 +154,7 @@ export function HeaderSearch({ className }: { className?: string }) {
           id={`${id}-list`}
           role="listbox"
           aria-label={m.suggestions}
-          className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-card bg-surface-page py-2 text-ink shadow-popover"
+          className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-card bg-surface-page py-2 text-ink shadow-popover [&>li[data-group-start]]:mt-2 [&>li[data-group-start]]:border-t [&>li[data-group-start]]:border-line-subtle [&>li[data-group-start]]:pt-2"
         >
           {found.products.map((product) =>
             row(
@@ -170,22 +176,24 @@ export function HeaderSearch({ className }: { className?: string }) {
               </>,
             ),
           )}
-          {found.categories.map((category) =>
+          {found.categories.map((category, i) =>
             row(
               category.href,
               <>
                 <span className="text-ink-secondary">{m.suggestCategory}</span>
                 <span className="truncate font-medium">{category.name}</span>
               </>,
+              i === 0,
             ),
           )}
-          {found.brands.map((brand) =>
+          {found.brands.map((brand, i) =>
             row(
               brand.href,
               <>
                 <span className="text-ink-secondary">{m.suggestBrand}</span>
                 <span className="truncate font-medium">{brand.name}</span>
               </>,
+              i === 0 && found.categories.length === 0,
             ),
           )}
         </ul>
