@@ -185,7 +185,7 @@ export function PurchasePanel({
         </div>
       ) : null}
 
-      {contact && (contact.phone || contact.email) ? (
+      {selected.purchasable && contact && (contact.phone || contact.email) ? (
         <section
           className="flex flex-col gap-1.5 rounded-card bg-card p-5 text-sm"
           aria-label={m.orderTitle}

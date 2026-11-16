@@ -189,7 +189,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
             {product.brand ? (
               <p className="text-sm font-medium text-ink-secondary">{product.brand.name}</p>
             ) : null}
-            <h1 className="heading-display text-3xl text-balance sm:text-4xl">{product.title}</h1>
+            <h1 className="heading-display text-2xl text-balance sm:text-3xl">{product.title}</h1>
             {product.energyClass ? (
               <div className="flex flex-wrap items-center gap-3">
                 <EnergyLabel

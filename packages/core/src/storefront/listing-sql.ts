@@ -17,6 +17,11 @@ export interface ListingScope {
   collectionId?: string;
   /** Textul căutat (`/cautare?q=`), după normalizare; lipsa lui înseamnă fără căutare. */
   search?: string;
+  /**
+   * `exact`: doar cuvinte (cu prefix) și coduri; `fuzzy`: și greșeli de scriere (trigrame). Se alege o singură dată pe interogare
+   * (`CatalogReader` încearcă întâi `exact`): trigramele aduc produse fără legătură când textul se potrivește deja exact.
+   */
+  searchMode?: "exact" | "fuzzy";
   filters?: ListingFilters;
 }
 
@@ -32,13 +37,16 @@ export const SIMILARITY_MIN = 0.45;
 
 const normalizeKey = (key: string): string => key.trim().toLowerCase();
 
-export function searchCondition(search: string): Prisma.Sql | null {
+export function searchCondition(search: string, fuzzy: boolean): Prisma.Sql | null {
   if (!isSearchable(search)) return null;
   const tsquery = toPrefixTsQuery(search);
   const like = likePrefix(search);
+  const typo = fuzzy
+    ? Prisma.sql`OR similarity(f_unaccent(lower(p.title)), ${like}) >= ${SIMILARITY_MIN}`
+    : Prisma.empty;
   return Prisma.sql`(
     to_tsvector('simple', f_unaccent(lower(p.title || ' ' || coalesce(p.subtitle, '')))) @@ to_tsquery('simple', ${tsquery})
-    OR similarity(f_unaccent(lower(p.title)), ${like}) >= ${SIMILARITY_MIN}
+    ${typo}
     OR EXISTS (
       SELECT 1 FROM product_variant v WHERE v."productId" = p.id AND (
         f_unaccent(lower(v.sku)) LIKE ${`${like}%`}
@@ -110,7 +118,7 @@ export function scopeConditions(scope: ListingScope, exclude: FilterExclusion = 
     );
   }
   if (scope.search !== undefined) {
-    const condition = searchCondition(scope.search);
+    const condition = searchCondition(scope.search, scope.searchMode === "fuzzy");
     // o căutare prea scurtă nu găsește nimic (nu «toate produsele»)
     parts.push(condition ?? Prisma.sql`false`);
   }

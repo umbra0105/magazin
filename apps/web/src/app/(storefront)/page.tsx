@@ -21,12 +21,24 @@ import {
   listProductsCached,
 } from "@/lib/storefront-catalog";
 import { getStorefrontChrome } from "@/lib/storefront-chrome";
-import { SHOP_PATH, productHref } from "@/lib/storefront-urls";
+import { SHOP_PATH, brandHref, productHref } from "@/lib/storefront-urls";
 import { getMessages } from "@/messages";
 
 const m = getMessages().storefront.home;
 
 const TRUST_ICONS = [Truck, ShieldCheck, Wallet, Headset];
+
+/**
+ * Plăcile de categorie ocupă rânduri complete: pe telefon (2 coloane) o placă rămasă singură se întinde pe lățime; pe ecrane late (6
+ * coloane) rândul de 3 se completează, iar un rând cu rest se împarte egal (o placă rămasă = tot rândul, două = jumătate fiecare).
+ */
+function tileSpan(index: number, count: number): string {
+  const small = count % 2 === 1 && index === count - 1 ? "col-span-2" : "col-span-1";
+  const rest = count % 3;
+  const inLastRow = rest !== 0 && index >= count - rest;
+  const wide = inLastRow ? (rest === 1 ? "lg:col-span-6" : "lg:col-span-3") : "lg:col-span-2";
+  return `${small} ${wide}`;
+}
 
 /** Câte produse recomandate arată pagina de start (două rânduri pe un ecran lat). */
 const FEATURED_COUNT = 8;
@@ -133,12 +145,12 @@ export default async function HomePage() {
         {categories.length > 0 ? (
           <section className="flex flex-col gap-8">
             <SectionHeading title={m.categories.title} lede={m.categories.lede} />
-            <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-              {categories.map((category) => (
-                <li key={category.id} className="contents">
+            <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
+              {categories.map((category, index) => (
+                <li key={category.id} className={tileSpan(index, categories.length)}>
                   <Link
                     href={category.href}
-                    className="group flex flex-col overflow-hidden rounded-card bg-card transition-colors duration-(--motion) hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    className="h-full group flex flex-col overflow-hidden rounded-card bg-card transition-colors duration-(--motion) hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   >
                     {category.image ? (
                       <span className="relative isolate block aspect-4/3 overflow-hidden bg-media p-3 [&_img]:size-full [&_img]:object-contain [&_img]:mix-blend-multiply">
@@ -185,7 +197,12 @@ export default async function HomePage() {
             <ul className="flex flex-wrap gap-x-8 gap-y-3 text-ink-secondary">
               {brands.map((brand) => (
                 <li key={brand.slug} className="text-lg font-medium">
-                  {brand.name}
+                  <Link
+                    href={brandHref(brand.slug)}
+                    className="rounded-sm hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  >
+                    {brand.name}
+                  </Link>
                 </li>
               ))}
             </ul>

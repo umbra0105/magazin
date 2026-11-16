@@ -37,10 +37,20 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Setări (Faza 7) | `catalog.showSalePricing` (oprit) nu are încă ecran în admin: rămâne oprit până la răspunsul avocatului (Omnibus) | -
 - [ ] S3 | Temă închisă, imagini de produs (Faza 7) | masa foto a cardurilor și a galeriei rămâne deschisă la culoare în tema închisă (decizie de design din Faza 6: fotografiile au fundal alb), iar substituentul «Fără imagine» e un bloc luminos pe pagină întunecată | local-data/capturi-faza7/checkpoint/produs-inchis-1440.png
 - [ ] S3 | Pagina de produs (Faza 7) | blocul «Cum comanzi» nu apare cât telefonul și emailul firmei sunt goale în setări: produsul nu are atunci nicio cale de comandă vizibilă (până la coș, Faza 8); de completat datele firmei | local-data/capturi-faza7/checkpoint/produs-deschis-1440.png
-- [ ] S3 | Liste (Faza 7) | pe telefon, grila de 2 coloane strânge numele lungi de produs (6–7 rânduri într-un card) | local-data/capturi-faza7/checkpoint/magazin-deschis-390.png
+- [x] S3 | Liste (Faza 7) | pe telefon, grila de 2 coloane strânge numele lungi de produs (6–7 rânduri într-un card) | local-data/capturi-faza7/checkpoint/magazin-deschis-390.png — parțial: titlurile lungi de produs sunt mai mici pe pagina de produs; cardurile păstrează numele întreg (2 coloane pe telefon)
 - [ ] S3 | «Anunță-mă când revine» (Faza 7) | o adresă care a atins plafonul de cereri în așteptare (10, setabil) primește un refuz la o cerere pentru încă o variantă, în timp ce o adresă deja înscrisă primește «Gata»: răspunsul diferă și trădează existența cererilor pe adresă; de uniformizat (răspuns identic, cu mesaj generic) | -
-- [ ] S3 | Pagina de produs (Faza 7) | blocul «Cum comanzi» apare și la produsele indisponibile, lângă «Anunță-mă»; de decis dacă la «Indisponibil» se arată doar formularul | local-data/capturi-faza7/checkpoint/produs-epuizat-deschis-1440.png
-- [ ] S3 | Pagina de start (Faza 7) | banda de mărci e text simplu (fără legături) până există paginile de mărci (pasul C); mărcile nu au logo în datele demo | local-data/capturi-faza7/checkpoint/acasa-deschis-1440.png
+- [x] S3 | Pagina de produs (Faza 7) | blocul «Cum comanzi» apare și la produsele indisponibile, lângă «Anunță-mă»; de decis dacă la «Indisponibil» se arată doar formularul | local-data/capturi-faza7/checkpoint/produs-epuizat-deschis-1440.png — rezolvat: apare doar la produsele care se pot comanda; la cele indisponibile rămâne formularul «Anunță-mă»
+- [x] S3 | Pagina de start (Faza 7) | banda de mărci e text simplu (fără legături) până există paginile de mărci (pasul C); mărcile nu au logo în datele demo | local-data/capturi-faza7/checkpoint/acasa-deschis-1440.png — rezolvat: mărcile sunt legături către paginile de marcă (`/brand/<slug>`)
+
+- [x] S3 | Pagina de produs (Faza 7) | nume lungi de produs prea mari pe calculator: titlul paginii de produs coborât la text-2xl / text-3xl
+- [x] S3 | Firimituri (Faza 7) | pe telefon ocupau 4 rânduri: rămân părintele direct și pagina curentă, pe un singur rând (de la sm apare tot drumul)
+- [x] S3 | Pagina de start (Faza 7) | plăcile de categorie cu rând incomplet: ocupă rânduri complete (pe 2 coloane o placă singură se întinde, pe 6 coloane rândul cu rest se împarte egal)
+- [ ] S3 | Date firmă (Faza 7) | telefonul și emailul firmei (blocul «Cum comanzi», subsol, JSON-LD) nu au ecran de admin; stau în baza de date (`company.phone`, `company.email`) până în Faza 13 (docs/06: ecranul Setări pentru datele firmei)
+- [ ] S3 | Filtre (Faza 7) | filtrul «doar în stoc» nu există: starea de stoc se calculează în aplicație (regulile din Faza 5), nu în SQL, iar un filtru aproximativ ar fi greșit; de făcut când stocul vizibil se poate interoga exact
+- [ ] S3 | Filtre (Faza 7) | sertarul de filtre de pe telefon e o secțiune care se deschide deasupra listei (`details`, funcționează fără JavaScript), nu un panou pe tot ecranul
+- [ ] S3 | Colecții (Faza 7) | colecțiile automate (`type = automated`, reguli) nu au motor de reguli: arată doar produsele atașate explicit
+- [ ] S3 | Căutare (Faza 7) | potrivirea aproximativă (trigrame) nu folosește indexul (`similarity() >= 0,45`): la ~500 de produse e instant; de trecut pe operatorul `%` cu prag setat dacă catalogul crește mult
+- [ ] S3 | Piese de schimb (Faza 7) | rândul din tabelul pieselor are «Vezi piesa», nu «Adaugă în coș»: coșul vine în Faza 8
 
 ## Rezolvate
 

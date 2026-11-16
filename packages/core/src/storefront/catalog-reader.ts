@@ -15,7 +15,13 @@ import {
   type ListingPrice,
 } from "./listing-price";
 import type { ListingSort } from "./listing-query";
-import { joinAnd, scopeConditions, searchRank, type ListingScope } from "./listing-sql";
+import {
+  joinAnd,
+  scopeConditions,
+  searchCondition,
+  searchRank,
+  type ListingScope,
+} from "./listing-sql";
 import type { ListingFilters, NumericRange } from "./listing-filters";
 import {
   publicAvailabilityOfRow,
@@ -350,10 +356,11 @@ export class CatalogReader {
 
   /** Produsele unei liste, sortate și paginate în SQL (sortarea după preț nu se poate exprima prin Prisma). */
   async listProducts(
-    scope: ListingScope,
+    rawScope: ListingScope,
     options: { sort: ListingSort | "relevance"; offset: number; limit: number },
     settings: CatalogSettings,
   ): Promise<ListingResult> {
+    const scope = await this.withSearchMode(rawScope);
     const at = this.now();
     const where = this.scopeSql(scope);
     const priceSql = this.priceSql(at, settings.showSalePricing);
@@ -375,6 +382,20 @@ export class CatalogReader {
       settings,
     );
     return { items, total };
+  }
+
+  /**
+   * Alege modul căutării: `exact` dacă există măcar un produs care se potrivește pe cuvinte sau coduri, altfel `fuzzy` (greșeli de
+   * scriere). Fără căutare, scope-ul rămâne neschimbat. Alegerea ține de interogare (nu de filtre), deci e aceeași pentru listă și facete.
+   */
+  private async withSearchMode(scope: ListingScope): Promise<ListingScope> {
+    if (scope.search === undefined || scope.searchMode !== undefined) return scope;
+    const exact = searchCondition(scope.search, false);
+    if (!exact) return scope;
+    const rows = await this.db.$queryRaw<{ one: number }[]>(
+      Prisma.sql`SELECT 1 AS one FROM product p WHERE p.status = 'active' AND p."deletedAt" IS NULL AND ${exact} LIMIT 1`,
+    );
+    return { ...scope, searchMode: rows.length > 0 ? "exact" : "fuzzy" };
   }
 
   private scopeSql(scope: ListingScope): Prisma.Sql {
@@ -494,7 +515,8 @@ export class CatalogReader {
    * ei filtru (altfel alegerea unei mărci ar face să dispară celelalte mărci): numărul de lângă o opțiune e câte produse ar rămâne
    * dacă ai alege-o. Atributele numerice dau limitele reale (minim și maxim) ale valorilor din listă, pentru slider.
    */
-  async getFacets(scope: ListingScope): Promise<ListingFacets> {
+  async getFacets(rawScope: ListingScope): Promise<ListingFacets> {
+    const scope = await this.withSearchMode(rawScope);
     const filters = scope.filters;
     const ownScope = (exclude: Parameters<typeof scopeConditions>[1]) =>
       joinAnd(scopeConditions(scope, exclude));

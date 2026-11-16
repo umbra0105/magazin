@@ -306,6 +306,17 @@ describe("căutare (FTS + trigrame)", () => {
     });
   });
 
+  it("când textul se potrivește exact pe cuvinte, trigramele nu aduc produse fără legătură; fără nicio potrivire exactă, se acceptă greșeli de scriere", async () => {
+    await withReader(async (reader, tx) => {
+      const tag = uid().replace(/-/g, "");
+      const alfa = await product(tx, { title: `Pompa alfa ${tag} mica` });
+      await product(tx, { title: `Pompa beta ${tag} mare` });
+      expect(ids(await find(reader, `pompa alfa ${tag}`))).toEqual(new Set([alfa.id]));
+      // niciun produs nu are cuvântul «pompaa»: fuzzy aduce produsele cu titlu apropiat
+      expect((await find(reader, `pompaa alfa ${tag}`)).total).toBeGreaterThan(0);
+    });
+  });
+
   it("greșeli de scriere apropiate (trigrame) și cod de produs / cod de producător, după început", async () => {
     await withReader(async (reader, tx) => {
       const tag = uid().replace(/-/g, "");

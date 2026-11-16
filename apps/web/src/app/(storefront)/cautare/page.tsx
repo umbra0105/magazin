@@ -65,10 +65,7 @@ export default async function SearchPage({
           }
         />
       ) : (
-        <StorefrontState
-          title={q ? m.search.empty(q) : m.search.heading}
-          description={q ? m.search.emptyHelp : m.search.tooShort}
-        />
+        <StorefrontState title={m.search.heading} description={m.search.tooShort} />
       )}
     </Container>
   );

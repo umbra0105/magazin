@@ -2280,3 +2280,79 @@ export async function resetE2eAppearance(): Promise<void> {
   });
   await withRedis((redis) => redis.del("ecom:settings:v1", "ecom:branding:v1"));
 }
+
+/**
+ * Catalog de probă pentru filtrele vitrinei: o categorie, două mărci și un atribut numeric filtrabil, cu trei produse active
+ * (marca A cu 10 și 20, marca B cu 30). Totul are adresa `e2e-…` și se șterge cu ajutoarele de curățare ale workerului.
+ */
+export async function seedE2eFilterCatalog(tag: string): Promise<{
+  categoryPath: string;
+  brandA: { slug: string; name: string };
+  brandB: { slug: string; name: string };
+  attributeCode: string;
+  attributeName: string;
+  products: { slug: string; title: string; value: number }[];
+}> {
+  const categoryPath = `e2e-cat-${tag}`;
+  const brandA = { slug: `e2e-brand-a-${tag}`, name: `Marca Alfa ${tag}` };
+  const brandB = { slug: `e2e-brand-b-${tag}`, name: `Marca Beta ${tag}` };
+  const attributeCode = `e2e_debit_${tag}`;
+  const attributeName = `Debit ${tag}`;
+  trackedCategories.add(categoryPath);
+  trackedBrands.add(brandA.slug);
+  trackedBrands.add(brandB.slug);
+  trackedAttributes.add(attributeCode);
+  const plan = [
+    { brand: brandA, value: 10, title: `Pompă Alfa ${tag} mică` },
+    { brand: brandA, value: 20, title: `Pompă Alfa ${tag} medie` },
+    { brand: brandB, value: 30, title: `Pompă Beta ${tag} mare` },
+  ];
+  const products: { slug: string; title: string; value: number }[] = [];
+  await withClient(async (db) => {
+    const category = await db.query(
+      `insert into category (id, name, slug, path, depth, "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $2, 0, 0, now()) returning id`,
+      [`E2E Filtre ${tag}`, categoryPath],
+    );
+    const brandIds = new Map<string, string>();
+    for (const brand of [brandA, brandB]) {
+      const row = await db.query(
+        `insert into brand (id, name, slug, "updatedAt") values (gen_random_uuid()::text, $1, $2, now()) returning id`,
+        [brand.name, brand.slug],
+      );
+      brandIds.set(brand.slug, row.rows[0]?.id as string);
+    }
+    const attribute = await db.query(
+      `insert into attribute (id, code, name, type, unit, "isFilterable", "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, 'number', 'mc/h', true, 0, now()) returning id`,
+      [attributeCode, attributeName],
+    );
+    let index = 0;
+    for (const item of plan) {
+      const slug = `e2e-filtre-${tag}-${index++}`;
+      trackedProducts.add(slug);
+      const product = await db.query(
+        `insert into product (id, slug, title, status, "manageStock", "stockStatus", "brandId", "publishedAt", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, 'active', false, 'instock', $3, now(), now()) returning id`,
+        [slug, item.title, brandIds.get(item.brand.slug)],
+      );
+      const productId = product.rows[0]?.id as string;
+      await db.query(
+        `insert into product_variant (id, "productId", sku, price, "isDefault", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, true, now())`,
+        [productId, `E2E-F-${tag}-${index}`.toUpperCase(), 10000 + index * 1000],
+      );
+      await db.query(
+        `insert into product_category ("productId", "categoryId", "isPrimary") values ($1, $2, true)`,
+        [productId, category.rows[0]?.id as string],
+      );
+      await db.query(
+        `insert into attribute_value (id, "productId", "attributeId", "numberValue")
+         values (gen_random_uuid()::text, $1, $2, $3)`,
+        [productId, attribute.rows[0]?.id as string, item.value],
+      );
+      products.push({ slug, title: item.title, value: item.value });
+    }
+  });
+  return { categoryPath, brandA, brandB, attributeCode, attributeName, products };
+}
