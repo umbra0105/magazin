@@ -35,6 +35,9 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Liste (Faza 7) | pe telefon sortarea ocupă trei rânduri de pastile; de comprimat (de exemplu un rând derulabil) | local-data/capturi-faza7/checkpoint/categorie-inchis-390.png
 - [ ] S3 | Redirecționări (Faza 7) | adresa veche și forma cu litere mari redirecționează cu 308 (permanent, echivalent pentru Google cu 301), cum face Next din pagini; același comportament ca redirecturile adminului | -
 - [ ] S3 | Setări (Faza 7) | `catalog.showSalePricing` (oprit) nu are încă ecran în admin: rămâne oprit până la răspunsul avocatului (Omnibus) | -
+- [ ] S3 | Temă închisă, imagini de produs (Faza 7) | masa foto a cardurilor și a galeriei rămâne deschisă la culoare în tema închisă (decizie de design din Faza 6: fotografiile au fundal alb), iar substituentul «Fără imagine» e un bloc luminos pe pagină întunecată | local-data/capturi-faza7/checkpoint/produs-inchis-1440.png
+- [ ] S3 | Pagina de produs (Faza 7) | blocul «Cum comanzi» nu apare cât telefonul și emailul firmei sunt goale în setări: produsul nu are atunci nicio cale de comandă vizibilă (până la coș, Faza 8); de completat datele firmei | local-data/capturi-faza7/checkpoint/produs-deschis-1440.png
+- [ ] S3 | Liste (Faza 7) | pe telefon, grila de 2 coloane strânge numele lungi de produs (6–7 rânduri într-un card) | local-data/capturi-faza7/checkpoint/magazin-deschis-390.png
 
 ## Rezolvate
 

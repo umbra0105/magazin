@@ -32,6 +32,8 @@ Magazinul nostru e Next.js cu randare pe server, deci cea mai gravă problemă a
 | **Consent pentru scripturile terțe** (analitice, reclame) cu stare implicită „refuzat" | F32 | verificare |
 | **Feed de produse (Google Merchant), când există**: se generează din prețurile magazinului, niciodată dintr-un export străin; **prețul din feed e egal cu prețul afișat pe pagina de produs**; plafon de plauzibilitate configurabil (alertă și excludere din feed peste o valoare), cu raport de produse excluse; adresa feed-ului: `/feed/google.xml` (`03-frontend.md` §1) | un preț greșit într-un feed poate duce la suspendarea întregului cont Merchant | test automat: prețul din feed = prețul de pe pagină, pe toate produsele; test pe plafon |
 
+> **Notă de implementare (Faza 7, 2026-11-16): «redirect 301» se implementează ca 308 permanent.** Paginile Next răspund cu `308 Permanent Redirect` (`permanentRedirect`), nu cu 301; pentru Google și Bing un 308 se tratează ca un 301 (redirecționare permanentă, semnalele de clasare se transferă). Peste tot în acest document, «301» înseamnă «redirecționare permanentă (308 în cod)»; același cod folosesc și redirecturile adminului.
+
 Monitorizare după lansare: înscrierea domeniului în Google Search Console și Bing Webmaster Tools, trimiterea sitemap-ului, urmărirea acoperirii de indexare; Core Web Vitals din date de teren (nu doar Lighthouse local); verificare periodică cu `curl` că randarea pe server întoarce conținut complet.
 
 ## 2. Migrarea feed-ului Google Merchant fără pierderea istoricului — OPȚIONAL, doar pentru un client care are deja un magazin

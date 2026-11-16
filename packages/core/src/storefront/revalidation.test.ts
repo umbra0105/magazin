@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
   REVALIDATE_MAX_SKEW_SECONDS,
@@ -39,6 +40,25 @@ describe("semnătura cererilor de invalidare", () => {
     expect(at(NOW, NOW + REVALIDATE_MAX_SKEW_SECONDS + 1)).toBe(false);
     expect(at(NOW, NOW - REVALIDATE_MAX_SKEW_SECONDS - 1)).toBe(false);
     expect(at(NOW, NOW + REVALIDATE_MAX_SKEW_SECONDS)).toBe(true);
+  });
+});
+
+describe("semnătura: chei și marcă de timp ciudate", () => {
+  it("o marcă de timp care nu e întreg (NaN) nu trece, nici dacă semnătura e calculată peste ea", () => {
+    const body = "{}";
+    const signature = signRevalidation(KEY, Number.NaN, body);
+    expect(verifyRevalidation(KEY, { timestamp: Number.NaN, signature, body, now: NOW })).toBe(
+      false,
+    );
+    expect(verifyRevalidation(KEY, { timestamp: 1.5, signature, body, now: 1 })).toBe(false);
+  });
+
+  it("cheia de semnare e DERIVATĂ din APP_KEY (o semnătură făcută cu cheia brută nu trece)", () => {
+    const body = "{}";
+    const raw = createHmac("sha256", Buffer.from(KEY, "base64"))
+      .update(`${NOW}.${body}`)
+      .digest("base64url");
+    expect(verifyRevalidation(KEY, { timestamp: NOW, signature: raw, body, now: NOW })).toBe(false);
   });
 });
 
