@@ -423,3 +423,78 @@ describe("sursa pentru sitemap", () => {
     });
   });
 });
+
+describe("pagina de produs: fișa explodată, documente, piese și compatibilitate", () => {
+  it("fișa se încarcă doar cu includeDiagram (flag-ul); piesele, documentele și «Se montează cu» vin din relații și din tabul Descărcări", async () => {
+    await withReader(async (reader, tx) => {
+      const main = await product(tx);
+      const part = await product(tx, { title: "Garnitură" });
+      const other = await product(tx, { title: "Racord compatibil" });
+      const media = await tx.media.create({
+        data: {
+          status: "ready",
+          mime: "image/png",
+          sizeBytes: 10,
+          checksum: "c".repeat(64),
+          originalName: "fisa.png",
+          storageKey: `public/media/${uid()}/original.png`,
+          variants: [],
+        },
+      });
+      const diagram = await tx.partsDiagram.create({
+        data: { title: "Fișa pompei", mediaId: media.id },
+      });
+      await tx.partsDiagramProduct.create({ data: { diagramId: diagram.id, productId: main.id } });
+      await tx.partsDiagramHotspot.create({
+        data: { diagramId: diagram.id, number: 1, productId: part.id, xBp: 1000, yBp: 2000 },
+      });
+      await tx.productRelation.create({
+        data: { productId: main.id, relatedProductId: part.id, type: "spare_part" },
+      });
+      await tx.productRelation.create({
+        data: { productId: main.id, relatedProductId: other.id, type: "compatible_with" },
+      });
+      await tx.productDocument.create({
+        data: {
+          productId: main.id,
+          type: "manual",
+          title: "Manual",
+          storageKey: `private/docs/${uid()}.pdf`,
+          originalName: "manual.pdf",
+          mime: "application/pdf",
+          sizeBytes: 1234,
+          showInTab: true,
+        },
+      });
+      await tx.productDocument.create({
+        data: {
+          productId: main.id,
+          type: "other",
+          title: "Ascuns",
+          storageKey: `private/docs/${uid()}.pdf`,
+          originalName: "ascuns.pdf",
+          mime: "application/pdf",
+          sizeBytes: 1,
+          showInTab: false,
+        },
+      });
+
+      const off = await reader.getProduct(main.slug, settings);
+      expect(off?.diagram).toBeNull();
+      const on = await reader.getProduct(main.slug, settings, { includeDiagram: true });
+      expect(on?.diagram?.parts).toHaveLength(1);
+      expect(on?.diagram?.parts[0]).toMatchObject({
+        number: 1,
+        xBp: 1000,
+        product: { title: "Garnitură" },
+      });
+      for (const page of [off, on]) {
+        expect(page?.spareParts.map((p) => p.id)).toEqual([part.id]);
+        expect(page?.compatible.map((p) => p.id)).toEqual([other.id]);
+        expect(page?.documents.map((d) => d.title)).toEqual(["Manual"]);
+      }
+      // adresa fișierului nu intră în datele paginii
+      expect(JSON.stringify(on)).not.toContain("private/docs");
+    });
+  });
+});
