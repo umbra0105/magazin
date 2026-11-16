@@ -658,6 +658,8 @@ export const ro = {
         CATEGORY_PARENT_NOT_FOUND: "Categoria părinte nu mai există. Reîncarcă pagina.",
         CATEGORY_SELF_PARENT: "O categorie nu poate fi propriul ei părinte.",
         CATEGORY_CYCLE: "Categoria nu poate fi mutată într-una dintre propriile subcategorii.",
+        CATEGORY_SIBLING_GONE:
+          "Categoria de referință nu mai este în acest loc (a fost mutată sau ștearsă de altcineva). Reîncarcă lista și încearcă din nou.",
         CATEGORY_TOO_DEEP: "Arborele poate avea cel mult 5 niveluri.",
         CATEGORY_SLUG_CONFLICT: "Adresa e deja folosită de o categorie din același loc.",
         CATEGORY_IMAGE_NOT_FOUND: "Imaginea aleasă nu mai există în bibliotecă.",

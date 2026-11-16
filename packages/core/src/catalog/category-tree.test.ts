@@ -8,6 +8,7 @@ import {
   subtreeHeight,
   validateMove,
   validParents,
+  positionRelativeTo,
   type CategoryNode,
 } from "./category-tree";
 
@@ -167,5 +168,44 @@ describe("planRename", () => {
     });
     expect(updates.get("cartuse")?.path).toBe("piscine/pompe-apa/filtrare/cartuse");
     expect(updates.size).toBe(3);
+  });
+});
+
+describe("positionRelativeTo (C-35: poziție față de un frate, nu index absolut)", () => {
+  const node = (id: string, parentId: string | null, sortOrder: number) => ({
+    id,
+    parentId,
+    slug: id,
+    name: id,
+    path: id,
+    depth: parentId ? 1 : 0,
+    sortOrder,
+  });
+  const nodes = [node("a", null, 0), node("b", null, 1), node("c", null, 2), node("x", "a", 0)];
+
+  it("beforeId: chiar înaintea fratelui; afterId: chiar după el; fără categoria mutată în numărătoare", () => {
+    expect(positionRelativeTo(nodes, "c", null, { beforeId: "a" })).toBe(0);
+    expect(positionRelativeTo(nodes, "c", null, { beforeId: "b" })).toBe(1);
+    expect(positionRelativeTo(nodes, "a", null, { afterId: "b" })).toBe(1);
+    expect(positionRelativeTo(nodes, "a", null, { afterId: "c" })).toBe(2);
+  });
+
+  it("referința dispărută sau mutată în alt părinte, sau chiar categoria mutată: null (mutarea se refuză)", () => {
+    expect(positionRelativeTo(nodes, "c", null, { beforeId: "inexistent" })).toBeNull();
+    expect(positionRelativeTo(nodes, "c", null, { beforeId: "x" })).toBeNull();
+    expect(positionRelativeTo(nodes, "c", null, { afterId: "c" })).toBeNull();
+  });
+
+  it("se adaptează dacă între timp s-a adăugat un frate: aceeași referință, alt index", () => {
+    const before = positionRelativeTo(nodes, "c", null, { afterId: "a" });
+    const grown = [
+      node("n", null, 1),
+      ...nodes.map((n) =>
+        n.parentId === null && n.sortOrder >= 1 ? { ...n, sortOrder: n.sortOrder + 1 } : n,
+      ),
+    ];
+    expect(before).toBe(1);
+    expect(positionRelativeTo(grown, "c", null, { afterId: "a" })).toBe(1);
+    expect(positionRelativeTo(grown, "c", null, { afterId: "n" })).toBe(2);
   });
 });

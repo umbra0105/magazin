@@ -107,6 +107,25 @@ export function validateMove(
 }
 
 /**
+ * Poziția (index între frații noului părinte, FĂRĂ categoria mutată) care corespunde unei referințe la un frate: `beforeId` = chiar
+ * înaintea lui, `afterId` = chiar după el (C-35). Referința e un frate, nu un număr: dacă între timp alt administrator a adăugat,
+ * șters sau mutat un frate, poziția se recalculează din starea de acum, nu cade pe alt loc. `null` = fratele nu mai e acolo (sau e
+ * chiar categoria mutată): mutarea trebuie refuzată, nu "reparată" în tăcere.
+ */
+export function positionRelativeTo(
+  nodes: readonly CategoryNode[],
+  id: string,
+  newParentId: string | null,
+  reference: { beforeId: string } | { afterId: string },
+): number | null {
+  const siblings = childrenOf(nodes, newParentId).filter((n) => n.id !== id);
+  const referenceId = "beforeId" in reference ? reference.beforeId : reference.afterId;
+  const at = siblings.findIndex((n) => n.id === referenceId);
+  if (at === -1) return null;
+  return "beforeId" in reference ? at : at + 1;
+}
+
+/**
  * Părinții în care se poate muta `id` (inclusiv rădăcina = `null`), pentru alternativa de tastatură a
  * glisării. Exclude categoria însăși, descendenții ei și părinții care ar depăși adâncimea maximă.
  */

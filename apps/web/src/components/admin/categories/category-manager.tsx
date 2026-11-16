@@ -70,11 +70,17 @@ export function CategoryManager({ rows, capabilities, maxDepth, thumbs, editId }
     startTransition(async () => {
       setProblem(null);
       try {
-        const result = await moveCategory({
-          id: row.id,
-          parentId: target.parentId,
-          ...(target.index !== undefined && { index: target.index }),
-        });
+        // poziția se trimite ca referință la un frate (`beforeId`/`afterId`), nu ca index: serverul o recalculează din starea de acum (C-35)
+        const siblings = rows
+          .filter((r) => r.parentId === target.parentId && r.id !== row.id)
+          .sort((a, b) => a.index - b.index);
+        const reference =
+          target.index === undefined || siblings.length === 0
+            ? {}
+            : target.index < siblings.length
+              ? { beforeId: (siblings[target.index] as CategoryRow).id }
+              : { afterId: (siblings[siblings.length - 1] as CategoryRow).id };
+        const result = await moveCategory({ id: row.id, parentId: target.parentId, ...reference });
         if (result.ok) {
           const position = (target.index ?? Number.MAX_SAFE_INTEGER) + 1;
           const parentName = nameOf(target.parentId);
