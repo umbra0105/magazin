@@ -1,15 +1,13 @@
 import type { ReactNode } from "react";
 import { StorefrontShell } from "@/components/storefront/storefront-shell";
-import { readConsent } from "@/lib/consent-server";
 import { getStorefrontChrome } from "@/lib/storefront-chrome";
 
-// Header, footer și meniu depind de setări, steaguri și categorii: dinamic (cache-ul vitrinei: Faza 7).
-export const dynamic = "force-dynamic";
-
+// Fără `force-dynamic` și fără cookie-uri/antete citite aici: cadrul vitrinei vine din cache cu etichete (`storefront-chrome`,
+// `catalog`), deci paginile pot fi servite din cache și regenerate (ISR). Consimțământul se citește în browser (ConsentBanner).
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
-  const [chrome, consent] = await Promise.all([getStorefrontChrome(), readConsent()]);
+  const chrome = await getStorefrontChrome();
   return (
-    <StorefrontShell chrome={chrome} year={new Date().getFullYear()} consent={consent}>
+    <StorefrontShell chrome={chrome} year={new Date().getFullYear()}>
       {children}
     </StorefrontShell>
   );

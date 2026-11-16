@@ -8,6 +8,8 @@ import {
   CONSENT_CATEGORIES,
   REFUSE_ALL,
   consentCookieString,
+  parseConsent,
+  readConsentCookie,
   type ConsentChoices,
 } from "@/lib/consent";
 import { getMessages } from "@/messages";
@@ -21,14 +23,19 @@ export const CONSENT_OPEN_EVENT = "ecom:consent-open";
  * Bannerul de consimțământ (docs/19 §1: implicit REFUZAT). Cât timp nu există o alegere salvată, arată bannerul și NIMIC care
  * cere consimțământ nu pornește. «Refuz» și «Acceptă tot» au același stil și aceeași mărime (refuzul e la fel de ușor ca acceptul);
  * «Preferințe» deschide alegerea pe categorii. Alegerea ajunge într-un cookie propriu (12 luni); bannerul nu e un perete: pagina
- * rămâne folosibilă, iar focusul nu e capturat. La server se știe dacă există o alegere (cookie-ul), deci bannerul nu apare și
- * dispare la hidratare.
+ * rămâne folosibilă, iar focusul nu e capturat. Alegerea se citește din cookie DUPĂ hidratare (nu pe server): așa pagina
+ * vitrinei poate fi servită din cache, la fel pentru toți vizitatorii; cât timp nu e citită, bannerul nu se desenează (nu clipește).
  */
-export function ConsentBanner({ initial }: { initial: ConsentChoices | null }) {
-  const [saved, setSaved] = useState<ConsentChoices | null>(initial);
+export function ConsentBanner() {
+  // `undefined` = cookie-ul încă necitit (serverul și prima desenare); `null` = fără alegere valabilă
+  const [saved, setSaved] = useState<ConsentChoices | null | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [draft, setDraft] = useState<ConsentChoices>(initial ?? REFUSE_ALL);
+  const [draft, setDraft] = useState<ConsentChoices>(REFUSE_ALL);
   const titleId = useId();
+
+  useEffect(() => {
+    setSaved(parseConsent(readConsentCookie(document.cookie)));
+  }, []);
 
   useEffect(() => {
     const open = () => {

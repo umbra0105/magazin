@@ -12,6 +12,7 @@ import { createStorage } from "@ecom/integrations";
 import { getLogger } from "@ecom/shared";
 import { createImageImportQueue, imageJobQueue } from "./image-import-queue";
 import { startImportWorker } from "./import-worker";
+import { createWorkerRevalidator } from "./revalidate";
 
 /** Pornește workerul `product-import` cu dependențele reale. Folosit de `pnpm worker` și de `pnpm dev:web`. */
 export function startImportWorkerFromEnv() {
@@ -30,7 +31,8 @@ export function startImportWorkerFromEnv() {
     logger,
     // imaginile se descarcă în jobul lor, după ce produsele sunt create
     imageQueue: imageJobQueue(imageQueue),
-    // fără `queue`: jobul rulează deja în fundal; fără `invalidate`: cache-ul se invalidează din aplicație
+    // fără `queue`: jobul rulează deja în fundal; cache-ul vitrinei se invalidează printr-o cerere semnată spre aplicație (C-37)
+    invalidate: createWorkerRevalidator(),
   });
   const worker = startImportWorker({
     redisUrl: env.REDIS_URL,

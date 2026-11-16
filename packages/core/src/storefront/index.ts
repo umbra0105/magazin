@@ -30,3 +30,4 @@ export {
   type AppearanceInput,
   type AppearanceValues,
 } from "./appearance-input";
+export * from "./revalidation";

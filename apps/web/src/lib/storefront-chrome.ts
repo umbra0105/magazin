@@ -1,8 +1,11 @@
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import {
   buildMenuTree,
   cardLayoutOf,
   containerWidthOf,
+  CATALOG_TAG,
+  STOREFRONT_CHROME_TAG,
   createPrismaMenuStore,
   footerVariantOf,
   headerVariantOf,
@@ -68,6 +71,23 @@ const defaults = (): StorefrontChrome => ({
  */
 export async function loadStorefrontChrome(): Promise<StorefrontChrome> {
   try {
+    return await readStorefrontChromeCached();
+  } catch (error) {
+    getLogger().warn(
+      { err: error },
+      "nu pot citi datele cadrului vitrinei, folosesc valorile implicite",
+    );
+    return defaults();
+  }
+}
+
+/**
+ * Citirea propriu-zisă, FĂRĂ valori implicite la eroare: o eroare aruncată nu intră în cache (`unstable_cache` nu memorează
+ * excepțiile), deci o pană scurtă a bazei de date nu se păstrează 5 minute. Cache-ul se invalidează cu `storefront-chrome`
+ * (setări, branding, flag-uri: `AdminWrites`) și cu `catalog` (categoriile din meniu), din aplicație sau din worker.
+ */
+async function readStorefrontChrome(): Promise<StorefrontChrome> {
+  {
     const settings = getSettings();
     const [general, company, legal, appearance, branding, wishlistFlag, categories] =
       await Promise.all([
@@ -110,14 +130,13 @@ export async function loadStorefrontChrome(): Promise<StorefrontChrome> {
       },
       legal: { anpcUrl: legal.anpcUrl, salUrl: legal.salUrl, odrUrl: legal.odrUrl },
     };
-  } catch (error) {
-    getLogger().warn(
-      { err: error },
-      "nu pot citi datele cadrului vitrinei, folosesc valorile implicite",
-    );
-    return defaults();
   }
 }
+
+const readStorefrontChromeCached = unstable_cache(readStorefrontChrome, ["storefront-chrome"], {
+  tags: [STOREFRONT_CHROME_TAG, CATALOG_TAG],
+  revalidate: 300,
+});
 
 /** O singură încărcare pe cerere: layout-ul și pagina cer aceleași date. */
 export const getStorefrontChrome = cache(loadStorefrontChrome);

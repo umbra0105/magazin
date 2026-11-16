@@ -14,6 +14,7 @@ import {
 import { getDb } from "@ecom/db";
 import { createStorage } from "@ecom/integrations";
 import { getLogger } from "@ecom/shared";
+import { createWorkerRevalidator } from "./revalidate";
 import { startMediaWorker } from "./media-worker";
 
 /**
@@ -58,6 +59,7 @@ export function startMediaWorkerFromEnv() {
     redisUrl: runtime.redisUrl,
     processor: runtime.processor,
     logger: getLogger(),
+    invalidate: createWorkerRevalidator(),
   });
   return {
     worker,
