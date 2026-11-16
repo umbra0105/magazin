@@ -7,6 +7,7 @@ import {
   type StockOverviewStore,
 } from "../inventory/stock-overview-store";
 import { pickBestVariantImage } from "../media/urls";
+import { isSearchable, likePrefix } from "./search-query";
 import {
   listingPrice,
   displayedPrice,
@@ -14,6 +15,8 @@ import {
   type ListingPrice,
 } from "./listing-price";
 import type { ListingSort } from "./listing-query";
+import { joinAnd, scopeConditions, searchRank, type ListingScope } from "./listing-sql";
+import type { ListingFilters, NumericRange } from "./listing-filters";
 import {
   publicAvailabilityOfRow,
   summarizeProductAvailability,
@@ -55,9 +58,30 @@ export interface ListedProduct {
   energyClass: string | null;
 }
 
-export interface ListingScope {
-  /** Calea categoriei: intră și produsele din toate subcategoriile ei. */
-  categoryPath?: string;
+export type { ListingScope } from "./listing-sql";
+
+export interface FacetRange {
+  code: string;
+  name: string;
+  unit: string | null;
+  /** Limitele reale ale valorilor din listă (fără propriul filtru). */
+  min: number;
+  max: number;
+  /** Câte produse din listă au o valoare pentru acest atribut. */
+  count: number;
+  selected: NumericRange | null;
+}
+
+export interface FacetOptions {
+  code: string;
+  name: string;
+  options: { id: string; value: string; count: number; selected: boolean }[];
+}
+
+export interface ListingFacets {
+  brands: { slug: string; name: string; count: number; selected: boolean }[];
+  ranges: FacetRange[];
+  options: FacetOptions[];
 }
 
 export interface ListingResult {
@@ -274,13 +298,16 @@ export class CatalogReader {
   /** Produsele unei liste, sortate și paginate în SQL (sortarea după preț nu se poate exprima prin Prisma). */
   async listProducts(
     scope: ListingScope,
-    options: { sort: ListingSort; offset: number; limit: number },
+    options: { sort: ListingSort | "relevance"; offset: number; limit: number },
     settings: CatalogSettings,
   ): Promise<ListingResult> {
     const at = this.now();
     const where = this.scopeSql(scope);
     const priceSql = this.priceSql(at, settings.showSalePricing);
-    const order = this.orderSql(options.sort, priceSql);
+    const order =
+      options.sort === "relevance" && scope.search !== undefined
+        ? Prisma.sql`${searchRank(scope.search)} DESC, p.id`
+        : this.orderSql(options.sort === "relevance" ? "recommended" : options.sort, priceSql);
     const [countRows, idRows] = await Promise.all([
       this.db.$queryRaw<{ count: bigint }[]>(
         Prisma.sql`SELECT count(*) AS count FROM product p WHERE ${where}`,
@@ -298,17 +325,7 @@ export class CatalogReader {
   }
 
   private scopeSql(scope: ListingScope): Prisma.Sql {
-    const parts: Prisma.Sql[] = [
-      Prisma.sql`p.status = 'active'`,
-      Prisma.sql`p."deletedAt" IS NULL`,
-    ];
-    if (scope.categoryPath !== undefined) {
-      const path = normalizeKey(scope.categoryPath);
-      parts.push(Prisma.sql`EXISTS (
-        SELECT 1 FROM product_category pc JOIN category c ON c.id = pc."categoryId"
-        WHERE pc."productId" = p.id AND (c.path = ${path} OR starts_with(c.path, ${`${path}/`})))`);
-    }
-    return Prisma.join(parts, " AND ");
+    return joinAnd(scopeConditions(scope));
   }
 
   /** Prețul minim al produsului pentru sortare: același preț ca pe card (întreg, sau efectiv când reducerile sunt afișate). */
@@ -415,6 +432,170 @@ export class CatalogReader {
           alt: media.alt || fallbackAlt,
         }
       : null;
+  }
+
+  // ---------------------------------------------------------------- filtre (faceted)
+
+  /**
+   * Grupele de filtre ale unei liste, cu contorizări. Fiecare grupă se numără cu TOATE celelalte filtre aplicate, dar fără propriul
+   * ei filtru (altfel alegerea unei mărci ar face să dispară celelalte mărci): numărul de lângă o opțiune e câte produse ar rămâne
+   * dacă ai alege-o. Atributele numerice dau limitele reale (minim și maxim) ale valorilor din listă, pentru slider.
+   */
+  async getFacets(scope: ListingScope): Promise<ListingFacets> {
+    const filters = scope.filters;
+    const ownScope = (exclude: Parameters<typeof scopeConditions>[1]) =>
+      joinAnd(scopeConditions(scope, exclude));
+
+    const brandRows = await this.db.$queryRaw<
+      { slug: string; name: string; count: bigint }[]
+    >(Prisma.sql`
+      SELECT b.slug, b.name, count(*) AS count FROM product p JOIN brand b ON b.id = p."brandId"
+      WHERE ${ownScope({ brands: true })} GROUP BY b.slug, b.name ORDER BY count(*) DESC, b.name ASC`);
+    const brands = brandRows.map((row) => ({
+      slug: row.slug,
+      name: row.name,
+      count: Number(row.count),
+      selected: filters?.brands.includes(row.slug) ?? false,
+    }));
+
+    // atributele filtrabile prezente în listă, fără filtrele (ca un atribut ales să nu dispară din panou)
+    const attributes = await this.db.$queryRaw<
+      { id: string; code: string; name: string; type: string; unit: string | null }[]
+    >(Prisma.sql`
+      SELECT DISTINCT a.id, a.code, a.name, a.type, a.unit, a."sortOrder"
+      FROM attribute a JOIN attribute_value av ON av."attributeId" = a.id JOIN product p ON p.id = av."productId"
+      WHERE a."isFilterable" AND a.type IN ('number', 'select')
+        AND ${joinAnd(scopeConditions({ ...scope, filters: undefined }))}
+      ORDER BY a."sortOrder" ASC, a.name ASC`);
+
+    const ranges: FacetRange[] = [];
+    const options: FacetOptions[] = [];
+    for (const attribute of attributes) {
+      if (attribute.type === "number") {
+        const [row] = await this.db.$queryRaw<
+          { min: string | null; max: string | null; count: bigint }[]
+        >(Prisma.sql`
+          SELECT min(av."numberValue")::text AS min, max(av."numberValue")::text AS max, count(*) AS count
+          FROM attribute_value av JOIN product p ON p.id = av."productId"
+          WHERE av."attributeId" = ${attribute.id} AND av."numberValue" IS NOT NULL
+            AND ${ownScope({ rangeCode: attribute.code })}`);
+        if (!row || row.min === null || row.max === null || Number(row.count) === 0) continue;
+        ranges.push({
+          code: attribute.code,
+          name: attribute.name,
+          unit: attribute.unit,
+          min: Number(row.min),
+          max: Number(row.max),
+          count: Number(row.count),
+          selected: filters?.ranges[attribute.code] ?? null,
+        });
+      } else {
+        const rows = await this.db.$queryRaw<
+          { id: string; value: string; count: bigint }[]
+        >(Prisma.sql`
+          SELECT o.id, o.value, count(*) AS count
+          FROM attribute_value av JOIN attribute_option o ON o.id = av."optionId" JOIN product p ON p.id = av."productId"
+          WHERE av."attributeId" = ${attribute.id} AND ${ownScope({ optionCode: attribute.code })}
+          GROUP BY o.id, o.value, o.position ORDER BY o.position ASC, o.value ASC`);
+        if (rows.length === 0) continue;
+        const chosen = filters?.options[attribute.code] ?? [];
+        options.push({
+          code: attribute.code,
+          name: attribute.name,
+          options: rows.map((row) => ({
+            id: row.id,
+            value: row.value,
+            count: Number(row.count),
+            selected: chosen.includes(row.id),
+          })),
+        });
+      }
+    }
+    return { brands, ranges, options };
+  }
+
+  /**
+   * Păstrează doar filtrele care există: un cod de atribut necunoscut, nefiltrabil sau de alt tip (interval pe un atribut de tip listă)
+   * se ignoră, ca o adresă cu un parametru învechit să nu producă o listă goală.
+   */
+  async sanitizeFilters(filters: ListingFilters): Promise<ListingFilters> {
+    const codes = [...Object.keys(filters.ranges), ...Object.keys(filters.options)];
+    if (codes.length === 0) return filters;
+    const known = await this.db.attribute.findMany({
+      where: { code: { in: codes }, isFilterable: true },
+      select: { code: true, type: true },
+    });
+    const type = new Map(known.map((a) => [a.code, a.type]));
+    return {
+      brands: filters.brands,
+      ranges: Object.fromEntries(
+        Object.entries(filters.ranges).filter(([code]) => type.get(code) === "number"),
+      ),
+      options: Object.fromEntries(
+        Object.entries(filters.options).filter(([code]) => type.get(code) === "select"),
+      ),
+    };
+  }
+
+  /** Numele filtrelor alese (pentru chip-uri): mărci după slug, opțiuni după identificator. */
+  async describeFilters(filters: ListingScope["filters"]): Promise<{
+    brands: Record<string, string>;
+    options: Record<string, Record<string, string>>;
+  }> {
+    const brandSlugs = filters?.brands ?? [];
+    const brandRows = brandSlugs.length
+      ? await this.db.brand.findMany({
+          where: { slug: { in: brandSlugs } },
+          select: { slug: true, name: true },
+        })
+      : [];
+    const optionIds = Object.values(filters?.options ?? {}).flat();
+    const optionRows = optionIds.length
+      ? await this.db.attributeOption.findMany({
+          where: { id: { in: optionIds } },
+          select: { id: true, value: true, attribute: { select: { code: true } } },
+        })
+      : [];
+    const options: Record<string, Record<string, string>> = {};
+    for (const row of optionRows) (options[row.attribute.code] ??= {})[row.id] = row.value;
+    return { brands: Object.fromEntries(brandRows.map((b) => [b.slug, b.name])), options };
+  }
+
+  // ---------------------------------------------------------------- căutare (autocomplete)
+
+  /** Sugestii pentru bara de căutare: produse (cele mai relevante), categorii și mărci al căror nume începe cu textul. */
+  async suggest(
+    text: string,
+    limit: number,
+    settings: CatalogSettings,
+  ): Promise<{
+    products: ListedProduct[];
+    categories: { name: string; path: string }[];
+    brands: { name: string; slug: string }[];
+  }> {
+    if (!isSearchable(text)) return { products: [], categories: [], brands: [] };
+    const result = await this.listProducts(
+      { search: text },
+      { sort: "relevance", offset: 0, limit },
+      settings,
+    );
+    const like = `${likePrefix(text)}%`;
+    const [categories, brands] = await Promise.all([
+      this.db.$queryRaw<{ name: string; path: string }[]>(Prisma.sql`
+        SELECT c.name, c.path FROM category c
+        WHERE f_unaccent(lower(c.name)) LIKE ${like}
+          AND EXISTS (SELECT 1 FROM product_category pc JOIN product p ON p.id = pc."productId"
+                      JOIN category d ON d.id = pc."categoryId"
+                      WHERE p.status = 'active' AND p."deletedAt" IS NULL
+                        AND (d.path = c.path OR starts_with(d.path, c.path || '/')))
+        ORDER BY c.depth ASC, c.name ASC LIMIT 3`),
+      this.db.$queryRaw<{ name: string; slug: string }[]>(Prisma.sql`
+        SELECT b.name, b.slug FROM brand b
+        WHERE f_unaccent(lower(b.name)) LIKE ${like}
+          AND EXISTS (SELECT 1 FROM product p WHERE p."brandId" = b.id AND p.status = 'active' AND p."deletedAt" IS NULL)
+        ORDER BY b.name ASC LIMIT 3`),
+    ]);
+    return { products: result.items, categories, brands };
   }
 
   // ---------------------------------------------------------------- mărci
