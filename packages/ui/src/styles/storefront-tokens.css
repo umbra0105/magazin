@@ -196,8 +196,8 @@ html:has(dialog.sheet-panel[open]) {
   margin-top: 0.25rem;
   border-radius: 9999px;
   background: var(--brand);
-  border: 3px solid var(--color-surface-page);
-  box-shadow: 0 0 0 1px var(--border-control);
+  border: 2px solid var(--color-surface-page);
+  outline: 1px solid var(--border-control);
   cursor: grab;
 }
 .range-dual::-moz-range-thumb {
@@ -206,8 +206,8 @@ html:has(dialog.sheet-panel[open]) {
   height: 1.5rem;
   border-radius: 9999px;
   background: var(--brand);
-  border: 3px solid var(--color-surface-page);
-  box-shadow: 0 0 0 1px var(--border-control);
+  border: 2px solid var(--color-surface-page);
+  outline: 1px solid var(--border-control);
   cursor: grab;
 }
 .range-dual:focus-visible::-webkit-slider-thumb {

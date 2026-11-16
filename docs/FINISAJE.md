@@ -52,6 +52,8 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Căutare (Faza 7) | potrivirea aproximativă (trigrame) nu folosește indexul (`similarity() >= 0,45`): la ~500 de produse e instant; de trecut pe operatorul `%` cu prag setat dacă catalogul crește mult
 - [ ] S3 | Piese de schimb (Faza 7) | rândul din tabelul pieselor are «Vezi piesa», nu «Adaugă în coș»: coșul vine în Faza 8
 
+- [x] S3 | Test E2E intermitent, depozite (descoperit la `verify:full` din Faza 7) | `e2e/warehouses.spec.ts:448` pica când eticheta hex aleatorie a produsului conținea «77» (ex. «775ec5»): aserțiunea `not.toContainText("77")` o confunda cu cantitatea din W1; acum caută «77 buc». Doar test, fără cod de producție; în afara scopului Fazei 7 (S2 de proces, ca la Faza 6)
+
 ## Rezolvate
 
 - [x] S3 | Mega meniu, plăci de categorie (Faza 6) | plăcile aveau cadre diferite (una cu fundal rotunjit, alta fără; imaginile tăiate cu `object-cover`) și stăteau în rânduri improvizate; acum toate au același cadru 4:3 pe «masa foto» din token, imaginea întreagă (`object-contain`) cu umplutură, într-o grilă cu 3 coloane fixe, iar categoriile text stau sub o linie fină pe aceleași coloane (test E2E pe dimensiuni, culoare, umplutură, încadrare și coloane, în 3 presets × 2 teme) | local-data/capturi-faza6/final/minimal-deschisa-meniu-1440.png
