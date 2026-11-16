@@ -30,12 +30,13 @@ test.describe("pagina principală și cadrul real", () => {
     await expect(page.locator("main#continut")).toHaveCount(1);
   });
 
-  test("căutarea și coșul sunt dezactivate (structură, fără funcție), favoritele ascunse fără steag", async ({
+  test("căutarea e activă (Faza 7); coșul rămâne dezactivat (structură, fără funcție), favoritele ascunse fără steag", async ({
     page,
   }) => {
     await page.goto("/");
     const header = page.getByRole("banner");
-    await expect(header.getByRole("searchbox").first()).toBeDisabled();
+    // căutarea e activă: câmp cu rol `combobox` (autocomplete), în formularul `role=search`, fără `disabled`
+    await expect(header.getByRole("combobox").first()).toBeEnabled();
     await expect(header.getByRole("button", { name: /Coșul tău/ })).toHaveAttribute(
       "aria-disabled",
       "true",
