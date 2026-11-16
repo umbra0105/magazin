@@ -28,7 +28,8 @@ export interface PanelOption {
   values: { id: string; value: string }[];
 }
 
-type NotifyState = "idle" | "sending" | "registered" | "available" | "invalid" | "failed";
+type NotifyState =
+  "idle" | "sending" | "registered" | "available" | "invalid" | "consent" | "failed";
 
 const FIELD =
   "h-(--sf-control-h) w-full rounded-full border border-line-input bg-surface-page px-5 text-(length:--control-text) text-ink " +
@@ -80,8 +81,13 @@ export function PurchasePanel({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const address = String(form.get("email") ?? "").trim();
+    const consent = form.get("consent") === "on";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
       setNotify("invalid");
+      return;
+    }
+    if (!consent) {
+      setNotify("consent");
       return;
     }
     setNotify("sending");
@@ -92,6 +98,7 @@ export function PurchasePanel({
         body: JSON.stringify({
           variantId: selected.id,
           email: address,
+          consent: true,
           website: String(form.get("website") ?? ""),
         }),
       });
@@ -110,6 +117,7 @@ export function PurchasePanel({
     registered: m.notifyRegistered,
     available: m.notifyAvailable,
     invalid: m.notifyInvalid,
+    consent: m.notifyConsentRequired,
     failed: m.notifyFailed,
   };
 
@@ -223,7 +231,16 @@ export function PurchasePanel({
                 aria-hidden="true"
                 className="hidden"
               />
-              {notify === "invalid" || notify === "failed" ? (
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  name="consent"
+                  type="checkbox"
+                  aria-invalid={notify === "consent"}
+                  className="mt-0.5 size-5 shrink-0 accent-brand"
+                />
+                <span>{m.notifyConsent}</span>
+              </label>
+              {notify === "invalid" || notify === "consent" || notify === "failed" ? (
                 <p role="alert" className="text-sm text-tone-problem-fg">
                   {message[notify]}
                 </p>
@@ -231,6 +248,7 @@ export function PurchasePanel({
               <StoreButton type="submit" disabled={notify === "sending"}>
                 {notify === "sending" ? m.notifySending : m.notifySubmit}
               </StoreButton>
+              <p className="text-xs text-ink-secondary">{m.notifyPrivacy}</p>
             </>
           )}
         </form>

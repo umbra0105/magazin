@@ -3371,6 +3371,11 @@ export const ro = {
         notifyTitle: "Anunță-mă când revine",
         notifyLede: "Îți trimitem un email o singură dată, când produsul revine în stoc.",
         notifyEmail: "Adresa ta de email",
+        /** Formulare PROVIZORIE (decizie utilizator, 2026-11-16); formularea finală: docs/INTREBARI-AVOCAT.md. */
+        notifyConsent: "Sunt de acord să primesc un singur email când produsul revine în stoc.",
+        notifyConsentRequired: "Bifează acordul ca să poți trimite cererea.",
+        notifyPrivacy:
+          "Adresa ta de email este folosită doar pentru această notificare și se șterge după trimitere.",
         notifySubmit: "Anunță-mă",
         notifySending: "Se trimite…",
         notifyRegistered: "Gata. Te anunțăm pe email când produsul revine în stoc.",

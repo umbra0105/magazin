@@ -38,6 +38,7 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Temă închisă, imagini de produs (Faza 7) | masa foto a cardurilor și a galeriei rămâne deschisă la culoare în tema închisă (decizie de design din Faza 6: fotografiile au fundal alb), iar substituentul «Fără imagine» e un bloc luminos pe pagină întunecată | local-data/capturi-faza7/checkpoint/produs-inchis-1440.png
 - [ ] S3 | Pagina de produs (Faza 7) | blocul «Cum comanzi» nu apare cât telefonul și emailul firmei sunt goale în setări: produsul nu are atunci nicio cale de comandă vizibilă (până la coș, Faza 8); de completat datele firmei | local-data/capturi-faza7/checkpoint/produs-deschis-1440.png
 - [ ] S3 | Liste (Faza 7) | pe telefon, grila de 2 coloane strânge numele lungi de produs (6–7 rânduri într-un card) | local-data/capturi-faza7/checkpoint/magazin-deschis-390.png
+- [ ] S3 | «Anunță-mă când revine» (Faza 7) | o adresă care a atins plafonul de cereri în așteptare (10, setabil) primește un refuz la o cerere pentru încă o variantă, în timp ce o adresă deja înscrisă primește «Gata»: răspunsul diferă și trădează existența cererilor pe adresă; de uniformizat (răspuns identic, cu mesaj generic) | -
 
 ## Rezolvate
 

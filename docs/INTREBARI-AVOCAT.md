@@ -150,3 +150,22 @@ CC-BY-4.0 pentru o bază de date de compatibilitate, FSL-1.1-Apache-2.0 pentru o
 verificare înainte de prima vânzare?
 
 Răspuns:
+
+---
+
+## 6. Formularul «Anunță-mă când revine» (adăugată în Faza 7)
+
+Formularul public cere o adresă de email și trimite UN singur mesaj când produsul revine în stoc; adresa se șterge după trimitere (sau după
+perioada de păstrare din setări, 90 de zile implicit). Textele de acum sunt PROVIZORII (decizia utilizatorului, 2026-11-16):
+bifa «Sunt de acord să primesc un singur email când produsul revine în stoc.» (obligatorie, nebifată) și, sub formular, «Adresa ta de email
+este folosită doar pentru această notificare și se șterge după trimitere.»
+
+**6.1.** Care este formularea finală a consimțământului și a informării (temei legal, scop, durata păstrării, drepturile persoanei, operatorul)?
+Este suficientă o bifă plus o frază și un link către politica de confidențialitate, sau trebuie o informare mai lungă?
+
+Răspuns:
+
+**6.2.** Este corect să ștergem adresa imediat după trimitere, fără să păstrăm dovada consimțământului? Dacă trebuie păstrată dovada (data și
+textul acceptat), cât timp și unde?
+
+Răspuns:

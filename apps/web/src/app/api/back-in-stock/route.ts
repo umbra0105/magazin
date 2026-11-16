@@ -17,6 +17,8 @@ const WINDOW_SECONDS = 3600;
 const bodySchema = z.object({
   variantId: z.string().min(1).max(64),
   email: z.string().min(3).max(254),
+  /** Acordul (bifa obligatorie, nebifată implicit în interfață): fără el cererea e respinsă și pe server. */
+  consent: z.literal(true),
   /** Capcana pentru roboți: un om nu o completează. */
   website: z.string().max(200).optional(),
 });
