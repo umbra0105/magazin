@@ -13,7 +13,7 @@ export function normalizeSearchText(input: string): string {
   return (
     input
       // caracterele de control (inclusiv NUL, pe care Postgres îl respinge) nu au ce căuta într-o interogare
-      .replace(/p{Cc}/gu, " ")
+      .replace(/\p{Cc}/gu, " ")
       .normalize("NFD")
       .replace(/\p{M}/gu, "")
       .toLowerCase()
