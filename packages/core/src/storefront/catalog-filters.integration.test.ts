@@ -385,3 +385,30 @@ describe("liste: marcă și colecție", () => {
     });
   });
 });
+
+describe("sursa pentru sitemap", () => {
+  it("doar produsele active; categoriile și mărcile doar dacă au produse active", async () => {
+    await withReader(async (reader, tx) => {
+      const live = await category(tx);
+      const empty = await category(tx);
+      const draftOnly = await category(tx);
+      const brand = await tx.brand.create({ data: { slug: `sm-${uid()}`, name: "Marca S" } });
+      const emptyBrand = await tx.brand.create({
+        data: { slug: `se-${uid()}`, name: "Marca goală" },
+      });
+      const ok = await product(tx, { categoryId: live.id, brandId: brand.id });
+      const draft = await product(tx, { categoryId: draftOnly.id, status: "draft" });
+      const source = await reader.listSitemapSource();
+      const slugs = new Set(source.products.map((p) => p.slug));
+      expect(slugs.has(ok.slug)).toBe(true);
+      expect(slugs.has(draft.slug)).toBe(false);
+      const paths = new Set(source.categories.map((c) => c.path));
+      expect(paths.has(live.path)).toBe(true);
+      expect(paths.has(empty.path)).toBe(false);
+      expect(paths.has(draftOnly.path)).toBe(false);
+      const brandSlugs = new Set(source.brands.map((b) => b.slug));
+      expect(brandSlugs.has(brand.slug)).toBe(true);
+      expect(brandSlugs.has(emptyBrand.slug)).toBe(false);
+    });
+  });
+});

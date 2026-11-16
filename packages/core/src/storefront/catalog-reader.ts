@@ -651,6 +651,68 @@ export class CatalogReader {
     return { products: result.items, categories, brands };
   }
 
+  // ---------------------------------------------------------------- sitemap
+
+  /** Tot ce intră în sitemap: produsele active (cu imaginea principală), categoriile și mărcile cu cel puțin un produs activ. */
+  async listSitemapSource(): Promise<{
+    products: { slug: string; title: string; updatedAt: Date; image: string | null }[];
+    categories: { path: string; updatedAt: Date }[];
+    brands: { slug: string; updatedAt: Date }[];
+  }> {
+    const [products, categories, brands] = await Promise.all([
+      this.db.product.findMany({
+        where: { status: "active", deletedAt: null },
+        orderBy: { id: "asc" },
+        take: 50_000,
+        select: {
+          slug: true,
+          title: true,
+          updatedAt: true,
+          media: {
+            where: { variantId: null },
+            orderBy: [{ position: "asc" }, { id: "asc" }],
+            take: 1,
+            select: {
+              media: {
+                select: {
+                  status: true,
+                  alt: true,
+                  storageKey: true,
+                  width: true,
+                  height: true,
+                  blurhash: true,
+                  variants: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.db.$queryRaw<{ path: string; updatedAt: Date }[]>(Prisma.sql`
+        SELECT c.path, c."updatedAt" FROM category c
+        WHERE EXISTS (SELECT 1 FROM product_category pc JOIN product p ON p.id = pc."productId"
+                      JOIN category d ON d.id = pc."categoryId"
+                      WHERE p.status = 'active' AND p."deletedAt" IS NULL
+                        AND (d.path = c.path OR starts_with(d.path, c.path || '/')))
+        ORDER BY c.path ASC`),
+      this.db.brand.findMany({
+        where: { products: { some: { status: "active", deletedAt: null } } },
+        select: { slug: true, updatedAt: true },
+        orderBy: { slug: "asc" },
+      }),
+    ]);
+    return {
+      products: products.map((p) => ({
+        slug: p.slug,
+        title: p.title,
+        updatedAt: p.updatedAt,
+        image: this.imageOf(p.media[0]?.media ?? null, "large", p.title)?.src ?? null,
+      })),
+      categories,
+      brands,
+    };
+  }
+
   // ---------------------------------------------------------------- mărci
 
   async resolveBrand(slug: string): Promise<ResolvedKey> {
