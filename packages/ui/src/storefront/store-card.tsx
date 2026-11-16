@@ -90,17 +90,21 @@ export function ProductCard({
           </a>
         </Heading>
         <div className="mt-auto flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-3">
-          <span className="text-2xl font-semibold tracking-tight">{price}</span>
+          <span className="whitespace-nowrap text-xl font-semibold tracking-tight sm:text-2xl">
+            {price}
+          </span>
           {oldPrice ? <s className="text-sm text-ink-secondary">{oldPrice}</s> : null}
         </div>
         {status ? (
+          // înălțime rezervată (4 rânduri de text pe telefon, 2 de la sm; plus umplutura de sus): prețul de deasupra rămâne pe aceeași linie la toate cardurile
+          // dintr-un rând, oricât de lungă e starea («La comandă · livrare în aproximativ 21 de zile»)
           <p
-            className="flex items-center gap-2 pt-1 text-sm text-ink-secondary"
+            className="flex min-h-21 items-start gap-2 pt-1 text-sm text-ink-secondary sm:min-h-11"
             data-status={status.tone}
           >
             <span
               aria-hidden="true"
-              className={cn("size-2 shrink-0 rounded-full", DOT[status.tone])}
+              className={cn("mt-1.5 size-2 shrink-0 rounded-full", DOT[status.tone])}
             />
             {status.label}
           </p>

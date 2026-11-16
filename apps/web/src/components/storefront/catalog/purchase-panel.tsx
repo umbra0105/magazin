@@ -258,7 +258,7 @@ export function PurchasePanel({
               <StoreButton type="submit" disabled={notify === "sending"}>
                 {notify === "sending" ? m.notifySending : m.notifySubmit}
               </StoreButton>
-              <p className="text-xs text-ink-secondary">{m.notifyPrivacy}</p>
+              <p className="text-sm text-ink-secondary">{m.notifyPrivacy}</p>
             </>
           )}
         </form>

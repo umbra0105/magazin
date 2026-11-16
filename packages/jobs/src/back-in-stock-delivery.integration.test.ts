@@ -190,6 +190,12 @@ describe("«Anunță-mă când revine»: de la cerere la email (Postgres și Red
       expect(await env.dispatch()).toEqual({ found: 1, enqueued: 1, failed: 0 });
       await waitFor(() => env.sent.length === 1);
       await waitFor(async () => (await totalCount(id)) === 0);
+      // «se șterge după trimitere» (informarea din formular): adresa nu mai există nicăieri în tabelul cererilor
+      expect(
+        await pool.backInStockAlert.count({
+          where: { email: { equals: ADDRESS, mode: "insensitive" } },
+        }),
+      ).toBe(0);
 
       const message = env.sent[0] as OutgoingMessage;
       expect(message.to).toBe(ADDRESS);
