@@ -35,6 +35,25 @@ html [data-surface="storefront"] {
   --sf-card: color-mix(in srgb, var(--color-border) 35%, var(--color-bg));
   --sf-card-hover: color-mix(in srgb, var(--color-border) 55%, var(--color-bg));
 
+  /*
+   * «Masa foto»: suprafața pe care stau fotografiile produselor (zona de imagine a cardurilor, plăcile din meniu). O culoare
+   * fixă, aproape albă, aceeași în toate presets și în ambele teme: fotografiile cu fundal alb (cele mai multe, la produse) se
+   * contopesc cu ea în loc să apară ca pătrate albe pe un card colorat, iar în tema închisă rămân ca un cadru deschis, nu ca o
+   * pată albă pe negru (aceeași suprafață peste tot, deci nicio fotografie nu arată altfel în altă zonă). Imaginile de pe ea se
+   * amestecă prin `multiply`: albul fotografiei devine exact culoarea mesei, deci nu rămâne niciun dreptunghi alb.
+   */
+  --sf-media-surface: oklch(0.94 0 0);
+
+  /*
+   * Header-ul «sticlă»: culoarea paginii la `--sf-glass-opacity`, peste o fotografie estompată și cu saturația ridicată (culorile
+   * fotografiei străbat, în loc de un gri murdar). Contrastul textului se verifică în test pe cea mai proastă fotografie.
+   */
+  --sf-glass-opacity: 90%;
+  --sf-glass-blur: 1rem;
+  --sf-glass-saturate: 1.8;
+  --sf-glass-fill: color-mix(in srgb, var(--color-bg) var(--sf-glass-opacity), transparent);
+  --sf-glass-edge: color-mix(in srgb, var(--color-border) 60%, transparent);
+
   /* peste fotografii: text deschis pe strat întunecat, în ambele teme */
   --sf-on-image: oklch(1 0 0);
   --sf-image-scrim: oklch(0 0 0);
@@ -59,6 +78,18 @@ html [data-surface="storefront"] {
 html [data-surface="storefront"][data-header="glass"] main > [data-hero]:first-child {
   margin-top: calc(var(--sf-header-total) * -1);
   padding-top: var(--sf-header-total);
+}
+
+html [data-surface="storefront"] [data-glass] {
+  background-color: var(--sf-glass-fill);
+  border-bottom-color: var(--sf-glass-edge);
+  backdrop-filter: blur(var(--sf-glass-blur)) saturate(var(--sf-glass-saturate));
+}
+/* fără estompare nu există «sticlă»: umplutura devine opacă, ca textul să rămână lizibil peste orice fotografie */
+@supports not (backdrop-filter: blur(1px)) {
+  html [data-surface="storefront"] [data-glass] {
+    background-color: var(--color-bg);
+  }
 }
 
 html [data-surface="storefront"][data-container="lg"] {

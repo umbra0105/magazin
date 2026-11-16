@@ -152,6 +152,7 @@
   --spacing-gutter: var(--sf-gutter);
   --color-card: var(--sf-card);
   --color-card-hover: var(--sf-card-hover);
+  --color-media: var(--sf-media-surface);
   --color-on-image: var(--sf-on-image);
   --color-image-ink: var(--sf-image-scrim);
   --color-image-scrim: var(--sf-image-scrim-fill);

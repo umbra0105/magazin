@@ -110,11 +110,11 @@ export function StoreHeader({
   const searchDisabled = slots.search !== "active";
   return (
     <header
+      // «sticlă»: umplutura, estomparea și marginea vin din tokenii `--sf-glass-*` (storefront-tokens.css), prin atributul `data-glass`
+      {...(variant === "glass" ? { "data-glass": "" } : {})}
       className={cn(
-        "sticky top-0 z-40 border-b text-ink",
-        variant === "glass"
-          ? "border-line-subtle/60 bg-surface-page/75 backdrop-blur-md"
-          : "border-line-subtle bg-surface-page",
+        "sticky top-0 z-40 border-b border-line-subtle text-ink",
+        variant !== "glass" && "bg-surface-page",
         className,
       )}
     >

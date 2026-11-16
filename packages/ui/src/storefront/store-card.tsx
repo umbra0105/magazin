@@ -61,7 +61,10 @@ export function ProductCard({
     >
       <div
         className={cn(
-          "relative aspect-square overflow-hidden bg-surface-page [&_img]:size-full [&_img]:object-contain",
+          // masa foto (`--sf-media-surface`): aceeași suprafață, același raport și aceeași umplutură la toate cardurile;
+          // fotografia se vede întreagă (object-contain), nu tăiată
+          // `multiply`: albul fotografiei devine culoarea mesei foto, deci fundalul alb al fotografiei nu se mai vede ca un dreptunghi
+          "relative isolate aspect-square overflow-hidden bg-media p-4 [&_img]:size-full [&_img]:object-contain [&_img]:mix-blend-multiply",
           horizontal && "w-2/5 shrink-0 sm:w-1/3",
         )}
       >

@@ -49,4 +49,5 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 | 2026-11-16 | 6 | editorul de temă Nivel 2 + CSS personalizat validat, setări de aspect, grup «Setări» | 32e481b | unitare 3466, integrare branding, 9 E2E editor pe build de producție | - |
 | 2026-11-16 | 6 | 404/500/schelete + consimțământ implicit refuzat | 171858d | unitare 3474, 9 E2E noi (dev) | - |
 | 2026-11-16 | 6 | mentenanță 503 + pagina admin; teste de audit robuste la rânduri E2E | 6cff19d | unitare 3490, integrare admin 28, E2E complet pe producție: 421 trecute (1 de mentenanță reparat) | - |
+| 2026-11-16 | 6 | corecturi S3 la sfârșit de fază: plăci de meniu uniforme (grilă cu 3 coloane), masă foto unică pentru imaginile de produs (`multiply`), header sticlă cu tokeni `--sf-glass-*`; capturile finale refăcute (54) | commit-ul corecturii | per pas: unitare (suprafețe, markup), E2E vitrină + stări pe build de producție, typecheck, lint, lint:root, prettier; fără verify:full (după aprobare, o singură dată pe codul îmbinat) | - |
 

@@ -143,6 +143,103 @@ test.describe("mega menu: plăci de categorie cu imagine (opționale)", () => {
   });
 });
 
+test.describe("masa foto: plăcile de meniu și imaginile cardurilor au aceeași suprafață în toate presets și temele", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  /** Culoarea de fundal și geometria unei zone de imagine (placă sau card), plus cum e încadrată imaginea. */
+  async function frames(page: Page, selector: string) {
+    return page.locator(selector).evaluateAll((elements) =>
+      elements.map((el) => {
+        const box = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        const img = el.querySelector("img");
+        const imgBox = img?.getBoundingClientRect();
+        return {
+          background: style.backgroundColor,
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+          left: Math.round(box.left),
+          padding: Number.parseFloat(style.paddingLeft),
+          fit: img ? getComputedStyle(img).objectFit : null,
+          blend: img ? getComputedStyle(img).mixBlendMode : null,
+          imgInside:
+            imgBox === undefined ||
+            (imgBox.left >= box.left &&
+              imgBox.right <= box.right &&
+              imgBox.top >= box.top &&
+              imgBox.bottom <= box.bottom),
+        };
+      }),
+    );
+  }
+
+  test("plăcile de meniu: același cadru 4:3, aceeași suprafață, imaginea întreagă cu umplutură, într-o grilă cu 3 coloane", async ({
+    page,
+  }) => {
+    const backgrounds = new Set<string>();
+    for (const preset of PRESETS) {
+      for (const tema of THEMES) {
+        await page.goto(gallery(preset, tema, "&meniu=deschis"));
+        const tiles = await frames(page, "[data-mega-tile]:visible");
+        expect(tiles.length, `${preset} ${tema}`).toBeGreaterThanOrEqual(2);
+        const [firstTile] = tiles;
+        for (const tile of tiles) {
+          expect(tile.width, `${preset} ${tema} lățime`).toBe(firstTile?.width);
+          expect(tile.height, `${preset} ${tema} înălțime`).toBe(firstTile?.height);
+          expect(Math.abs(tile.width / tile.height - 4 / 3)).toBeLessThan(0.02);
+          expect(tile.padding).toBeGreaterThan(0);
+          expect(tile.fit).toBe("contain");
+          expect(tile.blend).toBe("multiply");
+          expect(tile.imgInside).toBe(true);
+          backgrounds.add(tile.background);
+        }
+        // grila are cel mult 3 coloane, iar lista de text de sub plăci stă pe aceleași coloane
+        const tileColumns = new Set(tiles.map((tile) => tile.left));
+        expect(tileColumns.size).toBeLessThanOrEqual(3);
+        const texts = await page
+          .locator("[data-mega-texts]:visible > li")
+          .evaluateAll((items) =>
+            items.map((item) => Math.round(item.getBoundingClientRect().left)),
+          );
+        expect(texts.length).toBeGreaterThan(0);
+        for (const left of texts)
+          expect(tileColumns.has(left), `${preset} ${tema} text`).toBe(true);
+      }
+    }
+    // aceeași suprafață în toate 6 combinațiile (presets × teme): nu depinde de paleta presetului
+    expect([...backgrounds]).toHaveLength(1);
+  });
+
+  test("cardurile de produs: zona de imagine are aceeași suprafață, același raport și aceeași încadrare peste tot", async ({
+    page,
+  }) => {
+    const backgrounds = new Set<string>();
+    for (const preset of PRESETS) {
+      for (const tema of THEMES) {
+        await page.goto(gallery(preset, tema));
+        const zones = await frames(page, "article > div:first-child");
+        expect(zones.length, `${preset} ${tema}`).toBeGreaterThanOrEqual(4);
+        const [firstZone] = zones;
+        for (const zone of zones) {
+          expect(zone.width).toBe(firstZone?.width);
+          expect(zone.height).toBe(zone.width);
+          expect(zone.padding).toBeGreaterThan(0);
+          // fără fotografii în baza de dezvoltare (CI), cardul are un substituent fără <img>: încadrarea se verifică doar cu imagine
+          expect(zone.fit ?? "contain", `${preset} ${tema}`).toBe("contain");
+          expect(zone.blend ?? "multiply", `${preset} ${tema}`).toBe("multiply");
+          expect(zone.imgInside).toBe(true);
+          backgrounds.add(zone.background);
+        }
+      }
+    }
+    expect([...backgrounds]).toHaveLength(1);
+    // masa foto a cardurilor și a plăcilor e aceeași suprafață
+    await page.goto(gallery("minimal", "deschisa", "&meniu=deschis"));
+    const tile = await frames(page, "[data-mega-tile]:visible");
+    expect([...backgrounds][0]).toBe(tile[0]?.background);
+  });
+});
+
 test.describe("meniul de pe telefon", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 

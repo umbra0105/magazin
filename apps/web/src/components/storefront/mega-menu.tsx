@@ -39,6 +39,89 @@ export interface MegaMenuProps {
 const LINK =
   "rounded-sm outline-none transition-colors duration-(--motion) focus-visible:ring-2 focus-visible:ring-brand";
 
+type MegaMenuCategory = MegaMenuItem["children"][number];
+
+/** Subcategoriile de sub o categorie, ca sub-lista de text mică (nivelul 3), aceeași la plăci și la categoriile text. */
+function Grandchildren({ items }: { items: MegaMenuCategory["children"] }) {
+  if (items.length === 0) return null;
+  return (
+    <ul className="mt-2 flex flex-col gap-1.5">
+      {items.map((grand) => (
+        <li key={grand.id}>
+          <a
+            href={grand.href}
+            className={cn(LINK, "text-sm text-ink-secondary hover:text-ink hover:underline")}
+          >
+            {grand.name}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Subcategoriile unei categorii, în aceeași grilă cu 3 coloane fixe: întâi plăcile (categoriile cu imagine), apoi, sub o linie
+ * fină, categoriile fără imagine ca listă de text. Toate plăcile au ACELAȘI cadru (raport 4:3, «masa foto» din token, aceeași
+ * umplutură, imaginea întreagă, nu tăiată), deci o placă cu imagine mică sau cu fundal alb arată ca celelalte. Cu 1–2 plăci grila
+ * își păstrează coloanele (plăcile nu se întind pe tot rândul), iar spațiul rămas la dreapta e ritmul normal al grilei, ca la
+ * orice catalog cu un rând incomplet.
+ */
+function MegaMenuGroups({ categories }: { categories: MegaMenuCategory[] }) {
+  const tiles = categories.filter((category) => category.image);
+  const texts = categories.filter((category) => !category.image);
+  return (
+    <>
+      {tiles.length > 0 ? (
+        <ul data-mega-tiles className="mt-6 grid grid-cols-3 gap-x-8 gap-y-6">
+          {tiles.map((category) => (
+            <li key={category.id}>
+              <a href={category.href} className={cn(LINK, "group block")}>
+                <span
+                  data-mega-tile
+                  className="isolate block aspect-4/3 overflow-hidden rounded-card bg-media p-4"
+                >
+                  {category.image ? (
+                    <StoreImage
+                      src={category.image.src}
+                      alt=""
+                      width={category.image.width}
+                      height={category.image.height}
+                      className="size-full object-contain mix-blend-multiply transition-transform duration-(--motion) group-hover:scale-105"
+                    />
+                  ) : null}
+                </span>
+                <span className="mt-3 block font-semibold group-hover:underline">
+                  {category.name}
+                </span>
+              </a>
+              <Grandchildren items={category.children} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {texts.length > 0 ? (
+        <ul
+          data-mega-texts
+          className={cn(
+            "grid grid-cols-3 gap-x-8 gap-y-6",
+            tiles.length > 0 ? "mt-8 border-t border-line-subtle pt-6" : "mt-6",
+          )}
+        >
+          {texts.map((category) => (
+            <li key={category.id}>
+              <a href={category.href} className={cn(LINK, "font-semibold hover:underline")}>
+                {category.name}
+              </a>
+              <Grandchildren items={category.children} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </>
+  );
+}
+
 /**
  * Mega menu-ul de pe desktop (docs/21 §3.3): lista categoriilor în stânga, subcategoriile categoriei active în dreapta. TOATE
  * linkurile sunt `<a href>` în HTML-ul serverului (panourile inactive sunt doar ascunse), deci crawlerele le văd fără JavaScript.
@@ -166,106 +249,7 @@ export function MegaMenu({
                 >
                   {item.seeAllLabel}
                 </a>
-                {item.children.filter((child) => child.image).length > 0 ? (
-                  <ul className="mt-6 grid grid-cols-3 gap-x-8 gap-y-6">
-                    {item.children
-                      .filter((child) => child.image)
-                      .map((child) => (
-                        <li key={child.id}>
-                          {child.image ? (
-                            <a href={child.href} className={cn(LINK, "group block")}>
-                              <span className="block overflow-hidden rounded-card bg-card">
-                                <StoreImage
-                                  src={child.image.src}
-                                  alt=""
-                                  width={child.image.width}
-                                  height={child.image.height}
-                                  className="aspect-4/3 w-full object-cover transition-transform duration-(--motion) group-hover:scale-105"
-                                />
-                              </span>
-                              <span className="mt-3 block font-semibold group-hover:underline">
-                                {child.name}
-                              </span>
-                            </a>
-                          ) : (
-                            <a
-                              href={child.href}
-                              className={cn(LINK, "font-semibold hover:underline")}
-                            >
-                              {child.name}
-                            </a>
-                          )}
-                          {child.children.length > 0 ? (
-                            <ul className="mt-2 flex flex-col gap-1.5">
-                              {child.children.map((grand) => (
-                                <li key={grand.id}>
-                                  <a
-                                    href={grand.href}
-                                    className={cn(
-                                      LINK,
-                                      "text-sm text-ink-secondary hover:text-ink hover:underline",
-                                    )}
-                                  >
-                                    {grand.name}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </li>
-                      ))}
-                  </ul>
-                ) : null}
-                {item.children.filter((child) => !child.image).length > 0 ? (
-                  <ul className="mt-8 grid grid-cols-3 gap-x-8 gap-y-6 first:mt-6">
-                    {item.children
-                      .filter((child) => !child.image)
-                      .map((child) => (
-                        <li key={child.id}>
-                          {child.image ? (
-                            <a href={child.href} className={cn(LINK, "group block")}>
-                              <span className="block overflow-hidden rounded-card bg-card">
-                                <StoreImage
-                                  src={child.image.src}
-                                  alt=""
-                                  width={child.image.width}
-                                  height={child.image.height}
-                                  className="aspect-4/3 w-full object-cover transition-transform duration-(--motion) group-hover:scale-105"
-                                />
-                              </span>
-                              <span className="mt-3 block font-semibold group-hover:underline">
-                                {child.name}
-                              </span>
-                            </a>
-                          ) : (
-                            <a
-                              href={child.href}
-                              className={cn(LINK, "font-semibold hover:underline")}
-                            >
-                              {child.name}
-                            </a>
-                          )}
-                          {child.children.length > 0 ? (
-                            <ul className="mt-2 flex flex-col gap-1.5">
-                              {child.children.map((grand) => (
-                                <li key={grand.id}>
-                                  <a
-                                    href={grand.href}
-                                    className={cn(
-                                      LINK,
-                                      "text-sm text-ink-secondary hover:text-ink hover:underline",
-                                    )}
-                                  >
-                                    {grand.name}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </li>
-                      ))}
-                  </ul>
-                ) : null}
+                <MegaMenuGroups categories={item.children} />
               </div>
             ))}
           </div>

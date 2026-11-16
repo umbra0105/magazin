@@ -165,6 +165,24 @@ describe("AnnouncementBar (bara de anunț)", () => {
   });
 });
 
+describe("ProductCard: zona de imagine uniformă", () => {
+  const props = { href: "/produs/p", name: "P", media: h(StoreImage, img), price: "1 leu" };
+
+  it("masa foto din token, aceeași umplutură și încadrare întreagă (object-contain), în ambele layouturi", () => {
+    for (const layout of ["vertical", "horizontal"] as const) {
+      const html = render(h(ProductCard, { ...props, layout }));
+      expect(html, layout).toContain("bg-media");
+      expect(html, layout).toContain("p-4");
+      expect(html, layout).toContain("object-contain");
+      expect(html, layout).not.toContain("object-cover");
+      // fundalul alb al fotografiei se contopește cu masa foto (nu rămâne un dreptunghi alb)
+      expect(html, layout).toContain("mix-blend-multiply");
+      // fundalul zonei nu mai e culoarea paginii: acolo fotografiile albe ieșeau ca pătrate pe card
+      expect(html, layout).not.toContain("bg-surface-page");
+    }
+  });
+});
+
 describe("ProductCard: layout orizontal (listă)", () => {
   const props = { href: "/produs/p", name: "P", media: h(StoreImage, img), price: "1 leu" };
 

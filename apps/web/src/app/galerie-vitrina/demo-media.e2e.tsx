@@ -77,10 +77,10 @@ export async function loadHeroPhoto(): Promise<DemoPhoto | null> {
 }
 
 /**
- * Până la `limit` fotografii ale produselor demo (câte una pe produs, cele mai recent modificate întâi). Citește prin același
- * `pickVariantImage` ca meniul. Orice eroare (bază indisponibilă, driver de stocare neconfigurat) întoarce lista goală.
+ * Până la `limit` fotografii ale produselor demo, în varianta cerută (câte una pe produs, cele mai recent modificate întâi).
+ * Citește prin același `pickVariantImage` ca meniul. Orice eroare (bază indisponibilă, driver de stocare neconfigurat) întoarce lista goală.
  */
-export async function loadDemoProductPhotos(limit: number): Promise<DemoPhoto[]> {
+async function queryDemoPhotos(limit: number, variant: "medium" | "large"): Promise<DemoPhoto[]> {
   try {
     const { getStorage } = await import("@/lib/media");
     const storage = getStorage();
@@ -100,7 +100,7 @@ export async function loadDemoProductPhotos(limit: number): Promise<DemoPhoto[]>
     const photos: DemoPhoto[] = [];
     for (const row of rows) {
       if (seen.has(row.productId)) continue;
-      const picked = pickVariantImage(row.media, storage, "medium");
+      const picked = pickVariantImage(row.media, storage, variant);
       if (!picked) continue;
       seen.add(row.productId);
       photos.push({
@@ -115,4 +115,23 @@ export async function loadDemoProductPhotos(limit: number): Promise<DemoPhoto[]>
   } catch {
     return [];
   }
+}
+
+export const loadDemoProductPhotos = (limit: number): Promise<DemoPhoto[]> =>
+  queryDemoPhotos(limit, "medium");
+
+/**
+ * Fotografia de hero de rezervă, DOAR pentru galeria de dezvoltare: cât timp nu există fișiere în `local-data/foto-hero/`, cea mai
+ * bună imagine reală disponibilă din produsele demo (varianta mare; întâi cele late, apoi cea mai lată), ca aspectul header-ului
+ * «sticlă» și al hero-ului să se judece pe o fotografie, nu pe un substituent plat. Nu intră în producție (pagina nu există acolo)
+ * și nu înlocuiește fotografia reală a magazinului: aspectul final se judecă cu aceea (vezi `docs/FINISAJE.md`).
+ */
+export async function loadDemoHeroPhoto(): Promise<DemoPhoto | null> {
+  const photos = await queryDemoPhotos(8, "large");
+  const landscape = photos.filter((photo) => photo.width >= photo.height);
+  const pool = landscape.length > 0 ? landscape : photos;
+  return pool.reduce<DemoPhoto | null>(
+    (best, photo) => (best === null || photo.width > best.width ? photo : best),
+    null,
+  );
 }

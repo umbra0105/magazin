@@ -29,6 +29,7 @@ import { StoreHeader } from "@/components/storefront/store-header";
 import { getMessages } from "@/messages";
 import {
   TRANSPARENT_PIXEL,
+  loadDemoHeroPhoto,
   loadDemoProductPhotos,
   loadHeroPhoto,
   type DemoPhoto,
@@ -144,7 +145,13 @@ export default async function StorefrontGalleryPage({
   const announcement = ["brand", "neutral"].find((tone) => tone === first(params["anunt"])) as
     "brand" | "neutral" | undefined;
   const config = configFromPreset(preset);
-  const [photos, heroPhoto] = await Promise.all([loadDemoProductPhotos(8), loadHeroPhoto()]);
+  const [photos, ownHero, demoHero] = await Promise.all([
+    loadDemoProductPhotos(8),
+    loadHeroPhoto(),
+    loadDemoHeroPhoto(),
+  ]);
+  // fotografia proprie din local-data/foto-hero are prioritate; altfel cea mai bună imagine de produs (doar în galerie)
+  const heroPhoto = ownHero ?? demoHero;
   const menu = demoMenu(photos);
   const company = m.footerCompany;
   const query = (patch: Record<string, string>) =>
