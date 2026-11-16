@@ -84,6 +84,14 @@ export const settingGroups = {
      * (24 = minimul legal pentru consumatori). Magazinul o poate schimba; produsul o poate suprascrie.
      */
     defaultWarrantyMonths: z.number().int().min(0).max(240).default(24),
+    /**
+     * Vitrina arată prețul redus și prețul tăiat (promoțiile)? OPRIT implicit: până la răspunsul avocatului despre Omnibus
+     * (`docs/INTREBARI-AVOCAT.md` §2: ce se afișează, pentru ce reduceri, de la ce dată curge perioada de 30 de zile) vitrina
+     * arată doar prețul întreg. Nu e o decizie de produs: pornirea ei cere răspunsul și textele legale.
+     */
+    showSalePricing: z.boolean().default(false),
+    /** Produse pe pagină în listele vitrinei (categorie, mărci, colecții, căutare). */
+    productsPerPage: z.number().int().min(8).max(96).default(24),
   },
   checkout: {
     guestCheckoutEnabled: z.boolean().default(true),
