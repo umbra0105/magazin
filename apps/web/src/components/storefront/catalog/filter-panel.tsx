@@ -21,6 +21,7 @@ export function FilterPanel({
   hidden,
   clearHref,
   hasActive,
+  locale,
   framed = false,
 }: {
   action: string;
@@ -28,6 +29,8 @@ export function FilterPanel({
   hidden: { name: string; value: string }[];
   clearHref: string;
   hasActive: boolean;
+  /** Limba magazinului: numerele din intervale se scriu cu virgulă zecimală. */
+  locale: string;
   /** Panou propriu (pe calculator: card cu titlu); în sertar, fără cadru dublu. */
   framed?: boolean;
 }) {
@@ -82,6 +85,7 @@ export function FilterPanel({
               selectedMin={range.selected?.min ?? null}
               selectedMax={range.selected?.max ?? null}
               count={range.count}
+              locale={locale}
             />
           </div>
         ))}

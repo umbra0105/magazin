@@ -100,6 +100,57 @@ test.describe("filtre: fără JavaScript", () => {
   });
 });
 
+test.describe("format românesc și aspect (S3 din Faza 7)", () => {
+  test("intervalul se scrie cu virgulă: chip-ul, câmpul și adresa canonică", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(list(seed.categoryPath));
+    const panel = page.locator("[data-filter-panel]");
+    const field = panel.locator(`input[name="min_${seed.attributeCode}"]`);
+    await field.fill("12,5");
+    await panel.getByRole("button", { name: "Aplică filtrele" }).click();
+    await expect(page).toHaveURL(new RegExp(`f_${seed.attributeCode}=12\\.5-$`));
+    await expect(page.locator("[data-filter-chips]")).toContainText(`Debit ${tag}: ≥ 12,5 mc/h`);
+    // câmpul își păstrează valoarea cu virgulă
+    await expect(field).toHaveValue("12,5");
+  });
+
+  test("titlul foarte lung de produs coboară o treaptă și nu depășește trei rânduri pe calculator", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/produs/${seed.products[2]?.slug}`);
+    const h1 = page.locator("h1");
+    const size = await h1.evaluate((node) => parseFloat(getComputedStyle(node).fontSize));
+    const lines = await h1.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return Math.round(node.getBoundingClientRect().height / parseFloat(style.lineHeight));
+    });
+    expect(size).toBeLessThanOrEqual(20);
+    expect(lines).toBeLessThanOrEqual(3);
+    // un titlu scurt rămâne mare
+    await page.goto(`/produs/${seed.products[0]?.slug}`);
+    const shortSize = await page
+      .locator("h1")
+      .evaluate((node) => parseFloat(getComputedStyle(node).fontSize));
+    expect(shortSize).toBeGreaterThanOrEqual(30);
+  });
+
+  test("pe telefon firimiturile ocupă un singur rând, cu numele lung trunchiat", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/produs/${seed.products[2]?.slug}`);
+    const nav = page.getByRole("navigation", { name: "Firimituri" }).first();
+    const height = await nav.evaluate((node) => node.getBoundingClientRect().height);
+    const lineHeight = await nav.evaluate((node) => parseFloat(getComputedStyle(node).lineHeight));
+    expect(height).toBeLessThan(lineHeight * 1.5);
+    // fără defilare orizontală a paginii
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  });
+});
+
 test.describe("filtre: cu JavaScript", () => {
   test("bifa aplică singură filtrul; intervalul are glisoare legate de câmpuri; sertarul de pe telefon", async ({
     page,

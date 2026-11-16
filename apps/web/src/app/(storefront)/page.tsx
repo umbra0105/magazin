@@ -14,6 +14,7 @@ import { JsonLdScript } from "@/components/storefront/json-ld";
 import { getSettings } from "@/lib/services";
 import { organizationLd, websiteLd } from "@/lib/structured-data";
 import { ProductGrid } from "@/components/storefront/catalog/product-grid";
+import { tileSpan } from "@/lib/storefront-layout";
 import {
   formatPrice,
   getStorefrontFormat,
@@ -27,18 +28,6 @@ import { getMessages } from "@/messages";
 const m = getMessages().storefront.home;
 
 const TRUST_ICONS = [Truck, ShieldCheck, Wallet, Headset];
-
-/**
- * Plăcile de categorie ocupă rânduri complete: pe telefon (2 coloane) o placă rămasă singură se întinde pe lățime; pe ecrane late (6
- * coloane) rândul de 3 se completează, iar un rând cu rest se împarte egal (o placă rămasă = tot rândul, două = jumătate fiecare).
- */
-function tileSpan(index: number, count: number): string {
-  const small = count % 2 === 1 && index === count - 1 ? "col-span-2" : "col-span-1";
-  const rest = count % 3;
-  const inLastRow = rest !== 0 && index >= count - rest;
-  const wide = inLastRow ? (rest === 1 ? "lg:col-span-6" : "lg:col-span-3") : "lg:col-span-2";
-  return `${small} ${wide}`;
-}
 
 /** Câte produse recomandate arată pagina de start (două rânduri pe un ecran lat). */
 const FEATURED_COUNT = 8;

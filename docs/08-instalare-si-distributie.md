@@ -55,7 +55,9 @@ Prima impresie a produsului tău. Trebuie să dureze sub 5 minute.
 ```
 0. Gate         Dacă există deja instalare (flag în DB sau install.lock) → 404 permanent
 1. Cerințe      ✓ Node 24.7+  ✓ Postgres reachable  ✓ Redis reachable
-                ✓ extensii pg (pg_trgm, uuid-ossp)  ✓ permisiuni scriere pe storage
+                ✓ extensii pg (pg_trgm, unaccent, uuid-ossp)  ✓ permisiuni scriere pe storage
+                  (pg_trgm și unaccent sunt OBLIGATORII: căutarea din vitrină, migrarea
+                  20261116120000_catalog_search; trebuie permise pe Postgres-ul țintă)
                 ✓ APP_KEY prezent  → afișare verde/roșu, nu treci mai departe cu roșu
 2. Bază de date host, port, user, parolă, nume DB → buton „Testează conexiunea"
                 → rulează migrațiile cu progres vizibil

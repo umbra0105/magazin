@@ -20,6 +20,7 @@ import {
   getStorefrontFormat,
   listProductsCached,
 } from "@/lib/storefront-catalog";
+import { formatRange } from "@/lib/format-number";
 import { listingHref } from "@/lib/storefront-urls";
 import { getMessages } from "@/messages";
 import { FilterPanel } from "./filter-panel";
@@ -109,10 +110,7 @@ export async function CatalogListing({
   const rangeText = (code: string): string => {
     const range = filters.ranges[code];
     const meta = facets.ranges.find((r) => r.code === code);
-    const unit = meta?.unit ? ` ${meta.unit}` : "";
-    if (!range) return "";
-    if (range.min !== null && range.max !== null) return `${range.min}–${range.max}${unit}`;
-    return range.min !== null ? `≥ ${range.min}${unit}` : `≤ ${range.max}${unit}`;
+    return range ? formatRange(range, meta?.unit ?? null, format.locale) : "";
   };
 
   const chips: { label: string; href: string }[] = [
@@ -146,6 +144,7 @@ export async function CatalogListing({
       hidden={hidden}
       clearHref={clearHref}
       hasActive={active}
+      locale={format.locale}
     />
   );
 

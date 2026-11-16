@@ -2305,7 +2305,11 @@ export async function seedE2eFilterCatalog(tag: string): Promise<{
   const plan = [
     { brand: brandA, value: 10, title: `Pompă Alfa ${tag} mică` },
     { brand: brandA, value: 20, title: `Pompă Alfa ${tag} medie` },
-    { brand: brandB, value: 30, title: `Pompă Beta ${tag} mare` },
+    {
+      brand: brandB,
+      value: 30,
+      title: `Pompă Beta ${tag} mare, de filtrare pentru piscine publice și private, cu prefiltru, motor monofazat 230 V, protecție termică, racorduri incluse și garanție extinsă`,
+    },
   ];
   const products: { slug: string; title: string; value: number }[] = [];
   await withClient(async (db) => {

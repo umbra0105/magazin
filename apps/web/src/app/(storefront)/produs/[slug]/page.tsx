@@ -28,6 +28,7 @@ import {
 import { getStorefrontChrome } from "@/lib/storefront-chrome";
 import { telHref } from "@/lib/storefront-chrome-rules";
 import { SHOP_PATH, categoryHref, productHref } from "@/lib/storefront-urls";
+import { productTitleSize } from "@/lib/storefront-layout";
 import { getMessages } from "@/messages";
 
 const m = getMessages().storefront.catalog;
@@ -189,7 +190,9 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
             {product.brand ? (
               <p className="text-sm font-medium text-ink-secondary">{product.brand.name}</p>
             ) : null}
-            <h1 className="heading-display text-2xl text-balance sm:text-3xl">{product.title}</h1>
+            <h1 className={`heading-display text-balance ${productTitleSize(product.title)}`}>
+              {product.title}
+            </h1>
             {product.energyClass ? (
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <EnergyLabel

@@ -404,6 +404,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Wizard `/install` complet (`08-instalare-si-distributie.md` §2)
 - [ ] Notă: **tu faci instalările**, deci wizard-ul poate presupune un utilizator tehnic. Fără „prost-rezistență" extremă.
 - [ ] Verificare cerințe, test conexiune DB, rulare migrații cu progres
+- [ ] ⚠️ **Extensiile Postgres `pg_trgm` și `unaccent` (căutarea din vitrină, migrarea `20261116120000_catalog_search`):** verificarea de cerințe a instalatorului le cere pe Postgres-ul țintă (sunt extensii «de încredere» din PostgreSQL 13+: le creează orice utilizator cu dreptul CREATE pe baza de date, fără superutilizator; pe un Postgres gestionat verifică lista de extensii permise). Fără ele, migrările pică, deci instalatorul oprește cu mesaj clar, înainte de a rula migrațiile
 - [ ] Generare `APP_KEY` + avertisment de păstrare
 - [ ] Setare date firmă → propagate automat în footer, facturi, emailuri, pagini legale
 - [ ] Creare cont administrator, alegere temă, upload logo
