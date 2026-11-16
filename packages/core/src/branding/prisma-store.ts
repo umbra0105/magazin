@@ -17,6 +17,7 @@ export function createPrismaBrandingStore(db: PrismaClient): BrandingStore {
             logoUrl: row.logoUrl,
             faviconUrl: row.faviconUrl,
             ogImageUrl: row.ogImageUrl,
+            customCss: row.customCss,
           }
         : null;
     },
@@ -30,6 +31,7 @@ export function createPrismaBrandingStore(db: PrismaClient): BrandingStore {
         logoUrl: row.logoUrl,
         faviconUrl: row.faviconUrl,
         ogImageUrl: row.ogImageUrl,
+        customCss: row.customCss ?? null,
       };
       await db.branding.upsert({
         where: { id: ROW_ID },

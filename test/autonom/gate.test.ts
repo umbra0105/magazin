@@ -465,6 +465,15 @@ describe("condiția 6: aprobarea utilizatorului pentru fazele B și C", () => {
     ).toBe(true);
   });
 
+  it("faza 6 (modul C) cere «aprobat» pentru ea, nu pentru altă fază", async () => {
+    for (const text of [null, "- Faza 6: în așteptare", "- Faza 7: aprobat"]) {
+      expectStopsAt(await run({ branch: "faza-6", ...withApprovals(text) }, "6"), 6);
+    }
+    expect(
+      (await run({ branch: "faza-6", ...withApprovals("- Faza 6: aprobat") }, "6")).result.ok,
+    ).toBe(true);
+  });
+
   it("faza de modul A nu cere aprobare (nici dacă fișierul lipsește)", async () => {
     expect((await run(withApprovals(null))).result.ok).toBe(true);
   });

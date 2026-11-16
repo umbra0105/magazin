@@ -1,46 +1,16 @@
-import { PRESETS, settingGroups } from "@ecom/core";
-import { getLogger } from "@ecom/shared";
-import { getBranding, getSettings } from "@/lib/services";
+import { Container } from "@ecom/ui";
+import { getStorefrontChrome } from "@/lib/storefront-chrome";
 
-// Placeholder până la vitrină (Fazele 6-7). Citește numele magazinului din setări și arată
-// tokenii temei, ca presetele să se vadă. Dinamic, pentru că depinde de setări/Branding.
+// Pagina principală provizorie până la Faza 7 (șabloanele de acasă, categorie, produs): un singur h1 cu numele magazinului și
+// fraza lui din setări. Header-ul și footer-ul vin din layout. Dinamică, pentru că depinde de setări.
 export const dynamic = "force-dynamic";
 
-async function loadPageData() {
-  try {
-    const [storeName, branding] = await Promise.all([
-      getSettings().get("general.storeName"),
-      getBranding().getConfig(),
-    ]);
-    return { storeName, preset: PRESETS[branding.preset].label, darkMode: branding.darkMode };
-  } catch (error) {
-    // Fără DB/Redis pagina rămâne afișabilă, cu numele implicit din registru.
-    getLogger().warn({ err: error }, "nu pot citi setările pentru pagina principală");
-    return {
-      storeName: settingGroups.general.storeName.parse(undefined),
-      preset: null,
-      darkMode: false,
-    };
-  }
-}
-
 export default async function HomePage() {
-  const { storeName, preset, darkMode } = await loadPageData();
-
+  const { storeName, tagline } = await getStorefrontChrome();
   return (
-    <main className="mx-auto max-w-(--container-width) space-y-6 p-8">
-      <h1 className="font-[family-name:var(--font-heading)] text-4xl font-semibold">{storeName}</h1>
-      <p className="text-muted-foreground">
-        Text în fontul de corp, culoarea secundară.
-        {preset ? ` Preset: ${preset}${darkMode ? ", cu dark mode" : ""}.` : null}
-      </p>
-      <div className="flex flex-wrap gap-3 text-sm">
-        <span className="rounded-md bg-primary px-3 py-1 text-primary-foreground">primary</span>
-        <span className="rounded-md border border-border px-3 py-1 text-accent">accent</span>
-        <span className="rounded-md border border-border px-3 py-1 text-success">success</span>
-        <span className="rounded-md border border-border px-3 py-1 text-danger">danger</span>
-        <span className="rounded-md border border-border px-3 py-1">border</span>
-      </div>
-    </main>
+    <Container className="py-section">
+      <h1 className="heading-display text-hero text-balance">{storeName}</h1>
+      {tagline ? <p className="mt-6 max-w-2xl text-lede text-ink-secondary">{tagline}</p> : null}
+    </Container>
   );
 }

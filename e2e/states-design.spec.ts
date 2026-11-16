@@ -169,15 +169,24 @@ test.describe("autentificare: mesajul de formular", () => {
 // ───────────────────────── 404, eroare, încărcare ─────────────────────────
 
 test.describe("404, eroare, încărcare", () => {
-  test("404 public: stare cu titlu, o frază și o singură acțiune principală; răspunde 404", async ({
+  test("404 public: în cadrul vitrinei (header, footer), un singur H1 și o acțiune; răspunde 404", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const response = await page.goto("/pagina-care-nu-exista");
     expect(response?.status()).toBe(404);
-    await expect(page.getByRole("heading", { name: "Pagina nu a fost găsită" })).toBeVisible();
-    await expect(page.locator('[data-surface="admin"]')).toHaveCount(1);
-    expect(await primaryControls(page)).toEqual(["Înapoi la prima pagină"]);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Pagina nu a fost găsită" }),
+    ).toBeVisible();
+    // pagina stă pe suprafața vitrinei, nu pe cea a adminului, cu header și footer
+    await expect(page.locator('[data-surface="storefront"]')).toHaveCount(1);
+    await expect(page.locator('[data-surface="admin"]')).toHaveCount(0);
+    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "Înapoi la prima pagină" }),
+    ).toHaveAttribute("href", "/");
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await pageOverflow(page)).toBeLessThanOrEqual(0);
   });

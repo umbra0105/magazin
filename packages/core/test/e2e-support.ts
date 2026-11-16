@@ -2204,3 +2204,25 @@ export async function seedE2eAttributeList(tag: string): Promise<string[]> {
   });
   return rows.map((row) => row.name);
 }
+
+/**
+ * Readuce aspectul vitrinei la implicit: șterge rândul `Branding` și setările `appearance.*` și `maintenance.*` și invalidează cache-urile Redis ale
+ * temei și ale setărilor (literal aici, ca `removeE2eStockImports`: fișierul nu importă din `src`). Pentru specul editorului de temă,
+ * care schimbă setări comune întregii aplicații: îl rulează înainte și după, ca alte specuri să găsească vitrina neschimbată.
+ */
+export async function resetE2eAppearance(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query("BEGIN");
+    try {
+      await db.query(`delete from branding`);
+      await db.query(
+        `delete from setting where key like 'appearance.%' or key like 'maintenance.%'`,
+      );
+      await db.query("COMMIT");
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
+  });
+  await withRedis((redis) => redis.del("ecom:settings:v1", "ecom:branding:v1"));
+}

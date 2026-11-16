@@ -73,3 +73,18 @@ export {
   type ToastItem,
   type ToastTone,
 } from "./components/toast-state";
+
+// Vitrina (Faza 6): componente de bază, doar tokeni semantici (docs/21 §2).
+export { Container, type ContainerProps } from "./storefront/container";
+export { StoreButton, storeButtonVariants, type StoreButtonProps } from "./storefront/store-button";
+export { StoreCard, ProductCard, type ProductCardProps } from "./storefront/store-card";
+export { StorePill, type StorePillTone } from "./storefront/store-pill";
+export { StoreImage, type StoreImageProps } from "./storefront/store-image";
+export { HeroBanner, type HeroBannerProps } from "./storefront/hero-banner";
+export { TrustBar, type TrustItem } from "./storefront/trust-bar";
+export { StoreSearch, type StoreSearchProps } from "./storefront/store-search";
+export { SectionHeading } from "./storefront/section-heading";
+export { AnnouncementBar, type AnnouncementBarProps } from "./storefront/announcement-bar";
+export { StorefrontState, type StorefrontStateProps } from "./storefront/storefront-state";
+export { StoreSkeleton, StorefrontLoading } from "./storefront/store-skeleton";
+export { NavSheet, type NavSheetProps } from "./storefront/nav-sheet";

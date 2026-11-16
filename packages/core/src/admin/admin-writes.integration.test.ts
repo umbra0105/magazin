@@ -21,7 +21,8 @@ import { DEFAULT_ROLES } from "../rbac/catalog";
 import { createPrismaSettingsStore } from "../settings/prisma-store";
 import { SettingsService } from "../settings/settings-service";
 import { createFakeCache } from "../test-utils/fake-cache";
-import { inRolledBackTransaction, type TestTx } from "../test-utils/rollback";
+import { inAuditScope, newAuditRows } from "../test-utils/audit-baseline";
+import type { TestTx } from "../test-utils/rollback";
 import { createAdminWrites, recordDeniedAttempt } from "./admin-writes";
 
 const db = getDb();
@@ -43,8 +44,8 @@ function setup(tx: TestTx) {
   return { audit, settings, flags, branding, integrations, writes, tx };
 }
 
-const rows = (tx: TestTx, action: string) =>
-  tx.auditLog.findMany({ where: { action }, orderBy: { createdAt: "asc" } });
+/** Rândurile de audit scrise de test (nu cele rămase de rulări anterioare, de exemplu E2E, în aceeași bază). */
+const rows = (tx: TestTx, action: string) => newAuditRows(tx, { action });
 
 const inContext = <T>(fn: () => Promise<T>) => runWithRequestContext({ requestId: REQUEST_ID }, fn);
 
@@ -64,7 +65,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
   });
 
   it("setare: actor, requestId, rezultat, entitate, doar valoarea schimbată (înainte/după)", async () => {
-    await inRolledBackTransaction(db, async (tx) => {
+    await inAuditScope(db, async (tx) => {
       const { writes, settings } = setup(tx);
       await settings.set("general.storeName", "Magazin Vechi");
 
@@ -89,7 +90,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
   });
 
   it("o setare neschimbată sau invalidă nu scrie nimic în jurnal", async () => {
-    await inRolledBackTransaction(db, async (tx) => {
+    await inAuditScope(db, async (tx) => {
       const { writes, settings } = setup(tx);
       await settings.set("general.storeName", "Același");
 
@@ -108,7 +109,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
   });
 
   it("flag: înregistrează doar schimbarea (fals → adevărat); a doua oară nu mai scrie", async () => {
-    await inRolledBackTransaction(db, async (tx) => {
+    await inAuditScope(db, async (tx) => {
       const { writes, flags } = setup(tx);
       await flags.setEnabled("blog", false);
 
@@ -129,7 +130,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
   });
 
   it("branding: în jurnal apare DOAR culoarea schimbată, nu toată configurația", async () => {
-    await inRolledBackTransaction(db, async (tx) => {
+    await inAuditScope(db, async (tx) => {
       const { writes, branding } = setup(tx);
       const base = configFromPreset("minimal");
       await branding.save(base);
@@ -155,7 +156,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
     };
 
     it("credențialele apar doar ca nume de cheie ([modificat]/[ascuns]); în DB sunt criptate", async () => {
-      await inRolledBackTransaction(db, async (tx) => {
+      await inAuditScope(db, async (tx) => {
         const { writes, integrations } = setup(tx);
 
         await inContext(() =>
@@ -205,7 +206,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
     });
 
     it("la modificări, doar ce s-a schimbat: o schimbare de config nu atinge credențialele", async () => {
-      await inRolledBackTransaction(db, async (tx) => {
+      await inAuditScope(db, async (tx) => {
         const { writes } = setup(tx);
         await writes.saveIntegration(
           { type: "payment", provider: "netopia", credentials: secrets, config: { mode: "test" } },
@@ -225,7 +226,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
     });
 
     it("înlocuirea credențialelor: cheia scoasă apare ca dispărută, fără valori", async () => {
-      await inRolledBackTransaction(db, async (tx) => {
+      await inAuditScope(db, async (tx) => {
         const { writes } = setup(tx);
         await writes.saveIntegration(
           { type: "email", provider: "smtp", credentials: { password: secrets.password } },
@@ -251,7 +252,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
     });
 
     it("o valoare sensibilă pusă din greșeală în config e mascată de AuditService (după numele cheii)", async () => {
-      await inRolledBackTransaction(db, async (tx) => {
+      await inAuditScope(db, async (tx) => {
         const { writes } = setup(tx);
         const leak = "tok_" + randomBytes(8).toString("hex");
         await writes.saveIntegration(
@@ -267,7 +268,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
 
   describe("încercări refuzate", () => {
     it("fără permisiune: acțiunea NU rulează, nimic nu se modifică, încercarea se înregistrează ca „denied”", async () => {
-      await inRolledBackTransaction(db, async (tx) => {
+      await inAuditScope(db, async (tx) => {
         const { writes, audit } = setup(tx);
         const withPermission = createWithPermission({
           getSubject: async () => subjectFor("support"),
@@ -311,7 +312,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
     });
 
     it("neautentificat: refuzat și înregistrat fără actor", async () => {
-      await inRolledBackTransaction(db, async (tx) => {
+      await inAuditScope(db, async (tx) => {
         const { audit } = setup(tx);
         const withPermission = createWithPermission({
           getSubject: async () => null,
@@ -343,7 +344,7 @@ describe("scrieri din admin cu audit (Postgres real, în tranzacție anulată)",
     });
 
     it("cu permisiune: reușita se înregistrează cu rezultatul „success”", async () => {
-      await inRolledBackTransaction(db, async (tx) => {
+      await inAuditScope(db, async (tx) => {
         const { writes, audit, settings } = setup(tx);
         await settings.set("general.storeName", "Vechi");
         const withPermission = createWithPermission({

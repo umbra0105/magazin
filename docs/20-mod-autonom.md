@@ -101,6 +101,7 @@ Dacă nu e clar dacă ceva e «logică critică», este.
 - **`docs/PROGRESS.md`**: «de unde reiau» actualizat după **fiecare** pas, ca o sesiune nouă să poată continua dacă limita de utilizare se termină.
 - **🏁 la final de fază**, cu: ce funcționează, ce a rămas, S3 deschise, 10–15 pași de verificare în browser, locul capturilor, hash-ul îmbinării (sau motivul pentru care nu s-a îmbinat).
 - Nu se trimit rapoarte per lot. Se trimit doar 🛑 și 🏁.
+- **O fază = o sesiune nouă de Claude Code (și un chat nou cu ghidul).** La finalul oricărei faze, raportul 🏁 spune explicit: «Faza N închisă; deschide o sesiune nouă pentru Faza N+1», și indică unde e starea proiectului (`docs/PROGRESS.md`, `docs/AUTONOM-LOG.md`, ramura și etichetele). La începutul unei faze noi, sesiunea citește mai întâi `docs/PROGRESS.md`, `docs/20-mod-autonom.md` și secțiunea fazei din `docs/06-todo-master.md`, apoi confirmă înțelegerea înainte să construiască.
 
 ## 9. Ce rămâne la utilizator
 

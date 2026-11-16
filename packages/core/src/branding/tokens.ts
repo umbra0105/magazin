@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CUSTOM_CSS_MAX_LENGTH, validateCustomCss } from "./custom-css";
 
 /**
  * Tokens de temă. Tot ce ajunge în CSS trece prin aceste scheme STRICTE: culori doar hex,
@@ -79,6 +80,32 @@ export const RADIUS_KEYS = Object.keys(RADIUS_VALUES) as [RadiusKey, ...RadiusKe
 export const PRESET_KEYS = ["minimal", "bold", "editorial"] as const;
 export type PresetKey = (typeof PRESET_KEYS)[number];
 
+/**
+ * Forma vitrinei, proprietate a presetului (nu a coloanei din `Branding`): fiecare valoare e o cheie într-un tabel fix, deci în CSS
+ * ajung doar șirurile de mai jos, niciodată text liber. Componentele din `@ecom/ui` citesc doar variabilele rezultate.
+ */
+export const BUTTON_SHAPES = {
+  pill: "9999px",
+  round: "var(--radius)",
+  square: "0.125rem",
+} as const;
+export type ButtonShape = keyof typeof BUTTON_SHAPES;
+export const CARD_RADII = { sm: "0.25rem", md: "0.75rem", lg: "1.25rem", xl: "1.5rem" } as const;
+export type CardRadius = keyof typeof CARD_RADII;
+export const HEADING_TRACKING = { normal: "0", tight: "-0.02em", tighter: "-0.035em" } as const;
+export type HeadingTracking = keyof typeof HEADING_TRACKING;
+export type HeadingWeight = 600 | 700 | 800;
+/** Cât de întunecat e stratul de pe fotografia din hero, în procente (text alb peste: contrast AA pe orice imagine). */
+export type HeroScrim = 45 | 55 | 65;
+
+export interface PresetShape {
+  button: ButtonShape;
+  card: CardRadius;
+  headingWeight: HeadingWeight;
+  headingTracking: HeadingTracking;
+  heroScrim: HeroScrim;
+}
+
 /** URL de imagine: https absolut sau cale locală, fără caractere care ar putea ieși dintr-un atribut/URL. */
 const assetUrl = z
   .string()
@@ -98,5 +125,16 @@ export const brandingConfigSchema = z.strictObject({
   logoUrl: assetUrl.nullable(),
   faviconUrl: assetUrl.nullable(),
   ogImageUrl: assetUrl.nullable(),
+  /** CSS personalizat (Nivel 2): singurul text liber din temă; validat strict și împachetat în selectorul vitrinei (`custom-css.ts`). */
+  customCss: z
+    .string()
+    .max(CUSTOM_CSS_MAX_LENGTH, `CSS-ul depășește ${CUSTOM_CSS_MAX_LENGTH} de caractere`)
+    .superRefine((value, ctx) => {
+      const result = validateCustomCss(value);
+      if (!result.ok)
+        ctx.addIssue({ code: "custom", message: result.message, params: { code: result.code } });
+    })
+    .nullish()
+    .transform((value) => value ?? ""),
 });
 export type BrandingConfig = z.output<typeof brandingConfigSchema>;

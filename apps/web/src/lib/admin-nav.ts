@@ -37,7 +37,9 @@ export type AdminNavItemId =
   | "measureUnits"
   | "partsDiagrams"
   | "inventory"
-  | "warehouses";
+  | "warehouses"
+  | "appearance"
+  | "maintenance";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -114,6 +116,12 @@ export function itemHref(
   return query ? `${item.href}?${query}` : item.href;
 }
 
+/** Ecranele grupului «Setări», în ordinea din meniu (altele se adaugă aici, odată cu paginile lor). */
+export const SETTINGS_ITEMS: readonly AdminNavItem[] = [
+  { id: "appearance", href: "/admin/setari/aspect", permission: "settings.read" },
+  { id: "maintenance", href: "/admin/setari/mentenanta", permission: "settings.read" },
+];
+
 export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "dashboard", href: "/admin" },
   { id: "orders", href: "/admin/comenzi", permission: "orders.read" },
@@ -127,7 +135,7 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "content", href: "/admin/continut", permission: "content.read" },
   { id: "media", href: "/admin/media", permission: "media.read" },
   { id: "reports", href: "/admin/rapoarte", permission: "reports.read" },
-  { id: "settings", href: "/admin/setari", permission: "settings.read" },
+  { id: "settings", href: "/admin/setari", children: SETTINGS_ITEMS },
   { id: "users", href: "/admin/utilizatori", permission: "users.manage" },
   { id: "audit", href: "/admin/jurnal", permission: "audit.read" },
 ];

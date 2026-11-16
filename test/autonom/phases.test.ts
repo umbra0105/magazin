@@ -91,6 +91,15 @@ describe("faza redesign-finisaje", () => {
   });
 });
 
+describe("faza 6 (design system și layout, modul C)", () => {
+  it("modul C; ramura faza-6, etichetele pre-faza-6 și faza-6-completa", () => {
+    expect(modeOf("6")).toBe("C");
+    expect(branchOf("6")).toBe("faza-6");
+    expect(tagsOf("6")).toEqual({ pre: "pre-faza-6", done: "faza-6-completa" });
+    expect(isValidPhaseId("6")).toBe(true);
+  });
+});
+
 describe("faza 15d (mini-fază, modul A)", () => {
   it("modul A; ramura faza-15d, etichetele pre-faza-15d și faza-15d-completa", () => {
     expect(modeOf("15d")).toBe("A");

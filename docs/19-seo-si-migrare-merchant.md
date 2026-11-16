@@ -1,6 +1,6 @@
-# 19 — SEO și migrarea feed-ului Google Merchant (bază pentru Faza 6 și lansare)
+# 19 — SEO (bază pentru Faza 6) și, opțional, migrarea feed-ului Google Merchant
 
-> **Statut:** bază de cerințe, nu plan de execuție. Preia constatările auditurilor scrise pentru magazinul vechi (`SEO_AUDIT_SI_PLAN.md` din 2026-08-25, `PLAN-SEO.md` din 2026-10-21, `MIGRARE_TOTALWATER.md`) și le transformă în cerințe pentru magazinul nostru. Sursele sunt în `local-data/arhiva-piscine-concept/` (nu se comit). Hărțile de implementare ale magazinului vechi (Express + React SPA) **nu se aplică**; aici se păstrează doar *ce trebuie să fie adevărat* în produsul final.
+> **Statut:** bază de cerințe, nu plan de execuție. **Decizia utilizatorului (2026-11-15):** magazinul e white-label, construit de la zero; produsele din arhivă și din exportul WooCommerce sunt DOAR date de test, iar niciun magazin existent nu e sursă de adevăr. **§1 (cerințele SEO) rămâne valabil pentru orice magazin nou**, la fel testul «prețul din feed = prețul de pe pagină»; **§2 (migrarea de la un magazin vechi) e opțională**, doar pentru un client care are deja un magazin. Constatările auditurilor scrise pentru magazinul vechi (`SEO_AUDIT_SI_PLAN.md`, `PLAN-SEO.md`, `MIGRARE_TOTALWATER.md`) au fost transformate în cerințe; sursele sunt în `local-data/arhiva-piscine-concept/` (nu se comit). Hărțile de implementare ale magazinului vechi (Express + React SPA) **nu se aplică**; aici se păstrează doar *ce trebuie să fie adevărat* în produsul final.
 > **Document-pereche:** [18-referinta-magazin-vechi.md](18-referinta-magazin-vechi.md).
 > **Nu conține estimări de timp.** Estimările din documentele vechi sunt ignorate.
 
@@ -30,10 +30,13 @@ Magazinul nostru e Next.js cu randare pe server, deci cea mai gravă problemă a
 | **Nu promitem ce nu există**: meta descrierea nu menționează servicii (construcție, renovare) fără pagini care să le acopere | F24 | verificare |
 | **Fonturi**: se servesc din domeniul magazinului (deja decis pentru admin) | F31 | build |
 | **Consent pentru scripturile terțe** (analitice, reclame) cu stare implicită „refuzat" | F32 | verificare |
+| **Feed de produse (Google Merchant), când există**: se generează din prețurile magazinului, niciodată dintr-un export străin; **prețul din feed e egal cu prețul afișat pe pagina de produs**; plafon de plauzibilitate configurabil (alertă și excludere din feed peste o valoare), cu raport de produse excluse; adresa feed-ului: `/feed/google.xml` (`03-frontend.md` §1) | un preț greșit într-un feed poate duce la suspendarea întregului cont Merchant | test automat: prețul din feed = prețul de pe pagină, pe toate produsele; test pe plafon |
 
 Monitorizare după lansare: înscrierea domeniului în Google Search Console și Bing Webmaster Tools, trimiterea sitemap-ului, urmărirea acoperirii de indexare; Core Web Vitals din date de teren (nu doar Lighthouse local); verificare periodică cu `curl` că randarea pe server întoarce conținut complet.
 
-## 2. Migrarea feed-ului Google Merchant fără pierderea istoricului
+## 2. Migrarea feed-ului Google Merchant fără pierderea istoricului — OPȚIONAL, doar pentru un client care are deja un magazin
+
+> **Secțiune opțională (decizia utilizatorului, 2026-11-15).** Nu face parte din Faza 6 și nu se execută din oficiu: se aplică numai pentru un client care are deja un magazin cu istoric în Google Merchant și cere migrarea lui. Nimic de aici nu cere ca produsul să păstreze adrese, feed-uri sau structuri vechi.
 
 Scopul: Merchant Center să **nu** vadă „produse noi", iar campaniile să nu-și piardă istoricul. Reguli (din `MIGRARE_TOTALWATER.md`):
 
@@ -43,27 +46,21 @@ Scopul: Merchant Center să **nu** vadă „produse noi", iar campaniile să nu-
 4. **Aceleași etichete** `custom_label_*` și aceeași hartă categorie → `google_product_category` (derivată din feed-ul vechi cu scriptul `derive-google-category-map.js`).
 5. **Verificare înainte de comutarea DNS**, cu un script de comparare între feed-ul vechi și cel nou (`compare-merchant-feeds.js` îl face în sistemul vechi). Criterii de trecere:
    - 0 id-uri lipsă;
-   - 0 prețuri suspecte (vezi mai jos);
+   - 0 prețuri suspecte (vezi regula despre feed în §1);
    - 0 duplicate în feed-ul nou;
    - toate adresele vechi răspund 200 sau 301 (niciodată 404);
    - toate linkurile din feed-ul nou răspund 200;
    - acoperirea atributelor cel puțin egală cu cea veche.
 6. **După comutare**: reîncărcarea feed-ului în Merchant Center și urmărirea secțiunii „Diagnosticare" în primele zile; retrimiterea sitemap-ului în Search Console; urmărirea erorilor 404; **site-ul vechi rămâne accesibil ca rezervă** până când totul e verificat.
 
-### Controlul prețurilor (urgent, independent de migrare)
+Regulile despre prețurile din feed (din prețurile noastre, egale cu pagina, cu plafon de plauzibilitate) sunt acum în §1 și se aplică oricărui magazin. Într-o migrare reală, un export străin cu prețuri de scară greșită (de exemplu zeci de mii de lei pe un produs de sute) nu se folosește niciodată ca sursă pentru feed.
 
-În exportul de produse din arhivă, **15 produse au prețuri de ordinul zecilor de mii până al zecilor de milioane de lei** (de exemplu `Xhp60`, `TW1294`, `TW1295`), iar în `google-feed.xml` aceleași valori apar ca `<g:price>`. Un preț greșit într-un feed poate duce la suspendarea întregului cont Merchant, nu doar la respingerea produsului.
+## 3. Întrebări deschise pentru utilizator
 
-Reguli pentru magazinul nostru:
-- Feed-ul se generează **din prețurile noastre verificate**, niciodată din exportul vechi.
-- Generatorul de feed are un **plafon de plauzibilitate** configurabil (alertă și excludere din feed peste o valoare), plus un raport de produse excluse.
-- Prețul din feed trebuie să fie egal cu prețul afișat pe pagina de produs (test automat).
-- Cauza erorii vechi nu e stabilită: probabil eroare de scară sau de unitate la import. Se cere confirmarea prețurilor reale de la utilizator.
+Decizia din 2026-11-15 (magazin construit de la zero, produsele din arhivă = date de test) a scos două întrebări și a închis una:
 
-## 3. Întrebări deschise pentru utilizator (cer decizie înainte de lansare)
-
-1. **Care este site-ul sursă al migrării Merchant**: vechiul site OpenCart de pe `totalwater.ro` (cum spune documentul de migrare) sau platforma construită anterior (adresele de imagini din export arată `totalwater.ro/api/uploads/...`)? De la el vin adresele și feed-ul de redirecționat.
-2. **Structura adreselor de produs** în noul magazin: cu categorie în adresă (ca în vechiul sistem, cu 301 din restul) sau fără categorie? Decizia afectează redirecturile.
-3. Prețurile reale ale celor 15 produse cu valori suspecte.
-4. Există **servicii** (construcție, renovare, întreținere) care trebuie să aibă pagini proprii?
-5. Paginile legale necesare, cu `INTREBARI-AVOCAT.md`.
+1. ~~Site-ul sursă al migrării Merchant~~ — **scoasă**: nu există migrare obligatorie (§2 e opțională).
+2. ~~Structura adreselor de produs~~ — **închisă**: `/produs/[slug]`, fără categorie în adresă (`03-frontend.md` §1).
+3. ~~Prețurile reale ale celor 15 produse cu valori suspecte~~ — **scoasă**: produsele din arhivă sunt doar date de test.
+4. Există **servicii** (construcție, renovare, întreținere) care trebuie să aibă pagini proprii? — **deschisă**, înainte de lansare.
+5. Paginile legale necesare, cu `INTREBARI-AVOCAT.md` — **deschisă**.

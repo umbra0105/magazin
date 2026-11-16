@@ -15,6 +15,8 @@ export interface BrandingRow {
   logoUrl: string | null;
   faviconUrl: string | null;
   ogImageUrl: string | null;
+  /** CSS personalizat; `null`/lipsă la rândurile create înainte de editorul de temă. */
+  customCss?: string | null;
 }
 
 export interface BrandingStore {
@@ -87,6 +89,7 @@ export class BrandingService {
       logoUrl: config.logoUrl,
       faviconUrl: config.faviconUrl,
       ogImageUrl: config.ogImageUrl,
+      customCss: config.customCss,
     });
     await this.invalidate();
     return { config, warnings: checkContrast(config) };

@@ -1,0 +1,125 @@
+/*
+ * Tokenii VITRINEI (Faza 6, docs/21 §2), separați de cei ai adminului (admin-tokens.css). Aici stau doar valori care NU sunt culori
+ * de brand: ritmul vertical, mărimile controalelor, scara tipografică fluidă și cele două valori fixe de pe fotografii (text
+ * alb și strat negru: indiferent de temă, textul de pe o imagine e deschis pe un strat întunecat). Culorile de brand, razele,
+ * fonturile și forma vin din `Branding` (preset), prin `/theme.css`, deci vitrina arată bine și fără niciun brand configurat.
+ * Componentele citesc doar numele semantice; nicio valoare nu se repetă în `.tsx`.
+ */
+:root {
+  /* valori implicite (dacă /theme.css nu se încarcă); presetul le suprascrie prin html:root */
+  --radius-card: 1.5rem;
+  --radius-button: 9999px;
+  --heading-weight: 700;
+  --heading-tracking: -0.02em;
+  --hero-scrim: 55%;
+}
+
+html [data-surface="storefront"] {
+  /* ritm și aerisire */
+  --sf-section: clamp(3rem, 2rem + 4vw, 6rem);
+  --sf-gutter: clamp(1rem, 0.5rem + 2vw, 2rem);
+  --sf-stack: clamp(1.5rem, 1rem + 1.5vw, 2.5rem);
+  --sf-header-h: 4.5rem;
+  /* înălțimea totală a header-ului: pe telefon rândul principal + rândul căutării; de la 48rem un singur rând */
+  --sf-header-total: calc(var(--sf-header-h) + var(--sf-control-h) + 0.75rem + 1px);
+
+  /* controale: ținte tactile generoase, text de 16 px (fără zoom pe iOS) */
+  --control-h: 3rem;
+  --control-h-compact: 2.5rem;
+  --control-text: 1rem;
+  --button-text: 1rem;
+  --sf-control-h: 3rem;
+  --sf-control-h-lg: 3.5rem;
+
+  /* suprafața cardurilor: pagina amestecată cu bordura (aceeași pe orice preset și temă; verificată AA în teste) */
+  --sf-card: color-mix(in srgb, var(--color-border) 35%, var(--color-bg));
+  --sf-card-hover: color-mix(in srgb, var(--color-border) 55%, var(--color-bg));
+
+  /*
+   * «Masa foto»: suprafața pe care stau fotografiile produselor (zona de imagine a cardurilor, plăcile din meniu). O culoare
+   * fixă, aproape albă, aceeași în toate presets și în ambele teme: fotografiile cu fundal alb (cele mai multe, la produse) se
+   * contopesc cu ea în loc să apară ca pătrate albe pe un card colorat, iar în tema închisă rămân ca un cadru deschis, nu ca o
+   * pată albă pe negru (aceeași suprafață peste tot, deci nicio fotografie nu arată altfel în altă zonă). Imaginile de pe ea se
+   * amestecă prin `multiply`: albul fotografiei devine exact culoarea mesei, deci nu rămâne niciun dreptunghi alb.
+   */
+  --sf-media-surface: oklch(0.94 0 0);
+
+  /*
+   * Header-ul «sticlă»: culoarea paginii la `--sf-glass-opacity`, peste o fotografie estompată și cu saturația ridicată (culorile
+   * fotografiei străbat, în loc de un gri murdar). Contrastul textului se verifică în test pe cea mai proastă fotografie.
+   */
+  --sf-glass-opacity: 90%;
+  --sf-glass-blur: 1rem;
+  --sf-glass-saturate: 1.8;
+  --sf-glass-fill: color-mix(in srgb, var(--color-bg) var(--sf-glass-opacity), transparent);
+  --sf-glass-edge: color-mix(in srgb, var(--color-border) 60%, transparent);
+
+  /* peste fotografii: text deschis pe strat întunecat, în ambele teme */
+  --sf-on-image: oklch(1 0 0);
+  --sf-image-scrim: oklch(0 0 0);
+  --sf-image-scrim-fill: color-mix(in srgb, var(--sf-image-scrim) var(--hero-scrim), transparent);
+  /* fundalul plat de sub fotografia din hero cât timp nu s-a încărcat (sau lipsește): închis, ca textul deschis să rămână lizibil */
+  --sf-photo-fallback: oklch(0.3 0.03 250);
+  --sf-accent-on-image: color-mix(in srgb, var(--color-accent) 45%, var(--sf-on-image));
+
+  --motion: 150ms;
+}
+
+@media (min-width: 48rem) {
+  html [data-surface="storefront"] {
+    --sf-header-total: calc(var(--sf-header-h) + 1px);
+  }
+}
+
+/*
+ * Header-ul «sticlă» (setarea de aspect): e translucid, iar hero-ul care deschide pagina (primul element din `main`) urcă sub el.
+ * Pe paginile fără hero, header-ul rămâne peste fundalul paginii, deci textul rămâne lizibil în orice caz.
+ */
+html [data-surface="storefront"][data-header="glass"] main > [data-hero]:first-child {
+  margin-top: calc(var(--sf-header-total) * -1);
+  padding-top: var(--sf-header-total);
+}
+
+html [data-surface="storefront"] [data-glass] {
+  background-color: var(--sf-glass-fill);
+  border-bottom-color: var(--sf-glass-edge);
+  backdrop-filter: blur(var(--sf-glass-blur)) saturate(var(--sf-glass-saturate));
+}
+/* fără estompare nu există «sticlă»: umplutura devine opacă, ca textul să rămână lizibil peste orice fotografie */
+@supports not (backdrop-filter: blur(1px)) {
+  html [data-surface="storefront"] [data-glass] {
+    background-color: var(--color-bg);
+  }
+}
+
+html [data-surface="storefront"][data-container="lg"] {
+  --container-width: 72rem;
+}
+html [data-surface="storefront"][data-container="xl"] {
+  --container-width: 80rem;
+}
+html [data-surface="storefront"][data-container="2xl"] {
+  --container-width: 90rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html [data-surface="storefront"] {
+    --motion: 0ms;
+  }
+}
+
+/* Cât timp un panou modal (dialog nativ) e deschis, pagina de sub el nu se derulează și nu arată bara de derulare. */
+html:has(dialog.sheet-panel[open]) {
+  overflow: hidden;
+}
+
+/* Panoul de navigare de pe telefon: intră din stânga (dialog nativ), fără animație la prefers-reduced-motion. */
+.sheet-panel {
+  transition: transform var(--motion) ease-out;
+  transform: translateX(0);
+}
+@starting-style {
+  .sheet-panel[open] {
+    transform: translateX(-100%);
+  }
+}

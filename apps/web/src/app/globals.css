@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 /* Tokenii adminului (singurul loc cu valori hex ale interfeței), activi doar sub [data-surface="admin"]. */
 @import "../../../../packages/ui/src/styles/admin-tokens.css";
+/* Tokenii vitrinei (Faza 6): ritm, controale, scară tipografică, valori de pe fotografii; activi sub [data-surface="storefront"]. */
+@import "../../../../packages/ui/src/styles/storefront-tokens.css";
 
 /* dispozitive cu cursor (nu ecrane tactile): pentru elemente care apar doar la hover sau focus (creioanele de editare din liste) */
 @custom-variant hover-device (@media (hover: hover));
@@ -27,7 +29,15 @@
   --font-heading: ui-sans-serif, system-ui, sans-serif;
   --font-body: ui-sans-serif, system-ui, sans-serif;
   --container-width: 80rem;
+}
 
+/*
+ * Tokenii derivați (numele semantice) se calculează pe fiecare element care își redefinește culorile de brand: pe :root (tema
+ * magazinului) și pe elementul de previzualizare al galeriei de design (`data-theme-preview`, doar dezvoltare). Altfel o variabilă
+ * ca `--action: var(--color-primary)` ar rămâne rezolvată la valoarea rădăcinii.
+ */
+:root,
+[data-theme-preview] {
   /*
    * Numele semantice din docs/17, cu valorile vitrinei și ale paginilor publice: derivate din cele 9 culori din Branding.
    * Componentele din @ecom/ui folosesc DOAR aceste nume; adminul le redefinește sub [data-surface="admin"] (fișierul de
@@ -133,6 +143,40 @@
   --color-danger: var(--color-danger);
   --radius-md: var(--radius);
   --font-sans: var(--font-body);
+
+  /* Vitrina (valorile: storefront-tokens.css și /theme.css) */
+  --radius-card: var(--radius-card);
+  --radius-button: var(--radius-button);
+  --spacing-section: var(--sf-section);
+  --spacing-stack: var(--sf-stack);
+  --spacing-gutter: var(--sf-gutter);
+  --color-card: var(--sf-card);
+  --color-card-hover: var(--sf-card-hover);
+  --color-media: var(--sf-media-surface);
+  --color-on-image: var(--sf-on-image);
+  --color-image-ink: var(--sf-image-scrim);
+  --color-image-scrim: var(--sf-image-scrim-fill);
+  --color-photo-fallback: var(--sf-photo-fallback);
+  --color-accent-on-image: var(--sf-accent-on-image);
+}
+
+/* Scara tipografică a vitrinei (docs/21 §2.2): fluidă, titlul mare de ~84 px pe desktop și ~40 px pe telefon. */
+@theme {
+  --text-hero: clamp(2.5rem, 1.5rem + 4.6vw, 5.25rem);
+  --text-hero--line-height: 1.03;
+  --text-headline: clamp(1.875rem, 1.35rem + 2.2vw, 3.25rem);
+  --text-headline--line-height: 1.1;
+  --text-subhead: clamp(1.25rem, 1.1rem + 0.7vw, 1.75rem);
+  --text-subhead--line-height: 1.3;
+  --text-lede: clamp(1.0625rem, 1rem + 0.35vw, 1.3125rem);
+  --text-lede--line-height: 1.55;
+}
+
+/* Titlurile vitrinei: fontul, greutatea și strângerea vin din preset (variabilele din /theme.css). */
+@utility heading-display {
+  font-family: var(--font-heading);
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking);
 }
 
 /* Scara tipografică din docs/17 §2.8 (mărime / înălțime de linie / grosime). */

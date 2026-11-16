@@ -72,8 +72,33 @@ test.beforeAll(async ({ request, baseURL }) => {
   account = await createAccount(request, baseURL as string, "owner");
 });
 
-const css = (locator: Locator, property: string) =>
-  locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
+/**
+ * Așteaptă să se termine tranzițiile CSS ale paginii (culorile butoanelor și ale marcajelor se schimbă în `--motion`, 150 ms,
+ * deci `getComputedStyle` citit în timpul lor dă o culoare intermediară: `rgb(46, 48, 52)` în loc de `rgb(48, 50, 54)`).
+ * Așteptarea e pe CONDIȚIE (nicio tranziție în curs, după două cadre, ca schimbarea de stare să fi pornit tranziția), nu pe
+ * timp fix, și are o limită de runde: dacă nu se liniștește, citirea continuă, iar aserțiunea pică onest.
+ */
+const settleTransitions = (page: Page) =>
+  page.evaluate(async () => {
+    const frame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    for (let round = 0; round < 10; round += 1) {
+      await frame();
+      await frame();
+      const running = document
+        .getAnimations()
+        .filter(
+          (animation) => animation instanceof CSSTransition && animation.playState === "running",
+        );
+      if (running.length === 0) return;
+      await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+    }
+  });
+
+/** Stilul calculat al unui element, citit după ce tranzițiile s-au terminat (citirea imediată dă culori intermediare). */
+const css = async (locator: Locator, property: string) => {
+  await settleTransitions(locator.page());
+  return locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
+};
 
 /** Pagina nu derulează pe orizontală (scrollWidth ≤ clientWidth). */
 const pageOverflow = (page: Page) =>
@@ -96,8 +121,12 @@ const tokenStyle = (page: Page, className: string, property: string) =>
 /**
  * Butoanele principale vizibile dintr-o rădăcină (fundal `--action`): culoarea se citește dintr-un element-sondă cu clasa
  * `bg-action`. Întoarce numele lor (aria-label sau text). Fără rădăcină: toată pagina.
+ * Citirea e deterministă: cursorul iese din orice buton (fără culoare de hover), iar tranzițiile în curs se termină înainte
+ * de citire (un buton din care tocmai a plecat cursorul sau care tocmai s-a activat are o culoare intermediară).
  */
 async function primaryControls(page: Page, root?: Locator): Promise<string[]> {
+  await page.mouse.move(0, 0);
+  await settleTransitions(page);
   const scan = (element: Element | null) => {
     const scope: Element | Document = element ?? document;
     const probe = document.createElement("div");
