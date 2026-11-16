@@ -29,6 +29,13 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Consimțământ cookie (Faza 6) | categoriile Statistici și Marketing sunt structură: încă nu există funcții care să depindă de ele (se leagă când apar, în fazele lor) | -
 - [ ] S3 | Galeria de design (Faza 6) | fără fișiere în `local-data/foto-hero/` (nu se comit), galeria folosește ca hero cea mai bună imagine de produs din baza de dezvoltare (doar în galerie, nu în producție); aspectul final al hero-ului și al header-ului «sticlă» se judecă cu o fotografie reală a magazinului, nu cu o fotografie de produs | local-data/capturi-faza6/final/minimal-deschisa-sticla-1440.png
 
+- [ ] S3 | Pagina de start (Faza 7) | hero-ul nu are fotografie (nu există încă o imagine de hero configurabilă; vine cu CMS-ul din Faza 16): bloc întunecat înalt, cu titlul magazinului | local-data/capturi-faza7/checkpoint/acasa-deschis-1440.png
+- [ ] S3 | Carduri de produs (Faza 7) | produsele demo fără imagine arată doar masa gri, fără text; de decis dacă un card fără imagine primește un substituent | local-data/capturi-faza7/checkpoint/acasa-deschis-1440.png
+- [ ] S3 | Pagina de produs (Faza 7) | descrierile importate din datele demo conțin «&nbsp;» ca text vizibil (date importate dublu-codificate, nu un defect de afișare); de curățat la import | local-data/capturi-faza7/checkpoint/produs-deschis-1440.png
+- [ ] S3 | Liste (Faza 7) | pe telefon sortarea ocupă trei rânduri de pastile; de comprimat (de exemplu un rând derulabil) | local-data/capturi-faza7/checkpoint/categorie-inchis-390.png
+- [ ] S3 | Redirecționări (Faza 7) | adresa veche și forma cu litere mari redirecționează cu 308 (permanent, echivalent pentru Google cu 301), cum face Next din pagini; același comportament ca redirecturile adminului | -
+- [ ] S3 | Setări (Faza 7) | `catalog.showSalePricing` (oprit) nu are încă ecran în admin: rămâne oprit până la răspunsul avocatului (Omnibus) | -
+
 ## Rezolvate
 
 - [x] S3 | Mega meniu, plăci de categorie (Faza 6) | plăcile aveau cadre diferite (una cu fundal rotunjit, alta fără; imaginile tăiate cu `object-cover`) și stăteau în rânduri improvizate; acum toate au același cadru 4:3 pe «masa foto» din token, imaginea întreagă (`object-contain`) cu umplutură, într-o grilă cu 3 coloane fixe, iar categoriile text stau sub o linie fină pe aceleași coloane (test E2E pe dimensiuni, culoare, umplutură, încadrare și coloane, în 3 presets × 2 teme) | local-data/capturi-faza6/final/minimal-deschisa-meniu-1440.png

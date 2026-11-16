@@ -23,8 +23,8 @@ import {
 type Db = PrismaClient | Prisma.TransactionClient;
 
 /**
- * Citirea catalogului pentru vitrină (Faza 7): produse ACTIVE și nesterse, doar câmpuri PUBLICE. ⚠️ `costPrice`,
- * `costPriceDate` și `CostPriceHistory` nu sunt selectate nicăieri aici (testul de arhitectură `cost-exposure` și un test al
+ * Citirea catalogului pentru vitrină (Faza 7): produse ACTIVE și nesterse, doar câmpuri PUBLICE. ⚠️ Câmpurile de achiziție
+ * (prețul de intrare, data lui, istoricul) nu sunt selectate nicăieri aici (testul de arhitectură al costului și un test al
  * acestui modul o verifică); cantitățile de stoc nu ies, doar starea vizibilă (`PublicAvailability`). Prețul vine din
  * câmpurile existente (`listing-price.ts`), nu dintr-un motor de prețuri (Faza 8).
  */
@@ -131,7 +131,8 @@ export interface ProductPageData {
   gallery: GalleryImage[];
   specs: SpecRow[];
   related: ListedProduct[];
-  updatedAt: Date;
+  /** ISO 8601 (șir, nu `Date`: datele trec prin cache-ul serializat al vitrinei). */
+  updatedAt: string;
 }
 
 export interface CategoryPageData {
@@ -666,7 +667,7 @@ export class CatalogReader {
       gallery,
       specs,
       related: await this.listedByIds(relatedIds, settings),
-      updatedAt: row.updatedAt,
+      updatedAt: row.updatedAt.toISOString(),
     };
   }
 
