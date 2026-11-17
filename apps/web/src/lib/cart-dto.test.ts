@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { CartLineView, CartView, PricedLine } from "@ecom/core";
+import { priceLines, type CartLineView, type CartView, type PricedLine } from "@ecom/core";
+import { QUANTITY_FACTOR, netFromGross, parseQuantity, quantityFromTicks } from "@ecom/shared";
+import { formatMoney } from "./money-input";
 import { EMPTY_CART_VIEW, toCartDto } from "./cart-dto";
 
 const FORMAT = { currency: "RON", locale: "ro-RO" };
@@ -209,5 +211,72 @@ describe("coșul pentru interfață (texte gata formatate pe server)", () => {
   it("coș gol: fără linii și fără sumar", () => {
     const dto = toCartDto(EMPTY_CART_VIEW, FORMAT);
     expect(dto).toMatchObject({ lines: [], count: 0, totals: null });
+  });
+});
+
+describe("TVA afișat în coș = TVA din motor (coș cu 3 linii, cu fracțiuni de ban)", () => {
+  // aceleași linii ca în capturile de verificare: 751,81 + 240,00 + 9.490,00 = 10.481,81 lei
+  const ONE = quantityFromTicks(QUANTITY_FACTOR);
+  const input = (
+    key: string,
+    priceMinor: number,
+    quantity: string,
+    step: string,
+    basis: "unit" | "step",
+  ) => ({
+    key,
+    productId: `p-${key}`,
+    categoryIds: [] as string[],
+    basis,
+    priceMinor,
+    salePriceMinor: null,
+    quantity: parseQuantity(quantity, { maxDecimals: 4 }),
+    step: step === "1" ? ONE : parseQuantity(step, { maxDecimals: 4 }),
+    taxRateBps: 2100,
+    excludeFromGroupDiscount: false,
+  });
+  const engine = priceLines(
+    [
+      input("a", 12345, "6,09", "2,03", "unit"),
+      input("b", 12000, "50", "25", "step"),
+      input("c", 949000, "1", "1", "unit"),
+    ],
+    {
+      applySale: false,
+      group: { pricingType: "none" },
+      now: new Date(0),
+      maxLineMinor: 1_000_000_000,
+    },
+  );
+
+  const cartView = (): CartView => ({
+    lines: engine.lines.map((pricing) =>
+      line({ variantId: pricing.key, productSlug: pricing.key, pricing, included: true }),
+    ),
+    totals: engine.totals,
+    leadTime: null,
+    freeShipping: null,
+    canCheckout: true,
+  });
+  const money = (minor: number) => formatMoney(minor, FORMAT.currency, FORMAT.locale);
+
+  it("motorul: TVA-ul coșului e SUMA TVA-urilor pe linii, fiecare extras din totalul liniei; net + TVA = brut", () => {
+    expect(engine.lines.map((l) => l.totalMinor)).toEqual([75181, 24000, 949000]);
+    expect(engine.lines.map((l) => l.vatMinor)).toEqual([13048, 4165, 164702]);
+    expect(engine.totals.totalMinor).toBe(1048181);
+    expect(engine.totals.vatMinor).toBe(181915); // 1.819,15 lei, nu 1.819,16 (extras din total) și nu 1.819,06
+    expect(engine.totals.netMinor + engine.totals.vatMinor).toBe(engine.totals.totalMinor);
+    // diferența față de extragerea din totalul general e de 1 ban: de aceea regula e scrisă și testată
+    expect(engine.totals.totalMinor - netFromGross(engine.totals.totalMinor, 2100)).toBe(181916);
+  });
+
+  it("interfața arată exact TVA-ul din motor (suma pe linii), nu unul recalculat din total", () => {
+    const dto = toCartDto(cartView(), FORMAT);
+    expect(dto.totals?.vatText).toBe(money(engine.totals.vatMinor));
+    expect(dto.totals?.vatText).toBe(money(engine.lines.reduce((acc, l) => acc + l.vatMinor, 0)));
+    expect(dto.totals?.totalText).toBe(
+      money(engine.lines.reduce((acc, l) => acc + l.totalMinor, 0)),
+    );
+    expect(dto.totals?.vatText).toContain("1.819,15");
   });
 });

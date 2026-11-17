@@ -61,6 +61,9 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Coș (Faza 8) | excluderea din prețul de grup (`excludeFromGroupDiscount`) se citește de pe produs și categoriile directe; propagarea pe ascendenții categoriei vine cu grupurile de clienți (Faza 15) | -
 - [ ] S3 | Coș (Faza 8) | lista de recomandări de pe `/cos` nu se reîncarcă după ce coșul se golește din interfață (se reîmprospătează la reîncărcarea paginii) | -
 
+- [ ] S3 | Coș (Faza 8) | butonul dezactivat «Finalizarea comenzii se activează în curând» are text alb pe albastru deschis (contrast mic, opacitate de element dezactivat) și se rupe pe două rânduri în cardul îngust de la 1440 px | local-data/capturi-faza8/real-cos-1440.png
+- [ ] S3 | Pagina de produs (Faza 8) | pe telefon (390 px) «Adaugă în coș» stă sub imaginea mare, în afara primului ecran; bara lipicioasă apare abia când prețul iese din ecran, deci cumpărătorul trebuie să deruleze ca să găsească acțiunea | local-data/capturi-faza8/real-produs-390.png
+
 ## Rezolvate
 
 - [x] S3 | Mega meniu, plăci de categorie (Faza 6) | plăcile aveau cadre diferite (una cu fundal rotunjit, alta fără; imaginile tăiate cu `object-cover`) și stăteau în rânduri improvizate; acum toate au același cadru 4:3 pe «masa foto» din token, imaginea întreagă (`object-contain`) cu umplutură, într-o grilă cu 3 coloane fixe, iar categoriile text stau sub o linie fină pe aceleași coloane (test E2E pe dimensiuni, culoare, umplutură, încadrare și coloane, în 3 presets × 2 teme) | local-data/capturi-faza6/final/minimal-deschisa-meniu-1440.png

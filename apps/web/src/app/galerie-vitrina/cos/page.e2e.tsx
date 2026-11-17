@@ -1,6 +1,14 @@
 import { notFound } from "next/navigation";
 import { Container, cn, storeButtonVariants } from "@ecom/ui";
-import { PRESET_KEYS, configFromPreset, renderScopedThemeCss, type PresetKey } from "@ecom/core";
+import {
+  PRESET_KEYS,
+  configFromPreset,
+  priceLines,
+  renderScopedThemeCss,
+  type PresetKey,
+} from "@ecom/core";
+import { parseQuantity, quantityFromTicks, QUANTITY_FACTOR } from "@ecom/shared";
+import { formatMoney } from "@/lib/money-input";
 import { CartContent } from "@/components/storefront/cart/cart-panel";
 import { PurchasePanel } from "@/components/storefront/catalog/purchase-panel";
 import type { CartDto, CartLineDto } from "@/lib/cart-dto";
@@ -39,6 +47,60 @@ const line = (over: Partial<CartLineDto>): CartLineDto => ({
   ...over,
 });
 
+/**
+ * Sumele din galerie vin din MOTOR (nu sunt scrise de mână): totalul liniilor, TVA-ul extras din fiecare linie și suma lor, ca în
+ * coșul real. Liniile de probă: 6,09 mp la 123,45 lei/mp, 2 saci de 25 kg la 120,00 lei/sac și o pompă de 9.490,00 lei.
+ */
+const ONE = quantityFromTicks(QUANTITY_FACTOR);
+const ENGINE = priceLines(
+  [
+    {
+      key: "1",
+      productId: "p1",
+      categoryIds: [],
+      basis: "unit",
+      priceMinor: 12345,
+      salePriceMinor: null,
+      quantity: parseQuantity("6,09", { maxDecimals: 4 }),
+      step: parseQuantity("2,03", { maxDecimals: 4 }),
+      taxRateBps: 2100,
+      excludeFromGroupDiscount: false,
+    },
+    {
+      key: "2",
+      productId: "p2",
+      categoryIds: [],
+      basis: "step",
+      priceMinor: 12000,
+      salePriceMinor: null,
+      quantity: parseQuantity("50", { maxDecimals: 4 }),
+      step: parseQuantity("25", { maxDecimals: 4 }),
+      taxRateBps: 2100,
+      excludeFromGroupDiscount: false,
+    },
+    {
+      key: "3",
+      productId: "p3",
+      categoryIds: [],
+      basis: "unit",
+      priceMinor: 949000,
+      salePriceMinor: null,
+      quantity: ONE,
+      step: ONE,
+      taxRateBps: 2100,
+      excludeFromGroupDiscount: false,
+    },
+  ],
+  {
+    applySale: false,
+    group: { pricingType: "none" },
+    now: new Date(0),
+    maxLineMinor: 1_000_000_000,
+  },
+);
+const money = (minor: number) => formatMoney(minor, "RON", "ro-RO");
+const lineTotal = (key: string) => money(ENGINE.lines.find((l) => l.key === key)?.totalMinor ?? 0);
+
 const SAMPLE: CartDto = {
   count: 5,
   lines: [
@@ -52,7 +114,7 @@ const SAMPLE: CartDto = {
       quantityText: "6,09 mp",
       stepNote: "Se vinde în multipli de 2,03 mp (cutie)",
       unitPriceText: "123,45 RON / mp",
-      totalText: "751,81 RON",
+      totalText: lineTotal("1"),
     }),
     line({
       variantId: "2",
@@ -64,7 +126,7 @@ const SAMPLE: CartDto = {
       quantityText: "50 kg",
       stepNote: "Se vinde în multipli de 25 kg (sac)",
       unitPriceText: "120,00 RON / sac de 25 kg",
-      totalText: "240,00 RON",
+      totalText: lineTotal("2"),
       stateLabel: "Stoc limitat",
       stateTone: "warning",
       stateDetail: "Mai sunt 3",
@@ -76,7 +138,7 @@ const SAMPLE: CartDto = {
       energy: { value: "A+++", label: "Clasa energetică A+++" },
       quantityText: "1 buc",
       unitPriceText: "9.490,00 RON",
-      totalText: "9.490,00 RON",
+      totalText: lineTotal("3"),
       stateLabel: "La comandă",
       stateTone: "info",
       stateDetail: "în 21 de zile",
@@ -105,7 +167,11 @@ const SAMPLE: CartDto = {
       ],
     }),
   ],
-  totals: { productsText: "10.481,81 RON", vatText: "1.819,06 RON", totalText: "10.481,81 RON" },
+  totals: {
+    productsText: money(ENGINE.totals.totalMinor),
+    vatText: money(ENGINE.totals.vatMinor),
+    totalText: money(ENGINE.totals.totalMinor),
+  },
   leadTimeText: "Livrare toată odată, în aproximativ 21 de zile",
   freeShipping: { text: "Ai transport gratuit", percent: 100, reached: true },
   checkoutNote: "Finalizarea comenzii se activează în curând",

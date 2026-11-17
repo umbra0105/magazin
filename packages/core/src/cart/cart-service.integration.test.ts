@@ -263,6 +263,31 @@ describe("prețul și totalul (motorul de prețuri)", () => {
     });
   });
 
+  it("TVA-ul coșului = suma TVA-urilor pe linii (751,81 + 240,00 + 9.490,00 = 10.481,81 → TVA 1.819,15), net + TVA = brut", async () => {
+    await withCart(async (h) => {
+      const mozaic = await h.product({ price: 12345, step: "2,03" });
+      const bisulfat = await h.product({ price: 12000, step: "25", priceBasis: "step" });
+      const pompa = await h.product({ price: 949000 });
+      const first = await h.service.add(h.guest(), {
+        variantId: mozaic.variantId,
+        quantity: q("6,09"),
+      });
+      const owner = h.guest(first.newToken);
+      await h.service.add(owner, { variantId: bisulfat.variantId, quantity: q("50") });
+      const view = (await h.service.add(owner, { variantId: pompa.variantId, quantity: q("1") }))
+        .view;
+      const byVariant = Object.fromEntries(view.lines.map((l) => [l.variantId, l.pricing]));
+      expect(byVariant[mozaic.variantId]).toMatchObject({ totalMinor: 75181, vatMinor: 13048 });
+      expect(byVariant[bisulfat.variantId]).toMatchObject({ totalMinor: 24000, vatMinor: 4165 });
+      expect(byVariant[pompa.variantId]).toMatchObject({ totalMinor: 949000, vatMinor: 164702 });
+      expect(view.totals).toMatchObject({ totalMinor: 1048181, vatMinor: 181915 });
+      expect(view.totals.netMinor + view.totals.vatMinor).toBe(view.totals.totalMinor);
+      expect(view.totals.vatMinor).toBe(
+        view.lines.reduce((acc, l) => acc + (l.pricing?.vatMinor ?? 0), 0),
+      );
+    });
+  });
+
   it("bisulfat pe pas (R2): 2 saci × 120,00 lei = 240,00 lei", async () => {
     await withCart(async (h) => {
       const bisulfat = await h.product({ price: 12000, step: "25", priceBasis: "step" });

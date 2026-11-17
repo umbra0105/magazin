@@ -426,11 +426,51 @@ if (process.env["CAPTURE_DIR"])
           .getByRole("button", { name: "Mărește cantitatea" })
           .click();
         await page.locator("[data-add-button]").click();
-        await expect(drawer(page).locator("[data-cart-line]")).toBeVisible();
+        await expect(drawer(page).locator("[data-cart-line]")).toHaveCount(1);
+        await closeDrawer(page);
+        // al doilea produs: sertarul se deschide cu 2 linii
+        await page.goto(`/produs/${bucati.slug}`);
+        await page.locator("[data-add-button]").click();
+        const panel = drawer(page);
+        await expect(panel.locator("[data-cart-line]")).toHaveCount(2);
+        // captura se face DUPĂ ce intrarea s-a terminat: se așteaptă condiția (nicio animație în curs), nu un timp fix
+        await expect.poll(() => panel.evaluate((el) => el.getAnimations().length)).toBe(0);
+        const geometry = await panel.evaluate((el) => {
+          const box = el.getBoundingClientRect();
+          const close = el.querySelector<HTMLElement>("button[aria-label='Închide coșul']");
+          const active = document.activeElement as HTMLElement | null;
+          return {
+            left: Math.round(box.left),
+            width: Math.round(box.width),
+            height: Math.round(box.height),
+            viewport: [window.innerWidth, window.innerHeight],
+            closeVisible: close ? close.getBoundingClientRect().width > 0 : false,
+            focusInside: active ? el.contains(active) : false,
+            focusLabel: active?.getAttribute("aria-label") ?? active?.tagName ?? null,
+            scrollLocked: getComputedStyle(document.documentElement).overflow === "hidden",
+            modal: el.matches(":modal"),
+          };
+        });
+        test.info().annotations.push({ type: "sertar", description: JSON.stringify(geometry) });
+        expect(geometry.height).toBe(geometry.viewport[1]);
+        expect(geometry.closeVisible).toBe(true);
+        expect(geometry.focusInside).toBe(true);
+        expect(geometry.modal).toBe(true);
+        expect(geometry.scrollLocked).toBe(true);
+        if (width === 390) {
+          // telefon: sertarul ocupă tot ecranul
+          expect(geometry.left).toBe(0);
+          expect(geometry.width).toBe(geometry.viewport[0]);
+        } else {
+          // calculator: o coloană lipită de marginea dreaptă, cu pagina vizibilă (întunecată) în stânga
+          expect(geometry.width).toBeLessThan(geometry.viewport[0] / 2);
+          expect(geometry.left + geometry.width).toBe(geometry.viewport[0]);
+        }
+        console.log(`sertar ${width}: ${JSON.stringify(geometry)}`);
         await page.screenshot({ path: join(dir, `real-sertar-${width}.png`) });
         await closeDrawer(page);
         await page.goto("/cos");
-        await expect(page.locator("[data-cart-panel='page'] [data-cart-line]")).toBeVisible();
+        await expect(page.locator("[data-cart-panel='page'] [data-cart-line]")).toHaveCount(2);
         await page.screenshot({ path: join(dir, `real-cos-${width}.png`), fullPage: true });
       });
     }
