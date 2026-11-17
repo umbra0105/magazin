@@ -17,6 +17,7 @@ export const PHASE_MODES: Readonly<Record<string, Mode>> = {
   "17": "A",
   "19": "A",
   "20": "A",
+  "poarta-draft": "A",
   "8": "B",
   "9": "B",
   "10": "B",
