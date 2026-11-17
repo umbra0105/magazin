@@ -20,6 +20,7 @@ model User {
   roles          UserRole[]
   mediaUploads   Media[]
   productImports ProductImport[]
+  cart           Cart?
 
   @@unique([email])
   @@map("user")
@@ -479,6 +480,7 @@ model ProductVariant {
   inventoryItems         InventoryItem[]
   stockMovements         StockMovement[]
   backInStockAlerts      BackInStockAlert[]
+  cartItems              CartItem[]
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
@@ -1179,4 +1181,43 @@ model SlugRedirect {
   @@unique([kind, oldKey])
   @@index([kind, targetId])
   @@map("slug_redirect")
+}
+
+/// Coșul (Faza 8). Aparține fie unui utilizator autentificat (`userId`), fie unui oaspete (`tokenHash`): EXACT unul dintre ele
+/// (CHECK în migrație, cu comparații explicite `IS NULL` / `IS NOT NULL`). Un utilizator are cel mult un coș. Coșul NU rezervă
+/// stoc (D4) și nu păstrează prețuri: prețul, starea de stoc și totalul se recalculează la fiecare afișare, pe server.
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?    @unique
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 (hex) al tokenului din cookie; tokenul în sine nu se păstrează niciodată în baza de date.
+  tokenHash String?    @unique
+  /// După această dată coșul e șters de jobul de curățare; fiecare modificare o prelungește.
+  expiresAt DateTime
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([expiresAt])
+  @@map("cart")
+}
+
+/// O linie de coș: varianta și cantitatea (`Quantity`, zecimi de miime), nimic altceva despre bani. `ackedUnitPriceMinor` e
+/// prețul unitar efectiv (bani, pe baza produsului) pe care l-a văzut clientul la ultima confirmare: dacă prețul curent diferă,
+/// linia arată un mesaj până când clientul îl confirmă sau modifică cantitatea (totalul nu se schimbă tăcut).
+model CartItem {
+  id                  String         @id @default(cuid())
+  cartId              String
+  cart                Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variantId           String
+  variant             ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  /// Zecimi de miime de unitate; > 0 și cel mult MAX_QUANTITY (CHECK în migrație)
+  quantity            BigInt
+  ackedUnitPriceMinor Int?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@unique([cartId, variantId])
+  @@index([variantId])
+  @@map("cart_item")
 }
