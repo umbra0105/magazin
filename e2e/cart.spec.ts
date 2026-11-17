@@ -410,28 +410,28 @@ test.describe("telefon", () => {
   });
 });
 
-test.describe("capturi pentru autorevizuire (doar cu CAPTURE_DIR)", () => {
-  test.skip(!process.env["CAPTURE_DIR"], "fără CAPTURE_DIR nu se scrie nimic");
-
-  for (const width of [390, 1440]) {
-    test(`pagina de produs, sertarul și /cos reale la ${width} px`, async ({ page }) => {
-      const dir = process.env["CAPTURE_DIR"] as string;
-      mkdirSync(dir, { recursive: true });
-      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
-      await page.goto(`/produs/${mozaic.slug}`);
-      await page.locator("[data-consent-banner] [data-consent='reject']").click();
-      await page.screenshot({ path: join(dir, `real-produs-${width}.png`) });
-      await page
-        .locator("[data-add-to-cart]")
-        .getByRole("button", { name: "Mărește cantitatea" })
-        .click();
-      await page.locator("[data-add-button]").click();
-      await expect(drawer(page).locator("[data-cart-line]")).toBeVisible();
-      await page.screenshot({ path: join(dir, `real-sertar-${width}.png`) });
-      await closeDrawer(page);
-      await page.goto("/cos");
-      await expect(page.locator("[data-cart-panel='page'] [data-cart-line]")).toBeVisible();
-      await page.screenshot({ path: join(dir, `real-cos-${width}.png`), fullPage: true });
-    });
-  }
-});
+// Testele de capturi se înregistrează DOAR cu CAPTURE_DIR (un test sărit ar încălca «0 sărite» din poartă).
+if (process.env["CAPTURE_DIR"])
+  test.describe("capturi pentru autorevizuire", () => {
+    for (const width of [390, 1440]) {
+      test(`pagina de produs, sertarul și /cos reale la ${width} px`, async ({ page }) => {
+        const dir = process.env["CAPTURE_DIR"] as string;
+        mkdirSync(dir, { recursive: true });
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+        await page.goto(`/produs/${mozaic.slug}`);
+        await page.locator("[data-consent-banner] [data-consent='reject']").click();
+        await page.screenshot({ path: join(dir, `real-produs-${width}.png`) });
+        await page
+          .locator("[data-add-to-cart]")
+          .getByRole("button", { name: "Mărește cantitatea" })
+          .click();
+        await page.locator("[data-add-button]").click();
+        await expect(drawer(page).locator("[data-cart-line]")).toBeVisible();
+        await page.screenshot({ path: join(dir, `real-sertar-${width}.png`) });
+        await closeDrawer(page);
+        await page.goto("/cos");
+        await expect(page.locator("[data-cart-panel='page'] [data-cart-line]")).toBeVisible();
+        await page.screenshot({ path: join(dir, `real-cos-${width}.png`), fullPage: true });
+      });
+    }
+  });

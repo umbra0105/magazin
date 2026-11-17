@@ -61,6 +61,8 @@ async function withCommitted<T>(
       db: pool,
       storage,
       readSettings: async () => ({ ...SETTINGS, ...settings }),
+      // depozitul propriu al contextului: testul nu presupune seed (depozit implicit)
+      warehouseId: ctx.warehouseId,
     });
     const variant = async () => {
       const created = await addStockProduct(pool, ctx, {

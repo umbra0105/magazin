@@ -81,6 +81,8 @@ export interface CartServiceDeps {
   now?: () => Date;
   stockStore?: StockOverviewStore;
   generateToken?: () => string;
+  /** Depozitul din care se citește stocul; implicit depozitul implicit (testele cu date proprii îl dau explicit). */
+  warehouseId?: string;
 }
 
 const MESSAGES: Record<CartRejection["reason"], string> = {
@@ -244,6 +246,7 @@ export class CartService {
   private readonly now: () => Date;
   private readonly stock: StockOverviewStore;
   private readonly generateToken: () => string;
+  private readonly warehouseId: string | null;
 
   constructor(deps: CartServiceDeps) {
     this.db = deps.db;
@@ -252,6 +255,7 @@ export class CartService {
     this.now = deps.now ?? (() => new Date());
     this.stock = deps.stockStore ?? createPrismaStockOverviewStore(deps.db);
     this.generateToken = deps.generateToken ?? generateCartToken;
+    this.warehouseId = deps.warehouseId ?? null;
   }
 
   // ---------------------------------------------------------------- citire
@@ -351,7 +355,7 @@ export class CartService {
     if (!guest) return NO_MERGE;
     const target = await this.ensureCart({ kind: "user", userId }, settings);
 
-    const warehouse = await this.stock.defaultWarehouse();
+    const warehouse = await this.warehouse();
     const stepOf = async (variantId: string): Promise<Quantity | null> => {
       const source = warehouse ? await this.stock.getSource(variantId, warehouse.id) : null;
       return source ? quantityFromTicks(source.saleStep) : null;
@@ -418,6 +422,12 @@ export class CartService {
   /** Jobul de curățare: șterge coșurile expirate (cu liniile lor). Întoarce câte coșuri s-au șters. */
   async purgeExpired(): Promise<number> {
     return purgeExpiredCarts(this.db, this.now());
+  }
+
+  private warehouse() {
+    return this.warehouseId === null
+      ? this.stock.defaultWarehouse()
+      : this.stock.warehouse(this.warehouseId);
   }
 
   // ---------------------------------------------------------------- interne: scriere
@@ -661,7 +671,7 @@ export class CartService {
     const row = rows.get(variantId);
     const product = row ? orNull(row.product) : null;
     if (!row || !product) return null;
-    const warehouse = await this.stock.defaultWarehouse();
+    const warehouse = await this.warehouse();
     const source = warehouse ? await this.stock.getSource(variantId, warehouse.id) : null;
     if (!source) return null;
     const step = quantityFromTicks(source.saleStep);
@@ -702,7 +712,7 @@ export class CartService {
     settings: CartRuntimeSettings,
   ): Promise<CartView> {
     const rows = await this.loadRows(items.map((item) => item.variantId));
-    const warehouse = await this.stock.defaultWarehouse();
+    const warehouse = await this.warehouse();
     const options = this.pricingOptions(settings);
 
     interface Draft {
