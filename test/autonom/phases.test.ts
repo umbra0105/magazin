@@ -6,6 +6,7 @@ import {
   modeOf,
   tagsOf,
 } from "../../scripts/autonom/phases";
+import { approvalsGuardProblems, isPhaseBranch } from "../../scripts/autonom/approvals-guard";
 
 /** Tabelul din docs/20 §3, scris a doua oară aici: o modificare accidentală a modurilor pică testul. */
 const MODE_A = [
@@ -19,6 +20,7 @@ const MODE_A = [
   "17",
   "19",
   "20",
+  "poarta-draft",
 ];
 const MODE_B = ["8", "9", "10", "13", "14b", "15", "15b"];
 const MODE_C = ["6", "7", "18", "22"];
@@ -106,5 +108,30 @@ describe("faza 15d (mini-fază, modul A)", () => {
     expect(branchOf("15d")).toBe("faza-15d");
     expect(tagsOf("15d")).toEqual({ pre: "pre-faza-15d", done: "faza-15d-completa" });
     expect(isValidPhaseId("15d")).toBe(true);
+  });
+});
+
+describe("faza poarta-draft (mini-fază, modul A)", () => {
+  it("modul A; ramura faza-poarta-draft, etichetele pre-faza-poarta-draft și faza-poarta-draft-completa", () => {
+    expect(modeOf("poarta-draft")).toBe("A");
+    expect(branchOf("poarta-draft")).toBe("faza-poarta-draft");
+    expect(tagsOf("poarta-draft")).toEqual({
+      pre: "pre-faza-poarta-draft",
+      done: "faza-poarta-draft-completa",
+    });
+    expect(isValidPhaseId("poarta-draft")).toBe(true);
+  });
+
+  it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
+    const branch = branchOf("poarta-draft");
+    expect(isPhaseBranch(branch)).toBe(true);
+    const problems = approvalsGuardProblems({
+      branch,
+      baseAvailable: true,
+      ci: false,
+      touchingCommits: ["abc1234"],
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("abc1234");
   });
 });
