@@ -35,6 +35,6 @@ Modul B:
 Modul C:
 
 - Faza 6: aprobat, 2026-11-16, vitrina verificată
-- Faza 7: în așteptare
+- Faza 7: aprobat, 2026-11-17, vitrina verificată
 - Faza 18: în așteptare
 - Faza 22: în așteptare
