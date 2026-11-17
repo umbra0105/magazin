@@ -8,10 +8,15 @@
  *   1. arbore curat și fără fișiere de lucru în diferență;
  *   2. ramura e actualizată față de `main`;
  *   3. verificarea completă locală pe codul final (înregistrarea lui `verify:full`);
- *   4. `gh pr checks` verde pe vârful ramurii;
+ *   4. exact o cerere de îmbinare deschisă (ciornă sau nu), cu vârful = codul local și `gh pr checks` verde;
  *   5. fără S1 sau S2 deschise în `docs/FINISAJE.md`;
  *   6. fazele B și C: «aprobat» în `docs/AUTONOM-APROBARI.md`;
- *   7. eticheta `pre-faza-N`, îmbinarea prin commit, eticheta `faza-N-completa`.
+ *   7. eticheta `pre-faza-N`, apoi (doar dacă cererea e ciornă) `gh pr ready`, apoi îmbinarea prin commit, apoi eticheta
+ *      `faza-N-completa`. Cererea de fază stă ciornă (draft) până la poartă: un draft nu se poate îmbina din butonul GitHub, deci
+ *      poarta e singura cale. Dacă îmbinarea e refuzată după ce poarta a marcat cererea ready, o readuce în draft (`--undo`).
+ *
+ * Modul separat `--doar-etichete` (`runTagsOnly`) pune doar etichetele unei faze îmbinate din GitHub, direct de pe un commit de
+ * îmbinare verificat; nu îmbină, nu marchează ready și nu verifică CI, aprobarea sau `verify:full`.
  */
 import { isApproved } from "./aprobari";
 import { blockingEntries, parseFinisaje } from "./finisaje";
@@ -37,6 +42,8 @@ export interface GatePorts {
 export interface GateOptions {
   phase: string;
   dryRun: boolean;
+  /** `--doar-etichete`: nu îmbină nimic, doar pune etichetele unei faze deja îmbinate din GitHub. Prezent doar când e cerut. */
+  tagsOnly?: boolean;
 }
 
 export interface GateFailure {
@@ -110,7 +117,25 @@ export function mergeArgs(prNumber: number, headSha: string): string[] {
   return ["pr", "merge", String(prNumber), "--merge", "--match-head-commit", headSha];
 }
 
+/** Marcarea cererii ca «ready for review» (iese din draft): UN SINGUR loc, fără alte flag-uri. */
+export function readyArgs(prNumber: number): string[] {
+  return ["pr", "ready", String(prNumber)];
+}
+
+/** Readucerea în draft a unei cereri pe care poarta a marcat-o ready, dacă îmbinarea e refuzată: UN SINGUR loc. */
+export function undoReadyArgs(prNumber: number): string[] {
+  return ["pr", "ready", String(prNumber), "--undo"];
+}
+
+/** Modelele pentru `git ls-remote`: obiectul etichetei și, la cele adnotate, linia `^{}` cu commit-ul țintă. */
+function tagPatterns(names: readonly string[]): string[] {
+  return names.flatMap((name) => [`refs/tags/${name}`, `refs/tags/${name}^{}`]);
+}
+
+const FULL_SHA = /^[0-9a-f]{40}$/;
+
 export async function runGate(options: GateOptions, ports: GatePorts): Promise<GateResult> {
+  if (options.tagsOnly === true) return runTagsOnly(options, ports);
   const { phase, dryRun } = options;
   const pass = (line: string): void => ports.log(`  ✓ ${line}`);
 
@@ -247,12 +272,58 @@ export async function runGate(options: GateOptions, ports: GatePorts): Promise<G
       listed.stderr.trim() || "verifică gh auth status",
     );
   }
+  if (prs.length === 0) {
+    // nicio cerere DESCHISĂ: se caută în istoric, ca mesajul să spună adevărul (deja îmbinată sau închisă), nu «0 cereri deschise»
+    const history = await ports.gh([
+      "pr",
+      "list",
+      "--head",
+      branch,
+      "--base",
+      "main",
+      "--state",
+      "all",
+      "--json",
+      "number,state,mergeCommit",
+    ]);
+    const rows = parseJson(history.stdout);
+    if (history.code === 0 && Array.isArray(rows)) {
+      const asRow = (item: unknown) =>
+        item as { number?: unknown; state?: unknown; mergeCommit?: { oid?: unknown } | null };
+      const mergedRow = rows.map(asRow).find((row) => row.state === "MERGED");
+      if (mergedRow !== undefined) {
+        const oid =
+          typeof mergedRow.mergeCommit?.oid === "string" ? mergedRow.mergeCommit.oid : "necunoscut";
+        return failure(
+          4,
+          "cerere de îmbinare",
+          `PR #${String(mergedRow.number)} e deja îmbinat (commit ${oid}); poarta nu îmbină a doua oară`,
+          `dacă a fost îmbinat din GitHub, etichetele se pun cu: npm.cmd run gate:merge -- --faza ${phase} --doar-etichete`,
+        );
+      }
+      const closedRow = rows.map(asRow).find((row) => row.state === "CLOSED");
+      if (closedRow !== undefined) {
+        return failure(
+          4,
+          "cerere de îmbinare",
+          `PR #${String(closedRow.number)} e închis fără îmbinare; poarta nu îmbină a doua oară`,
+          `deschide o cerere nouă, în draft: gh pr create --draft --base main --head ${branch}`,
+        );
+      }
+    }
+    return failure(
+      4,
+      "CI verde",
+      "ramura are 0 cereri de îmbinare deschise spre main (trebuie exact una)",
+      `gh pr create --draft --base main --head ${branch}`,
+    );
+  }
   if (prs.length !== 1) {
     return failure(
       4,
       "CI verde",
       `ramura are ${prs.length} cereri de îmbinare deschise spre main (trebuie exact una)`,
-      `gh pr create --base main --head ${branch}`,
+      "închide cererile în plus; poarta cere exact una",
     );
   }
   const pr = prs[0] as { number?: unknown; headRefOid?: unknown; isDraft?: unknown };
@@ -264,9 +335,8 @@ export async function runGate(options: GateOptions, ports: GatePorts): Promise<G
       "",
     );
   }
-  if (pr.isDraft === true) {
-    return failure(4, "CI verde", "cererea de îmbinare e ciornă (draft)", "gh pr ready");
-  }
+  // o cerere draft e normală: poarta o marchează ready chiar înainte de îmbinare (pasul 7); restul condițiilor rămân neschimbate
+  const wasDraft = pr.isDraft === true;
   if (pr.headRefOid !== head) {
     return failure(
       4,
@@ -307,6 +377,7 @@ export async function runGate(options: GateOptions, ports: GatePorts): Promise<G
     );
   }
   pass(`CI verde (${checks.length} verificări) pe vârful ramurii, cererea #${pr.number}`);
+  if (wasDraft) ports.log("  • PR-ul e draft; poarta îl va marca ready înainte de îmbinare");
 
   // 5. fără S1 sau S2 deschise
   const finisaje = await ports.readText(FINISAJE_FILE);
@@ -349,12 +420,12 @@ export async function runGate(options: GateOptions, ports: GatePorts): Promise<G
   // 7. etichete și îmbinare
   const tags = tagsOf(phase);
   const mainSha = (await ports.git(["rev-parse", "origin/main"])).stdout.trim();
+  // și liniile `^{}`: etichetele puse de poartă sunt adnotate, iar `ls-remote` arată altfel doar obiectul etichetei, nu commit-ul țintă
   const remote = await ports.git([
     "ls-remote",
     "--tags",
     "origin",
-    `refs/tags/${tags.pre}`,
-    `refs/tags/${tags.done}`,
+    ...tagPatterns([tags.pre, tags.done]),
   ]);
   if (remote.code !== 0) {
     return failure(
@@ -412,12 +483,36 @@ export async function runGate(options: GateOptions, ports: GatePorts): Promise<G
   }
   pass(`eticheta ${tags.pre} pe vârful actual al lui main`);
 
+  // cererea de fază stă draft până aici; ready se pune ULTIMUL, imediat înaintea îmbinării. O cerere care era deja ready nu se atinge.
+  let markedReady = false;
+  if (wasDraft) {
+    const ready = await ports.gh(readyArgs(pr.number));
+    if (ready.code !== 0) {
+      return failure(
+        7,
+        "etichete și îmbinare",
+        `nu pot marca cererea #${pr.number} ca ready (gh pr ready a eșuat); nu am îmbinat nimic și cererea a rămas draft`,
+        ready.stderr.trim() || ready.stdout.trim(),
+      );
+    }
+    markedReady = true;
+    pass(`cererea #${pr.number} marcată ready (era draft)`);
+  }
+
   const merged = await ports.gh(mergeArgs(pr.number, head));
   if (merged.code !== 0) {
+    let note = "";
+    if (markedReady) {
+      const undo = await ports.gh(undoReadyArgs(pr.number));
+      note =
+        undo.code === 0
+          ? `; cererea #${pr.number} a fost readusă în draft`
+          : `; ATENȚIE: nu am putut readuce cererea #${pr.number} în draft, e încă ready și se poate îmbina din butonul GitHub: gh pr ready ${pr.number} --undo`;
+    }
     return failure(
       7,
       "etichete și îmbinare",
-      "îmbinarea a fost refuzată de GitHub",
+      `îmbinarea a fost refuzată de GitHub${note}`,
       merged.stderr.trim() || merged.stdout.trim(),
     );
   }
@@ -474,30 +569,214 @@ export async function runGate(options: GateOptions, ports: GatePorts): Promise<G
 }
 
 /**
- * Linia de comandă: DOAR `--faza <id>` (sau `--faza=<id>`) și `--dry-run`. Orice altceva (inclusiv `--force`, `--skip-ci`, `--admin`,
- * `--squash`) e respins: nu există flag care să ocolească o condiție.
+ * `--doar-etichete`: etichetele unei faze îmbinate DIRECT din GitHub (în afara porții). Nu îmbină, nu marchează ready și nu verifică
+ * CI, aprobarea sau `verify:full`: nu îmbină nimic, iar etichetele nu sunt o aprobare. Verifică doar că:
+ *  - există exact o cerere îmbinată spre `main` de pe ramura fazei, al cărei commit de îmbinare e strămoș al lui `origin/main`;
+ *  - acel commit are EXACT doi părinți (îmbinare prin commit, nu squash sau rebase);
+ *  - `pre-faza-N` arată (sau va arăta) spre primul părinte, iar `faza-N-completa` spre commit-ul de îmbinare.
+ * O etichetă care lipsește se creează adnotată (aceleași mesaje ca la poartă) și se trimite singură (`refs/tags/<nume>`); una aflată
+ * deja pe commit-ul corect nu se atinge (idempotent); una aflată pe ALT commit oprește totul, fără nicio modificare: o etichetă nu
+ * se mută niciodată.
+ */
+async function runTagsOnly(options: GateOptions, ports: GatePorts): Promise<GateResult> {
+  const { phase, dryRun } = options;
+  if (modeOf(phase) === null) {
+    return failure(
+      0,
+      "pregătire",
+      `faza ${JSON.stringify(phase)} nu e în tabelul din docs/20 §3`,
+      "folosește --faza <id> din tabel",
+    );
+  }
+  if ((await ports.readText(STOP_FILE)) !== null) {
+    return failure(
+      0,
+      "frâna de mână",
+      "există STOP.txt în rădăcina proiectului",
+      "șterge STOP.txt când vrei să continui",
+    );
+  }
+  const branch = branchOf(phase);
+  const tags = tagsOf(phase);
+  ports.log(
+    "  (--doar-etichete) nu îmbină nimic și nu verifică CI, aprobarea sau verify:full; etichetele nu sunt o aprobare",
+  );
+
+  const fetched = await ports.git(["fetch", "origin", "main"]);
+  if (fetched.code !== 0) {
+    return failure(
+      0,
+      "main la zi",
+      "`git fetch origin main` a eșuat",
+      fetched.stderr.trim() || "verifică rețeaua și contul GitHub",
+    );
+  }
+
+  // exact o cerere ÎMBINATĂ spre main de pe ramura fazei
+  const listed = await ports.gh([
+    "pr",
+    "list",
+    "--head",
+    branch,
+    "--base",
+    "main",
+    "--state",
+    "all",
+    "--json",
+    "number,state,mergeCommit",
+  ]);
+  const rows = parseJson(listed.stdout);
+  if (listed.code !== 0 || !Array.isArray(rows)) {
+    return failure(
+      7,
+      "cerere îmbinată",
+      "nu pot citi cererile de îmbinare din GitHub",
+      listed.stderr.trim() || "verifică gh auth status",
+    );
+  }
+  type Row = { number?: unknown; state?: unknown; mergeCommit?: { oid?: unknown } | null };
+  const all = rows as Row[];
+  const mergedRows = all.filter((row) => row.state === "MERGED");
+  if (mergedRows.length === 0) {
+    const others = all.map((row) => `#${String(row.number)} (${String(row.state)})`).join(", ");
+    return failure(
+      7,
+      "cerere îmbinată",
+      all.length === 0
+        ? `nu există nicio cerere de îmbinare de pe ${branch} spre main`
+        : `nicio cerere de pe ${branch} nu e îmbinată: ${others}`,
+      "etichetele se pun doar pentru o fază îmbinată; ruta obișnuită e poarta (gate:merge --faza <id>)",
+    );
+  }
+  if (mergedRows.length > 1) {
+    return failure(
+      7,
+      "cerere îmbinată",
+      `${mergedRows.length} cereri îmbinate de pe ${branch}: nu știu pe care să o iau`,
+      "verifică istoricul în GitHub",
+    );
+  }
+  const merged = mergedRows[0] as Row;
+  const oid = typeof merged.mergeCommit?.oid === "string" ? merged.mergeCommit.oid : "";
+  if (!FULL_SHA.test(oid)) {
+    return failure(
+      7,
+      "commit de îmbinare",
+      `GitHub nu dă un commit de îmbinare valid pentru PR #${String(merged.number)}`,
+      "verifică cererea în GitHub",
+    );
+  }
+
+  // commit-ul de îmbinare: strămoș al lui origin/main, cu exact doi părinți
+  const ancestor = await ports.git(["merge-base", "--is-ancestor", oid, "origin/main"]);
+  if (ancestor.code !== 0) {
+    return failure(
+      7,
+      "commit de îmbinare",
+      `commitul ${oid} nu e strămoș al lui origin/main`,
+      "verifică în GitHub dacă îmbinarea a ajuns în main",
+    );
+  }
+  const parentsOut = await ports.git(["rev-list", "--parents", "-n", "1", oid]);
+  const tokens = parentsOut.stdout.trim().split(/\s+/);
+  if (
+    parentsOut.code !== 0 ||
+    tokens.length !== 3 ||
+    tokens[0] !== oid ||
+    !FULL_SHA.test(tokens[1] ?? "") ||
+    !FULL_SHA.test(tokens[2] ?? "")
+  ) {
+    return failure(
+      7,
+      "commit de îmbinare",
+      `commitul ${oid} nu are exact doi părinți (nu e o îmbinare prin commit: squash, rebase sau alt fel)`,
+      "poarta cere îmbinare prin commit; verifică în GitHub cum a fost îmbinat",
+    );
+  }
+  const firstParent = tokens[1] as string;
+
+  // etichetele: cele existente trebuie să fie pe commit-urile corecte
+  const remote = await ports.git([
+    "ls-remote",
+    "--tags",
+    "origin",
+    ...tagPatterns([tags.pre, tags.done]),
+  ]);
+  if (remote.code !== 0) {
+    return failure(7, "etichete", "nu pot citi etichetele din GitHub", remote.stderr.trim());
+  }
+  const expected = [
+    { name: tags.pre, sha: firstParent, message: `Înaintea fazei ${phase}` },
+    { name: tags.done, sha: oid, message: `Faza ${phase} completă` },
+  ];
+  const moved = expected
+    .map((tag) => ({ ...tag, actual: remoteTag(remote.stdout, tag.name) }))
+    .filter((tag) => tag.actual !== null && tag.actual !== tag.sha);
+  if (moved.length > 0) {
+    const list = moved
+      .map((tag) => `${tag.name} e pe ${String(tag.actual)}, nu pe ${tag.sha}`)
+      .join("; ");
+    return failure(
+      7,
+      "etichete",
+      `etichetă existentă pe alt commit: ${list}`,
+      "nu se mută etichete; nu am modificat nimic; verifică istoricul",
+    );
+  }
+  const missing = expected.filter((tag) => remoteTag(remote.stdout, tag.name) === null);
+  for (const tag of expected) {
+    if (!missing.includes(tag)) ports.log(`  ✓ eticheta ${tag.name} e deja pe ${tag.sha}`);
+  }
+  if (dryRun) {
+    for (const tag of missing) {
+      ports.log(`  (--dry-run) ar crea eticheta ${tag.name} pe ${tag.sha}`);
+    }
+    if (missing.length === 0) ports.log("  (--dry-run) nimic de făcut: etichetele există");
+    return { ok: true, dryRun: true, mergeCommit: oid };
+  }
+  for (const tag of missing) {
+    const tagged = await ports.git(["tag", "-a", tag.name, "-m", tag.message, tag.sha]);
+    if (tagged.code !== 0) {
+      return failure(7, "etichete", `nu pot crea eticheta ${tag.name}`, tagged.stderr.trim());
+    }
+    const pushed = await ports.git(["push", "origin", `refs/tags/${tag.name}`]);
+    if (pushed.code !== 0) {
+      return failure(7, "etichete", `nu pot trimite eticheta ${tag.name}`, pushed.stderr.trim());
+    }
+    ports.log(`  ✓ eticheta ${tag.name} pusă pe ${tag.sha} și trimisă`);
+  }
+  return { ok: true, dryRun: false, mergeCommit: oid };
+}
+
+/**
+ * Linia de comandă: DOAR `--faza <id>` (sau `--faza=<id>`), `--dry-run` și `--doar-etichete`. Orice altceva (inclusiv `--force`,
+ * `--skip-ci`, `--admin`, `--squash`, `--ready`) e respins: nu există flag care să ocolească o condiție.
  */
 export function parseGateArgs(
   argv: readonly string[],
 ): { ok: true; options: GateOptions } | { ok: false; error: string } {
   let phase: string | null = null;
   let dryRun = false;
+  let tagsOnly = false;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i] as string;
     if (arg === "--dry-run") {
       dryRun = true;
+    } else if (arg === "--doar-etichete") {
+      if (tagsOnly) return { ok: false, error: "--doar-etichete apare de două ori" };
+      tagsOnly = true;
     } else if (arg === "--faza" || arg.startsWith("--faza=")) {
       if (phase !== null) return { ok: false, error: "--faza apare de două ori" };
       phase = arg === "--faza" ? (argv[(i += 1)] ?? "") : arg.slice("--faza=".length);
     } else {
       return {
         ok: false,
-        error: `argument nepermis: ${arg} (poarta acceptă doar --faza <id> și --dry-run)`,
+        error: `argument nepermis: ${arg} (poarta acceptă doar --faza <id>, --dry-run și --doar-etichete)`,
       };
     }
   }
   if (phase === null) return { ok: false, error: "lipsește --faza <id>" };
   if (!isValidPhaseId(phase))
     return { ok: false, error: `identificator de fază nevalid: ${JSON.stringify(phase)}` };
-  return { ok: true, options: { phase, dryRun } };
+  return { ok: true, options: tagsOnly ? { phase, dryRun, tagsOnly: true } : { phase, dryRun } };
 }

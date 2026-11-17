@@ -1,5 +1,6 @@
 /**
- * `npm.cmd run gate:merge -- --faza <id> [--dry-run]`: poarta de îmbinare în `main` (docs/20 §5), cu `git` și `gh` reale.
+ * `npm.cmd run gate:merge -- --faza <id> [--dry-run]`: poarta de îmbinare în `main` (docs/20 §5), cu `git` și `gh` reale;
+ * `npm.cmd run gate:merge -- --faza <id> --doar-etichete [--dry-run]`: doar etichetele unei faze îmbinate din GitHub (nu îmbină nimic).
  * Logica e în `gate.ts` (testată cu `git` și `gh` simulate); aici sunt doar legăturile cu sistemul. Cod de ieșire: 0 = îmbinat
  * (sau --dry-run reușit), 1 = o condiție nu e îndeplinită, 2 = argumente greșite sau `gh` lipsește.
  */
@@ -52,6 +53,9 @@ async function main(): Promise<number> {
   if (!parsed.ok) {
     console.error(`Poarta de îmbinare: ${parsed.error}`);
     console.error("Folosire: npm.cmd run gate:merge -- --faza <id> [--dry-run]");
+    console.error(
+      "        npm.cmd run gate:merge -- --faza <id> --doar-etichete [--dry-run]   (doar etichete, după o îmbinare din GitHub)",
+    );
     return 2;
   }
   const gh = await findGh();
@@ -78,16 +82,30 @@ async function main(): Promise<number> {
   };
 
   console.log(
-    `Poarta de îmbinare, faza ${parsed.options.phase}${parsed.options.dryRun ? " (--dry-run)" : ""}`,
+    `Poarta de îmbinare, faza ${parsed.options.phase}${parsed.options.tagsOnly === true ? " (--doar-etichete)" : ""}${parsed.options.dryRun ? " (--dry-run)" : ""}`,
   );
   const result = await runGate(parsed.options, ports);
   if (result.ok) {
+    if (parsed.options.tagsOnly === true) {
+      console.log(
+        result.dryRun
+          ? "OK (--dry-run): etichetele nu s-au modificat."
+          : `OK: etichetele fazei sunt la zi (commit de îmbinare ${result.mergeCommit ?? "?"}).`,
+      );
+      return 0;
+    }
     console.log(
       result.dryRun
         ? "OK (--dry-run): toate condițiile sunt îndeplinite."
         : `OK: faza îmbinată, commit ${result.mergeCommit ?? "?"}.`,
     );
     return 0;
+  }
+  if (parsed.options.tagsOnly === true) {
+    console.error(`✗ ${result.failed.name}: ${result.failed.reason}`);
+    if (result.failed.hint) console.error(`  Ce faci: ${result.failed.hint}`);
+    console.error("În acest mod poarta nu îmbină nimic și nu mută etichete existente.");
+    return 1;
   }
   console.error(`✗ Condiția ${result.failed.id}, ${result.failed.name}: ${result.failed.reason}`);
   if (result.failed.hint) console.error(`  Ce faci: ${result.failed.hint}`);
