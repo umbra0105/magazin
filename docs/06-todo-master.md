@@ -283,6 +283,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Circuit breaker: curier picat ≠ comandă pierdută
 
 ## FAZA 13 — Facturare și e-Factura (SmartBill)
+- [ ] **Ecran de admin pentru datele firmei** (din Faza 7: `company.phone`, `company.email`, adresa, CUI, ANPC/SAL): azi se citesc din setări și apar în subsol, în blocul «Cum comanzi» și în JSON-LD (`Organization`), dar nu au ecran și se completează direct în baza de date; facturarea are nevoie de ele, deci ecranul vine aici
 - [ ] ⚠️ **Din Faza 5 (punctul 14), stoc și facturare:** **ora facturii pe comandă** (`StockService.markInvoiced`: factură înaintea ultimei sincronizări = oglindită, după ea = încă angajată; o bucată se scade o singură dată); unitățile SmartBill (tabelul din `smartbill-units.ts`), **2 zecimale la cantitate cu rotunjire la cea mai apropiată cifră**, kg în kg și sacul ca bucată (răspunsurile contabilului din 2026-10-28), conversia SmartBill ↔ unitatea noastră; **cele 20 de cazuri numerice** (total încasat = total factură, la 1 ban); lista **«comenzi confirmate fără factură»** (altfel rămân angajate la nesfârșit, D1.5 punctul 6); stornoul returnează stocul (D13); factura la «La comandă» (la plată sau, la ramburs, la expediere); SmartBill refuză factura la stoc 0 cu descărcare de gestiune activă, deci emitere fără descărcare când e cazul
 - [ ] **Înainte de a începe:** citește documentația API curentă a SmartBill; utilizatorul a confirmat cu SmartBill că abonamentul include acces API (`10` Partea II #9)
 - [ ] Interfață `InvoiceProvider` (SmartBill primul; Oblio posibil mai târziu prin aceeași interfață)
@@ -365,6 +366,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Admin: listă, anulare, ajustare cu audit, **raport de datorie în vouchere**
 
 ## FAZA 16 — CMS și conținut
+- [ ] ⚠️ **Link către politica de confidențialitate în formularul „Anunță-mă”** (Faza 7: formularul are doar bifa de acord și o frază de informare, provizorii, în `ro.ts`; linkul nu se pune până există pagina; formularea finală: `docs/INTREBARI-AVOCAT.md` §6)
 - [ ] ⚠️ **Provideri de utilizare media pentru pagini și bannere (cerință explicită, cu test):** câte un `MediaUsageProvider` pentru blocurile de pagină (inclusiv homepage), bannere (și blog, dacă are imagini), înregistrate înainte ca editorul de pagini să poată referi fișiere din bibliotecă. Teste: un fișier folosit într-un bloc sau banner nu se poate șterge (refuz cu lista locurilor), iar după ce e scos se poate
 - [ ] ⚠️ **Utilizatori și roluri în admin (`users.manage`) — reguli anti-escaladare de privilegii** (decizie utilizator): un utilizator nu poate acorda un rol sau o permisiune pe care nu o are; doar Owner atribuie sau retrage rolul Owner; un Admin nu își poate modifica propriul rol și nici pe cel al Owner-ului; **test explicit pentru escaladare de privilegii**. Verificarea stă în `packages/core`, nu în UI
 - [ ] 🟡 **Drepturile Depozitului pe elementele din Catalog** (decizie utilizator, blocul 8b: nu se schimbă modelul de drepturi acum; fostele «taburi din Produse», din 8c elemente ale grupului «Catalog»): Depozit vede acum toate elementele din Catalog; de decis dacă primește o permisiune separată pentru taxonomie (Categorii, Branduri, Atribute, Unități).
@@ -402,6 +404,7 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] Wizard `/install` complet (`08-instalare-si-distributie.md` §2)
 - [ ] Notă: **tu faci instalările**, deci wizard-ul poate presupune un utilizator tehnic. Fără „prost-rezistență" extremă.
 - [ ] Verificare cerințe, test conexiune DB, rulare migrații cu progres
+- [ ] ⚠️ **Extensiile Postgres `pg_trgm` și `unaccent` (căutarea din vitrină, migrarea `20261116120000_catalog_search`):** verificarea de cerințe a instalatorului le cere pe Postgres-ul țintă (sunt extensii «de încredere» din PostgreSQL 13+: le creează orice utilizator cu dreptul CREATE pe baza de date, fără superutilizator; pe un Postgres gestionat verifică lista de extensii permise). Fără ele, migrările pică, deci instalatorul oprește cu mesaj clar, înainte de a rula migrațiile
 - [ ] Generare `APP_KEY` + avertisment de păstrare
 - [ ] Setare date firmă → propagate automat în footer, facturi, emailuri, pagini legale
 - [ ] Creare cont administrator, alegere temă, upload logo

@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@ecom/db";
 import type { NodeUpdate } from "./category-tree";
+import { applyRedirectPlan, planCategoryRedirects } from "./slug-redirect";
 
 export interface CategoryRecord {
   id: string;
@@ -131,6 +132,12 @@ export function createPrismaCategoryStore(db: Db): CategoryStore {
     async applyUpdates(updates) {
       if (updates.length === 0) return;
       await inTransaction(db, async (tx) => {
+        // căile dinainte, pentru istoricul de adrese (C-43)
+        const ids = updates.map((u) => u.id);
+        const before = await tx.category.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, path: true },
+        });
         // Căile sunt unice: într-o mutare/redenumire căile noi nu le ciocnesc pe cele vechi ale
         // aceluiași subarbore decât tranzitoriu, deci actualizările se fac în două treceri
         // (mai întâi căi temporare unice, apoi cele finale).
@@ -152,6 +159,14 @@ export function createPrismaCategoryStore(db: Db): CategoryStore {
             },
           });
         }
+        await applyRedirectPlan(
+          tx,
+          "category",
+          planCategoryRedirects(
+            before,
+            updates.map((u) => ({ id: u.id, path: u.path })),
+          ),
+        );
       });
     },
 

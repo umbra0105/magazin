@@ -61,6 +61,29 @@ export function pickVariantImage(
   return null;
 }
 
+/** Ordinea de rezervă când varianta cerută lipsește: cea mai apropiată ca mărime (nu se generează variante mai mari decât originalul). */
+const SIZE_FALLBACK: Readonly<Record<VariantName, readonly VariantName[]>> = {
+  large: ["large", "medium", "thumb"],
+  medium: ["medium", "large", "thumb"],
+  thumb: ["thumb", "medium", "large"],
+};
+
+/**
+ * Ca `pickVariantImage`, dar când varianta cerută nu există (un original mic nu primește «large») folosește cea mai apropiată
+ * disponibilă. `null` doar când fișierul nu are nicio variantă procesată: vitrina nu servește niciodată originalul necomprimat.
+ */
+export function pickBestVariantImage(
+  media: MediaUrlSource,
+  storage: StorageDriver,
+  preferred: VariantName,
+): PickedImage | null {
+  for (const name of SIZE_FALLBACK[preferred]) {
+    const picked = pickVariantImage(media, storage, name);
+    if (picked) return picked;
+  }
+  return null;
+}
+
 /**
  * URL-urile publice ale unui fișier media: toate trec prin `storage.publicUrl`, deci arată corect
  * pe orice configurație (`/media/...` pe aplicație, sau `S3_PUBLIC_URL` pe CDN / bucket public).

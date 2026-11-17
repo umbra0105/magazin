@@ -8,6 +8,7 @@ import {
   pathFor,
   planMove,
   planRename,
+  positionRelativeTo,
   validateMove,
   type CategoryNode,
   type MoveRefusal,
@@ -90,10 +91,23 @@ export const categoryUpdateSchema = z
   .refine((v) => Object.values(v).some((x) => x !== undefined), {
     message: "Nu a fost trimis niciun câmp de modificat",
   });
-export const categoryMoveSchema = z.strictObject({
-  parentId: z.string().min(1).max(40).nullable(),
-  index: z.number().int().min(0).max(10_000).optional(),
-});
+/**
+ * Mutarea unei categorii (C-35): poziția se dă ca REFERINȚĂ la un frate (`beforeId` = înaintea lui, `afterId` = după el), nu ca index
+ * absolut, ca o mutare să nu cadă pe alt loc când alt administrator adaugă sau șterge un frate între timp. `index` rămâne pentru
+ * compatibilitate; cel mult unul dintre cei trei; fără niciunul, la sfârșitul listei.
+ */
+export const categoryMoveSchema = z
+  .strictObject({
+    parentId: z.string().min(1).max(40).nullable(),
+    index: z.number().int().min(0).max(10_000).optional(),
+    beforeId: z.string().min(1).max(40).optional(),
+    afterId: z.string().min(1).max(40).optional(),
+  })
+  .refine(
+    (value) =>
+      [value.index, value.beforeId, value.afterId].filter((item) => item !== undefined).length <= 1,
+    { message: "Alege o singură poziție: index, beforeId sau afterId" },
+  );
 
 export interface CategoryServiceDeps {
   store: CategoryStore;
@@ -109,6 +123,9 @@ const REFUSAL_MESSAGES: Record<MoveRefusal, string> = {
   CATEGORY_CYCLE: "Categoria nu poate fi mutată într-una dintre propriile subcategorii",
   CATEGORY_TOO_DEEP: `Arborele de categorii poate avea cel mult ${MAX_CATEGORY_DEPTH + 1} niveluri`,
 };
+
+const SIBLING_GONE_MESSAGE =
+  "Categoria de referință nu mai este în acest loc (a fost mutată sau ștearsă de altcineva). Reîncarcă lista și încearcă din nou.";
 
 const asNodes = (rows: readonly CategoryRecord[]): CategoryNode[] =>
   rows.map((r) => ({
@@ -338,7 +355,7 @@ export class CategoryService {
    */
   async move(subject: PermissionSubject | null, id: string, input: unknown): Promise<void> {
     assertCan(subject, "products.write");
-    const { parentId, index } = parseInput(categoryMoveSchema, input);
+    const { parentId, index, beforeId, afterId } = parseInput(categoryMoveSchema, input);
     // citire + validare + plan + scriere sub blocarea arborelui: planul scrie rândurile complete ale fraților,
     // deci o mutare simultană ar fi anulată de o citire veche
     const { node, target } = await this.deps.store.serialized(async () => {
@@ -353,7 +370,17 @@ export class CategoryService {
         const owner = await this.deps.store.findSiblingBySlug(parentId, moved.slug, id);
         if (owner) throw this.conflict(moved.slug, owner);
       }
-      const position = index ?? nodes.filter((n) => n.parentId === parentId && n.id !== id).length;
+      let position = index ?? nodes.filter((n) => n.parentId === parentId && n.id !== id).length;
+      const reference =
+        beforeId !== undefined ? { beforeId } : afterId !== undefined ? { afterId } : null;
+      if (reference) {
+        // poziția se calculează AICI, sub blocarea arborelui, din starea de acum (nu din ce vedea interfața)
+        const relative = positionRelativeTo(nodes, id, parentId, reference);
+        if (relative === null) {
+          throw new CatalogError("CATEGORY_SIBLING_GONE", SIBLING_GONE_MESSAGE);
+        }
+        position = relative;
+      }
       await this.deps.store.applyUpdates(planMove(nodes, id, parentId, position));
       return { node: moved, target: position };
     });

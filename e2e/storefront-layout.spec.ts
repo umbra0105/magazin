@@ -30,12 +30,13 @@ test.describe("pagina principală și cadrul real", () => {
     await expect(page.locator("main#continut")).toHaveCount(1);
   });
 
-  test("căutarea și coșul sunt dezactivate (structură, fără funcție), favoritele ascunse fără steag", async ({
+  test("căutarea e activă (Faza 7); coșul rămâne dezactivat (structură, fără funcție), favoritele ascunse fără steag", async ({
     page,
   }) => {
     await page.goto("/");
     const header = page.getByRole("banner");
-    await expect(header.getByRole("searchbox").first()).toBeDisabled();
+    // căutarea e activă: câmp cu rol `combobox` (autocomplete), în formularul `role=search`, fără `disabled`
+    await expect(header.getByRole("combobox").first()).toBeEnabled();
     await expect(header.getByRole("button", { name: /Coșul tău/ })).toHaveAttribute(
       "aria-disabled",
       "true",
@@ -454,12 +455,13 @@ test.describe("consimțământ pentru cookie-uri (implicit refuzat)", () => {
   const consentCookie = async (page: Page) =>
     (await page.context().cookies()).find((cookie) => cookie.name === "ecom_consent");
 
-  test("prima vizită: bannerul e în HTML-ul serverului, cu trei butoane, și nu s-a salvat nicio alegere", async ({
+  test("prima vizită: bannerul apare după hidratare (cookie-ul se citește în browser, pagina rămâne în cache), cu trei butoane, și nu s-a salvat nicio alegere", async ({
     page,
     request,
   }) => {
+    // pagina din cache e aceeași pentru toți vizitatorii: bannerul nu e în HTML-ul serverului, ci îl desenează browserul
     const html = await (await request.get("/")).text();
-    expect(html).toContain("data-consent-banner");
+    expect(html).not.toContain("data-consent-banner");
     await page.goto("/");
     await expect(banner(page)).toBeVisible();
     await expect(banner(page).getByRole("button")).toHaveText([

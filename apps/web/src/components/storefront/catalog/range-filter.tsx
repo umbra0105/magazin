@@ -1,0 +1,131 @@
+"use client";
+
+import { useEffect, useId, useState } from "react";
+import { formatEditableNumber, formatNumber, parseEditableNumber } from "@/lib/format-number";
+import { getMessages } from "@/messages";
+
+const m = getMessages().storefront.catalog.filters;
+
+/**
+ * Filtrul pe interval numeric (debit, putere, volum piscină). Fără JavaScript sunt două câmpuri numerice, `min_<cod>` și
+ * `max_<cod>` (formularul GET le trimite și pagina le aduce la forma canonică). După hidratare apare și un glisor cu două
+ * mânere, legat de câmpuri, între limitele reale ale valorilor din listă. Câmpurile goale înseamnă fără limită. Numerele se
+ * scriu în forma limbii magazinului (în română, cu virgulă: «2,5»); serverul citește și virgula, și punctul.
+ */
+export function RangeFilter({
+  code,
+  name,
+  unit,
+  min,
+  max,
+  selectedMin,
+  selectedMax,
+  count,
+  locale,
+}: {
+  code: string;
+  name: string;
+  unit: string | null;
+  min: number;
+  max: number;
+  selectedMin: number | null;
+  selectedMax: number | null;
+  count: number;
+  locale: string;
+}) {
+  const id = useId();
+  const [lo, setLo] = useState<string>(
+    selectedMin === null ? "" : formatEditableNumber(selectedMin),
+  );
+  const [hi, setHi] = useState<string>(
+    selectedMax === null ? "" : formatEditableNumber(selectedMax),
+  );
+  const [enhanced, setEnhanced] = useState(false);
+  useEffect(() => setEnhanced(true), []);
+
+  const numLo = parseEditableNumber(lo) ?? min;
+  const numHi = parseEditableNumber(hi) ?? max;
+  const step = max - min > 50 ? 1 : max - min > 5 ? 0.5 : 0.1;
+  const label = m.rangeLabel(name, unit);
+
+  const low = Math.min(numLo, numHi);
+  const high = Math.max(numLo, numHi);
+  const span = max - min || 1;
+  const left = Math.max(0, Math.min(100, ((low - min) / span) * 100));
+  const right = Math.max(0, Math.min(100, ((high - min) / span) * 100));
+
+  const slider = (side: "lo" | "hi") => (
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={side === "lo" ? low : high}
+      aria-label={side === "lo" ? m.sliderMin(name) : m.sliderMax(name)}
+      onChange={(event) => {
+        const next = Number(event.target.value);
+        if (side === "lo") setLo(next <= min ? "" : formatEditableNumber(next));
+        else setHi(next >= max ? "" : formatEditableNumber(next));
+      }}
+      className="range-dual absolute inset-0 w-full"
+      data-range-slider={side}
+    />
+  );
+
+  return (
+    <fieldset className="flex flex-col gap-3" data-range-filter={code}>
+      <legend className="flex w-full items-baseline justify-between gap-2 text-sm font-semibold">
+        <span>{label}</span>
+        <span className="font-normal text-ink-secondary">
+          {formatNumber(min, locale)}–{formatNumber(max, locale)}
+          {unit ? ` ${unit}` : ""} ({count})
+        </span>
+      </legend>
+      {enhanced ? (
+        <div className="relative h-8">
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-line-control"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-brand"
+            style={{ left: `${left}%`, width: `${Math.max(right - left, 0)}%` }}
+          />
+          {slider("lo")}
+          {slider("hi")}
+        </div>
+      ) : null}
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1 text-sm text-ink-secondary" htmlFor={`${id}-min`}>
+          {m.min}
+          <input
+            id={`${id}-min`}
+            name={`min_${code}`}
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder={formatEditableNumber(min)}
+            value={lo}
+            onChange={(event) => setLo(event.target.value)}
+            className="h-11 rounded-full border border-line-input bg-surface-page px-4 text-base text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-ink-secondary" htmlFor={`${id}-max`}>
+          {m.max}
+          <input
+            id={`${id}-max`}
+            name={`max_${code}`}
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder={formatEditableNumber(max)}
+            value={hi}
+            onChange={(event) => setHi(event.target.value)}
+            className="h-11 rounded-full border border-line-input bg-surface-page px-4 text-base text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          />
+        </label>
+      </div>
+    </fieldset>
+  );
+}

@@ -18,6 +18,11 @@ export interface MediaWorkerOptions {
   queueName?: string;
   /** Cât se amână un job când nu e loc în limita de decodări (cu jitter ±25%). */
   busyDelayMs?: number;
+  /**
+   * Invalidarea cache-ului vitrinei (în producție: cerere semnată spre aplicație). Se cheamă după ce fișierul devine «ready»:
+   * paginile din cache arată variantele noi. O eroare a invalidării nu eșuează jobul (funcția nu aruncă, vezi `createRemoteRevalidator`).
+   */
+  invalidate?: (tags: readonly string[]) => Promise<void> | void;
 }
 
 /**
@@ -40,6 +45,7 @@ export function startMediaWorker(options: MediaWorkerOptions): Worker<MediaJobDa
           await job.moveToDelayed(Date.now() + Math.round(busyDelayMs * jitter), token);
           throw new DelayedError();
         }
+        if (outcome.status === "ready") await options.invalidate?.(["catalog"]);
       } catch (error) {
         if (error instanceof DelayedError) throw error;
         if (error instanceof MediaProcessingError) {

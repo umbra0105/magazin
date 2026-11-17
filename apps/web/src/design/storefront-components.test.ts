@@ -172,7 +172,7 @@ describe("ProductCard: zona de imagine uniformă", () => {
     for (const layout of ["vertical", "horizontal"] as const) {
       const html = render(h(ProductCard, { ...props, layout }));
       expect(html, layout).toContain("bg-media");
-      expect(html, layout).toContain("p-4");
+      expect(html, layout).toContain("p-2");
       expect(html, layout).toContain("object-contain");
       expect(html, layout).not.toContain("object-cover");
       // fundalul alb al fotografiei se contopește cu masa foto (nu rămâne un dreptunghi alb)

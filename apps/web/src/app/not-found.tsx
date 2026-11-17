@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { StorefrontState, storeButtonVariants } from "@ecom/ui";
 import { StorefrontShell } from "@/components/storefront/storefront-shell";
-import { readConsent } from "@/lib/consent-server";
 import { getStorefrontChrome } from "@/lib/storefront-chrome";
 import { getMessages } from "@/messages";
 
@@ -13,9 +12,9 @@ const m = getMessages().storefront.states.notFound;
  * valorile implicite (la fel ca tema), deci pagina se afișează oricum. Adminul are propriul 404 (`(admin)/admin/not-found.tsx`).
  */
 export default async function NotFound() {
-  const [chrome, consent] = await Promise.all([getStorefrontChrome(), readConsent()]);
+  const chrome = await getStorefrontChrome();
   return (
-    <StorefrontShell chrome={chrome} year={new Date().getFullYear()} consent={consent}>
+    <StorefrontShell chrome={chrome} year={new Date().getFullYear()}>
       <StorefrontState
         title={m.title}
         description={m.description}

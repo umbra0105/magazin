@@ -457,7 +457,8 @@ test.describe("Stoc cu mai multe depozite (13d)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Stoc" })).toBeVisible();
     // lista e cea a depozitului implicit (5 buc), nu a lui W1 (77 buc), iar adresa cu ?depozit= nu schimbă nimic
     await expect(physicalCell(page, skuPcs)).toContainText("5 buc");
-    await expect(stockRow(page, skuPcs)).not.toContainText("77");
+    // «77 buc» (cantitatea din W1), nu «77» simplu: eticheta aleatorie a produsului (hex) poate conține «77» întâmplător
+    await expect(stockRow(page, skuPcs)).not.toContainText("77 buc");
     await expect(selector(page)).toHaveCount(0);
     await expect(transferButton(page)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Ajustează stocul:/ }).first()).toBeVisible();

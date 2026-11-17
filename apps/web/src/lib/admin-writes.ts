@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { loadEnv } from "@ecom/config";
 import {
   AuditService,
@@ -28,6 +29,9 @@ export function getAdminWrites(): AdminWrites {
     flags: getFeatureFlags(),
     branding: getBranding(),
     integrations: new IntegrationService(createPrismaIntegrationStore(getDb()), loadEnv().APP_KEY),
+    invalidate: (tags) => {
+      for (const tag of tags) revalidateTag(tag);
+    },
   });
   return globalForAdmin.__ecomAdminWrites;
 }

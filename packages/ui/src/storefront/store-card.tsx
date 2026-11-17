@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../lib/cn";
-import { StorePill, type StorePillTone } from "./store-pill";
+import type { StorePillTone } from "./store-pill";
 
 /**
  * Cardul mare al vitrinei: fundal înclinat (`--sf-card`), rază mare din preset, fără bordură și fără umbră (umbra e doar a
@@ -12,6 +12,15 @@ export function StoreCard({ className, ...props }: HTMLAttributes<HTMLDivElement
   );
 }
 
+/** Punctul stării (discret, lângă text): culoarea vine din tonul semantic al vitrinei. */
+const DOT: Record<StorePillTone, string> = {
+  neutral: "bg-tone-neutral-fg",
+  success: "bg-tone-success-fg",
+  warning: "bg-tone-warning-fg",
+  problem: "bg-tone-problem-fg",
+  info: "bg-tone-info-fg",
+};
+
 export interface ProductCardProps {
   /** Adresa produsului (`/produs/<slug>`): legătură reală, în HTML-ul de pe server. */
   href: string;
@@ -22,7 +31,9 @@ export interface ProductCardProps {
   /** Prețul gata formatat de apelant: cardul nu calculează și nu formatează bani (motorul de prețuri e în Faza 8). */
   price: string;
   oldPrice?: string | undefined;
-  status?: { label: string; tone: StorePillTone } | undefined;
+  status?: { label: string; detail?: string | undefined; tone: StorePillTone } | undefined;
+  /** Marcajul din colțul imaginii (eticheta energetică), desenat de apelant. */
+  badge?: ReactNode;
   /** Nivelul titlului în pagină (h2 sub un h1 de listă, h3 sub un h2 de secțiune). */
   headingLevel?: 2 | 3;
   /** `vertical`: imaginea sus (grilă); `horizontal`: imaginea în stânga, textul în dreapta (listă). Vine din setarea de aspect. */
@@ -43,6 +54,7 @@ export function ProductCard({
   price,
   oldPrice,
   status,
+  badge,
   headingLevel = 3,
   layout = "vertical",
   className,
@@ -64,15 +76,16 @@ export function ProductCard({
           // masa foto (`--sf-media-surface`): aceeași suprafață, același raport și aceeași umplutură la toate cardurile;
           // fotografia se vede întreagă (object-contain), nu tăiată
           // `multiply`: albul fotografiei devine culoarea mesei foto, deci fundalul alb al fotografiei nu se mai vede ca un dreptunghi
-          "relative isolate aspect-square overflow-hidden bg-media p-4 [&_img]:size-full [&_img]:object-contain [&_img]:mix-blend-multiply",
+          "relative isolate aspect-square overflow-hidden bg-media p-2 [&_img]:size-full [&_img]:object-contain [&_img]:mix-blend-multiply",
           horizontal && "w-2/5 shrink-0 sm:w-1/3",
         )}
       >
         {media}
+        {badge ? <span className="absolute left-3 top-3 z-10">{badge}</span> : null}
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-5">
-        {brand ? <p className="text-sm text-ink-secondary">{brand}</p> : null}
-        <Heading className="text-lg font-semibold leading-snug">
+      <div className="flex flex-1 flex-col gap-1 p-4 sm:p-5">
+        {brand ? <p className="text-xs font-medium text-ink-secondary">{brand}</p> : null}
+        <Heading className="break-words text-lg font-semibold leading-snug">
           <a
             href={href}
             className="rounded-sm outline-none after:absolute after:inset-0 after:content-['']"
@@ -81,13 +94,27 @@ export function ProductCard({
           </a>
         </Heading>
         <div className="mt-auto flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-3">
-          <span className="text-xl font-semibold">{price}</span>
+          <span className="whitespace-nowrap text-xl font-semibold tracking-tight sm:text-2xl">
+            {price}
+          </span>
           {oldPrice ? <s className="text-sm text-ink-secondary">{oldPrice}</s> : null}
         </div>
         {status ? (
-          <div className="pt-1">
-            <StorePill tone={status.tone}>{status.label}</StorePill>
-          </div>
+          // înălțime rezervată (4 rânduri de text pe telefon, 2 de la sm; plus umplutura de sus): prețul de deasupra rămâne pe aceeași linie la toate cardurile
+          // dintr-un rând, oricât de lungă e starea («La comandă · livrare în aproximativ 21 de zile»)
+          <p
+            className="flex min-h-21 items-start gap-2 pt-1 text-sm text-ink-secondary sm:min-h-11"
+            data-status={status.tone}
+          >
+            <span
+              aria-hidden="true"
+              className={cn("mt-1.5 size-2 shrink-0 rounded-full", DOT[status.tone])}
+            />
+            <span>
+              <span className="font-medium text-ink">{status.label}</span>
+              {status.detail ? <span> {status.detail}</span> : null}
+            </span>
+          </p>
         ) : null}
       </div>
     </article>

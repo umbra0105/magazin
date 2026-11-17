@@ -15,7 +15,7 @@ export interface StoreSearchProps {
   className?: string;
 }
 
-const FIELD =
+export const STORE_SEARCH_FIELD =
   "h-(--sf-control-h) w-full rounded-full border border-line-input bg-surface-page pl-12 pr-4 text-(length:--control-text) text-ink " +
   "placeholder:text-ink-placeholder transition-colors duration-(--motion) " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page " +
@@ -51,7 +51,7 @@ export function StoreSearch({
         aria-label={label}
         placeholder={placeholder}
         disabled={disabled}
-        className={FIELD}
+        className={STORE_SEARCH_FIELD}
       />
     </form>
   );

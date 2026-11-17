@@ -37,6 +37,8 @@ const DELEGATE_ALLOWED = new Set([
   "packages/core/src/catalog/parts-diagram-service.ts",
   // doar citire; trebuie să funcționeze și cu flag-ul oprit (protejează imaginea)
   "packages/core/src/catalog/media-usage.ts",
+  // citirea publică a vitrinei: fișa se încarcă DOAR cu `includeDiagram`, pe care pagina de produs îl ia din flag (`isEnabled("partsDiagrams")`)
+  "packages/core/src/storefront/catalog-reader.ts",
 ]);
 
 const isTest = (path: string): boolean =>

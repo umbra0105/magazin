@@ -11,6 +11,8 @@ import type {
 import type { DeniedAttempt } from "../rbac/can";
 import { getSettingSchema, type SettingKey } from "../settings/registry";
 import type { SettingsService } from "../settings/settings-service";
+import { CATALOG_TAG } from "../catalog/catalog-support";
+import { STOREFRONT_CHROME_TAG } from "../storefront/revalidation";
 
 export interface AdminWriteDeps {
   audit: AuditService;
@@ -18,6 +20,11 @@ export interface AdminWriteDeps {
   flags: FeatureFlagService;
   branding: BrandingService;
   integrations: IntegrationService;
+  /**
+   * Invalidare de cache (în aplicație: `revalidateTag`). Setările, flag-urile și brandingul se văd în cadrul vitrinei (header,
+   * footer, meniu) și în paginile de catalog, deci o scriere reușită invalidează ambele; un eșec al invalidării nu anulează scrierea.
+   */
+  invalidate?: (tags: readonly string[]) => Promise<void> | void;
 }
 
 export interface SaveIntegrationCommand {
@@ -55,6 +62,14 @@ interface IntegrationAuditView {
 export function createAdminWrites(deps: AdminWriteDeps) {
   const { audit, settings, flags, branding, integrations } = deps;
 
+  const refreshStorefront = async (): Promise<void> => {
+    try {
+      await deps.invalidate?.([STOREFRONT_CHROME_TAG, CATALOG_TAG]);
+    } catch {
+      // scrierea e deja făcută; TTL-ul paginilor acoperă o invalidare ratată
+    }
+  };
+
   /** Împachetează o scriere cu `withAudit`, pentru actorul dat. */
   const audited =
     <I, O>(spec: AuditedActionSpec<I, O>, handler: (input: I) => Promise<O>) =>
@@ -77,7 +92,11 @@ export function createAdminWrites(deps: AdminWriteDeps) {
       after: (stored, input) => ({ [input.key]: stored }),
     },
     // `set` validează cu schema din registru și întoarce valoarea stocată (normalizată).
-    (input) => settings.set(requireSettingKey(input.key), input.value),
+    async (input) => {
+      const stored = await settings.set(requireSettingKey(input.key), input.value);
+      await refreshStorefront();
+      return stored;
+    },
   );
 
   const setFeatureFlag = audited<{ key: FeatureKey; enabled: boolean }, { enabled: boolean }>(
@@ -89,6 +108,7 @@ export function createAdminWrites(deps: AdminWriteDeps) {
     },
     async (input) => {
       await flags.setEnabled(input.key, input.enabled);
+      await refreshStorefront();
       return { enabled: await flags.isEnabled(input.key) };
     },
   );
@@ -102,7 +122,11 @@ export function createAdminWrites(deps: AdminWriteDeps) {
       after: (result) => result.config,
     },
     // Validare strictă în serviciu; întoarce și avertismentele de contrast pentru apelant.
-    (input) => branding.save(input),
+    async (input) => {
+      const result = await branding.save(input);
+      await refreshStorefront();
+      return result;
+    },
   );
 
   const integrationView = async (

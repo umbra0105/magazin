@@ -104,6 +104,7 @@ interface Setup {
   attempts?: number;
   busyDelayMs?: number;
   slots?: number;
+  invalidate?: (tags: readonly string[]) => Promise<void> | void;
 }
 
 function setup(options: Setup) {
@@ -134,6 +135,7 @@ function setup(options: Setup) {
     logger,
     concurrency: 2,
     busyDelayMs: options.busyDelayMs ?? 150,
+    ...(options.invalidate && { invalidate: options.invalidate }),
   });
   const created: string[] = [];
   cleanups.push(async () => {
@@ -197,6 +199,16 @@ async function waitFor(
 }
 
 describe("coada media pe disc local (Redis + Postgres reale)", () => {
+  it("după ce un fișier devine «ready», workerul invalidează cache-ul catalogului (C-37)", async () => {
+    const calls: (readonly string[])[] = [];
+    const t = setup({ storage: localStorage(), invalidate: (tags) => void calls.push(tags) });
+    const id = await t.createMedia();
+    await enqueueMediaProcessing(t.queue, id);
+    await waitFor(async () => (await t.row(id)).status === "ready");
+    await waitFor(() => calls.length > 0, 5000, "invalidarea după procesare");
+    expect(calls).toEqual([["catalog"]]);
+  });
+
   it("procesează un fișier: ready, 9 variante în storage, blurhash, job șters", async () => {
     const storage = localStorage();
     const t = setup({ storage });

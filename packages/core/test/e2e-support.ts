@@ -265,6 +265,60 @@ export async function attachProductToE2eBrand(
   });
 }
 
+/**
+ * Publică în vitrină un produs de test (activ, o variantă, în stoc, brand și categorie proprii, `e2e-…`) cu fișierul media
+ * încărcat în test (după numele original). Pentru testele vitrinei cu imagini REALE (procesate, în storage). Întoarce adresele.
+ */
+export async function publishE2eStorefrontProduct(
+  originalName: string,
+  tag: string,
+): Promise<{ productSlug: string; categoryPath: string; title: string }> {
+  const productSlug = `e2e-vitrina-${tag}`;
+  const categorySlug = `e2e-cat-${tag}`;
+  const brandSlug = `e2e-brand-${tag}`;
+  const title = `Produs vitrină ${tag}`;
+  trackedProducts.add(productSlug);
+  trackedCategories.add(categorySlug);
+  trackedBrands.add(brandSlug);
+  await withClient(async (db) => {
+    const media = await db.query(
+      `select id from media where "originalName" = $1 and status = 'ready' order by "createdAt" desc limit 1`,
+      [originalName],
+    );
+    const mediaId = media.rows[0]?.id as string | undefined;
+    if (!mediaId) throw new Error(`Fișierul media „${originalName}” nu e procesat în baza de test`);
+    const category = await db.query(
+      `insert into category (id, name, slug, path, depth, "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $2, 0, 0, now()) returning id`,
+      [`E2E Categorie ${tag}`, categorySlug],
+    );
+    const brand = await db.query(
+      `insert into brand (id, name, slug, "updatedAt") values (gen_random_uuid()::text, $1, $2, now()) returning id`,
+      [`E2E Brand ${tag}`, brandSlug],
+    );
+    const product = await db.query(
+      `insert into product (id, slug, title, status, "manageStock", "stockStatus", "brandId", "publishedAt", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, 'active', false, 'instock', $3, now(), now()) returning id`,
+      [productSlug, title, brand.rows[0]?.id as string],
+    );
+    const productId = product.rows[0]?.id as string;
+    await db.query(
+      `insert into product_variant (id, "productId", sku, price, "isDefault", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, 12345, true, now())`,
+      [productId, `E2E-VITRINA-${tag}`.toUpperCase()],
+    );
+    await db.query(
+      `insert into product_media (id, "productId", "mediaId", position) values (gen_random_uuid()::text, $1, $2, 0)`,
+      [productId, mediaId],
+    );
+    await db.query(
+      `insert into product_category ("productId", "categoryId", "isPrimary") values ($1, $2, true)`,
+      [productId, category.rows[0]?.id as string],
+    );
+  });
+  return { productSlug, categoryPath: categorySlug, title };
+}
+
 /** Prețul de achiziție pus pe produsele de probă: valoare-santinelă, căutată în paginile randate. */
 export const E2E_COST_SENTINEL = 777777;
 
@@ -2225,4 +2279,84 @@ export async function resetE2eAppearance(): Promise<void> {
     }
   });
   await withRedis((redis) => redis.del("ecom:settings:v1", "ecom:branding:v1"));
+}
+
+/**
+ * Catalog de probă pentru filtrele vitrinei: o categorie, două mărci și un atribut numeric filtrabil, cu trei produse active
+ * (marca A cu 10 și 20, marca B cu 30). Totul are adresa `e2e-…` și se șterge cu ajutoarele de curățare ale workerului.
+ */
+export async function seedE2eFilterCatalog(tag: string): Promise<{
+  categoryPath: string;
+  brandA: { slug: string; name: string };
+  brandB: { slug: string; name: string };
+  attributeCode: string;
+  attributeName: string;
+  products: { slug: string; title: string; value: number }[];
+}> {
+  const categoryPath = `e2e-cat-${tag}`;
+  const brandA = { slug: `e2e-brand-a-${tag}`, name: `Marca Alfa ${tag}` };
+  const brandB = { slug: `e2e-brand-b-${tag}`, name: `Marca Beta ${tag}` };
+  const attributeCode = `e2e_debit_${tag}`;
+  const attributeName = `Debit ${tag}`;
+  trackedCategories.add(categoryPath);
+  trackedBrands.add(brandA.slug);
+  trackedBrands.add(brandB.slug);
+  trackedAttributes.add(attributeCode);
+  const plan = [
+    { brand: brandA, value: 10, title: `Pompă Alfa ${tag} mică` },
+    { brand: brandA, value: 20, title: `Pompă Alfa ${tag} medie` },
+    {
+      brand: brandB,
+      value: 30,
+      title: `Pompă Beta ${tag} mare, de filtrare pentru piscine, cu prefiltru, motor monofazat 230 V, protecție termică și racorduri incluse`,
+    },
+  ];
+  const products: { slug: string; title: string; value: number }[] = [];
+  await withClient(async (db) => {
+    const category = await db.query(
+      `insert into category (id, name, slug, path, depth, "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $2, 0, 0, now()) returning id`,
+      [`E2E Filtre ${tag}`, categoryPath],
+    );
+    const brandIds = new Map<string, string>();
+    for (const brand of [brandA, brandB]) {
+      const row = await db.query(
+        `insert into brand (id, name, slug, "updatedAt") values (gen_random_uuid()::text, $1, $2, now()) returning id`,
+        [brand.name, brand.slug],
+      );
+      brandIds.set(brand.slug, row.rows[0]?.id as string);
+    }
+    const attribute = await db.query(
+      `insert into attribute (id, code, name, type, unit, "isFilterable", "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, 'number', 'mc/h', true, 0, now()) returning id`,
+      [attributeCode, attributeName],
+    );
+    let index = 0;
+    for (const item of plan) {
+      const slug = `e2e-filtre-${tag}-${index++}`;
+      trackedProducts.add(slug);
+      const product = await db.query(
+        `insert into product (id, slug, title, status, "manageStock", "stockStatus", "brandId", "publishedAt", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, 'active', false, 'instock', $3, now(), now()) returning id`,
+        [slug, item.title, brandIds.get(item.brand.slug)],
+      );
+      const productId = product.rows[0]?.id as string;
+      await db.query(
+        `insert into product_variant (id, "productId", sku, price, "isDefault", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, true, now())`,
+        [productId, `E2E-F-${tag}-${index}`.toUpperCase(), 10000 + index * 1000],
+      );
+      await db.query(
+        `insert into product_category ("productId", "categoryId", "isPrimary") values ($1, $2, true)`,
+        [productId, category.rows[0]?.id as string],
+      );
+      await db.query(
+        `insert into attribute_value (id, "productId", "attributeId", "numberValue")
+         values (gen_random_uuid()::text, $1, $2, $3)`,
+        [productId, attribute.rows[0]?.id as string, item.value],
+      );
+      products.push({ slug, title: item.title, value: item.value });
+    }
+  });
+  return { categoryPath, brandA, brandB, attributeCode, attributeName, products };
 }

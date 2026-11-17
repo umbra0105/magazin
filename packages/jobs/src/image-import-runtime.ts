@@ -11,6 +11,7 @@ import { createStorage } from "@ecom/integrations";
 import { getLogger } from "@ecom/shared";
 import { startImageImportWorker } from "./image-import-worker";
 import { createMediaRuntime } from "./media-runtime";
+import { createWorkerRevalidator } from "./revalidate";
 
 const BUSY_RETRIES = 10;
 const BUSY_WAIT_MS = 2000;
@@ -46,7 +47,8 @@ export function startImageImportWorkerFromEnv() {
     limiter: media.limiter,
     processMedia,
     logger,
-    // cache-ul catalogului se invalidează din aplicație (revalidarea pe etichete nu există în worker)
+    // `revalidateTag` nu există în worker: cerere semnată spre aplicație (C-37)
+    invalidate: createWorkerRevalidator(),
   });
   const worker = startImageImportWorker({
     redisUrl: media.redisUrl,

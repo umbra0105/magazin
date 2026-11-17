@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { AnnouncementBar } from "@ecom/ui";
 import { getMessages } from "@/messages";
-import type { ConsentChoices } from "@/lib/consent";
 import type { StorefrontChrome } from "@/lib/storefront-chrome";
 import { ConsentBanner } from "./consent-banner";
 import { StoreFooter } from "./store-footer";
@@ -16,13 +15,10 @@ const m = getMessages().storefront;
 export function StorefrontShell({
   chrome,
   year,
-  consent,
   children,
 }: {
   chrome: StorefrontChrome;
   year: number;
-  /** Alegerea de cookie-uri din cererea curentă; `null` = fără alegere (refuzat, cu banner). */
-  consent: ConsentChoices | null;
   children: ReactNode;
 }) {
   return (
@@ -67,7 +63,7 @@ export function StorefrontShell({
         year={year}
         variant={chrome.footerVariant}
       />
-      <ConsentBanner initial={consent} />
+      <ConsentBanner />
     </div>
   );
 }

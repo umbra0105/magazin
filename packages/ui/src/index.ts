@@ -81,8 +81,10 @@ export { StoreCard, ProductCard, type ProductCardProps } from "./storefront/stor
 export { StorePill, type StorePillTone } from "./storefront/store-pill";
 export { StoreImage, type StoreImageProps } from "./storefront/store-image";
 export { HeroBanner, type HeroBannerProps } from "./storefront/hero-banner";
+export { HeroSplit, type HeroSplitProps } from "./storefront/hero-split";
 export { TrustBar, type TrustItem } from "./storefront/trust-bar";
-export { StoreSearch, type StoreSearchProps } from "./storefront/store-search";
+export { EnergyLabel, ENERGY_SCALE, type EnergyLabelProps } from "./storefront/energy-label";
+export { StoreSearch, STORE_SEARCH_FIELD, type StoreSearchProps } from "./storefront/store-search";
 export { SectionHeading } from "./storefront/section-heading";
 export { AnnouncementBar, type AnnouncementBarProps } from "./storefront/announcement-bar";
 export { StorefrontState, type StorefrontStateProps } from "./storefront/storefront-state";

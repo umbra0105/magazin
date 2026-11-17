@@ -1163,3 +1163,20 @@ model BackInStockAlert {
   @@index([variantId, notifiedAt])
   @@map("back_in_stock_alert")
 }
+
+/// Istoric de adrese (Faza 7, C-43): când se schimbă slugul unui produs sau al unui brand, ori calea unei categorii (redenumire,
+/// mutare, inclusiv descendenții), adresa veche rămâne aici și vitrina o redirecționează permanent (301) către adresa curentă a
+/// aceleiași entități. `oldKey` e slugul (produs, brand) sau calea de slug-uri (categorie), în litere mici. `targetId` nu e cheie
+/// străină (legătură polimorfă): vitrina verifică la citire că ținta există încă. Nu are lanțuri: pointează mereu spre entitate.
+model SlugRedirect {
+  id        String   @id @default(cuid())
+  /// "product" | "category" | "brand" (CHECK în migrație)
+  kind      String
+  oldKey    String
+  targetId  String
+  createdAt DateTime @default(now())
+
+  @@unique([kind, oldKey])
+  @@index([kind, targetId])
+  @@map("slug_redirect")
+}

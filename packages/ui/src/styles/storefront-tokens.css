@@ -123,3 +123,98 @@ html:has(dialog.sheet-panel[open]) {
     transform: translateX(-100%);
   }
 }
+
+/*
+ * Eticheta energetică (scara europeană A+++ … G): culorile scării sunt convenție de reglementare, nu identitate de magazin, deci
+ * stau aici (nu în presets) și nu se schimbă cu tema. Valorile sunt `oklch` (fără hex); textul de pe fiecare treaptă e ales pentru
+ * contrast AA pe culoarea ei.
+ */
+.energy-label {
+  --energy-ink: oklch(0.2 0 0);
+  color: var(--energy-ink);
+  /* vârf de săgeată spre dreapta, ca pe eticheta europeană; spațiul din dreapta ține textul în corp */
+  clip-path: polygon(0 0, calc(100% - 0.55em) 0, 100% 50%, calc(100% - 0.55em) 100%, 0 100%);
+  padding-right: 0.9em;
+}
+.energy-label[data-energy="A+++"] {
+  background: oklch(0.62 0.17 150);
+  --energy-ink: oklch(0.99 0 0);
+}
+.energy-label[data-energy="A++"] {
+  background: oklch(0.7 0.17 145);
+}
+.energy-label[data-energy="A+"] {
+  background: oklch(0.78 0.18 135);
+}
+.energy-label[data-energy="A"] {
+  background: oklch(0.84 0.17 120);
+}
+.energy-label[data-energy="B"] {
+  background: oklch(0.88 0.17 105);
+}
+.energy-label[data-energy="C"] {
+  background: oklch(0.88 0.16 90);
+}
+.energy-label[data-energy="D"] {
+  background: oklch(0.82 0.16 75);
+}
+.energy-label[data-energy="E"] {
+  background: oklch(0.76 0.17 60);
+}
+.energy-label[data-energy="F"] {
+  background: oklch(0.7 0.19 45);
+}
+.energy-label[data-energy="G"] {
+  background: oklch(0.58 0.2 28);
+  --energy-ink: oklch(0.99 0 0);
+}
+
+/*
+ * Glisorul pe interval cu două mânere pe o singură pistă (filtrele numerice): două `input[type=range]` suprapuse; pista și segmentul
+ * ales sunt elemente separate, iar doar mânerele primesc clicuri. Culorile vin din tokenii de brand și de pagină.
+ */
+.range-dual {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  margin: 0;
+  height: 100%;
+}
+.range-dual::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 100%;
+}
+.range-dual::-moz-range-track {
+  background: transparent;
+}
+.range-dual::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 0.25rem;
+  border-radius: 9999px;
+  background: var(--brand);
+  border: 2px solid var(--color-surface-page);
+  outline: 1px solid var(--border-control);
+  cursor: grab;
+}
+.range-dual::-moz-range-thumb {
+  pointer-events: auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: var(--brand);
+  border: 2px solid var(--color-surface-page);
+  outline: 1px solid var(--border-control);
+  cursor: grab;
+}
+.range-dual:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.range-dual:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
