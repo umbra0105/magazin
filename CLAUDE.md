@@ -415,13 +415,18 @@ din acest fișier, **câștigă `CLAUDE.md`**.
 - **Push:** doar ramura de fază (`faza-N`, sau `redesign-…`), niciodată `main`. `main` se
   atinge numai prin poarta `npm.cmd run gate:merge -- --faza N`: nu îmbin manual, nu rulez
   `gh pr merge` direct, fără `--force`, fără `reset --hard` pe ramuri publicate, fără `--admin`.
+  **PR-ul fazei se deschide DRAFT** (`gh pr create --draft --base main --head faza-N`) și stă draft
+  până la poartă, care îl marchează ready chiar înainte de îmbinare; **PR-ul fazei nu se îmbină
+  niciodată din butonul GitHub** (la Faza 7 o îmbinare din buton a ocolit poarta). Dacă totuși s-a
+  îmbinat din GitHub, etichetele se pun cu `npm.cmd run gate:merge -- --faza N --doar-etichete`.
 - **Poarta de îmbinare** se oprește la prima condiție neîndeplinită și nu are flag de ocolire:
   arbore curat și fără fișiere din afara scopului; ramura actualizată față de `main` și publicată;
-  verificarea completă locală pe codul final (`npm.cmd run verify:full`); `gh pr checks` verde pe
+  verificarea completă locală pe codul final (`npm.cmd run verify:full`); exact un PR deschis (draft sau nu) cu vârful = codul local și `gh pr checks` verde pe
   vârful ramurii; fără intrări S1 sau S2 deschise în `docs/FINISAJE.md`; pentru fazele B și C,
   «aprobat» scris de utilizator în `docs/AUTONOM-APROBARI.md` (**fișier al utilizatorului: nu-l scriu
   și nu-l modific niciodată**; un test pică dacă un commit al ramurii fazei îl atinge); apoi eticheta `pre-faza-N`,
-  îmbinare prin commit (`--merge`, fără squash, ramura nu se șterge) și eticheta `faza-N-completa`.
+  `gh pr ready` (doar dacă PR-ul e draft), îmbinare prin commit (`--merge`, fără squash, ramura nu se
+  șterge) și eticheta `faza-N-completa`.
 - **Niveluri de gravitate:** **S1** (bani, stoc, plăți, securitate, permisiuni, date personale,
   migrări pe date, aspecte legale, pierdere de date) = oprire imediată cu 🛑; **S2** (o funcție nu
   merge, un test critic pică) = repar pe loc, înainte de pasul următor; **S3** (aspect, text,
