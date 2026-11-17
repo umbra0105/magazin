@@ -59,7 +59,8 @@ export type CartRejection =
   | { reason: "exceeds_available"; maxSteps: bigint }
   | { reason: "exceeds_limit"; maxSteps: bigint }
   | { reason: "too_many_lines"; maxLines: number }
-  | { reason: "line_too_expensive" };
+  | { reason: "line_too_expensive" }
+  | { reason: "not_in_cart" };
 
 function problemOf(error: QuantityError): QuantityProblem {
   switch (error.reason) {
@@ -138,7 +139,8 @@ export type CartIssue =
   | { type: "unavailable" }
   | { type: "exceeds_available"; maxSteps: number }
   | { type: "invalid_quantity"; detail: QuantityProblem }
-  | { type: "price_changed"; fromMinor: number; toMinor: number };
+  | { type: "price_changed"; fromMinor: number; toMinor: number }
+  | { type: "line_too_expensive" };
 
 export interface LineIssueInput {
   quantity: Quantity;

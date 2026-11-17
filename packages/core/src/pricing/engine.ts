@@ -57,7 +57,7 @@ export interface PricingLineInput {
   /** Produsul sau o categorie a lui exclud prețul de grup (vezi `excludedFromGroupPricing`). */
   excludeFromGroupDiscount: boolean;
   /** Prețul de intrare NET pe aceeași bază; doar pentru `cost_plus`, de la un apelant autorizat. */
-  costNetMinor: number | null;
+  costNetMinor?: number | null;
 }
 
 export interface PricingCoupon {
@@ -156,7 +156,42 @@ interface ResolvedPrice {
   source: PriceSource;
 }
 
-function resolvePrice(input: PricingLineInput, options: PricingOptions): ResolvedPrice {
+export type UnitPriceInput = Pick<
+  PricingLineInput,
+  "priceMinor" | "salePriceMinor" | "taxRateBps" | "excludeFromGroupDiscount" | "costNetMinor"
+>;
+
+/**
+ * Prețul unitar efectiv pe baza liniei (după promoție și grup), rotunjit, FĂRĂ cantitate: pentru mesajul «prețul s-a schimbat»
+ * și pentru afișări. Aceeași rezolvare ca în `priceLines`, deci nu există un al doilea calcul de preț.
+ */
+export function resolveUnitPrice(
+  input: UnitPriceInput,
+  options: Pick<PricingOptions, "applySale" | "group">,
+): { unitPriceMinor: number; priceSource: PriceSource } {
+  const resolved = resolvePrice(input, options);
+  return {
+    unitPriceMinor: minorToNumber(roundHalfUp(resolved.price)),
+    priceSource: resolved.source,
+  };
+}
+
+/** Promoția e activă la momentul `at`? Întoarce prețul promoțional sau `null` (fereastra de valabilitate: început inclusiv, sfârșit exclusiv). */
+export function activeSalePrice(
+  variant: { salePrice: number | null; saleStartsAt: Date | null; saleEndsAt: Date | null },
+  at: Date,
+): number | null {
+  if (variant.salePrice === null) return null;
+  const t = at.getTime();
+  const started = variant.saleStartsAt === null || variant.saleStartsAt.getTime() <= t;
+  const notEnded = variant.saleEndsAt === null || t < variant.saleEndsAt.getTime();
+  return started && notEnded ? variant.salePrice : null;
+}
+
+function resolvePrice(
+  input: UnitPriceInput,
+  options: Pick<PricingOptions, "applySale" | "group">,
+): ResolvedPrice {
   const list = exactFromMinor(input.priceMinor);
   const sale =
     options.applySale && input.salePriceMinor !== null && input.salePriceMinor < input.priceMinor
@@ -183,7 +218,7 @@ function resolvePrice(input: PricingLineInput, options: PricingOptions): Resolve
 
   // cost_plus: preț brut = costNet × (1 + adaos) × (1 + TVA), plafonat la prețul public curent
   assertBps(group.markupBps, "Adaosul grupului (puncte de bază)", 0, 1_000_000);
-  if (input.costNetMinor === null) {
+  if (input.costNetMinor === null || input.costNetMinor === undefined) {
     return { price: publicCurrent, publicCurrent, source: publicSource };
   }
   const gross = scaleExact(

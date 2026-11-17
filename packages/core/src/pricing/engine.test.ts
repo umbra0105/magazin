@@ -10,7 +10,9 @@ import {
   type Quantity,
 } from "@ecom/shared";
 import {
+  activeSalePrice,
   excludedFromGroupPricing,
+  resolveUnitPrice,
   priceLines,
   type PriceGroup,
   type PricingCoupon,
@@ -625,5 +627,35 @@ describe("Motor de prețuri: proprietăți (generator determinist, fără ceas �
       const withoutSale = total([input], { applySale: false }).lines[0];
       expect((withSale?.totalMinor ?? 0) <= (withoutSale?.totalMinor ?? 0)).toBe(true);
     }
+  });
+});
+
+describe("Motor de prețuri: prețul unitar fără cantitate și fereastra promoției", () => {
+  it("resolveUnitPrice dă același preț ca priceLines (un singur calcul de preț)", () => {
+    const input = line({ salePriceMinor: 15000 });
+    expect(resolveUnitPrice(input, { applySale: true, group: none })).toEqual({
+      unitPriceMinor: 15000,
+      priceSource: "sale",
+    });
+    expect(resolveUnitPrice(input, { applySale: false, group: none })).toEqual({
+      unitPriceMinor: 19900,
+      priceSource: "public",
+    });
+    const priced = total([line({ salePriceMinor: 15000 })], { group: discount(500, true) });
+    expect(
+      resolveUnitPrice(input, { applySale: true, group: discount(500, true) }).unitPriceMinor,
+    ).toBe(priced.lines[0]?.unitPriceMinor);
+  });
+
+  it("promoția activă: început inclusiv, sfârșit exclusiv, fără promoție → null", () => {
+    const base = { salePrice: 15000, saleStartsAt: null, saleEndsAt: null };
+    expect(activeSalePrice(base, NOW)).toBe(15000);
+    expect(activeSalePrice({ ...base, salePrice: null }, NOW)).toBeNull();
+    expect(activeSalePrice({ ...base, saleStartsAt: NOW }, NOW)).toBe(15000);
+    expect(activeSalePrice({ ...base, saleStartsAt: new Date(NOW.getTime() + 1) }, NOW)).toBeNull();
+    expect(activeSalePrice({ ...base, saleEndsAt: NOW }, NOW)).toBeNull();
+    expect(activeSalePrice({ ...base, saleEndsAt: new Date(NOW.getTime() + DAY) }, NOW)).toBe(
+      15000,
+    );
   });
 });

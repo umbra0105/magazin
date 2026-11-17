@@ -16,3 +16,4 @@ export * from "./channels";
 export * from "./inventory";
 export * from "./storefront";
 export * from "./pricing";
+export * from "./cart";
