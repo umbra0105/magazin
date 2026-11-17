@@ -630,6 +630,22 @@ describe("Motor de prețuri: proprietăți (generator determinist, fără ceas �
   });
 });
 
+describe("Motor de prețuri: egalitățile de la limită nu schimbă sursa prețului", () => {
+  it("o promoție egală cu prețul de listă nu e promoție (sursa rămâne «public»)", () => {
+    const l = total([line({ salePriceMinor: 19900 })]).lines[0];
+    expect(l?.priceSource).toBe("public");
+    expect(l?.totalMinor).toBe(19900);
+  });
+
+  it("prețul calculat de partener egal cu prețul public: sursa rămâne cea publică", () => {
+    // 100,00 × 1,12 × 1,21 = 135,52 și prețul public tot 135,52
+    const l = total([line({ priceMinor: 13552, costNetMinor: 10000 })], { group: costPlus(1200) })
+      .lines[0];
+    expect(l?.totalMinor).toBe(13552);
+    expect(l?.priceSource).toBe("public");
+  });
+});
+
 describe("Motor de prețuri: prețul unitar fără cantitate și fereastra promoției", () => {
   it("resolveUnitPrice dă același preț ca priceLines (un singur calcul de preț)", () => {
     const input = line({ salePriceMinor: 15000 });

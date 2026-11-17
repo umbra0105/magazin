@@ -139,6 +139,20 @@ describe("Money: repartizarea unei sume fixe (cupon, puncte) pe linii", () => {
     expect(() => allocateMinor(1001n, [500n, 500n])).toThrow(MoneyError);
   });
 
+  it("restul merge la cea mai mare parte fracționară (nu la cea mai mică), iar părțile sunt cele proporționale", () => {
+    expect(allocateMinor(3n, [3n, 1n])).toEqual([2n, 1n]);
+    // 4 × 5/8 = 2,5 și 4 × 3/8 = 1,5: partea întreagă 2 + 1, restul de 1 ban merge primei linii
+    expect(allocateMinor(4n, [5n, 3n])).toEqual([3n, 1n]);
+    expect(allocateMinor(7n, [10n, 1n, 1n])).toEqual([6n, 1n, 0n]);
+    // 13 × 11/15 = 9,53 și 13 × 4/15 = 3,47: părțile întregi sunt 9 și 3, restul de 1 ban merge primei linii
+    expect(allocateMinor(13n, [11n, 4n])).toEqual([10n, 3n]);
+  });
+
+  it("un număr negativ de pași se refuză", () => {
+    expect(() => lineByStepPrice(exactFromMinor(100), -1)).toThrow(MoneyError);
+    expect(roundHalfUp(lineByStepPrice(exactFromMinor(100), 0))).toBe(0n);
+  });
+
   it("zero și ponderi zero", () => {
     expect(allocateMinor(0n, [5n, 7n])).toEqual([0n, 0n]);
     expect(allocateMinor(0n, [])).toEqual([]);

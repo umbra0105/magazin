@@ -390,6 +390,22 @@ describe("pasul, minimul, stocul, plafoanele (validate pe server)", () => {
     });
   });
 
+  it("pasul s-a schimbat în admin: linia cu cantitate invalidă iese din total și cere o decizie", async () => {
+    await withCart(async (h) => {
+      const { variantId, productId } = await h.product({ price: 12345, step: "2,03" });
+      const added = await h.service.add(h.guest(), { variantId, quantity: q("6,09") });
+      expect(added.view.totals.totalMinor).toBe(75181);
+      await h.tx.product.update({ where: { id: productId }, data: { saleStep: 25000 } });
+      const view = await h.service.view(h.guest(added.newToken));
+      expect(only(view).issues).toEqual([
+        { type: "invalid_quantity", detail: "not_multiple_of_step" },
+      ]);
+      expect(only(view).pricing).toBeNull();
+      expect(view.totals.totalMinor).toBe(0);
+      expect(view.canCheckout).toBe(false);
+    });
+  });
+
   it("stocul scade după adăugare: linia primește «exceeds_available», cantitatea nu se modifică tăcut", async () => {
     await withCart(async (h) => {
       const { variantId } = await h.product({ physical: "10" });
@@ -635,6 +651,22 @@ describe("îmbinarea coșului de oaspete în coșul utilizatorului (la autentifi
 });
 
 describe("expirare și curățare", () => {
+  it("un coș expirat (încă necurățat) nu se mai vede, iar o adăugare nouă pornește un coș gol", async () => {
+    await withCart(async (h) => {
+      const { variantId } = await h.product();
+      const guest = await h.service.add(h.guest(), { variantId, quantity: q("2") });
+      const u = await h.user();
+      await h.service.add(u, { variantId, quantity: q("3") });
+      await h.tx.cart.updateMany({ data: { expiresAt: new Date(NOW.getTime() - 1) } });
+      expect((await h.service.view(h.guest(guest.newToken))).lines).toHaveLength(0);
+      expect(await h.service.lineCount(h.guest(guest.newToken))).toBe(0);
+      expect((await h.service.view(u)).lines).toHaveLength(0);
+      // coșul expirat al utilizatorului se înlocuiește: cantitatea veche nu reapare
+      const fresh = await h.service.add(u, { variantId, quantity: q("1") });
+      expect(only(fresh.view).quantityTicks).toBe("10000");
+    });
+  });
+
   it("expirarea vine din setări, iar fiecare modificare o prelungește", async () => {
     await withCart(async (h) => {
       const { variantId } = await h.product();

@@ -231,6 +231,13 @@ describe("Îmbinarea cantităților (coșul de oaspete în coșul utilizatorului
     });
   });
 
+  it("o sumă exact la plafon nu se reduce și nu primește semnal", () => {
+    expect(clampMergedQuantity(q("60"), q("40"), ONE, 100)).toEqual({
+      quantity: q("100"),
+      clamped: false,
+    });
+  });
+
   it("suma peste plafonul pe linie se reduce la plafon (în pași întregi), cu semnal", () => {
     expect(clampMergedQuantity(q("60"), q("70"), ONE, 100)).toEqual({
       quantity: q("100"),
