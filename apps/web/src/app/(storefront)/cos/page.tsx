@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Container, SectionHeading } from "@ecom/ui";
-import { CartLive, CartPanel } from "@/components/storefront/cart/cart-panel";
+import { CartPanel } from "@/components/storefront/cart/cart-panel";
 import { ProductGrid } from "@/components/storefront/catalog/product-grid";
 import { getCartService, resolveCartOwner } from "@/lib/cart";
 import {
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 const SUGGESTIONS = 4;
 
 /**
- * Pagina `/cos` (Faza 8): conținutul e `CartPanel` (același ca în sertar), încărcat de la server la fiecare afișare, cu prețurile și
+ * Pagina `/cos` (Faza 8; anunțurile `aria-live` vin din regiunea unică a header-ului): conținutul e `CartPanel` (același ca în sertar), încărcat de la server la fiecare afișare, cu prețurile și
  * stocul recalculate. Sub el: cross-sell din relațiile «crosssell» ale produselor din coș (doar produse vandabile) sau, la coș
  * gol, produse recomandate. Finalizarea comenzii e dezactivată până în Faza 9.
  */
@@ -47,7 +47,6 @@ export default async function CartPage() {
   return (
     <Container className="flex flex-col gap-10 py-8 sm:py-12">
       <h1 className="heading-display text-4xl sm:text-5xl">{m.title}</h1>
-      <CartLive />
       <CartPanel variant="page" />
       {suggested.length > 0 ? (
         <section className="flex flex-col gap-6">

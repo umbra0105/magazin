@@ -20,7 +20,6 @@ export interface PriceLines {
   perUnit: string | null;
   /** «Rolă de 41,25 mp ≈ 3.603,19 RON»; doar la baza «pe unitate» cu «arată prețul pasului» */
   stepPrice: string | null;
-  provisional: true;
 }
 
 export function priceLines(
@@ -57,5 +56,5 @@ export function priceLines(
       )
     : null;
 
-  return { reference, per: perText, perUnit, stepPrice, provisional: true };
+  return { reference, per: perText, perUnit, stepPrice };
 }

@@ -933,8 +933,7 @@ export const ro = {
     /** Afișarea prețului pe unitate și pe pas (9b). PROVIZORIE: informativă, până la motorul de prețuri (Faza 8). */
     priceDisplay: {
       heading: "Cum se afișează prețul",
-      provisional:
-        "Afișare provizorie, doar informativă: totalul comenzii îl calculează coșul. «≈» înseamnă că suma nu iese exactă în bani.",
+      note: "Afișare informativă: totalul comenzii îl calculează motorul de prețuri, o singură rotunjire pe linie. «≈» înseamnă că suma nu iese exactă în bani.",
       defaultUnit: "buc",
       /** Ce urmează după «/»: simbolul unității, sau pasul întreg cu denumirea lui */
       perUnit: (symbol: string) => symbol,

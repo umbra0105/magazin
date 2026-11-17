@@ -174,7 +174,7 @@ test.describe("«Cum se afișează prețul» în tabul Prețuri", () => {
     await expect(preview.locator("[data-preview-step]")).toContainText(
       "Rolă de 41,25 mp ≈ 3.603,19 RON",
     );
-    await expect(preview.locator("[data-price-provisional]")).toContainText("Afișare provizorie");
+    await expect(preview.locator("[data-price-note]")).toContainText("Afișare informativă");
 
     // în timp ce scrii: previzualizarea urmărește câmpul; 90,00 × 41,25 = 3.712,50 exact (fără «≈»)
     await page.getByLabel("Preț (lei, cu TVA)").fill("90,00");
