@@ -221,6 +221,12 @@ type LineRow = Prisma.ProductVariantGetPayload<{ select: typeof LINE_SELECT }>;
  */
 const orNull = <T>(value: T): T | null => value;
 
+/** Șterge coșurile expirate (cu liniile lor); folosit de serviciu și de jobul de curățare, care nu are nevoie de restul dependențelor. */
+export async function purgeExpiredCarts(db: Db, now: Date): Promise<number> {
+  const result = await db.cart.deleteMany({ where: { expiresAt: { lt: now } } });
+  return result.count;
+}
+
 export class CartService {
   private readonly db: Db;
   private readonly storage: StorageDriver;
@@ -400,8 +406,7 @@ export class CartService {
 
   /** Jobul de curățare: șterge coșurile expirate (cu liniile lor). Întoarce câte coșuri s-au șters. */
   async purgeExpired(): Promise<number> {
-    const result = await this.db.cart.deleteMany({ where: { expiresAt: { lt: this.now() } } });
-    return result.count;
+    return purgeExpiredCarts(this.db, this.now());
   }
 
   // ---------------------------------------------------------------- interne: scriere
