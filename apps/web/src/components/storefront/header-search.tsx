@@ -2,7 +2,7 @@
 
 import { Search } from "lucide-react";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { STORE_SEARCH_FIELD, cn } from "@ecom/ui";
+import { STORE_SEARCH_FIELD, StoreImage, cn } from "@ecom/ui";
 import { getMessages } from "@/messages";
 
 const m = getMessages().storefront.header;
@@ -161,7 +161,7 @@ export function HeaderSearch({ className }: { className?: string }) {
               product.href,
               <>
                 {product.image ? (
-                  <img
+                  <StoreImage
                     src={product.image.src}
                     alt=""
                     width={40}
