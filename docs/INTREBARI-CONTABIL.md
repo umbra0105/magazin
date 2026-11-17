@@ -37,6 +37,7 @@ este același cu codul de produs din SmartBill.
 - **Întrebarea 3 (zecimale):** SmartBill folosește 2 zecimale la cantitate, cu rotunjire la cea mai apropiată cifră (2,348 devine 2,35).
 - **Întrebarea 5 (produse pe ambalaj):** la kilograme se facturează în kg; sacul se facturează ca bucată.
 - **Întrebarea 7 (momentul facturii la «La comandă»):** produsele «La comandă» se facturează la plată dacă au fost plătite, iar la expediere dacă se plătesc la livrare (ramburs).
+- **Întrebarea 4 (rotunjirea) — răspuns primit de la utilizator, nu de la contabil în scris, 2026-11-17:** SmartBill preia exact suma comenzilor din website, fără rotunjire proprie, și acceptă 2 zecimale. Regula magazinului rămâne «o singură rotunjire pe linie, la 2 zecimale, în magazin» (R1 pe unitate / R2 pe pas); Faza 8 nu așteaptă alt răspuns. **De confirmat în sandbox-ul SmartBill (Faza 13): o diferență de 1 ban acolo = 🛑.**
 - Consecințele pentru cod sunt trecute în TODO, Faza 13 (factura fără descărcare pentru «La comandă» sau fără stoc; cel mult 2 zecimale pe factură). Nu sunt rezolvate încă.
 
 ---

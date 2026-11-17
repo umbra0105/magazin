@@ -122,7 +122,7 @@ există `tenantId`. În schimb:
   `packages/shared` (test de arhitectură). Cantitatea comandată e mereu multiplu EXACT
   al pasului de vânzare (pe produs sau pe variantă); disponibilitatea și pragurile se
   exprimă în pași; restul nevandabil se vede doar în admin. Regula de rotunjire (R1 pe
-  unitate / R2 pe pas, PROVIZORIE până confirmă contabilul) aparține motorului de prețuri;
+  unitate / R2 pe pas, decisă 2026-11-17, de confirmat în sandbox-ul SmartBill, Faza 13) aparține motorului de prețuri;
   în `packages/shared` stă doar primitiva exactă preț × cantitate, fără rotunjire.
 - **O unitate nulă pe produs sau variantă înseamnă EXACT «buc»** (unitatea implicită, fără zecimale, de sistem):
   rezolvarea unității și comparațiile trec prin `effectiveMeasureUnit` / `sameMeasureUnit` (`inventory/units.ts`),
