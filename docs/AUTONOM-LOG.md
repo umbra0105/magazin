@@ -86,3 +86,8 @@ La final de pas: verificarea completă, citită integral (`npm.cmd run verify:fu
 | 2026-11-17 | 8 | început de fază (mod B, ramura faza-8 din main 8a18a1d, PR #10 draft) | - | copie bază: local-data/backups/ecom-20261117-195519.sql | - |
 | 2026-11-17 | 8 | 0: cherry-pick e9e7fcb (bifa mini-fazei poarta-draft), Sesiunea 23 închisă în PROGRESS (fapte verificate cu git) | 8fc6fa2, af6baa0 | prettier OK | - |
 | 2026-11-17 | 8 | 1: rotunjirea decisă (R1/R2, răspuns de la utilizator, de confirmat în sandbox-ul SmartBill, Faza 13) în CLAUDE.md, docs/06, FAZA-5-plan, INTREBARI-CONTABIL; cookie-ul coșului la avocat §3.4 | ab242e2 | prettier OK | - |
+| 2026-11-17 | 8 | 2: `Money` în shared (o singură rotunjire half-up, R1/R2, plafon, repartizare de sumă fixă; price-display folosește aceeași rotunjire); teste întâi (roșu: modul lipsă) | 0a676dd | unitare shared 159 verzi | - |
+| 2026-11-17 | 8 | 3: motorul de prețuri (`packages/core/src/pricing`): lanț docs/09, grupuri none/discount/cost_plus, cupon (reguli în memorie), ambele moduri de promoție; 58 de teste | 42bbd94 | unitare pricing 58 verzi, typecheck OK | - |
+| 2026-11-17 | 8 | 4: migrarea aditivă `20261117120000_cart` (cart, cart_item, CHECK cu IS NULL/IS NOT NULL), setări `cart.*` și `checkout.freeShippingThreshold`, regulile pure ale coșului (23 teste) | 0def6bb, 1e0683c | unitare verzi | - |
+| 2026-11-17 | 8 | 5: `CartService` (oaspete cu token+amprentă, IDOR, îmbinare, plafoane, pas, stoc, un singur preț), 33 teste pe Postgres + 4 de concurență (date comise), test de arhitectură `cart-pricing`; lint a prins o atribuire inutilă (reparat) | 762c66b | integrare cart 37 verzi | - |
+| 2026-11-17 | 8 | 6: jobul `cart-purge-expired` (zilnic 04:00) | ecd806b | typecheck OK | - |
