@@ -3244,6 +3244,7 @@ export const ro = {
       total: "Total (TVA inclus)",
       itemCount: (count: number) => countOf(count, "produs", "produse", "de produse"),
       remove: (title: string) => `Scoate din coș: ${title}`,
+      removeShort: "Scoate din coș",
       removed: (title: string) => `${title} a fost scos din coș.`,
       quantityOf: (title: string) => `Cantitate pentru ${title}`,
       decrease: "Micșorează cantitatea",

@@ -171,10 +171,12 @@ există `tenantId`. În schimb:
 ### Bani și taxe
 
 - Sumele sunt `int` în bani (minor units). `1999` = 19,99 RON. Niciodată `float`.
-- Un helper `Money` nu există încă. Calculul exact al **cantităților** e în
-  `packages/shared/src/quantity.ts` (`Quantity`, fără rotunjire); motorul de prețuri și helperul de
-  bani vin în Faza 8 (până atunci sumele sunt `int` în bani, iar TVA se extrage cu `vat.ts`).
-  Rotunjirea se face pe linia de comandă, o singură dată (vezi „Prețuri"), nu pe total.
+- **Helperul `Money` există (Faza 8)**: `packages/shared/src/money.ts`, peste primitivele exacte din
+  `quantity.ts` (`Quantity`, fără rotunjire). Valorile intermediare sunt fracții exacte de bani (`bigint`),
+  niciodată `float`; **o singură rotunjire pe linie, half-up la 2 zecimale (la bani)**, `roundHalfUp`, singurul loc
+  care rotunjește sume. Motorul de prețuri e `packages/core/src/pricing/engine.ts` (singurul calcul de preț; coșul îl
+  apelează prin `CartService`; un test de arhitectură interzice un al doilea apel și `float` în zona de preț și coș).
+  Rotunjirea se face pe linia de comandă, o singură dată (vezi „Prețuri"), nu pe total. TVA se extrage cu `vat.ts`.
 - TVA-ul se stochează pe linia de comandă (rată + valoare) și nu se recalculează
   retroactiv. Cotele vin din setări, nu sunt hardcodate.
 

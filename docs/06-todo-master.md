@@ -203,18 +203,18 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] ⚠️ **Rutele funcționalităților opționale** (`requireFeature`, `apps/web/src/lib/features.ts`) citesc flag-ul la fiecare cerere, deci ruta devine **dinamică**. Alege conștient: pagina rămâne dinamică sau flag-ul se citește la build/ISR. În ambele cazuri, **paginile din cache trebuie invalidate (`revalidateTag`/`revalidatePath`) când se schimbă un flag**, altfel o pagină oprită rămâne servită din cache
 
 ## FAZA 8 — Motor de prețuri și coș ⚠️
-- [ ] **Din Faza 5 (punctul 14):** motorul primește cantitatea ca `Quantity` (`bigint`), aplică R1 (pe unitate) / R2 (pe pas) și face **o singură rotunjire pe linie**; testele numerice includ cele 6 produse-model (3 × 2,03 = 6,09; liner 41,25 mp; bisulfat pe pas, 120,00 lei/sac) și depășirile (`MAX_MONEY`). Regula de rotunjire e **decisă 2026-11-17** (răspuns de la utilizator: SmartBill preia exact suma comenzilor din website, fără rotunjire proprie, și acceptă 2 zecimale; nu se așteaptă răspuns scris de la contabil); de confirmat în sandbox-ul SmartBill (Faza 13)
-- [ ] ⚠️ **Decizia despre helperul `Money` și regula de rotunjire** (din Faza 5, punctul 2): `CLAUDE.md` nu mai pretinde un `Money` existent; aici se decide dacă se creează un helper de bani în `packages/shared` și se aplică regula de rotunjire pe linie (R1 pe unitate / R2 pe pas, **decisă 2026-11-17**, de confirmat în sandbox-ul SmartBill, Faza 13; nu mai e provizorie). Motorul primește cantitatea ca `Quantity` și folosește primitivele exacte din `packages/shared/src/quantity.ts` (`exactLineValue`, `exactStepsValue`, `splitScaledMoney`), cu `MAX_MONEY` ca plafon de linie; rotunjirea e o singură dată pe linie
-- [ ] **Motor de prețuri** (`09-preturi-si-parteneri.md` §3): preț brut → salePrice → preț de grup (`none` / `discount` / `cost_plus`; extinderea vine în Faza 15) → cupon → puncte → total linie → extragere TVA
-- [ ] Extragere TVA din brut, rotunjire pe linie, o singură dată
-- [ ] **Testele scrise ÎNAINTE de implementare**: cumulare promoție + grup, produse excluse, cupon peste discount, rotunjiri, cota standard din setări plus o a doua cotă de test (dovadă că nu e hardcodat)
-- [ ] Coș în DB + coș de guest cu token în cookie, merge la login
-- [ ] Cart drawer + pagină `/cos`
-- [ ] Validare la fiecare afișare (produs activ, preț actual, stoc)
-- [ ] Cantitate minimă și multipli aplicați
-- [ ] Prag de transport gratuit cu indicator
-- [ ] **Cross-sell în coș**: sugestii de accesorii și racorduri la produsele mari
-- [ ] Aplicare cupon cu toate condițiile
+- [x] **Din Faza 5 (punctul 14):** motorul primește cantitatea ca `Quantity` (`bigint`), aplică R1 (pe unitate) / R2 (pe pas) și face **o singură rotunjire pe linie**; testele numerice includ cele 6 produse-model (3 × 2,03 = 6,09; liner 41,25 mp; bisulfat pe pas, 120,00 lei/sac) și depășirile (`MAX_MONEY`). Regula de rotunjire e **decisă 2026-11-17** (răspuns de la utilizator: SmartBill preia exact suma comenzilor din website, fără rotunjire proprie, și acceptă 2 zecimale; nu se așteaptă răspuns scris de la contabil); de confirmat în sandbox-ul SmartBill (Faza 13)
+- [x] ⚠️ **Decizia despre helperul `Money` și regula de rotunjire** (din Faza 5, punctul 2): `CLAUDE.md` nu mai pretinde un `Money` existent; aici se decide dacă se creează un helper de bani în `packages/shared` și se aplică regula de rotunjire pe linie (R1 pe unitate / R2 pe pas, **decisă 2026-11-17**, de confirmat în sandbox-ul SmartBill, Faza 13; nu mai e provizorie). Motorul primește cantitatea ca `Quantity` și folosește primitivele exacte din `packages/shared/src/quantity.ts` (`exactLineValue`, `exactStepsValue`, `splitScaledMoney`), cu `MAX_MONEY` ca plafon de linie; rotunjirea e o singură dată pe linie
+- [x] **Motor de prețuri** (`09-preturi-si-parteneri.md` §3): preț brut → salePrice → preț de grup (`none` / `discount` / `cost_plus`; extinderea vine în Faza 15) → cupon → puncte → total linie → extragere TVA
+- [x] Extragere TVA din brut, rotunjire pe linie, o singură dată
+- [x] **Testele scrise ÎNAINTE de implementare**: cumulare promoție + grup, produse excluse, cupon peste discount, rotunjiri, cota standard din setări plus o a doua cotă de test (dovadă că nu e hardcodat)
+- [x] Coș în DB + coș de guest cu token în cookie, merge la login
+- [x] Cart drawer + pagină `/cos`
+- [x] Validare la fiecare afișare (produs activ, preț actual, stoc)
+- [x] Cantitate minimă și multipli aplicați
+- [x] Prag de transport gratuit cu indicator (setarea `checkout.freeShippingThreshold`, gol = dezactivat, ecran `/admin/setari/cos`; pragul pe clasă de transport și pe produs: Faza 9)
+- [x] **Cross-sell în coș**: sugestii de accesorii și racorduri la produsele mari
+- [ ] Aplicare cupon cu toate condițiile — **făcută doar REGULA din motor** (Faza 8: procent/sumă fixă, cumul cu prețul de grup, `notForDiscountedGroups`, produse/categorii excluse, valoare minimă, valabilitate, plafon la valoarea liniei, testată cu cupoane în memorie); câmpul «Ai un cupon?», tabela `Discount`, adminul și generatorul de coduri vin în Faza 17 (câmpul rămâne ascuns; test de arhitectură)
 
 ## FAZA 9 — Checkout și plasare comandă ⚠️ partea critică
 - [ ] ⚠️ **Din Faza 5 (punctul 14), stoc în coș și plată:** coșul NU rezervă (D4); starea vizibilă (În stoc / Stoc limitat / La comandă cu termen / Indisponibil) și termenul de livrare apar în coș și la plată; **coșuri mixte: livrare toată odată, cu termenul cel mai lung** (D6); selector de cantitate **în pași**, cu **validarea pasului la adăugare, modificare și plasare, pe server** (cantitatea comandată e mereu multiplu EXACT al pasului, nu doar în interfață); fără limită de cantitate la «La comandă», dar cu limita tehnică de siguranță pe linie (setabilă); **ramburs la «La comandă»: decizie (🛑, atinge plata și textele legale, vezi `docs/INTREBARI-AVOCAT.md` §1.5)**

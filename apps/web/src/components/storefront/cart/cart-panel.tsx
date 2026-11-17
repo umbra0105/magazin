@@ -43,7 +43,14 @@ function IssueRow({
 }) {
   const action = issue.action;
   return (
-    <div className="flex flex-col gap-2 rounded-card bg-tone-warning-bg px-3 py-2 text-sm text-tone-warning-fg">
+    <div
+      className={cn(
+        "flex flex-col gap-2 rounded-card px-3 py-2 text-sm",
+        issue.type === "unavailable"
+          ? "bg-tone-problem-bg text-tone-problem-fg"
+          : "bg-tone-warning-bg text-tone-warning-fg",
+      )}
+    >
       <p>{issue.message}</p>
       {action ? (
         <button
@@ -55,9 +62,10 @@ function IssueRow({
               void setQuantity(line.variantId, action.quantityTicks);
             else void acknowledgePrice(line.variantId);
           }}
+          aria-label={action.kind === "remove" ? m.remove(line.title) : undefined}
           className="inline-flex min-h-11 w-fit items-center rounded-full border border-current px-4 font-semibold transition-colors duration-(--motion) hover:bg-surface-page/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
         >
-          {action.kind === "remove" ? m.remove(line.title) : action.label}
+          {action.kind === "remove" ? m.removeShort : action.label}
         </button>
       ) : null}
     </div>
@@ -215,7 +223,10 @@ export function OrderSummary({ cart }: { cart: CartDto }) {
 
 function EmptyCart({ variant }: { variant: "drawer" | "page" }) {
   return (
-    <div className="flex flex-col items-start gap-4 px-gutter py-10" data-cart-empty>
+    <div
+      className={cn("flex flex-col items-start gap-4 py-10", variant === "drawer" && "px-gutter")}
+      data-cart-empty
+    >
       <h2 className="heading-display text-2xl">{m.empty}</h2>
       <p className="text-ink-secondary">{m.emptyLede}</p>
       <Link
@@ -255,6 +266,19 @@ export function CartPanel({ variant }: { variant: "drawer" | "page" }) {
       </div>
     );
   }
+  return <CartContent cart={cart} busy={busy} variant={variant} />;
+}
+
+/** Conținutul coșului, fără acces la stare (galeria de design îl desenează cu date de probă). */
+export function CartContent({
+  cart,
+  busy,
+  variant,
+}: {
+  cart: CartDto;
+  busy: boolean;
+  variant: "drawer" | "page";
+}) {
   if (cart.lines.length === 0) return <EmptyCart variant={variant} />;
 
   return (
