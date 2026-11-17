@@ -357,6 +357,25 @@ describe("pasul, minimul, stocul, plafoanele (validate pe server)", () => {
     });
   });
 
+  it("adăugarea directă (piese de schimb): «minimum» pune minimul comandabil, în pași", async () => {
+    await withCart(async (h) => {
+      const bucati = await h.product();
+      const mozaic = await h.product({ step: "2,03", minSteps: 2 });
+      const first = await h.service.add(h.guest(), {
+        variantId: bucati.variantId,
+        quantity: "minimum",
+      });
+      const view = (
+        await h.service.add(h.guest(first.newToken), {
+          variantId: mozaic.variantId,
+          quantity: "minimum",
+        })
+      ).view;
+      const byVariant = Object.fromEntries(view.lines.map((l) => [l.variantId, l.quantityTicks]));
+      expect(byVariant).toEqual({ [bucati.variantId]: "10000", [mozaic.variantId]: "40600" });
+    });
+  });
+
   it("stoc gestionat: peste disponibil se refuză, cu numărul de pași; coșul NU rezervă nimic", async () => {
     await withCart(async (h) => {
       const { variantId } = await h.product({ physical: "2" });

@@ -1,0 +1,218 @@
+import type { CartIssue, CartLineView, CartView } from "@ecom/core";
+
+export { EMPTY_CART_VIEW } from "@ecom/core";
+import {
+  QUANTITY_FACTOR,
+  formatQuantity,
+  quantityFromTicks,
+  stepsToQuantity,
+  type Quantity,
+} from "@ecom/shared";
+import { getMessages } from "@/messages";
+import { formatMoney } from "./money-input";
+import { productHref } from "./storefront-urls";
+
+/**
+ * Cartea de vizită a coșului pentru interfață: toate textele (bani, cantități, mesaje) gata formatate pe SERVER, ca să nu ajungă
+ * în JavaScript-ul clientului nicio regulă de preț și niciun calcul de sumă. Funcție PURĂ (testată pe valori): primește
+ * vederea din `CartService` și formatul (moneda și limba din setări). Coșul nu arată nicio reducere: cât vitrina nu afișează
+ * reduceri, motorul percepe prețul întreg, iar vederea nu are linii de reducere.
+ */
+
+const m = () => getMessages().storefront.cart;
+const product = () => getMessages().storefront.catalog.product;
+const availability = () => getMessages().storefront.catalog.availability;
+
+export interface CartFormat {
+  currency: string;
+  locale: string;
+}
+
+export type CartIssueAction =
+  | { kind: "remove" }
+  | { kind: "adjust"; quantityTicks: string; label: string }
+  | { kind: "acknowledge"; label: string };
+
+export interface CartIssueDto {
+  type: CartIssue["type"];
+  message: string;
+  action: CartIssueAction | null;
+}
+
+export interface CartLineDto {
+  variantId: string;
+  href: string;
+  title: string;
+  variantLabel: string | null;
+  sku: string;
+  image: { src: string; width: number; height: number; alt: string } | null;
+  energy: { value: string; label: string } | null;
+  quantityTicks: string;
+  stepTicks: string;
+  /** Numărul de pași comandați (afișat în selector); cantitatea reală rămâne cea din `quantityTicks`. */
+  steps: number;
+  minSteps: number;
+  quantityText: string;
+  stepNote: string | null;
+  minNote: string | null;
+  unitPriceText: string | null;
+  totalText: string | null;
+  stateLabel: string;
+  stateTone: "success" | "warning" | "info" | "problem";
+  stateDetail: string | null;
+  issues: CartIssueDto[];
+  included: boolean;
+}
+
+export interface CartDto {
+  lines: CartLineDto[];
+  count: number;
+  totals: { productsText: string; vatText: string; totalText: string } | null;
+  leadTimeText: string | null;
+  freeShipping: { text: string; percent: number; reached: boolean } | null;
+  /** Finalizarea nu există în Faza 8: butonul e mereu dezactivat, cu explicație. */
+  checkoutNote: string;
+  shippingNote: string;
+}
+
+const TONE = {
+  in_stock: "success",
+  limited: "warning",
+  on_order: "info",
+  unavailable: "problem",
+} as const;
+
+function unitPriceText(line: CartLineView, format: CartFormat): string | null {
+  if (!line.pricing) return null;
+  const price = formatMoney(line.pricing.unitPriceMinor, format.currency, format.locale);
+  const p = product();
+  const symbol = line.unit.symbol;
+  if (line.basis === "step") {
+    const step = quantityFromTicks(BigInt(line.stepTicks));
+    return `${price} ${p.perStep(line.stepLabel, formatQuantity(step), symbol)}`;
+  }
+  return `${price} ${p.perUnit(symbol)}`;
+}
+
+function issueOf(line: CartLineView, issue: CartIssue, format: CartFormat): CartIssueDto {
+  const text = m();
+  const step = quantityFromTicks(BigInt(line.stepTicks));
+  const withUnit = (quantity: Quantity) => `${formatQuantity(quantity)} ${line.unit.symbol}`;
+  switch (issue.type) {
+    case "unavailable":
+      return { type: issue.type, message: text.issueUnavailable, action: { kind: "remove" } };
+    case "exceeds_available": {
+      const available = stepsToQuantity(issue.maxSteps, step);
+      return {
+        type: issue.type,
+        message: text.issueExceeds(withUnit(available)),
+        action: {
+          kind: "adjust",
+          quantityTicks: available.toString(),
+          label: text.issueAdjust(withUnit(available)),
+        },
+      };
+    }
+    case "invalid_quantity": {
+      const wanted = quantityFromTicks(BigInt(line.quantityTicks));
+      const floor = wanted / step;
+      const steps = floor < BigInt(line.minSteps ?? 1) ? BigInt(line.minSteps ?? 1) : floor;
+      const fixed = stepsToQuantity(steps, step);
+      return {
+        type: issue.type,
+        message: text.issueInvalid,
+        action: {
+          kind: "adjust",
+          quantityTicks: fixed.toString(),
+          label: text.issueAdjust(withUnit(fixed)),
+        },
+      };
+    }
+    case "price_changed":
+      return {
+        type: issue.type,
+        message: text.issuePriceChanged(
+          formatMoney(issue.fromMinor, format.currency, format.locale),
+          formatMoney(issue.toMinor, format.currency, format.locale),
+        ),
+        action: { kind: "acknowledge", label: text.issueAcknowledge },
+      };
+    case "line_too_expensive":
+      return { type: issue.type, message: text.issueTooExpensive, action: null };
+  }
+}
+
+function lineDto(line: CartLineView, format: CartFormat): CartLineDto {
+  const p = product();
+  const text = m();
+  const step = quantityFromTicks(BigInt(line.stepTicks));
+  const quantity = quantityFromTicks(BigInt(line.quantityTicks));
+  const symbol = line.unit.symbol;
+  const oneUnit = BigInt(step) === QUANTITY_FACTOR;
+  const stepsCount = quantity / step;
+  const minSteps = line.minSteps ?? 1;
+  const detail =
+    line.state === "limited" && line.remainingSteps !== null
+      ? availability().limitedCount(line.remainingSteps)
+      : line.state === "on_order" && line.leadTimeDays !== null
+        ? availability().onOrderDays(line.leadTimeDays)
+        : null;
+  return {
+    variantId: line.variantId,
+    href: productHref(line.productSlug),
+    title: line.productTitle,
+    variantLabel: line.variantLabel,
+    sku: line.sku,
+    image: line.image,
+    energy: line.energyClass
+      ? { value: line.energyClass, label: p.energy.label(line.energyClass) }
+      : null,
+    quantityTicks: line.quantityTicks,
+    stepTicks: line.stepTicks,
+    steps: Number(stepsCount),
+    minSteps,
+    quantityText: `${formatQuantity(quantity)} ${symbol}`,
+    stepNote: oneUnit ? null : text.stepNote(formatQuantity(step), symbol, line.stepLabel),
+    minNote:
+      minSteps > 1 ? text.minNote(formatQuantity(stepsToQuantity(minSteps, step)), symbol) : null,
+    unitPriceText: unitPriceText(line, format),
+    totalText: line.pricing
+      ? formatMoney(line.pricing.totalMinor, format.currency, format.locale)
+      : null,
+    stateLabel: availability()[line.state],
+    stateTone: TONE[line.state],
+    stateDetail: detail,
+    issues: line.issues.map((issue) => issueOf(line, issue, format)),
+    included: line.included,
+  };
+}
+
+export function toCartDto(view: CartView, format: CartFormat): CartDto {
+  const text = m();
+  const money = (minor: number) => formatMoney(minor, format.currency, format.locale);
+  const priced = view.lines.some((line) => line.pricing !== null);
+  const free = view.freeShipping;
+  return {
+    lines: view.lines.map((line) => lineDto(line, format)),
+    count: view.lines.length,
+    totals: priced
+      ? {
+          productsText: money(view.totals.totalMinor),
+          vatText: money(view.totals.vatMinor),
+          totalText: money(view.totals.totalMinor),
+        }
+      : null,
+    leadTimeText: view.leadTime ? text.leadTime(view.leadTime.days) : null,
+    freeShipping: free
+      ? {
+          text: free.reached
+            ? text.freeShippingReached
+            : text.freeShippingRemaining(money(free.remainingMinor)),
+          percent: Math.min(100, Math.floor((view.totals.totalMinor * 100) / free.thresholdMinor)),
+          reached: free.reached,
+        }
+      : null,
+    checkoutNote: text.checkoutSoon,
+    shippingNote: text.shippingNote,
+  };
+}

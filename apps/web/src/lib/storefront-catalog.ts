@@ -103,7 +103,7 @@ export const getCategoryCached = unstable_cache(
 export const getProductCached = unstable_cache(
   (slug: string, format: StorefrontFormat, includeDiagram: boolean) =>
     getCatalogReader().getProduct(slug, format, { includeDiagram }),
-  ["catalog-product"],
+  ["catalog-product-v2"],
   CACHE,
 );
 

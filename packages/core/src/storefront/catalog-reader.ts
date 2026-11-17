@@ -62,6 +62,8 @@ export interface ListedProduct {
   price: ListingPrice | null;
   availability: PublicAvailability;
   energyClass: string | null;
+  /** Varianta unică a produsului (adăugare directă în coș, ex. piesele de schimb); `null` când produsul are mai multe variante. */
+  variantId: string | null;
 }
 
 export type { ListingScope } from "./listing-sql";
@@ -143,8 +145,21 @@ export interface PageDiagram {
       title: string;
       price: ListingPrice | null;
       availability: PublicAvailability;
+      variantId: string | null;
     } | null;
   }[];
+}
+
+/** Datele de vânzare ale unei variante, valori EFECTIVE (varianta peste produs); doar text și numere, trec prin cache. */
+export interface PageSaleInfo {
+  /** La ce se referă prețul: pe unitate sau pe pas. */
+  basis: "unit" | "step";
+  /** Pasul de vânzare în zecimi de miime, ca șir. */
+  stepTicks: string;
+  minSteps: number | null;
+  stepLabel: string | null;
+  unitSymbol: string;
+  unitDecimals: number;
 }
 
 export interface PageVariant {
@@ -158,6 +173,8 @@ export interface PageVariant {
   optionValues: Record<string, string>;
   price: DisplayedPrice;
   availability: PublicAvailability;
+  /** Cum se vinde: baza prețului, pasul și unitatea (pentru selectorul de cantitate în pași). */
+  sale: PageSaleInfo;
   isDefault: boolean;
   unitSymbol: string | null;
   manufacturerPartNumber: string | null;
@@ -457,6 +474,7 @@ export class CatalogReader {
           ),
         ),
         energyClass: row.energyClass,
+        variantId: row.variants.length === 1 ? (row.variants[0]?.id ?? null) : null,
       })),
     );
   }
@@ -885,6 +903,8 @@ export class CatalogReader {
         shippingClass: true,
         energyClass: true,
         eprelUrl: true,
+        priceBasis: true,
+        saleStepLabel: true,
         seoTitle: true,
         seoDescription: true,
         gpsrManufacturerName: true,
@@ -919,6 +939,7 @@ export class CatalogReader {
             saleStartsAt: true,
             saleEndsAt: true,
             isDefault: true,
+            priceBasis: true,
             manufacturerPartNumber: true,
             measureUnit: { select: { symbol: true } },
             optionValues: { select: { optionId: true, optionValueId: true } },
@@ -962,12 +983,21 @@ export class CatalogReader {
       row.options.flatMap((o) => o.values.map((v) => [v.id, v.value] as const)),
     );
     const availabilityByVariant = new Map<string, PublicAvailability>();
+    const saleByVariant = new Map<string, PageSaleInfo>();
     const warehouse = await this.stock.defaultWarehouse();
     if (warehouse) {
       await Promise.all(
         row.variants.map(async (variant) => {
           const source = await this.stock.getSource(variant.id, warehouse.id);
           if (!source) return;
+          saleByVariant.set(variant.id, {
+            basis: (variant.priceBasis ?? row.priceBasis) === "step" ? "step" : "unit",
+            stepTicks: source.saleStep.toString(),
+            minSteps: source.minSteps,
+            stepLabel: row.saleStepLabel,
+            unitSymbol: source.unit.symbol,
+            unitDecimals: source.unit.decimals,
+          });
           availabilityByVariant.set(
             variant.id,
             publicAvailabilityOfRow(
@@ -997,6 +1027,14 @@ export class CatalogReader {
       ),
       price: displayedPrice(variant, at, settings.showSalePricing),
       availability: availabilityByVariant.get(variant.id) ?? unavailable,
+      sale: saleByVariant.get(variant.id) ?? {
+        basis: "unit",
+        stepTicks: "10000",
+        minSteps: null,
+        stepLabel: null,
+        unitSymbol: "buc",
+        unitDecimals: 0,
+      },
       isDefault: variant.isDefault,
       unitSymbol: variant.measureUnit?.symbol ?? row.measureUnit?.symbol ?? null,
       manufacturerPartNumber: variant.manufacturerPartNumber,
@@ -1160,6 +1198,7 @@ export class CatalogReader {
                 title: part.title,
                 price: part.price,
                 availability: part.availability,
+                variantId: part.variantId,
               }
             : null,
         };

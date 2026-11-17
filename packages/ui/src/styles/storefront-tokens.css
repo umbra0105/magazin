@@ -122,6 +122,10 @@ html:has(dialog.sheet-panel[open]) {
   .sheet-panel[open] {
     transform: translateX(-100%);
   }
+  /* sertarul coșului vine din dreapta */
+  .sheet-panel[data-side="right"][open] {
+    transform: translateX(100%);
+  }
 }
 
 /*

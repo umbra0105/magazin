@@ -4,6 +4,7 @@ import {
   DomainError,
   MoneyError,
   QuantityError,
+  minimumOrderQuantity,
   percentToBasisPoints,
   quantityFromTicks,
   type Quantity,
@@ -166,6 +167,15 @@ const ZERO_TOTALS: PricingTotals = {
 };
 const GROUP_NONE = { pricingType: "none" } as const;
 
+/** Coșul gol (fără linii, totaluri zero), pentru interfață când nu există încă niciun coș. */
+export const EMPTY_CART_VIEW: CartView = {
+  lines: [],
+  totals: ZERO_TOTALS,
+  leadTime: null,
+  freeShipping: null,
+  canCheckout: false,
+};
+
 const MEDIA_SELECT = {
   status: true,
   alt: true,
@@ -289,9 +299,10 @@ export class CartService {
 
   // ---------------------------------------------------------------- scriere
 
+  /** Adaugă o variantă; `"minimum"` = cantitatea minimă comandabilă (minimul în pași × pasul), pentru adăugarea directă. */
   async add(
     owner: CartOwner,
-    input: { variantId: string; quantity: Quantity },
+    input: { variantId: string; quantity: Quantity | "minimum" },
   ): Promise<CartMutation> {
     return this.write(owner, input, "add");
   }
@@ -413,12 +424,19 @@ export class CartService {
 
   private async write(
     owner: CartOwner,
-    input: { variantId: string; quantity: Quantity },
+    rawInput: { variantId: string; quantity: Quantity | "minimum" },
     mode: "add" | "set",
   ): Promise<CartMutation> {
     const settings = await this.readSettings();
-    const variant = await this.resolveVariant(input.variantId, settings);
+    const variant = await this.resolveVariant(rawInput.variantId, settings);
     if (!variant?.sellable) throw new CartError({ reason: "not_sellable" });
+    const input = {
+      variantId: rawInput.variantId,
+      quantity:
+        rawInput.quantity === "minimum"
+          ? minimumOrderQuantity(variant.step, variant.minSteps)
+          : rawInput.quantity,
+    };
     const limits = { maxLines: settings.maxLines, maxStepsPerLine: settings.maxStepsPerLine };
 
     const verify = (quantity: Quantity): void => {

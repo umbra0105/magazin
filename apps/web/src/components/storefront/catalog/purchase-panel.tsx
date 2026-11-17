@@ -2,6 +2,9 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { StoreButton, StorePill, type StorePillTone } from "@ecom/ui";
+import { QUANTITY_FACTOR, formatQuantity, quantityFromTicks } from "@ecom/shared/quantity";
+import { addToCart, openDrawer, useCartState } from "@/components/storefront/cart/cart-store";
+import { QuantityStepper } from "@/components/storefront/cart/steps-stepper";
 import { getMessages } from "@/messages";
 
 const m = getMessages().storefront.catalog.product;
@@ -13,7 +16,14 @@ export interface PanelVariant {
   optionValues: Record<string, string>;
   /** Prețul gata formatat pe server (moneda și limba din setări); clientul nu formatează bani. */
   priceText: string;
+  /** Ce urmează după preț: «/ mp», «/ sac de 25 kg» (gol la bucăți). */
+  priceSuffix: string | null;
   compareAtText: string | null;
+  /** Cum se vinde: pasul în zecimi de miime (șir), minimul în pași, unitatea și denumirea pasului. */
+  stepTicks: string;
+  minSteps: number;
+  unitSymbol: string;
+  stepLabel: string | null;
   availabilityLabel: string;
   availabilityDetail: string | null;
   tone: StorePillTone;
@@ -37,17 +47,19 @@ const FIELD =
   "focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page";
 
 /**
- * Zona de cumpărare a paginii de produs (până la Faza 8 NU există «Adaugă în coș»: coșul nu e construit, deci nu desenăm un buton
- * mort). Arată prețul variantei alese, starea ei de stoc (D6), selectorul de variante și, cât variantă e indisponibilă,
- * formularul «Anunță-mă când revine». Până la coș, un bloc «Cum comanzi» cu telefonul și emailul firmei (din setări).
- * Varianta implicită e desenată pe server; selecția schimbă doar ce se vede.
+ * Zona de cumpărare a paginii de produs: prețul variantei alese, starea ei de stoc (D6), selectorul de variante, selectorul de
+ * cantitate ÎN PAȘI cu «Adaugă în coș» (serverul validează pasul, stocul și plafoanele) și, cât varianta e indisponibilă,
+ * formularul «Anunță-mă când revine». Datele de contact ale firmei rămân ca ajutor informativ. Pe telefon, bara lipicioasă
+ * ține prețul și «Adaugă în coș» când prețul iese din ecran. Varianta implicită e desenată pe server.
  */
 export function PurchasePanel({
   options,
   variants,
   defaultVariantId,
   contact,
+  productTitle,
 }: {
+  productTitle: string;
   options: readonly PanelOption[];
   variants: readonly PanelVariant[];
   defaultVariantId: string;
@@ -56,6 +68,8 @@ export function PurchasePanel({
   const initial = variants.find((v) => v.id === defaultVariantId) ?? variants[0];
   const [variantId, setVariantId] = useState(initial?.id ?? "");
   const selected = variants.find((v) => v.id === variantId) ?? initial;
+  const [steps, setSteps] = useState(initial?.minSteps ?? 1);
+  const { busy } = useCartState();
   const emailId = useId();
   const [email, setEmail] = useState("");
   const [notify, setNotify] = useState<NotifyState>("idle");
@@ -71,7 +85,14 @@ export function PurchasePanel({
     return () => observer.disconnect();
   }, []);
   if (!selected) return null;
-  const hasOrderBlock = Boolean(contact && (contact.phone || contact.email));
+  const hasContact = Boolean(contact && (contact.phone || contact.email));
+  const stepQuantity = quantityFromTicks(BigInt(selected.stepTicks));
+  const oneUnit = BigInt(stepQuantity) === QUANTITY_FACTOR;
+  const totalTicks = BigInt(selected.stepTicks) * BigInt(steps);
+  const add = async () => {
+    const result = await addToCart(selected.id, totalTicks.toString(), productTitle);
+    if (result.ok) openDrawer();
+  };
 
   const choose = (optionId: string, valueId: string) => {
     const wanted = { ...selected.optionValues, [optionId]: valueId };
@@ -82,6 +103,7 @@ export function PurchasePanel({
     const next = exact ?? fallback;
     if (next) {
       setVariantId(next.id);
+      setSteps(next.minSteps);
       setNotify("idle");
     }
   };
@@ -138,6 +160,9 @@ export function PurchasePanel({
       <div className="flex flex-col gap-2">
         <p ref={priceRef} className="flex flex-wrap items-baseline gap-x-3 gap-y-1" data-price>
           <span className="heading-display text-5xl">{selected.priceText}</span>
+          {selected.priceSuffix ? (
+            <span className="text-lg text-ink-secondary">{selected.priceSuffix}</span>
+          ) : null}
           {selected.compareAtText ? (
             <s className="text-lg text-ink-secondary">{selected.compareAtText}</s>
           ) : null}
@@ -185,14 +210,49 @@ export function PurchasePanel({
         </div>
       ) : null}
 
-      {selected.purchasable && contact && (contact.phone || contact.email) ? (
+      {selected.purchasable ? (
+        <div className="flex flex-col gap-4" data-add-to-cart>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-semibold">{m.quantity}</p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <QuantityStepper
+                steps={steps}
+                minSteps={selected.minSteps}
+                label={m.quantity}
+                disabled={busy}
+                onChange={setSteps}
+              />
+              <p className="text-sm tabular-nums text-ink-secondary" data-quantity-total>
+                {m.quantityTotal(
+                  formatQuantity(quantityFromTicks(totalTicks)),
+                  selected.unitSymbol,
+                )}
+              </p>
+            </div>
+            {oneUnit ? null : (
+              <p className="text-sm text-ink-secondary" data-step-hint>
+                {steps === 1 ? "1" : steps} ×{" "}
+                {m.quantityHint(
+                  formatQuantity(stepQuantity),
+                  selected.unitSymbol,
+                  selected.stepLabel,
+                )}
+              </p>
+            )}
+          </div>
+          <StoreButton size="lg" disabled={busy} onClick={() => void add()} data-add-button>
+            {busy ? m.adding : m.addToCart}
+          </StoreButton>
+        </div>
+      ) : null}
+      {selected.purchasable && hasContact && contact ? (
         <section
           className="flex flex-col gap-1.5 rounded-card bg-card p-5 text-sm"
-          aria-label={m.orderTitle}
+          aria-label={m.contactTitle}
           id="cum-comanzi"
         >
-          <p className="font-semibold">{m.orderTitle}</p>
-          <p className="text-ink-secondary">{m.orderLine}</p>
+          <p className="font-semibold">{m.contactTitle}</p>
+          <p className="text-ink-secondary">{m.contactLine}</p>
           {contact.phone ? (
             <p>
               {contact.telHref ? (
@@ -303,14 +363,18 @@ export function PurchasePanel({
             <span className="text-xl font-semibold">{selected.priceText}</span>
             <span className="text-sm text-ink-secondary">{selected.availabilityLabel}</span>
           </p>
-          {!selected.purchasable || hasOrderBlock ? (
+          {selected.purchasable ? (
+            <StoreButton disabled={busy} onClick={() => void add()} data-sticky-add>
+              {m.stickyAdd}
+            </StoreButton>
+          ) : (
             <a
-              href={selected.purchasable ? "#cum-comanzi" : "#anunta-ma"}
+              href="#anunta-ma"
               className="inline-flex h-12 items-center rounded-full bg-action px-6 font-semibold text-action-fg"
             >
-              {selected.purchasable ? m.stickyOrder : m.stickyNotify}
+              {m.stickyNotify}
             </a>
-          ) : null}
+          )}
         </div>
       )}
     </div>

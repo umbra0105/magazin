@@ -9,16 +9,16 @@ import {
 } from "./storefront-chrome-rules";
 
 describe("headerSlots: elementele din header care aparțin fazelor viitoare", () => {
-  it("căutarea e activă (Faza 7); coșul rămâne dezactivat până la Faza 8 (nu ascuns, nu activ)", () => {
+  it("căutarea (Faza 7) și coșul (Faza 8) sunt active; favoritele ascunse fără steag", () => {
     expect(headerSlots({ wishlistFlag: false, readiness: STOREFRONT_READINESS })).toEqual({
       search: "active",
-      cart: "disabled",
+      cart: "active",
       wishlist: "hidden",
     });
   });
 
-  it("starea oficială de azi: căutarea e gata, coșul și favoritele nu", () => {
-    expect(STOREFRONT_READINESS).toEqual({ search: true, cart: false, wishlist: false });
+  it("starea oficială de azi: căutarea și coșul sunt gata, favoritele nu", () => {
+    expect(STOREFRONT_READINESS).toEqual({ search: true, cart: true, wishlist: false });
   });
 
   it("când faza e gata, elementul devine activ", () => {
