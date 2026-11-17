@@ -3,13 +3,12 @@ import {
   exactLineValue,
   exactUnitPrice,
   quantityFromTicks,
-  splitScaledMoney,
   type Quantity,
 } from "./quantity";
+import { exactFraction, roundHalfUp } from "./money";
 
 /**
- * Afișarea prețului pe UNITATE și pe PAS (Faza 5, punctul 9b). PROVIZORIE: aparține motorului de prețuri din Faza 8 și va fi
- * mutată sau înlocuită acolo. Funcție PURĂ, doar cu `Quantity` (fără `float`): primește prețul introdus de administrator (în
+ * Afișarea prețului pe UNITATE și pe PAS (Faza 5, punctul 9b). Rotunjirea e cea decisă la 2026-11-17 (`money.ts`), nu mai e provizorie. Funcție PURĂ, doar cu `Quantity` (fără `float`): primește prețul introdus de administrator (în
  * bani, cu TVA) și configurarea de vânzare și întoarce VALORI (nu text); textele în română le asamblează aplicația.
  *
  * Reguli:
@@ -58,11 +57,10 @@ export interface PriceDisplay {
 
 /** Valoarea în bani × 10⁻⁴ → bani întregi half-up (doar pentru text), cu indicatorul de exactitate. */
 function forDisplay(scaledMinor: bigint, lossy: boolean): DisplayAmount {
-  const { wholeMinor, remainderScaled } = splitScaledMoney(scaledMinor);
-  const roundUp = remainderScaled * 2n >= QUANTITY_FACTOR;
+  // aceeași rotunjire half-up ca a liniei de comandă (`money.ts`: singurul loc care rotunjește sume)
   return {
-    minor: roundUp ? wholeMinor + 1n : wholeMinor,
-    exact: !lossy && remainderScaled === 0n,
+    minor: roundHalfUp(exactFraction(scaledMinor, QUANTITY_FACTOR)),
+    exact: !lossy && scaledMinor % QUANTITY_FACTOR === 0n,
   };
 }
 
