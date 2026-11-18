@@ -469,6 +469,25 @@ describe("totalul și erorile: o plasare eșuată nu lasă nimic și nu consumă
     });
   });
 
+  it("pasul de vânzare schimbat după adăugarea în coș: cantitatea nu mai e multiplu exact → comanda nu se plasează, nimic scris", async () => {
+    await harness(async (h) => {
+      const p = await h.product({ step: "0,3" });
+      const owner = await h.fill([{ variantId: p.variantId, quantity: q("0,9") }]);
+      const before = await h.checkout.preview({ owner, destination: null });
+      expect(before.blocked).toBeNull();
+      const input = await h.input(owner);
+      // magazinul schimbă pasul produsului: 0,9 nu mai e multiplu exact de 0,4
+      await h.tx.product.update({ where: { id: p.productId }, data: { saleStep: 4_000 } });
+      const after = await h.checkout.preview({ owner, destination: null });
+      // coșul însuși marchează linia (nu se poate finaliza); verificarea pasului din CheckoutService e a doua plasă, pe aceeași regulă
+      expect(after.blocked?.code).toMatch(/ORDER_CART_NOT_READY|ORDER_QUANTITY_INVALID/);
+      expect(await codeOf(h.checkout.place(owner, input))).toMatch(
+        /ORDER_CART_NOT_READY|ORDER_QUANTITY_INVALID/,
+      );
+      expect(await h.tx.order.count({ where: { email: "client@exemplu.ro" } })).toBe(0);
+    });
+  });
+
   it("coșul modificat între calcul și plasare → ORDER_CART_CHANGED, nimic scris", async () => {
     let mutate: (() => Promise<void>) | null = null;
     const provider: ShippingRateProvider = {

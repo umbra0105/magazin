@@ -77,6 +77,27 @@ describe("zonele de livrare din admin", () => {
     });
   });
 
+  it("o zonă inactivă nu ține județele ocupate: o zonă activă le poate lua după ea", async () => {
+    await inRolledBackTransaction(db, async (tx) => {
+      const service = new ShippingZoneService(tx);
+      await service.save(zone({ name: "Veche, inactivă", countyCodes: [95], isActive: false }));
+      const active = await service.save(zone({ name: "Nouă, activă", countyCodes: [95] }));
+      expect(active.countyCodes).toEqual([95]);
+    });
+  });
+
+  it("județele se salvează fără dubluri și în ordine; editarea unei zone nu se suprapune cu ea însăși", async () => {
+    await inRolledBackTransaction(db, async (tx) => {
+      const service = new ShippingZoneService(tx);
+      const saved = await service.save(zone({ countyCodes: [97, 96, 97, 96] }));
+      expect(saved.countyCodes).toEqual([96, 97]);
+      const row = await tx.shippingZone.findUniqueOrThrow({ where: { id: saved.id } });
+      expect(row.countyCodes).toEqual([96, 97]);
+      const again = await service.save({ ...zone({ countyCodes: [96, 97] }), id: saved.id });
+      expect(again.id).toBe(saved.id);
+    });
+  });
+
   it("refuză date greșite: fără județe, nume prea scurt, sume negative sau prag zero", async () => {
     await inRolledBackTransaction(db, async (tx) => {
       const service = new ShippingZoneService(tx);

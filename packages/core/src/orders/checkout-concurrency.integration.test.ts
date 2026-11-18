@@ -281,9 +281,12 @@ describe("plasări simultane", () => {
         Array.from({ length: 6 }, () => env.checkout.place(owner, input)),
       );
       const values = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
-      expect(values.length).toBeGreaterThanOrEqual(1);
+      // fiecare click primește ACEEAȘI comandă (una nouă, restul reluate): niciunul nu eșuează (serializare pe cheia de idempotență)
+      expect(results.filter((r) => r.status === "rejected")).toEqual([]);
+      expect(values).toHaveLength(6);
       expect(new Set(values.map((v) => v.orderId)).size).toBe(1);
       expect(values.filter((v) => !v.replayed)).toHaveLength(1);
+      expect(values.filter((v) => v.replayed)).toHaveLength(5);
       expect((await counterValue()) - before).toBe(1);
       expect(
         await pool.order.count({ where: { idempotencyKey: input["idempotencyKey"] as string } }),
