@@ -18,7 +18,12 @@ import {
   fitsUnitPrecision,
 } from "./adjustment-rules";
 import { computeAvailability, type ManagedInventory } from "./availability";
-import { ADJUSTMENT_REASONS, LOW_STOCK_STEPS_MAX, type AdjustmentReason } from "./constants";
+import {
+  ADJUSTMENT_REASONS,
+  LOW_STOCK_STEPS_MAX,
+  ORDER_REF_TYPE,
+  type AdjustmentReason,
+} from "./constants";
 import { reconcileSnapshot } from "./reconcile";
 import { effectiveSaleStep } from "./sale-config";
 import { StockError } from "./stock-errors";
@@ -182,10 +187,18 @@ export interface StockServiceDeps {
   now?: () => Date;
 }
 
+/** Valoare tipată ca prezentă, dar care poate fi `null` la rulare (relație ștearsă între două interogări Prisma). */
+const orNull = <T>(value: T): T | null => value;
+
 const keyId = (k: ItemKey): string => `${k.variantId}\u0000${k.warehouseId}`;
 
 function tupleList(keys: readonly ItemKey[]): Prisma.Sql {
   return Prisma.join(keys.map((k) => Prisma.sql`(${k.variantId}, ${k.warehouseId})`));
+}
+
+/** Cheia străină spre comandă: setată doar pentru referințele de tip comandă (CHECK în bază: `orderId = refId`). */
+function orderIdOf(ref: StockRef): string | null {
+  return ref.refType === ORDER_REF_TYPE ? ref.refId : null;
 }
 
 function assertRef(ref: StockRef): void {
@@ -422,7 +435,9 @@ export class StockService {
     const prepared = new Map<string, Prepared>();
     for (const [id, { key, quantity }] of merged) {
       const variant = byId.get(key.variantId);
-      if (!variant) {
+      // Prisma execută `select`-ul imbricat ca interogări separate: produsul unei variante șterse definitiv între ele vine
+      // `null`, deși tipul spune altceva; tratat ca variantă inexistentă, nu ca TypeError.
+      if (!variant || orNull(variant.product) === null) {
         throw new StockError(
           "STOCK_VARIANT_NOT_FOUND",
           "Una dintre variantele din coș nu mai există",
@@ -659,6 +674,7 @@ export class StockService {
             status: "active",
             refType: ref.refType,
             refId: ref.refId,
+            orderId: orderIdOf(ref),
             expiresAt,
           },
         });
@@ -770,6 +786,7 @@ export class StockService {
             status: "open",
             refType: ref.refType,
             refId: ref.refId,
+            orderId: orderIdOf(ref),
             committedAt: now,
           },
         });
@@ -837,6 +854,7 @@ export class StockService {
             status: "open",
             refType: ref.refType,
             refId: ref.refId,
+            orderId: orderIdOf(ref),
             committedAt: now,
           },
         });
@@ -1099,7 +1117,7 @@ export class StockService {
           },
         },
       });
-      if (!variant) {
+      if (!variant || orNull(variant.product) === null) {
         throw new StockError("STOCK_VARIANT_NOT_FOUND", "Varianta nu există", {
           variantId: key.variantId,
         });

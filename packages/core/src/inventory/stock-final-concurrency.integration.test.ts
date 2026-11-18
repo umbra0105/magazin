@@ -156,20 +156,22 @@ describe("amestec final: operații care NU scad stocul fizic, deodată pe două 
           case 1:
             return settle("reserve", () =>
               stock.reserve(
-                { refType: "order", refId: mine },
+                { refType: "stock_test", refId: mine },
                 [{ variantId: v.id, warehouseId, quantity: q("1") }],
                 soon(),
               ),
             );
           case 2:
             return settle("confirm", () =>
-              stock.confirmReservation({ refType: "order", refId: earlier }),
+              stock.confirmReservation({ refType: "stock_test", refId: earlier }),
             );
           case 3:
-            return settle("release", () => stock.release({ refType: "order", refId: earlier }));
+            return settle("release", () =>
+              stock.release({ refType: "stock_test", refId: earlier }),
+            );
           case 4:
             return settle("commit", () =>
-              stock.commitDirect({ refType: "order", refId: mine }, [
+              stock.commitDirect({ refType: "stock_test", refId: mine }, [
                 { variantId: v.id, warehouseId, quantity: q("1") },
               ]),
             );
@@ -232,20 +234,22 @@ describe("amestec final: toate operațiile, inclusiv ajustări și transferuri, 
           case 0:
             return settle("reserve", () =>
               stock.reserve(
-                { refType: "order", refId: mine },
+                { refType: "stock_test", refId: mine },
                 [{ variantId: v.id, warehouseId: a, quantity: q("1") }],
                 soon(),
               ),
             );
           case 1:
             return settle("confirm", () =>
-              stock.confirmReservation({ refType: "order", refId: earlier }),
+              stock.confirmReservation({ refType: "stock_test", refId: earlier }),
             );
           case 2:
-            return settle("release", () => stock.release({ refType: "order", refId: earlier }));
+            return settle("release", () =>
+              stock.release({ refType: "stock_test", refId: earlier }),
+            );
           case 3:
             return settle("commit", () =>
-              stock.commitDirect({ refType: "order", refId: mine }, [
+              stock.commitDirect({ refType: "stock_test", refId: mine }, [
                 { variantId: v.id, warehouseId: a, quantity: q("1") },
               ]),
             );

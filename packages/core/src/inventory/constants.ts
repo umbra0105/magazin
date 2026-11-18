@@ -80,3 +80,6 @@ export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
 
 export const COMMITMENT_STATUSES = ["open", "mirrored", "released"] as const;
 export type CommitmentStatus = (typeof COMMITMENT_STATUSES)[number];
+
+/** Tipul referinței de stoc pentru o comandă (Faza 9): rândurile cu acest tip au `orderId` = `refId` (cheie străină spre comandă). */
+export const ORDER_REF_TYPE = "order";

@@ -249,7 +249,7 @@ describe("transferuri și rezervări simultane pe aceeași sursă", () => {
         ? transfer(v.id, ctx.warehouseId, other, "1").then(() => "transfer" as const)
         : stock
             .reserve(
-              { refType: "order", refId: `${ctx.tag}-r${i}` },
+              { refType: "stock_test", refId: `${ctx.tag}-r${i}` },
               [{ variantId: v.id, warehouseId: ctx.warehouseId, quantity: q("1") }],
               soon(),
             )
@@ -282,7 +282,7 @@ describe("transferuri și rezervări simultane pe aceeași sursă", () => {
           ? transfer(v.id, ctx.warehouseId, other, "3").then(() => "transfer" as const)
           : stock
               .reserve(
-                { refType: "order", refId: `${ctx.tag}-x${round}` },
+                { refType: "stock_test", refId: `${ctx.tag}-x${round}` },
                 [{ variantId: v.id, warehouseId: ctx.warehouseId, quantity: q("3") }],
                 soon(),
               )

@@ -70,7 +70,7 @@ try {
 
   // 1) rezervare cu termen scurt
   await stock.reserve(
-    { refType: "order", refId: `${ctx.tag}-demo` },
+    { refType: "stock_test", refId: `${ctx.tag}-demo` },
     line,
     new Date(Date.now() + seconds * 1000),
   );

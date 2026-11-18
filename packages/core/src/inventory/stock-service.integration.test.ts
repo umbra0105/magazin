@@ -54,7 +54,7 @@ async function withStock<T>(fn: (h: Harness) => Promise<T>): Promise<T> {
       setClock: (date) => {
         clock = date;
       },
-      ref: (name) => ({ refType: "order", refId: `${ctx.tag}-${name}` }),
+      ref: (name) => ({ refType: "stock_test", refId: `${ctx.tag}-${name}` }),
       line: (variantId, quantity) => ({ variantId, quantity: q(quantity) }),
       product: async (physical, spec = {}) => {
         const created = await addStockProduct(tx, ctx, { ...spec, variants: [{ physical }] });
@@ -398,7 +398,7 @@ describe("confirmarea plății (rezervare → angajare)", () => {
       expect(commitment).toMatchObject({
         status: "open",
         quantity: q("2"),
-        refType: "order",
+        refType: "stock_test",
         refId: h.ref("p").refId,
       });
       const movements = await h.tx.stockMovement.findMany({ where: { variantId: p.id } });
@@ -409,7 +409,7 @@ describe("confirmarea plății (rezervare → angajare)", () => {
         deltaCommitted: q("2"),
         physicalAfter: q("5"),
         committedAfter: q("2"),
-        refType: "order",
+        refType: "stock_test",
         refId: h.ref("p").refId,
       });
       // a doua confirmare nu mai face nimic

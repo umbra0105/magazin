@@ -130,7 +130,7 @@ describe("pornirea gestionării pe date comise", () => {
         activation.apply(owner, applyInput(bytes, preview)),
         ...items.map((i, n) =>
           stock.reserve(
-            { refType: "order", refId: `${ctx.tag}-r${n}` },
+            { refType: "stock_test", refId: `${ctx.tag}-r${n}` },
             [{ variantId: i.id, warehouseId: ctx.warehouseId, quantity: q("1") }],
             new Date(Date.now() + 600_000),
           ),

@@ -83,7 +83,7 @@ async function withStock<T>(
         const created = await addStockProduct(tx, ctx, { ...spec, variants: [{ physical }] });
         return created.variants[0]!;
       },
-      ref: (name) => ({ refType: "order", refId: `${ctx.tag}-${name}` }),
+      ref: (name) => ({ refType: "stock_test", refId: `${ctx.tag}-${name}` }),
       reserveUntil: async (variantId, quantity, name, expiresAt) => {
         await stock.reserve(h.ref(name), [{ variantId, quantity: q(quantity) }], expiresAt);
       },

@@ -242,7 +242,7 @@ describe("transferul reușit", () => {
       const a = await h.product({ variants: [{ physical: "10" }] });
       const b = await h.product({ variants: [{ physical: "7" }] });
       await h.stock.reserve(
-        { refType: "order", refId: `r-${h.ctx.tag}` },
+        { refType: "stock_test", refId: `r-${h.ctx.tag}` },
         [{ variantId: a.id, warehouseId: h.from, quantity: q("2") }],
         new Date(NOW.getTime() + HOUR),
       );
@@ -286,11 +286,11 @@ describe("sursa dă doar ce e DISPONIBIL, nu tot ce e fizic", () => {
     await withTransfer(async (h) => {
       const v = await h.product({ variants: [{ physical: "10" }] });
       await h.stock.reserve(
-        { refType: "order", refId: `r-${h.ctx.tag}` },
+        { refType: "stock_test", refId: `r-${h.ctx.tag}` },
         [{ variantId: v.id, warehouseId: h.from, quantity: q("3") }],
         new Date(NOW.getTime() + HOUR),
       );
-      await h.stock.commitDirect({ refType: "order", refId: `c-${h.ctx.tag}` }, [
+      await h.stock.commitDirect({ refType: "stock_test", refId: `c-${h.ctx.tag}` }, [
         { variantId: v.id, warehouseId: h.from, quantity: q("2") },
       ]);
       // disponibil = 10 − 3 − 2 = 5
@@ -331,7 +331,7 @@ describe("sursa dă doar ce e DISPONIBIL, nu tot ce e fizic", () => {
     await withTransfer(async (h) => {
       const v = await h.product({ variants: [{ physical: "10" }] });
       await h.stock.reserve(
-        { refType: "order", refId: `x-${h.ctx.tag}` },
+        { refType: "stock_test", refId: `x-${h.ctx.tag}` },
         [{ variantId: v.id, warehouseId: h.from, quantity: q("6") }],
         new Date(NOW.getTime() + 15 * 60_000),
       );

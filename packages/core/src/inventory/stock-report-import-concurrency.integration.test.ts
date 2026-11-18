@@ -102,7 +102,7 @@ describe("import în timp ce se rezervă stoc (date comise)", () => {
         }),
         ...variants.map((v, i) =>
           stock.reserve(
-            { refType: "order", refId: `${ctx.tag}-r${i}` },
+            { refType: "stock_test", refId: `${ctx.tag}-r${i}` },
             [{ variantId: v.id, warehouseId: ctx.warehouseId, quantity: q("1") }],
             new Date(Date.now() + 600_000),
           ),
@@ -110,7 +110,7 @@ describe("import în timp ce se rezervă stoc (date comise)", () => {
         ...reversed
           .slice(0, 20)
           .map((v, i) =>
-            stock.commitDirect({ refType: "order", refId: `${ctx.tag}-c${i}` }, [
+            stock.commitDirect({ refType: "stock_test", refId: `${ctx.tag}-c${i}` }, [
               { variantId: v.id, warehouseId: ctx.warehouseId, quantity: q("1") },
             ]),
           ),

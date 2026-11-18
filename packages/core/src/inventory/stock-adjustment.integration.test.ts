@@ -479,7 +479,7 @@ describe("avertismente (ajustarea se aplică, dar utilizatorul trebuie să știe
   it("stocul scade sub ce e angajat sau rezervat: se permite (marfa lipsește pe bune), dar cu avertisment", async () => {
     await withStock(async (h) => {
       const p = await h.product("5");
-      await h.service.commitDirect({ refType: "order", refId: `${h.ctx.tag}-o1` }, [
+      await h.service.commitDirect({ refType: "stock_test", refId: `${h.ctx.tag}-o1` }, [
         { variantId: p.id, quantity: q("4") },
       ]);
       // 5 → 4: fizicul egalează angajatul, fără avertisment

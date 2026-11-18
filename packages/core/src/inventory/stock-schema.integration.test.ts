@@ -614,12 +614,12 @@ describe("StockMovement (imuabil)", () => {
 
   it("referința generică: tip și id împreună sau deloc", async () => {
     const name = "stock_movement_ref_check";
-    await accepts(base, (tx, b) => movement(tx, b, { refType: "order", refId: uid() }));
+    await accepts(base, (tx, b) => movement(tx, b, { refType: "stock_test", refId: uid() }));
     await accepts(base, (tx, b) => movement(tx, b, { refType: null, refId: null }));
-    await rejects(base, (tx, b) => movement(tx, b, { refType: "order", refId: null }), name);
+    await rejects(base, (tx, b) => movement(tx, b, { refType: "stock_test", refId: null }), name);
     await rejects(base, (tx, b) => movement(tx, b, { refType: null, refId: uid() }), name);
     await rejects(base, (tx, b) => movement(tx, b, { refType: "Order", refId: uid() }), name);
-    await rejects(base, (tx, b) => movement(tx, b, { refType: "order", refId: "" }), name);
+    await rejects(base, (tx, b) => movement(tx, b, { refType: "stock_test", refId: "" }), name);
   });
 
   it("o mișcare schimbă ceva, iar soldurile de după nu sunt negative sau peste plafon", async () => {
@@ -811,7 +811,7 @@ describe("StockCommitment (angajat, cu referință generică)", () => {
         variantId: b.variant.id,
         warehouseId: b.warehouse.id,
         quantity: 10_000n,
-        refType: "order",
+        refType: "stock_test",
         refId: "order-1",
         ...over,
       },
@@ -871,7 +871,7 @@ describe("StockCommitment (angajat, cu referință generică)", () => {
             variantId: b.variant.id,
             warehouseId: b.warehouse.id,
             quantity: 10_000n,
-            refType: "order",
+            refType: "stock_test",
             refId: "o",
           },
         }),
@@ -1060,7 +1060,7 @@ describe("constantele din cod oglindesc constrângerile din bază", () => {
             warehouseId: b.warehouse.id,
             quantity: 10_000n,
             status,
-            refType: "order",
+            refType: "stock_test",
             refId: "o",
             mirroredAt: status === "mirrored" ? now : null,
             releasedAt: status === "released" ? now : null,

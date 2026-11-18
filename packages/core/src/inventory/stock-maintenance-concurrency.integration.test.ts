@@ -55,7 +55,7 @@ describe("două instanțe deodată (date comise, conexiuni separate)", () => {
       const soon = new Date(Date.now() + 4_000);
       for (const [i, variant] of created.variants.entries()) {
         await service.reserve(
-          { refType: "order", refId: `${ctx.tag}-${i}` },
+          { refType: "stock_test", refId: `${ctx.tag}-${i}` },
           [{ variantId: variant.id, warehouseId: ctx.warehouseId, quantity: q("2") }],
           soon,
         );
