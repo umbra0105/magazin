@@ -41,7 +41,7 @@ for (const preset of PRESETS) {
 
             if (zona === "pagina" || zona === "sertar") {
               await expect(page.locator("[data-cart-panel] [data-checkout]")).toHaveText(
-                "Finalizarea comenzii se activează în curând",
+                "Finalizează comanda",
               );
               // un singur buton principal în coș (finalizarea); legăturile secundare au contur
               await expect(page.locator("[data-cart-panel] .bg-action")).toHaveCount(1);

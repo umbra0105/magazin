@@ -3341,13 +3341,15 @@ export const ro = {
         "Pentru unele produse lipsesc greutatea sau dimensiunile: costul de transport poate fi ajustat de magazin.",
       free: "Gratuit",
       days: (n: number) =>
-        n === 0 ? "Disponibil imediat" : `Livrare în aproximativ ${n} ${n === 1 ? "zi" : "zile"}`,
+        n === 0
+          ? "Disponibil imediat"
+          : `Livrare în aproximativ ${countOf(n, "zi", "zile", "de zile")}`,
       pickup: "Ridicare personală",
       pickupLede: "De la sediul magazinului, fără cost de transport.",
       demoBadge: "DEMO",
       demoNote: "Tarif demonstrativ, nu un tarif real de curierat.",
       leadTime: (days: number) =>
-        `Livrare toată odată, în aproximativ ${days} ${days === 1 ? "zi" : "zile"} (cel mai lung termen din comandă).`,
+        `Livrare toată odată, în aproximativ ${countOf(days, "zi", "zile", "de zile")} (cel mai lung termen din comandă).`,
       groundNotice:
         "Livrarea se face la adresă, la nivelul solului. Descărcarea și manipularea produselor sunt în sarcina clientului.",
       billingSame: "Aceleași date ca la livrare",
@@ -3450,9 +3452,9 @@ export const ro = {
         "Emailul de confirmare nu se trimite încă; păstrează această pagină sau numărul comenzii.",
       delivery: "Livrare",
       deliveryTo: "Livrare în",
-      estimate: (days: number) => `Estimare: aproximativ ${days} ${days === 1 ? "zi" : "zile"}`,
+      estimate: (days: number) => `Estimare: aproximativ ${countOf(days, "zi", "zile", "de zile")}`,
       leadTime: (days: number) =>
-        `Comanda se livrează toată odată, în aproximativ ${days} ${days === 1 ? "zi" : "zile"}.`,
+        `Comanda se livrează toată odată, în aproximativ ${countOf(days, "zi", "zile", "de zile")}.`,
       installRequested: "Ai cerut o ofertă pentru instalare; te contactăm.",
       payment: "Plată",
       paymentMethods: { cod: "Ramburs (la livrare)", bank_transfer: "Transfer bancar" } as Record<

@@ -1,4 +1,4 @@
-import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared";
+import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared/quantity";
 import type { OrderSummary } from "@ecom/core";
 import { StorePill } from "@ecom/ui";
 import { formatDateTime } from "@/lib/format-date";
