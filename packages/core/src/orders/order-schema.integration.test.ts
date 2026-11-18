@@ -74,7 +74,10 @@ const orderData = (channelId: string, over: Record<string, unknown> = {}) => ({
   subtotalMinor: 10_000,
   shippingMinor: 1_500,
   codFeeMinor: 500,
-  taxMinor: 2_000,
+  shippingTaxMinor: 260,
+  codFeeTaxMinor: 87,
+  // TVA = linia (1.735) + transport (260) + taxa de ramburs (87)
+  taxMinor: 2_082,
   totalMinor: 12_000,
   taxRateBps: 2100,
   shippingMethodCode: "courier",
@@ -174,6 +177,8 @@ describe("comanda: stări și sume", () => {
           data: orderData(b.channel.id, {
             paymentMethod: "card",
             codFeeMinor: 0,
+            codFeeTaxMinor: 0,
+            taxMinor: 1_995,
             totalMinor: 11_500,
             reservationExpiresAt: new Date(),
           }),
@@ -242,6 +247,8 @@ describe("comanda: stări și sume", () => {
           data: orderData(b.channel.id, {
             paymentMethod: "bank_transfer",
             codFeeMinor: 0,
+            codFeeTaxMinor: 0,
+            taxMinor: 1_995,
             totalMinor: 11_500,
           }),
         }),
@@ -258,6 +265,8 @@ describe("comanda: stări și sume", () => {
         data: orderData(b.channel.id, {
           paymentMethod: "bank_transfer",
           codFeeMinor: 0,
+          codFeeTaxMinor: 0,
+          taxMinor: 1_995,
           totalMinor: 11_500,
           reservationExpiresAt: new Date(),
         }),
@@ -713,7 +722,7 @@ describe("cheia străină a stocului spre comandă", () => {
     variantId: b.variant.id,
     warehouseId: b.warehouse.id,
     quantity: 10_000n,
-    refType: "stock_test",
+    refType: "order",
     refId: b.order.id,
     orderId: b.order.id,
     expiresAt: new Date(Date.now() + 60_000),
@@ -726,7 +735,7 @@ describe("cheia străină a stocului spre comandă", () => {
     variantId: b.variant.id,
     warehouseId: b.warehouse.id,
     quantity: 10_000n,
-    refType: "stock_test",
+    refType: "order",
     refId: b.order.id,
     orderId: b.order.id,
     ...over,
@@ -785,5 +794,100 @@ describe("cheia străină a stocului spre comandă", () => {
       (tx, b) => tx.order.delete({ where: { id: b.order.id } }),
       "stock_commitment_orderId_fkey",
     );
+  });
+});
+
+describe("integritatea totalurilor, verificată la commit", () => {
+  const consistent = async (tx: TestTx) => {
+    const b = await base(tx);
+    const order = await tx.order.create({ data: orderData(b.channel.id) });
+    await tx.orderLine.create({ data: lineData(order.id, b.variant.id) });
+    return { ...b, order };
+  };
+  const check = (tx: TestTx) => tx.$executeRawUnsafe("SET CONSTRAINTS ALL IMMEDIATE");
+
+  it("acceptă o comandă al cărei subtotal e suma liniilor și al cărei TVA e suma pe linii + transport + taxă", async () => {
+    await accepts(consistent, (tx) => check(tx));
+  });
+
+  it("refuză o comandă fără nicio linie", async () => {
+    await rejects(
+      async (tx) => {
+        const b = await base(tx);
+        return tx.order.create({ data: orderData(b.channel.id) });
+      },
+      (tx) => check(tx),
+      "nu are nicio linie",
+    );
+  });
+
+  it("refuză un subtotal care nu e suma liniilor (1 ban diferență)", async () => {
+    await rejects(
+      async (tx) => {
+        const b = await base(tx);
+        const order = await tx.order.create({
+          data: orderData(b.channel.id, {
+            subtotalMinor: 10_001,
+            totalMinor: 12_001,
+            taxMinor: 2_082,
+          }),
+        });
+        await tx.orderLine.create({ data: lineData(order.id, b.variant.id) });
+      },
+      (tx) => check(tx),
+      "nu e suma liniilor",
+    );
+  });
+
+  it("refuză un TVA al comenzii diferit cu 1 ban de suma TVA-urilor pe linii + transport + taxă", async () => {
+    for (const taxMinor of [2_081, 2_083]) {
+      await rejects(
+        async (tx) => {
+          const b = await base(tx);
+          const order = await tx.order.create({
+            data: orderData(b.channel.id, { taxMinor }),
+          });
+          await tx.orderLine.create({ data: lineData(order.id, b.variant.id) });
+        },
+        (tx) => check(tx),
+        "TVA-ul",
+      );
+    }
+  });
+
+  it("refuză ștergerea unei linii dintr-o comandă existentă", async () => {
+    await rejects(
+      async (tx) => {
+        const b = await consistent(tx);
+        await check(tx);
+        return b;
+      },
+      async (tx, b) => {
+        await tx.orderLine.deleteMany({ where: { orderId: b.order.id } });
+        await check(tx);
+      },
+      "nu are nicio linie",
+    );
+  });
+
+  it("TVA-ul transportului și al taxei nu pot depăși sumele lor", async () => {
+    await rejects(
+      base,
+      (tx, b) => tx.order.create({ data: orderData(b.channel.id, { shippingTaxMinor: 1_501 }) }),
+      "customer_order_tax_parts_check",
+    );
+    await rejects(
+      base,
+      (tx, b) => tx.order.create({ data: orderData(b.channel.id, { codFeeTaxMinor: 501 }) }),
+      "customer_order_tax_parts_check",
+    );
+  });
+
+  it("șterge o comandă cu liniile ei fără să se plângă de integritate", async () => {
+    await accepts(consistent, async (tx, b) => {
+      await check(tx);
+      await tx.order.delete({ where: { id: b.order.id } });
+      await check(tx);
+    });
   });
 });

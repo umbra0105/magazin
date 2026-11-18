@@ -69,6 +69,8 @@ CREATE TABLE "customer_order" (
     "discountMinor" INTEGER NOT NULL DEFAULT 0,
     "shippingMinor" INTEGER NOT NULL,
     "codFeeMinor" INTEGER NOT NULL DEFAULT 0,
+    "shippingTaxMinor" INTEGER NOT NULL DEFAULT 0,
+    "codFeeTaxMinor" INTEGER NOT NULL DEFAULT 0,
     "taxMinor" INTEGER NOT NULL,
     "totalMinor" INTEGER NOT NULL,
     "taxRateBps" INTEGER NOT NULL,
@@ -351,6 +353,10 @@ ALTER TABLE "customer_order" ADD CONSTRAINT "customer_order_source_check"
 ALTER TABLE "customer_order" ADD CONSTRAINT "customer_order_amounts_check"
   CHECK ("subtotalMinor" >= 0 AND "discountMinor" >= 0 AND "shippingMinor" >= 0 AND "codFeeMinor" >= 0
      AND "taxMinor" >= 0 AND "totalMinor" > 0 AND "taxRateBps" >= 0 AND "taxRateBps" <= 10000);
+ALTER TABLE "customer_order" ADD CONSTRAINT "customer_order_tax_parts_check"
+  CHECK ("shippingTaxMinor" >= 0 AND "shippingTaxMinor" <= "shippingMinor"
+     AND "codFeeTaxMinor" >= 0 AND "codFeeTaxMinor" <= "codFeeMinor"
+     AND "taxMinor" <= "totalMinor");
 ALTER TABLE "customer_order" ADD CONSTRAINT "customer_order_total_check"
   CHECK ("totalMinor" = "subtotalMinor" - "discountMinor" + "shippingMinor" + "codFeeMinor");
 ALTER TABLE "customer_order" ADD CONSTRAINT "customer_order_cod_fee_check"
@@ -415,6 +421,8 @@ BEGIN
     OR NEW."discountMinor" IS DISTINCT FROM OLD."discountMinor"
     OR NEW."shippingMinor" IS DISTINCT FROM OLD."shippingMinor"
     OR NEW."codFeeMinor" IS DISTINCT FROM OLD."codFeeMinor"
+    OR NEW."shippingTaxMinor" IS DISTINCT FROM OLD."shippingTaxMinor"
+    OR NEW."codFeeTaxMinor" IS DISTINCT FROM OLD."codFeeTaxMinor"
     OR NEW."taxMinor" IS DISTINCT FROM OLD."taxMinor"
     OR NEW."totalMinor" IS DISTINCT FROM OLD."totalMinor"
     OR NEW."taxRateBps" IS DISTINCT FROM OLD."taxRateBps"
@@ -466,3 +474,49 @@ END;
 $$ LANGUAGE plpgsql;
 CREATE TRIGGER "address_immutable_trg" BEFORE UPDATE ON "address"
   FOR EACH ROW EXECUTE FUNCTION "address_immutable"();
+
+-- ---------------------------------------------------------------------------------------------------------------------
+-- Integritatea totalurilor, verificată la COMMIT (constrângeri amânate): subtotalul comenzii = suma totalurilor liniilor, iar
+-- TVA-ul comenzii = suma TVA-urilor pe linii + TVA transport + TVA taxă de ramburs. O comandă fără linii nu se poate comite.
+-- (Tranzacțiile anulate, ca cele ale testelor, nu declanșează verificarea.)
+
+CREATE FUNCTION "order_totals_integrity"() RETURNS trigger AS $$
+DECLARE
+  oid text;
+  ord record;
+  lines_count integer;
+  lines_total bigint;
+  lines_tax bigint;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    oid := OLD."orderId";
+  ELSIF TG_TABLE_NAME = 'customer_order' THEN
+    oid := NEW."id";
+  ELSE
+    oid := NEW."orderId";
+  END IF;
+  SELECT * INTO ord FROM "customer_order" WHERE "id" = oid;
+  IF NOT FOUND THEN
+    RETURN NULL; -- comanda a fost ștearsă în aceeași tranzacție
+  END IF;
+  SELECT count(*), COALESCE(sum("lineTotalMinor"), 0), COALESCE(sum("taxMinor"), 0)
+    INTO lines_count, lines_total, lines_tax
+    FROM "order_line" WHERE "orderId" = oid;
+  IF lines_count = 0 THEN
+    RAISE EXCEPTION 'Comanda % nu are nicio linie', ord."number";
+  END IF;
+  IF lines_total <> ord."subtotalMinor" THEN
+    RAISE EXCEPTION 'Comanda %: subtotalul (%) nu e suma liniilor (%)', ord."number", ord."subtotalMinor", lines_total;
+  END IF;
+  IF lines_tax + ord."shippingTaxMinor" + ord."codFeeTaxMinor" <> ord."taxMinor" THEN
+    RAISE EXCEPTION 'Comanda %: TVA-ul (%) nu e suma TVA-urilor pe linii (%) plus transport (%) și taxa de ramburs (%)',
+      ord."number", ord."taxMinor", lines_tax, ord."shippingTaxMinor", ord."codFeeTaxMinor";
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER "customer_order_totals_trg" AFTER INSERT OR UPDATE ON "customer_order"
+  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION "order_totals_integrity"();
+CREATE CONSTRAINT TRIGGER "order_line_totals_trg" AFTER INSERT OR UPDATE OR DELETE ON "order_line"
+  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION "order_totals_integrity"();

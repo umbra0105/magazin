@@ -1300,7 +1300,10 @@ model Order {
   discountMinor         Int                @default(0)
   shippingMinor         Int
   codFeeMinor           Int                @default(0)
-  /// TVA total = suma TVA pe linii + TVA transport + TVA taxă de ramburs (docs/09 §2).
+  /// TVA extras din transport și din taxa de ramburs (sume cu TVA inclus, ca liniile; docs/09 §2).
+  shippingTaxMinor      Int                @default(0)
+  codFeeTaxMinor        Int                @default(0)
+  /// TVA total = suma TVA pe linii + shippingTaxMinor + codFeeTaxMinor (verificat în bază, la commit).
   taxMinor              Int
   totalMinor            Int
   /// Cota standard de TVA la plasare, în puncte de bază (2100 = 21%), ca snapshot.

@@ -10,6 +10,8 @@ import {
 import { z } from "zod";
 import { normalizeHostname } from "../media/host";
 import { isValidCalendarDate } from "../inventory/workdays";
+import { PAYMENT_RULE_DEFAULTS } from "../orders/payment-rules";
+import { SHIPPING_CLASSES } from "../shipping/types";
 
 /**
  * Registrul setărilor: singura sursă pentru chei, tipuri și valori implicite NEUTRE.
@@ -112,6 +114,58 @@ export const settingGroups = {
      * GOL = dezactivat (indicatorul din coș nu apare deloc). Pragul pe clasă de transport și pe produs vine în Faza 9.
      */
     freeShippingThreshold: z.number().int().min(1).max(1_000_000_000).nullable().default(null),
+    /**
+     * Clasele de transport la care se aplică pragul de transport gratuit. Implicit doar `standard`: la produsele voluminoase
+     * (`oversized`, `pallet`) transportul costă mult mai mult decât marja unui prag obișnuit. Pragul se poate dezactiva și
+     * pe produs (ecranul «Coș și transport»).
+     */
+    freeShippingClasses: z.array(z.enum(SHIPPING_CLASSES)).max(3).default(["standard"]),
+    /** Prefixul numărului de comandă (ex. «WEB-»); gol = doar cifre. Numărul = prefix + contor cu zerouri la stânga. */
+    orderNumberPrefix: z
+      .string()
+      .trim()
+      .max(10)
+      .regex(/^[A-Za-z0-9-]*$/, "Doar litere, cifre și cratimă")
+      .default(""),
+    /** Câte cifre are partea numerică a numărului de comandă (completată cu zerouri la stânga). */
+    orderNumberDigits: z.number().int().min(1).max(12).default(6),
+    /** Cât așteptăm răspunsul ANAF la validarea CUI (ms); dacă nu vine, CUI-ul rămâne «neverificat», comanda nu se blochează. */
+    anafTimeoutMs: z.number().int().min(500).max(10_000).default(3000),
+  },
+  payment: {
+    /**
+     * Suma maximă (bani, cu TVA) pentru plata cu ramburs la persoane fizice; peste ea metoda se ascunde. Regula «fără ramburs la
+     * produse La comandă» NU e setare: e fixă în cod.
+     */
+    codMaxAmountIndividual: z
+      .number()
+      .int()
+      .min(0)
+      .max(1_000_000_000)
+      .default(PAYMENT_RULE_DEFAULTS.codMaxIndividualMinor),
+    /** Suma maximă pentru ramburs la persoane juridice (CUI la facturare sau grup `cost_plus`). */
+    codMaxAmountCompany: z
+      .number()
+      .int()
+      .min(0)
+      .max(1_000_000_000)
+      .default(PAYMENT_RULE_DEFAULTS.codMaxCompanyMinor),
+  },
+  shipping: {
+    /** Ridicare personală de la sediu (adresa din `company.address`). */
+    pickupEnabled: z.boolean().default(false),
+    /** Easybox (locker): oprit până la hartă (Faza 12); regula «oversized/pallet blochează easybox» există oricum. */
+    easyboxEnabled: z.boolean().default(false),
+    /** Cât așteptăm tarifele furnizorului (ms) înainte să cădem pe tarifele pe zonă. */
+    quoteTimeoutMs: z.number().int().min(500).max(15_000).default(4000),
+    /** Mesajul despre livrarea la nivelul solului, afișat la alegerea livrării. */
+    groundLevelNotice: z
+      .string()
+      .trim()
+      .max(500)
+      .default(
+        "Livrarea se face la adresă, la nivelul solului. Descărcarea și manipularea produselor sunt în sarcina clientului.",
+      ),
   },
   cart: {
     /** Cât rămâne un coș de oaspete (și cookie-ul lui), în zile; fiecare modificare îl prelungește. */
