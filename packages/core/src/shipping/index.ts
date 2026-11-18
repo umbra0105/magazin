@@ -13,3 +13,4 @@ export type {
   ShippingRateProvider,
 } from "./types";
 export * from "./zone-service";
+export * from "./exclusion-service";

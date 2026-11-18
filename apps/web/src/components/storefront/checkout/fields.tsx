@@ -3,7 +3,7 @@ import { cn } from "@ecom/ui";
 
 /** Stilul câmpurilor din checkout: aceleași valori ca restul vitrinei (înălțime = ținta tactilă, formă din preset). */
 export const FIELD =
-  "h-(--sf-control-h) w-full rounded-full border border-line-input bg-surface-page px-5 text-(length:--control-text) text-ink " +
+  "h-(--sf-control-h) w-full min-w-0 max-w-full rounded-full border border-line-input bg-surface-page px-5 text-(length:--control-text) text-ink " +
   "placeholder:text-ink-placeholder focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand " +
   "focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page disabled:opacity-60 aria-[invalid=true]:border-tone-problem-fg";
 
@@ -36,7 +36,7 @@ export function Field({
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [helpId, errorId].filter(Boolean).join(" ") || undefined;
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
       <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>

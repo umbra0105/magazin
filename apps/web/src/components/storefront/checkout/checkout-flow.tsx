@@ -645,7 +645,7 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
       className="grid gap-8 lg:grid-cols-12 lg:items-start"
       data-checkout-form
     >
-      <div className="flex flex-col gap-4 lg:col-span-7 xl:col-span-8">
+      <div className="flex min-w-0 flex-col gap-4 lg:col-span-7 xl:col-span-8">
         {stepShell(
           "contact",
           <>
@@ -784,7 +784,7 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
         {stepShell(
           "billing",
           <>
-            <fieldset className="flex flex-col gap-3">
+            <fieldset className="flex min-w-0 flex-col gap-3">
               <legend className="sr-only">{m.steps.billing}</legend>
               <label className="flex min-h-11 items-center gap-3">
                 <input
@@ -919,7 +919,7 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
           "payment",
           <>
             <p className="text-ink-secondary">{m.paymentLede}</p>
-            <fieldset className="flex flex-col gap-3">
+            <fieldset className="flex min-w-0 flex-col gap-3">
               <legend className="sr-only">{m.steps.payment}</legend>
               {preview?.methods?.map((entry, index) => (
                 <label
@@ -1107,7 +1107,7 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
 
       <aside
         aria-label={m.summary}
-        className="flex flex-col gap-4 rounded-card bg-card p-6 lg:sticky lg:top-6 lg:col-span-5 xl:col-span-4"
+        className="flex min-w-0 flex-col gap-4 rounded-card bg-card p-6 lg:sticky lg:top-6 lg:col-span-5 xl:col-span-4"
         data-checkout-summary
       >
         <h2 className="text-lg font-semibold">{m.summary}</h2>

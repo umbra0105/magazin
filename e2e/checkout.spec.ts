@@ -212,7 +212,8 @@ test.describe("verificarea 1: comandă completă cu ramburs", () => {
     await page.goto("/cos");
     await expect(page.locator("[data-cart-empty]")).toBeVisible();
     await page.goto("/checkout");
-    await expect(page.locator("[data-checkout-blocked]")).toContainText("Coșul tău este gol");
+    await expect(page.getByRole("heading", { level: 1, name: "Coșul tău este gol" })).toBeVisible();
+    await expect(page.locator("[data-checkout-blocked]")).toContainText("Adaugă produse în coș");
   });
 });
 
@@ -293,7 +294,7 @@ test.describe("verificarea 4: limitele de ramburs", () => {
     await throughToPayment(page);
     const cod = step(page, "payment").locator('[data-method="cod"]');
     await expect(cod).toHaveAttribute("data-available", "false");
-    await expect(cod).toContainText("nu e disponibil pentru comenzi peste 10.000,00 lei");
+    await expect(cod).toContainText("nu e disponibil pentru comenzi peste 10.000,00 RON");
     await expect(step(page, "payment").locator('[data-method="bank_transfer"]')).toHaveAttribute(
       "data-available",
       "true",
@@ -323,7 +324,7 @@ test.describe("verificarea 4: limitele de ramburs", () => {
     await next(page, "billing");
     const cod = step(page, "payment").locator('[data-method="cod"]');
     await expect(cod).toHaveAttribute("data-available", "false");
-    await expect(cod).toContainText("Pentru firme, rambursul nu e disponibil peste 5.000,00 lei");
+    await expect(cod).toContainText("Pentru firme, rambursul nu e disponibil peste 5.000,00 RON");
   });
 });
 
