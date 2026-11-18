@@ -525,6 +525,8 @@ test.describe("telefon (390 px)", () => {
     const submit = await page.locator("[data-checkout-submit]").boundingBox();
     const banner = await page.locator("[data-consent-banner]").boundingBox();
     expect(submit && banner).toBeTruthy();
+    // bannerul compact pe telefon: «Refuz» și «Acceptă tot» pe un rând, «Preferințe» dedesubt (nu trei rânduri de butoane)
+    expect(banner!.height).toBeLessThanOrEqual(280);
     expect(submit!.y + submit!.height).toBeLessThanOrEqual(banner!.y + 1);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - window.innerWidth,

@@ -95,7 +95,7 @@ export function ConsentBanner() {
                 </Link>
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row md:shrink-0">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row md:shrink-0">
               <StoreButton data-consent="reject" onClick={() => choose(REFUSE_ALL)}>
                 {m.reject}
               </StoreButton>
@@ -104,6 +104,7 @@ export function ConsentBanner() {
               </StoreButton>
               <StoreButton
                 variant="secondary"
+                className="col-span-2 sm:col-auto"
                 data-consent="preferences"
                 onClick={() => {
                   setDraft(REFUSE_ALL);

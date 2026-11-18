@@ -217,31 +217,31 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Aplicare cupon cu toate condițiile — **făcută doar REGULA din motor** (Faza 8: procent/sumă fixă, cumul cu prețul de grup, `notForDiscountedGroups`, produse/categorii excluse, valoare minimă, valabilitate, plafon la valoarea liniei, testată cu cupoane în memorie); câmpul «Ai un cupon?», tabela `Discount`, adminul și generatorul de coduri vin în Faza 17 (câmpul rămâne ascuns; test de arhitectură)
 
 ## FAZA 9 — Checkout și plasare comandă ⚠️ partea critică
-- [ ] ⚠️ **Din Faza 5 (punctul 14), stoc în coș și plată:** coșul NU rezervă (D4); starea vizibilă (În stoc / Stoc limitat / La comandă cu termen / Indisponibil) și termenul de livrare apar în coș și la plată; **coșuri mixte: livrare toată odată, cu termenul cel mai lung** (D6); selector de cantitate **în pași**, cu **validarea pasului la adăugare, modificare și plasare, pe server** (cantitatea comandată e mereu multiplu EXACT al pasului, nu doar în interfață); fără limită de cantitate la «La comandă», dar cu limita tehnică de siguranță pe linie (setabilă); **ramburs la «La comandă»: decizie (🛑, atinge plata și textele legale, vezi `docs/INTREBARI-AVOCAT.md` §1.5)**
-- [ ] `Order.channelId` (implicit canalul `web`), `Order.externalId`, `Order.externalData` (JSON brut, pentru depanare), pregătite pentru eMAG (mutate din Faza 4, punctul 5; `12` §2)
-- [ ] ⚠️ **Din Faza 5:** angajarea de stoc ține o referință generică (tip + id, cu unicitate) spre comandă, fiindcă `Order` nu exista. Aici se înlocuiește cu **cheie străină** spre `Order`/`OrderLine`, cu **validarea datelor existente** (referințe orfane) înainte de migrație, și testele de concurență din Faza 5 se rulează din nou pe schema nouă
-- [ ] `Order.parentSubscriptionId` (câmp pregătitor pentru abonamente, nefolosit; mutat din Faza 4, punctul 4)
-- [ ] Schema: Order, OrderLine, OrderEvent, Payment, Address, ShippingZone, ShippingMethod
-- [ ] Motor de livrare: zone pe județ/localitate, tarife, praguri, taxă ramburs, **ridicare personală de la sediu**
-- [ ] **Greutate volumetrică** ((L×l×h)/5000) și tarifare pe cea mai mare dintre greutăți
-- [ ] **Interfața `ShippingRateProvider`** (lista de colete, județ, localitate, cod poștal, suma de ramburs → oferte), cu furnizor FALS marcat «DEMO» într-un singur loc (în teste și în aplicație) și **rezervă pe zone județene cu tarife fixe**, editabile din admin, când furnizorul nu răspunde; checkout-ul nu se blochează niciodată. *(Tarifele în timp real de la agregator au fost mutate în Faza 12.)*
-- [ ] Pragul de transport gratuit **dezactivabil per clasă de transport și per produs**
-- [ ] **Cerere de ofertă instalare** în checkout: bifă nebifată implicit + câmp de observații, fără impact pe total (`15` §4)
-- [ ] Blocare automată a easybox-ului dacă în coș există un produs `oversized` (sau `pallet`)
-- [ ] Mesaj explicit despre livrarea la nivelul solului, fără descărcare
-- [ ] Seed cu județele și localitățile din România (SIRUTA)
-- [ ] UI checkout pe pași accordion (`03-frontend.md` §2)
-- [ ] Facturare pe firmă cu **validare CUI la ANAF**
-- [ ] `PlaceOrderUseCase`: tranzacție atomică, snapshot, rezervare stoc, numerotare, idempotency key
-- [ ] State machine cu 3 statusuri și tranziții validate, scrie `OrderEvent`
-- [ ] Confirmare + `/comanda/urmarire` pentru guest
-- [ ] **Vânzare doar în România, pentru orice produs**: țările permise vin din `regional.allowedCountries` (implicit `["RO"]`), verificate pe server la adresa de livrare și de facturare, cu mesaj clar
-- [ ] **Limite de ramburs, configurabile în setări**: `payment.codMaxAmountIndividual` (implicit 10.000 lei) și `payment.codMaxAmountCompany` (implicit 5.000 lei; cheile au două segmente, `grup.nume`, deci nu `payment.cod.maxAmount…`; sumele sunt în bani). „Persoană juridică" = CUI la facturare **sau** grup `cost_plus`. Peste limită, metoda se ascunde și se explică de ce
-- [ ] Ramburs + transfer bancar funcționale cap-coadă
-- [ ] E2E Playwright: cumpărare completă ca guest
-- [ ] ⚠️ **Mutat din Faza 10 (2026-11-18): rezervarea pentru transfer bancar** (Faza 5, punctul 7): termenul vine din `reservationExpiresAt('transfer', …)` = sfârșitul celei de-a `inventory.transferReservationWorkdays`-a zile lucrătoare (fusul `regional.timezone`), salvat ca `Order.reservationExpiresAt`; **la expirare comanda se ANULEAZĂ automat** (job, tranziție validată, `OrderEvent`, rezervarea eliberată). Ramburs nu rezervă: angajează direct (`StockCommitment`) și comanda se confirmă. Confirmarea plății prin transfer există doar în serviciu și în teste (ecranul «marchează plătit» vine în Faza 11)
-- [ ] **Mutat din Faza 10 (2026-11-18): calendarul zilelor nelucrătoare** (Faza 5, punctul 7): setarea `regional.nonWorkingDates` (lista de date `AAAA-LL-ZZ`), pe care `addWorkdaysEndOfDay` o sare; cu teste
-- [ ] **Decizii Faza 9 (2026-11-18):** checkout doar pentru oaspete (`Order.customerId` gol; contul vine în Faza 14); metode de plată: ramburs și transfer bancar (cardul vine în Faza 10 și nu apare ca opțiune); **ramburs interzis la orice comandă cu cel puțin o linie «La comandă»** (regulă fixă în cod, validată pe server la afișare ȘI la plasare); număr de comandă = prefix setabil + contor în tabel, blocat în aceeași tranzacție cu plasarea (fără goluri); consimțământul (text, versiune, moment) se salvează pe comandă, fără IP și fără user-agent; fără bifă de newsletter până în Faza 17; sursa județelor și localităților: SIRUTA semestrul 1 din 2026 (INS, CC BY 4.0, `docs/SIRUTA-SURSA.md`)
+- [x] ⚠️ **Din Faza 5 (punctul 14), stoc în coș și plată:** coșul NU rezervă (D4); starea vizibilă (În stoc / Stoc limitat / La comandă cu termen / Indisponibil) și termenul de livrare apar în coș și la plată; **coșuri mixte: livrare toată odată, cu termenul cel mai lung** (D6); selector de cantitate **în pași**, cu **validarea pasului la adăugare, modificare și plasare, pe server** (cantitatea comandată e mereu multiplu EXACT al pasului, nu doar în interfață); fără limită de cantitate la «La comandă», dar cu limita tehnică de siguranță pe linie (setabilă); **ramburs la «La comandă»: decizie (🛑, atinge plata și textele legale, vezi `docs/INTREBARI-AVOCAT.md` §1.5)**
+- [x] `Order.channelId` (implicit canalul `web`), `Order.externalId`, `Order.externalData` (JSON brut, pentru depanare), pregătite pentru eMAG (mutate din Faza 4, punctul 5; `12` §2)
+- [x] ⚠️ **Din Faza 5:** angajarea de stoc ține o referință generică (tip + id, cu unicitate) spre comandă, fiindcă `Order` nu exista. Aici se înlocuiește cu **cheie străină** spre `Order`/`OrderLine`, cu **validarea datelor existente** (referințe orfane) înainte de migrație, și testele de concurență din Faza 5 se rulează din nou pe schema nouă
+- [x] `Order.parentSubscriptionId` (câmp pregătitor pentru abonamente, nefolosit; mutat din Faza 4, punctul 4)
+- [x] Schema: Order, OrderLine, OrderEvent, Payment, Address, ShippingZone, ShippingMethod
+- [x] Motor de livrare: zone pe județ/localitate, tarife, praguri, taxă ramburs, **ridicare personală de la sediu** *(furnizor DEMO + rezerva pe zone, editabilă din Setări → Zone de livrare; curierii reali: Faza 12)*
+- [x] **Greutate volumetrică** ((L×l×h)/5000) și tarifare pe cea mai mare dintre greutăți
+- [x] **Interfața `ShippingRateProvider`** (lista de colete, județ, localitate, cod poștal, suma de ramburs → oferte), cu furnizor FALS marcat «DEMO» într-un singur loc (în teste și în aplicație) și **rezervă pe zone județene cu tarife fixe**, editabile din admin, când furnizorul nu răspunde; checkout-ul nu se blochează niciodată. *(Tarifele în timp real de la agregator au fost mutate în Faza 12.)*
+- [x] Pragul de transport gratuit **dezactivabil per clasă de transport și per produs**
+- [x] **Cerere de ofertă instalare** în checkout: bifă nebifată implicit + câmp de observații, fără impact pe total (`15` §4)
+- [x] Blocare automată a easybox-ului dacă în coș există un produs `oversized` (sau `pallet`)
+- [x] Mesaj explicit despre livrarea la nivelul solului, fără descărcare
+- [x] Seed cu județele și localitățile din România (SIRUTA)
+- [x] UI checkout pe pași accordion (`03-frontend.md` §2)
+- [x] Facturare pe firmă cu **validare CUI la ANAF**
+- [x] `PlaceOrderUseCase`: tranzacție atomică, snapshot, rezervare stoc, numerotare, idempotency key *(în cod: `CheckoutService` în `packages/core/src/orders/checkout-service.ts`: previzualizare + plasare atomică, o singură cale de creare a comenzii, păzită de testul de arhitectură `orders`)*
+- [x] State machine cu 3 statusuri și tranziții validate, scrie `OrderEvent`
+- [x] Confirmare + `/comanda/urmarire` pentru guest
+- [x] **Vânzare doar în România, pentru orice produs**: țările permise vin din `regional.allowedCountries` (implicit `["RO"]`), verificate pe server la adresa de livrare și de facturare, cu mesaj clar
+- [x] **Limite de ramburs, configurabile în setări**: `payment.codMaxAmountIndividual` (implicit 10.000 lei) și `payment.codMaxAmountCompany` (implicit 5.000 lei; cheile au două segmente, `grup.nume`, deci nu `payment.cod.maxAmount…`; sumele sunt în bani). „Persoană juridică" = CUI la facturare **sau** grup `cost_plus`. Peste limită, metoda se ascunde și se explică de ce
+- [x] Ramburs + transfer bancar funcționale cap-coadă
+- [x] E2E Playwright: cumpărare completă ca guest
+- [x] ⚠️ **Mutat din Faza 10 (2026-11-18): rezervarea pentru transfer bancar** (Faza 5, punctul 7): termenul vine din `reservationExpiresAt('transfer', …)` = sfârșitul celei de-a `inventory.transferReservationWorkdays`-a zile lucrătoare (fusul `regional.timezone`), salvat ca `Order.reservationExpiresAt`; **la expirare comanda se ANULEAZĂ automat** (job, tranziție validată, `OrderEvent`, rezervarea eliberată). Ramburs nu rezervă: angajează direct (`StockCommitment`) și comanda se confirmă. Confirmarea plății prin transfer există doar în serviciu și în teste (ecranul «marchează plătit» vine în Faza 11)
+- [x] **Mutat din Faza 10 (2026-11-18): calendarul zilelor nelucrătoare** (Faza 5, punctul 7): setarea `regional.nonWorkingDates` (lista de date `AAAA-LL-ZZ`), pe care `addWorkdaysEndOfDay` o sare; cu teste
+- [x] **Decizii Faza 9 (2026-11-18):** checkout doar pentru oaspete (`Order.customerId` gol; contul vine în Faza 14); metode de plată: ramburs și transfer bancar (cardul vine în Faza 10 și nu apare ca opțiune); **ramburs interzis la orice comandă cu cel puțin o linie «La comandă»** (regulă fixă în cod, validată pe server la afișare ȘI la plasare); număr de comandă = prefix setabil + contor în tabel, blocat în aceeași tranzacție cu plasarea (fără goluri); consimțământul (text, versiune, moment) se salvează pe comandă, fără IP și fără user-agent; fără bifă de newsletter până în Faza 17; sursa județelor și localităților: SIRUTA semestrul 1 din 2026 (INS, CC BY 4.0, `docs/SIRUTA-SURSA.md`)
 
 ## FAZA 10 — Plăți online (Netopia + EuPlătesc)
 - [ ] Interfață `PaymentProvider`
