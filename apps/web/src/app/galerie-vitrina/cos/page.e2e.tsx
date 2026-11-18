@@ -174,7 +174,9 @@ const SAMPLE: CartDto = {
   },
   leadTimeText: "Livrare toată odată, în aproximativ 21 de zile",
   freeShipping: { text: "Ai transport gratuit", percent: 100, reached: true },
-  checkoutNote: "Finalizarea comenzii se activează în curând",
+  canCheckout: true,
+  checkoutLabel: "Finalizează comanda",
+  checkoutBlockedNote: "Rezolvă mai întâi problemele de mai sus ca să poți finaliza comanda",
   shippingNote: "Transportul se calculează la finalizarea comenzii",
 };
 

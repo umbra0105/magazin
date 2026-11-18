@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Dialog, StoreButton } from "@ecom/ui";
 import {
   ACCEPT_ALL,
@@ -32,6 +32,25 @@ export function ConsentBanner() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [draft, setDraft] = useState<ConsentChoices>(REFUSE_ALL);
   const titleId = useId();
+  const bannerRef = useRef<HTMLElement>(null);
+  const visible = saved === null;
+
+  // Bannerul e fix, jos: cât e vizibil, pagina primește jos un spațiu cât el, ca să nu acopere ultimele elemente (de exemplu
+  // butonul «Plasează comanda» pe telefon). Spațiul dispare odată cu bannerul.
+  useEffect(() => {
+    const banner = bannerRef.current;
+    if (!visible || !banner) return;
+    const reserve = () => {
+      document.body.style.paddingBottom = `${banner.offsetHeight}px`;
+    };
+    reserve();
+    const observer = new ResizeObserver(reserve);
+    observer.observe(banner);
+    return () => {
+      observer.disconnect();
+      document.body.style.paddingBottom = "";
+    };
+  }, [visible]);
 
   useEffect(() => {
     setSaved(parseConsent(readConsentCookie(document.cookie)));
@@ -56,6 +75,7 @@ export function ConsentBanner() {
     <>
       {saved === null ? (
         <section
+          ref={bannerRef}
           aria-labelledby={titleId}
           data-consent-banner
           className="fixed inset-x-0 bottom-0 z-50 border-t border-line-subtle bg-surface-page text-ink shadow-popover"

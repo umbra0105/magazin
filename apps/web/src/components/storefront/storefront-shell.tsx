@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { AnnouncementBar } from "@ecom/ui";
 import { getMessages } from "@/messages";
 import type { StorefrontChrome } from "@/lib/storefront-chrome";
+import { CheckoutHeader } from "./checkout-header";
 import { ConsentBanner } from "./consent-banner";
 import { StoreFooter } from "./store-footer";
 import { StoreHeader } from "./store-header";
@@ -16,10 +17,13 @@ export function StorefrontShell({
   chrome,
   year,
   children,
+  minimal = false,
 }: {
   chrome: StorefrontChrome;
   year: number;
   children: ReactNode;
+  /** Checkout «curat»: fără anunț, meniu și subsol; doar logo, indicator de securitate și legătura la coș. */
+  minimal?: boolean;
 }) {
   return (
     <div
@@ -35,7 +39,7 @@ export function StorefrontShell({
       >
         {m.skipToContent}
       </a>
-      {chrome.announcement ? (
+      {chrome.announcement && !minimal ? (
         <AnnouncementBar
           label={m.announcementLabel}
           text={chrome.announcement.text}
@@ -43,26 +47,32 @@ export function StorefrontShell({
           tone={chrome.announcement.tone}
         />
       ) : null}
-      <StoreHeader
-        variant={chrome.headerVariant}
-        storeName={chrome.storeName}
-        logoUrl={chrome.logoUrl}
-        menu={chrome.menu}
-        phone={chrome.company.phone}
-        slots={chrome.slots}
-      />
+      {minimal ? (
+        <CheckoutHeader storeName={chrome.storeName} logoUrl={chrome.logoUrl} />
+      ) : (
+        <StoreHeader
+          variant={chrome.headerVariant}
+          storeName={chrome.storeName}
+          logoUrl={chrome.logoUrl}
+          menu={chrome.menu}
+          phone={chrome.company.phone}
+          slots={chrome.slots}
+        />
+      )}
       <main id="continut" className="flex-1">
         {children}
       </main>
-      <StoreFooter
-        storeName={chrome.storeName}
-        tagline={chrome.tagline}
-        menu={chrome.menu}
-        company={chrome.company}
-        legal={chrome.legal}
-        year={year}
-        variant={chrome.footerVariant}
-      />
+      {minimal ? null : (
+        <StoreFooter
+          storeName={chrome.storeName}
+          tagline={chrome.tagline}
+          menu={chrome.menu}
+          company={chrome.company}
+          legal={chrome.legal}
+          year={year}
+          variant={chrome.footerVariant}
+        />
+      )}
       <ConsentBanner />
     </div>
   );

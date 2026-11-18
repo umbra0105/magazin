@@ -11,3 +11,4 @@ export * from "./order-service";
 export * from "./order-state";
 export * from "./order-totals";
 export * from "./payment-rules";
+export * from "./order-access";

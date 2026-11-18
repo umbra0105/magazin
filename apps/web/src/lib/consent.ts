@@ -15,7 +15,13 @@ export const CONSENT_COOKIE = "ecom_consent";
 export const CART_COOKIE = "ecom_cart";
 
 /** Cookie-urile strict necesare ale aplicației (lista din politica de cookie-uri); niciunul nu depinde de alegerea vizitatorului. */
-export const NECESSARY_COOKIES = [CART_COOKIE] as const;
+/**
+ * Cookie-ul de acces la pagina de confirmare a comenzii (Faza 9): STRICT NECESAR (fără el clientul nu și-ar putea vedea comanda
+ * imediat după plasare). Conține un jeton semnat cu HMAC (ID-ul comenzii și un termen scurt), `httpOnly`, `SameSite=Lax`, 2 ore.
+ */
+export const ORDER_ACCESS_COOKIE = "ecom_order";
+
+export const NECESSARY_COOKIES = [CART_COOKIE, ORDER_ACCESS_COOKIE] as const;
 export const CONSENT_VERSION = 1;
 export const CONSENT_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
