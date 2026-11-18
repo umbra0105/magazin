@@ -380,7 +380,7 @@ ALTER TABLE "order_line" ADD CONSTRAINT "order_line_total_check"
   CHECK ("netMinor" + "taxMinor" = "lineTotalMinor");
 ALTER TABLE "order_line" ADD CONSTRAINT "order_line_stock_state_check"
   CHECK (("stockState" = 'on_order' AND "leadTimeDays" IS NOT NULL AND "leadTimeDays" >= 0)
-      OR ("stockState" IN ('in_stock', 'low_stock') AND "leadTimeDays" IS NULL));
+      OR ("stockState" IN ('in_stock', 'limited') AND "leadTimeDays" IS NULL));
 ALTER TABLE "order_line" ADD CONSTRAINT "order_line_shipping_class_check"
   CHECK ("shippingClass" IN ('standard', 'oversized', 'pallet'));
 

@@ -32,7 +32,7 @@ describe("ramburs interzis la «La comandă» (regulă fixă)", () => {
   });
 
   it("«Stoc limitat» și «În stoc» permit rambursul", () => {
-    expect(methodOf(withInput({ lines: [{ stockState: "low_stock" }] }), "cod")?.available).toBe(
+    expect(methodOf(withInput({ lines: [{ stockState: "limited" }] }), "cod")?.available).toBe(
       true,
     );
     expect(methodOf(base, "cod")?.available).toBe(true);

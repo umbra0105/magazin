@@ -23,7 +23,7 @@ export type CodUnavailableReason =
 
 export interface PaymentRuleInput {
   /** Starea de stoc a fiecărei linii, din regulile de disponibilitate (D6). */
-  lines: ReadonlyArray<{ stockState: "in_stock" | "low_stock" | "on_order" }>;
+  lines: ReadonlyArray<{ stockState: "in_stock" | "limited" | "on_order" }>;
   /** Suma care s-ar încasa la livrare cu rambursul: produse + transport + taxa de ramburs. */
   payableOnDeliveryMinor: number;
   /** Persoană juridică: CUI la facturare SAU grup `cost_plus`. */

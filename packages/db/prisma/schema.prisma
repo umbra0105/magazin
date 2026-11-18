@@ -1369,7 +1369,7 @@ model OrderLine {
   netMinor        Int
   taxMinor        Int
   taxRateBps      Int
-  /// Starea de stoc la plasare: in_stock | low_stock | on_order (D6) și termenul, în zile, la «La comandă».
+  /// Starea de stoc la plasare: in_stock | limited | on_order (D6) și termenul, în zile, la «La comandă».
   stockState      String
   leadTimeDays    Int?
   /// Clasa de transport la plasare (standard | oversized | pallet), pentru reguli (easybox) și transport.
