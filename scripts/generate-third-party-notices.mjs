@@ -85,6 +85,13 @@ lines.push(
   "- **MIT-0 — `nodemailer`; BlueOak-1.0.0 — `glob`, `lru-cache`, `minimatch`, `minipass`, `path-scurry`; 0BSD — `tslib`.**",
   "",
 );
+// Date incluse în produs (atribuiri cerute de licențe de date)
+lines.push(
+  "## Date incluse în produs",
+  "",
+  "- **CC BY 4.0 — registrul SIRUTA (județe și localități).** Credit: Institutul Național de Statistică (INS), registrul SIRUTA, semestrul 1 din 2026 (https://data.gov.ro/dataset/siruta_s1-2026). Licența: https://creativecommons.org/licenses/by/4.0/. Date modificate: coloane selectate, diacritice normalizate (ș/ț); la afișare, majusculele sunt convertite în litere mici cu inițiale mari. Fișierul din repo: `packages/core/data/siruta/siruta-s1-2026.json`. Produsul nu este susținut de INS.",
+  "",
+);
 // Binare native opționale (alte platforme decât cea pe care s-a rulat scriptul): din lockfile
 const lock = readFileSync(join(root, "pnpm-lock.yaml"), "utf8");
 const optional = [
