@@ -11,7 +11,7 @@ import {
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { DomainError } from "@ecom/shared";
-import { getAdminWrites } from "@/lib/admin-writes";
+import { getAdminWrites, getAudit } from "@/lib/admin-writes";
 import { parseMoneyInput } from "@/lib/money-input";
 import { getSettings } from "@/lib/services";
 import { withPermission } from "@/lib/session";
@@ -113,12 +113,20 @@ const sku = z.strictObject({ sku: z.string().max(100) });
 
 export const addFreeShippingExclusion = withPermission(
   "settings.write",
-  async (raw: unknown): Promise<ExclusionResult> => {
+  async (raw: unknown, subject): Promise<ExclusionResult> => {
     const parsed = sku.safeParse(raw);
     if (!parsed.success) return { ok: false, code: "invalid" };
     const service = new FreeShippingExclusionService(getDb());
     try {
-      await service.addBySku(parsed.data.sku);
+      const added = await service.addBySku(parsed.data.sku);
+      await getAudit().record({
+        actorId: subject.userId,
+        actorLabel: subject.email,
+        action: "free-shipping-exclusion.add",
+        entity: "product",
+        entityId: added.productId,
+        after: { productId: added.productId, title: added.title, sku: added.sku },
+      });
       return { ok: true, items: await service.list() };
     } catch (error) {
       if (error instanceof DomainError && error.code === "FREE_SHIPPING_SKU_NOT_FOUND") {
@@ -134,11 +142,23 @@ const productRef = z.strictObject({ productId: z.string().min(1).max(64) });
 
 export const removeFreeShippingExclusion = withPermission(
   "settings.write",
-  async (raw: unknown): Promise<ExclusionResult> => {
+  async (raw: unknown, subject): Promise<ExclusionResult> => {
     const parsed = productRef.safeParse(raw);
     if (!parsed.success) return { ok: false, code: "invalid" };
     const service = new FreeShippingExclusionService(getDb());
-    await service.remove(parsed.data.productId);
+    const before = (await service.list()).find(
+      (entry) => entry.productId === parsed.data.productId,
+    );
+    if (await service.remove(parsed.data.productId)) {
+      await getAudit().record({
+        actorId: subject.userId,
+        actorLabel: subject.email,
+        action: "free-shipping-exclusion.remove",
+        entity: "product",
+        entityId: parsed.data.productId,
+        before,
+      });
+    }
     return { ok: true, items: await service.list() };
   },
   { action: "free-shipping-exclusion.remove", entity: "product" },

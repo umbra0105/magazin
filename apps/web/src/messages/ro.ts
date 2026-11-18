@@ -348,7 +348,7 @@ export const ro = {
       readOnly: "Poți vedea setările coșului, dar nu le poți modifica.",
       threshold: "Prag de transport gratuit",
       thresholdHelp:
-        "Suma în lei, cu TVA (de exemplu 500 sau 499,90). Gol = dezactivat: indicatorul nu apare deloc în coș. Pragul pe clasă de transport și pe produs vine odată cu livrarea.",
+        "Suma în lei, cu TVA (de exemplu 500 sau 499,90). Gol = dezactivat: indicatorul nu apare deloc în coș. Mai jos alegi clasele de transport la care se aplică pragul și produsele excluse.",
       thresholdOn: (amount: string) => `Indicatorul e pornit: transport gratuit de la ${amount}.`,
       thresholdOff: "Indicatorul e oprit: coșul nu arată niciun prag.",
       thresholdInvalid:
@@ -412,6 +412,20 @@ export const ro = {
       description:
         "Tarife fixe pe județe, folosite când furnizorul de tarife nu răspunde, ca finalizarea comenzii să nu se blocheze niciodată. Un județ poate fi în cel mult o zonă activă. Sumele sunt în lei, cu TVA inclus.",
       readOnly: "Poți vedea zonele, dar nu le poți modifica.",
+      close: "Închide",
+      none: "Fără",
+      activeBadge: "Activă",
+      selectAll: "Toate județele",
+      selectNone: "Niciun județ",
+      columns: {
+        name: "Zona",
+        counties: "Județe",
+        tariff: "Tarif",
+        freeAbove: "Gratuit de la",
+        codFee: "Taxă ramburs",
+        status: "Stare",
+        actions: "Acțiuni",
+      },
       add: "Adaugă o zonă",
       empty: "Nu există nicio zonă. Fără zone, rezerva folosește un tarif provizoriu DEMO.",
       edit: "Editează",

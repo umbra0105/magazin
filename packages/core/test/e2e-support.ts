@@ -2567,6 +2567,8 @@ export async function setE2eSettings(entries: Record<string, unknown>): Promise<
       );
     }
   });
+  // cache-ul setărilor (300 s) se golește: altfel un spec care a citit setările mai devreme (în paralel) le vede pe cele vechi
+  await withRedis((redis) => redis.del("ecom:settings:v1"));
 }
 
 /** Valoarea curentă a unei setări din baza de TEST (`undefined` dacă nu e stocată). */
@@ -2582,6 +2584,7 @@ export async function clearE2eSettings(keys: readonly string[]): Promise<void> {
   await withClient(async (db) => {
     await db.query(`delete from setting where key = any($1::text[])`, [keys]);
   });
+  await withRedis((redis) => redis.del("ecom:settings:v1"));
 }
 
 /**
@@ -2706,5 +2709,41 @@ export async function countE2eOrdersByEmail(email: string): Promise<number> {
       email,
     ]);
     return row.rows[0]?.n ?? 0;
+  });
+}
+
+/** Șterge zonele de livrare ale testelor (numele începe cu «E2E »); metodele dispar în cascadă. Doar baza de test. */
+export async function removeE2eShippingZones(): Promise<number> {
+  return withClient(async (db) => {
+    const result = await db.query(`delete from shipping_zone where name like 'E2E %'`);
+    return result.rowCount ?? 0;
+  });
+}
+
+/** O zonă de livrare a testelor, cu județele, tariful și starea (pentru verificarea a ce a scris ecranul). */
+export async function readE2eShippingZone(name: string): Promise<{
+  isActive: boolean;
+  countyCodes: number[];
+  method: { priceMinor: number; codFeeMinor: number; freeAboveMinor: number | null } | null;
+} | null> {
+  return withClient(async (db) => {
+    const zone = await db.query(
+      `select id, "isActive", "countyCodes" from shipping_zone where name = $1`,
+      [name],
+    );
+    const row = zone.rows[0] as
+      { id: string; isActive: boolean; countyCodes: number[] } | undefined;
+    if (!row) return null;
+    const method = await db.query(
+      `select "priceMinor", "codFeeMinor", "freeAboveMinor" from shipping_method where "zoneId" = $1 limit 1`,
+      [row.id],
+    );
+    const m = method.rows[0] as
+      { priceMinor: number; codFeeMinor: number; freeAboveMinor: number | null } | undefined;
+    return {
+      isActive: row.isActive,
+      countyCodes: [...row.countyCodes].sort((a, b) => a - b),
+      method: m ?? null,
+    };
   });
 }

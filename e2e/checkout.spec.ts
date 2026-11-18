@@ -512,7 +512,16 @@ test.describe("telefon (390 px)", () => {
     await throughToPayment(page);
     await review(page, "cod");
     await expect(page.locator("[data-consent-banner]")).toBeVisible();
-    await page.locator("[data-checkout-submit]").scrollIntoViewIfNeeded();
+    // la capătul paginii (cât poate derula cumpărătorul) butonul stă deasupra bannerului: pagina rezervă jos spațiu cât bannerul
+    await page.mouse.move(195, 300);
+    await page.mouse.wheel(0, 5000);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1,
+        ),
+      )
+      .toBe(true);
     const submit = await page.locator("[data-checkout-submit]").boundingBox();
     const banner = await page.locator("[data-consent-banner]").boundingBox();
     expect(submit && banner).toBeTruthy();
