@@ -12,3 +12,4 @@ export type {
   RateRequest,
   ShippingRateProvider,
 } from "./types";
+export * from "./zone-service";

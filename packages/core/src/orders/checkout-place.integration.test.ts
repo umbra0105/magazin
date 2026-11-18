@@ -497,6 +497,37 @@ describe("totalul și erorile: o plasare eșuată nu lasă nimic și nu consumă
   });
 });
 
+describe("acordul pentru Termeni", () => {
+  it("fără acord, sau cu o versiune a textului care nu mai e cea curentă, comanda nu se plasează", async () => {
+    await harness(async (h) => {
+      const a = await h.product();
+      const owner = await h.fill([{ variantId: a.variantId }]);
+      const refused = await h.input(owner, {
+        consent: { accepted: false, version: CHECKOUT_TERMS_CONSENT.version },
+      });
+      expect(await codeOf(h.checkout.place(owner, refused))).toBe("VALIDATION_ERROR");
+      const stale = await h.input(owner, {
+        consent: { accepted: true, version: "versiune-veche" },
+      });
+      expect(await codeOf(h.checkout.place(owner, stale))).toBe("VALIDATION_ERROR");
+      expect(await h.tx.order.count({ where: { email: "client@exemplu.ro" } })).toBe(0);
+      expect((await h.cart.view(owner)).lines).toHaveLength(1);
+    });
+  });
+
+  it("textul și versiunea salvate pe comandă sunt cele de pe server, nu cele trimise de client", async () => {
+    await harness(async (h) => {
+      const a = await h.product();
+      const owner = await h.fill([{ variantId: a.variantId }]);
+      const placed = await h.checkout.place(owner, await h.input(owner));
+      const order = await orderOf(h.tx, placed.orderId);
+      expect(order.termsConsentText).toBe(CHECKOUT_TERMS_CONSENT.text);
+      expect(order.termsConsentVersion).toBe(CHECKOUT_TERMS_CONSENT.version);
+      expect(order.termsAcceptedAt).toEqual(NOW);
+    });
+  });
+});
+
 describe("CUI și facturare pe firmă", () => {
   it("ANAF a găsit firma: adresa de facturare are CUI-ul «verified»", async () => {
     await harness(async (h) => {
