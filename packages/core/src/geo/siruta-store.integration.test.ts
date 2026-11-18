@@ -56,7 +56,7 @@ function fictiveRows(): SirutaRow[] {
     { code: VILLAGE_C, countyCode: 98, name: "SAT COMUN", parentCode: UAT_BAD, tip: 23, level: 3 },
     {
       code: BUC,
-      countyCode: 40,
+      countyCode: 91,
       name: "MUNICIPIUL BUCUREȘTI",
       parentCode: null,
       tip: 40,
@@ -64,7 +64,7 @@ function fictiveRows(): SirutaRow[] {
     },
     {
       code: BUC_MUN,
-      countyCode: 40,
+      countyCode: 91,
       name: "MUNICIPIUL BUCUREȘTI",
       parentCode: BUC,
       tip: 1,
@@ -74,7 +74,7 @@ function fictiveRows(): SirutaRow[] {
   for (let i = 1; i <= 6; i++) {
     rows.push({
       code: ok(80_020 + i),
-      countyCode: 40,
+      countyCode: 91,
       name: `BUCUREȘTI SECTORUL ${i}`,
       parentCode: BUC_MUN,
       tip: 6,
@@ -185,7 +185,7 @@ describe("GeoService (citirea pentru checkout)", () => {
     await inRolledBackTransaction(db, async (tx) => {
       await importSirutaDerived(tx, plain(fictiveFile()));
       const geo = new GeoService(tx);
-      const localities = await geo.localities(40);
+      const localities = await geo.localities(91);
       expect(localities.map((l) => l.name)).toEqual([
         "București Sectorul 1",
         "București Sectorul 2",
@@ -195,7 +195,7 @@ describe("GeoService (citirea pentru checkout)", () => {
         "București Sectorul 6",
       ]);
       const sector = localities[0];
-      expect(await geo.resolveLocation(40, sector!.code)).toEqual({
+      expect(await geo.resolveLocation(91, sector!.code)).toEqual({
         countyName: "București",
         localityName: "București Sectorul 1",
       });
@@ -218,7 +218,7 @@ describe("GeoService (citirea pentru checkout)", () => {
     await inRolledBackTransaction(db, async (tx) => {
       await importSirutaDerived(tx, plain(fictiveFile()));
       const geo = new GeoService(tx);
-      await expect(geo.resolveLocation(40, VILLAGE_A)).rejects.toThrow();
+      await expect(geo.resolveLocation(91, VILLAGE_A)).rejects.toThrow();
       await expect(geo.resolveLocation(98, UAT)).rejects.toThrow(); // UAT, nu localitate
       await expect(geo.resolveLocation(98, 1)).rejects.toThrow();
       await expect(geo.resolveLocation(97, VILLAGE_A)).rejects.toThrow();

@@ -2387,6 +2387,10 @@ export interface E2eCartProductSpec {
   stockStatus?: "instock" | "outofstock" | "onbackorder";
   leadTimeDays?: number;
   status?: "active" | "draft" | "archived";
+  /** Faza 9: clasa de transport și datele de livrare ale variantei (grame, mm). */
+  shippingClass?: "standard" | "oversized" | "pallet";
+  weightGrams?: number;
+  dimensionsMm?: [number, number, number];
 }
 
 const trackedCartVariants = new Set<string>();
@@ -2408,8 +2412,9 @@ export async function seedE2eCartProduct(
       : undefined;
     const product = await db.query(
       `insert into product (id, slug, title, status, "manageStock", "stockStatus", "publishedAt", "updatedAt",
-                            "priceBasis", "saleStep", "saleStepLabel", "minSteps", "measureUnitId", "leadTimeDays")
-       values (gen_random_uuid()::text, $1, $2, $3, false, $4, now(), now(), $5, $6, $7, $8, $9, $10) returning id`,
+                            "priceBasis", "saleStep", "saleStepLabel", "minSteps", "measureUnitId", "leadTimeDays",
+                            "shippingClass")
+       values (gen_random_uuid()::text, $1, $2, $3, false, $4, now(), now(), $5, $6, $7, $8, $9, $10, $11) returning id`,
       [
         slug,
         title,
@@ -2421,12 +2426,14 @@ export async function seedE2eCartProduct(
         spec.minSteps ?? null,
         unit ?? null,
         spec.leadTimeDays ?? null,
+        spec.shippingClass ?? "standard",
       ],
     );
     const productId = product.rows[0]?.id as string;
     const variant = await db.query(
-      `insert into product_variant (id, "productId", sku, price, "salePrice", "saleStartsAt", "saleEndsAt", "isDefault", "updatedAt")
-       values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, true, now()) returning id`,
+      `insert into product_variant (id, "productId", sku, price, "salePrice", "saleStartsAt", "saleEndsAt", "isDefault", "updatedAt",
+                                     "weightGrams", "lengthMm", "widthMm", "heightMm")
+       values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, true, now(), $7, $8, $9, $10) returning id`,
       [
         productId,
         sku,
@@ -2434,6 +2441,10 @@ export async function seedE2eCartProduct(
         spec.salePrice ?? null,
         spec.salePrice ? new Date(Date.now() - 86_400_000) : null,
         spec.salePrice ? new Date(Date.now() + 86_400_000) : null,
+        spec.weightGrams ?? 1000,
+        spec.dimensionsMm?.[0] ?? 200,
+        spec.dimensionsMm?.[1] ?? 200,
+        spec.dimensionsMm?.[2] ?? 200,
       ],
     );
     const variantId = variant.rows[0]?.id as string;
@@ -2537,5 +2548,163 @@ export async function countE2eCartLines(email: string): Promise<number> {
       [email],
     );
     return (result.rows[0]?.n as number | undefined) ?? 0;
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------- Faza 9
+
+/** Domeniul emailurilor comenzilor create de E2E (se șterg după ele). */
+export const E2E_ORDER_EMAIL_DOMAIN = "@e2e-comanda.invalid";
+
+/** Setează mai multe setări deodată în baza de TEST (ca `setTestSetting`, dar fără URL explicit). */
+export async function setE2eSettings(entries: Record<string, unknown>): Promise<void> {
+  await withClient(async (db) => {
+    for (const [key, value] of Object.entries(entries)) {
+      await db.query(
+        `insert into setting (key, "group", value, "updatedAt") values ($1, $2, $3::jsonb, now())
+         on conflict (key) do update set value = excluded.value, "updatedAt" = now()`,
+        [key, key.split(".")[0], JSON.stringify(value)],
+      );
+    }
+  });
+}
+
+/** Valoarea curentă a unei setări din baza de TEST (`undefined` dacă nu e stocată). */
+export async function readE2eSetting(key: string): Promise<unknown> {
+  return withClient(async (db) => {
+    const row = await db.query(`select value from setting where key = $1`, [key]);
+    return row.rows[0]?.value;
+  });
+}
+
+/** Șterge setările date (revine la valoarea implicită din registru). */
+export async function clearE2eSettings(keys: readonly string[]): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`delete from setting where key = any($1::text[])`, [keys]);
+  });
+}
+
+/**
+ * Datele FICTIVE ale magazinului pentru checkout (cele reale le dă proprietarul înainte de lansare): date bancare, ridicare
+ * personală activă, prefix de număr de comandă. Nu schimbă nimic în afara bazei de TEST.
+ */
+export async function seedE2eCheckoutSettings(): Promise<void> {
+  await setE2eSettings({
+    "company.legalName": "Magazin Demo SRL",
+    "company.bankName": "Banca Demo",
+    "company.iban": "RO00DEMO0000000000000000",
+    "shipping.pickupEnabled": true,
+    "checkout.orderNumberPrefix": "E2E-",
+    "checkout.orderNumberDigits": 6,
+  });
+}
+
+/** Comenzile create de E2E (email din `E2E_ORDER_EMAIL_DOMAIN`) și tot ce atârnă de ele (linii, adrese, plăți, evenimente). */
+export async function removeE2eOrders(): Promise<number> {
+  return withClient(async (db) => {
+    const pattern = `%${E2E_ORDER_EMAIL_DOMAIN}`;
+    await db.query(
+      `delete from stock_commitment where "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
+    await db.query(
+      `delete from stock_reservation where "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
+    const removed = await db.query(`delete from customer_order where email like $1`, [pattern]);
+    return removed.rowCount ?? 0;
+  });
+}
+
+export interface E2eOrderSnapshot {
+  id: string;
+  number: string;
+  status: string;
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  paymentMethod: string;
+  shippingMethodCode: string;
+  subtotalMinor: number;
+  shippingMinor: number;
+  codFeeMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+  customerId: string | null;
+  installationRequested: boolean;
+  installationNote: string | null;
+  customerNote: string | null;
+  termsConsentText: string;
+  termsConsentVersion: string;
+  reservationExpiresAt: Date | null;
+  lines: Array<{
+    sku: string;
+    stockState: string;
+    leadTimeDays: number | null;
+    lineTotalMinor: number;
+    taxMinor: number;
+  }>;
+  addresses: Array<{
+    kind: string;
+    countyName: string;
+    localityName: string;
+    vatId: string | null;
+    vatIdVerification: string | null;
+    postalCode: string;
+  }>;
+  events: string[];
+  payments: Array<{ provider: string; status: string; amountMinor: number }>;
+  stockCommitments: number;
+  stockReservations: number;
+}
+
+/** O comandă după număr, cu liniile, adresele, plățile, evenimentele și numărul de angajări/rezervări de stoc. */
+export async function readE2eOrder(number: string): Promise<E2eOrderSnapshot | null> {
+  return withClient(async (db) => {
+    const found = await db.query(
+      `select id, number, status, "paymentStatus", "fulfillmentStatus", "paymentMethod", "shippingMethodCode", "subtotalMinor",
+              "shippingMinor", "codFeeMinor", "taxMinor", "totalMinor", "customerId", "installationRequested", "installationNote",
+              "customerNote", "termsConsentText", "termsConsentVersion", "reservationExpiresAt"
+         from customer_order where number = $1`,
+      [number],
+    );
+    const order = found.rows[0];
+    if (!order) return null;
+    const [lines, addresses, events, payments, commitments, reservations] = await Promise.all([
+      db.query(
+        `select sku, "stockState", "leadTimeDays", "lineTotalMinor", "taxMinor" from order_line where "orderId" = $1 order by "createdAt"`,
+        [order.id],
+      ),
+      db.query(
+        `select kind, "countyName", "localityName", "vatId", "vatIdVerification", "postalCode" from address where "orderId" = $1`,
+        [order.id],
+      ),
+      db.query(`select type from order_event where "orderId" = $1 order by "createdAt", id`, [
+        order.id,
+      ]),
+      db.query(`select provider, status, "amountMinor" from payment where "orderId" = $1`, [
+        order.id,
+      ]),
+      db.query(`select count(*)::int as n from stock_commitment where "orderId" = $1`, [order.id]),
+      db.query(`select count(*)::int as n from stock_reservation where "orderId" = $1`, [order.id]),
+    ]);
+    return {
+      ...order,
+      lines: lines.rows,
+      addresses: addresses.rows,
+      events: events.rows.map((row) => row.type as string),
+      payments: payments.rows,
+      stockCommitments: commitments.rows[0]?.n ?? 0,
+      stockReservations: reservations.rows[0]?.n ?? 0,
+    } as E2eOrderSnapshot;
+  });
+}
+
+/** Câte comenzi cu emailul dat există (pentru «o singură comandă la dublu-click»). */
+export async function countE2eOrdersByEmail(email: string): Promise<number> {
+  return withClient(async (db) => {
+    const row = await db.query(`select count(*)::int as n from customer_order where email = $1`, [
+      email,
+    ]);
+    return row.rows[0]?.n ?? 0;
   });
 }
