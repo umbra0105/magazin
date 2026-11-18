@@ -165,6 +165,13 @@ const SETUP = [
 
 const MINIO = "Pornește MinIO (storage S3 de test)";
 
+/**
+ * Singurul pas NOU față de vechiul `check`, descoperit la prima rulare reală pe GitHub: serverul E2E (`webServer` din Playwright)
+ * pre-randează aplicația pe `ecom_test` ÎNAINTE de `globalSetup`, iar în jobul unic baza exista deja pentru că testele de integrare
+ * o creau mai devreme. Cu joburi paralele, `e2e` o creează și o migrează singur, cu aceeași funcție ca `globalSetup`-urile.
+ */
+const PREPARE_TEST_DB = "Pregătește baza de test E2E (ecom_test, creată și migrată)";
+
 /** Pașii de lucru ai vechiului `check`, în ordine, pe jobul căruia îi aparțin acum: [nume, comandă sau `uses`]. */
 const WORK: Readonly<Record<string, ReadonlyArray<readonly [string, string]>>> = {
   "lint-unit": [
@@ -180,6 +187,7 @@ const WORK: Readonly<Record<string, ReadonlyArray<readonly [string, string]>>> =
   ],
   e2e: [
     ["Migrații DB (baza aplicației, pentru build și E2E)", "pnpm --filter @ecom/db db:deploy"],
+    [PREPARE_TEST_DB, "prepareTestDatabase"],
     [MINIO, "docker run"],
     ["Build", "pnpm build"],
     ["Instalează browserul Playwright", "pnpm exec playwright install --with-deps chromium"],
@@ -321,6 +329,21 @@ describe("jobul `check` (agregarea)", () => {
       expect(script, `${match[2]}`).toContain(`[ "$${match[1]}" != "success" ]`);
     }
     expect(script).toContain("exit 1");
+  });
+});
+
+describe("YAML valid în punctele fragile (testul nu are parser YAML; Prettier din pre-commit și din CI rămâne verificarea completă)", () => {
+  it("valorile simple (fără ghilimele) ale lui `name:` nu conțin «: » sau « #» (ar rupe YAML-ul sau l-ar trunchia)", () => {
+    for (const line of lines) {
+      const match = /^\s*(?:- )?name:\s*(.+)$/.exec(line);
+      const value = (match?.[1] ?? "").trim();
+      if (value === "" || /^["'|>]/.test(value)) continue;
+      expect(value, line.trim()).not.toMatch(/: | #/);
+    }
+  });
+
+  it("indentare doar cu spații (YAML nu acceptă tab-uri)", () => {
+    expect(raw).not.toContain("\t");
   });
 });
 

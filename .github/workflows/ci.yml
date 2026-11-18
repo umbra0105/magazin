@@ -191,6 +191,14 @@ jobs:
       - name: Migrații DB (baza aplicației, pentru build și E2E)
         run: pnpm --filter @ecom/db db:deploy
 
+      # Serverul E2E (`webServer` din Playwright) pre-randează aplicația pe `ecom_test` ÎNAINTE de `globalSetup`. În jobul unic de
+      # dinainte baza exista deja, creată de testele de integrare; acum jobul e independent și o creează singur, cu aceeași funcție
+      # ca `globalSetup` (refuză orice bază fără "test" în nume; idempotentă).
+      - name: Pregătește baza de test E2E (ecom_test, creată și migrată)
+        run: >-
+          node --import tsx -e "import('./packages/db/test/prepare-test-database.ts').then((m) =>
+          m.prepareTestDatabase(process.env.TEST_DATABASE_URL, process.env.TEST_REDIS_URL, process.cwd() + '/packages/db'))"
+
       # MinIO nu poate fi în `services:` (acolo nu se poate da comanda `server /data`).
       # Aceeași imagine, fixată prin digest, ca în docker/docker-compose.dev.yml.
       - name: Pornește MinIO (storage S3 de test)
