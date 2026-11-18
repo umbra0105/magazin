@@ -310,6 +310,8 @@ test.describe("verificarea 4: limitele de ramburs", () => {
     await chooseShipping(page);
     // persoană fizică: rambursul există
     await next(page, "billing");
+    // pasul «Plata» s-a DESCHIS (metodele sunt în DOM și înainte de deschidere: fără asta, clicul de mai jos putea veni prea devreme)
+    await expect(step(page, "payment").locator('button[aria-expanded="true"]')).toBeVisible();
     await expect(step(page, "payment").locator('[data-method="cod"]')).toHaveAttribute(
       "data-available",
       "true",
