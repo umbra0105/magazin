@@ -9,6 +9,7 @@ import {
 } from "../storefront/appearance";
 import { z } from "zod";
 import { normalizeHostname } from "../media/host";
+import { isValidCalendarDate } from "../inventory/workdays";
 
 /**
  * Registrul setărilor: singura sursă pentru chei, tipuri și valori implicite NEUTRE.
@@ -46,6 +47,17 @@ export const settingGroups = {
     currency: z.string().length(3).default("RON"),
     locale: z.string().default("ro-RO"),
     timezone: z.string().default("Europe/Bucharest"),
+    /**
+     * Zile nelucrătoare (sărbători legale, zile libere ale magazinului), ca date locale `AAAA-LL-ZZ`: se sar la expirarea
+     * rezervării prin transfer bancar (`inventory.transferReservationWorkdays`). Lista o completează magazinul din admin;
+     * pachetul nu poartă sărbători scrise în cod.
+     */
+    nonWorkingDates: z
+      .array(
+        z.string().refine(isValidCalendarDate, "Data trebuie să fie AAAA-LL-ZZ, o zi care există"),
+      )
+      .max(400)
+      .default([]),
   },
   tax: {
     /** Cota unică de TVA, în procente. Singura sursă: nu se hardcodează nicăieri în cod. */
