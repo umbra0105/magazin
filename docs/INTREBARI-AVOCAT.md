@@ -52,6 +52,10 @@ sau recomandări (de exemplu cerem plata în avans pentru aceste produse)? *(Dec
 
 Răspuns:
 
+**1.6. Ce afirmăm (și ce NU) despre returnarea produselor „la comandă” (adăugată în Faza 9).** Magazinul NU scrie pe site «nu se pot returna» pentru produsele aduse de la furnizor și nu blochează nimic pe această bază. Excepția de la dreptul de retragere de 14 zile este pentru bunuri **făcute după specificațiile clientului** (sau personalizate), nu automat pentru cele pe care le comandăm noi de la furnizor pentru că nu sunt în stoc. Confirmați că un produs standard, doar adus la comandă, rămâne returnabil în 14 zile? Ce textul recomandați (la produs, la plată, în termeni)? *(Returnările se construiesc în Faza 14.)*
+
+Răspuns:
+
 ---
 
 ## 2. Prețul redus și „cel mai mic preț din ultimele 30 de zile” (Omnibus)
@@ -131,6 +135,8 @@ de la dreptul de retragere pentru produse realizate conform specificațiilor cli
 
 Răspuns:
 
+*Legătură (Faza 9): vezi și 1.6. Nu afirmăm pe site că produsele „la comandă” nu se returnează; excepția se aplică doar produselor realizate după specificațiile clientului.*
+
 **4.3.** Pentru produsele chimice (de exemplu bisulfat de sodiu) există obligații de informare, de limitare a livrării sau de
 etichetare pe care trebuie să le reflectăm în magazin (fișă de securitate, avertismente, restricții de vânzare la distanță)?
 
@@ -175,5 +181,21 @@ Răspuns:
 
 **6.2.** Este corect să ștergem adresa imediat după trimitere, fără să păstrăm dovada consimțământului? Dacă trebuie păstrată dovada (data și
 textul acceptat), cât timp și unde?
+
+Răspuns:
+
+---
+
+## 7. Plasarea comenzii (adăugată în Faza 9)
+
+**7.1. Textul butonului final.** Azi butonul este «Plasează comanda». Legea cere ca butonul de finalizare să indice clar obligația de plată (de exemplu «Comandă cu obligație de plată»)? Ce formulare recomandați pentru comenzile cu ramburs și pentru cele cu transfer bancar (unde plata se face după plasare)? Textul stă într-un singur mesaj, ușor de schimbat.
+
+Răspuns:
+
+**7.2. Adresa IP și user-agent pe comandă.** În Faza 9 NU salvăm adresa IP și user-agent-ul clientului pe comandă. Sunt necesare ca dovadă a consimțământului la Termeni sau la bifa legală? Dacă da, cât timp se păstrează și ce scriem în politica de confidențialitate?
+
+Răspuns:
+
+**7.3. Formularea consimțământului pentru Termeni.** Bifa obligatorie, nepre-bifată: «Am citit și sunt de acord cu Termenii și condițiile» (cu legături către pagini). Salvăm pe comandă textul exact, versiunea și momentul. Este suficient? Ce alte acorduri trebuie bifate separat la comandă (politica de confidențialitate, informații precontractuale)? *(Paginile legale reale vin în Faza 16; până atunci legăturile duc la pagini provizorii, noindex, marcate «în curs de redactare».)*
 
 Răspuns:

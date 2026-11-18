@@ -1,6 +1,6 @@
 # Sursa pentru județe și localități (SIRUTA) — propunere pentru Faza 9
 
-**Stare:** sursa a fost **aprobată** de utilizator (INS, SIRUTA semestrul 1 din 2026, varianta A, CC BY 4.0). Încărcarea e **oprită la 🛑** de la verificarea cifrei de control (vezi secțiunea 7).
+**Stare:** sursa e **aprobată** de utilizator (INS, SIRUTA semestrul 1 din 2026, varianta A, CC BY 4.0); decizia pe cifra de control (excepții documentate) e luată, vezi secțiunea 7. Implementarea e în curs.
 **Întocmit:** 2026-11-18, la începutul Fazei 9. Citirea paginilor s-a făcut doar în browser/HTTP (fără descărcarea fișierelor de date).
 
 **Aprobare:** «Sursa SIRUTA aprobată: INS, registrul SIRUTA semestrul 1 din 2026, varianta A (CSV de pe data.gov.ro), licență CC BY 4.0», 2026-11-18. Fișierul stă în `local-data/siruta/` (necomis).
@@ -57,7 +57,7 @@ Verificat cu un script de probă (în afara repo-ului, doar numere), pe `local-d
 - **Diacritice:** numele sunt în **majuscule**, cu sedilă (`Ţ`, `Ş`) în mare parte și câteva cu virgulă (`Ș`): normalizarea la ș/ț e necesară.
 - **Cifra de control:** algoritmul oficial din metodologie (secțiunea «Codul de identificare SIRUTA»): primele 5 cifre ale codului de 6 cifre (completat cu zerouri la stânga) se înmulțesc cu ponderile **7, 5, 3, 2, 1**; produsele se adună **cifră cu cifră** (35 contează 3+5); restul sumei la 10 se scade din 11; restul acelui rezultat la 10 e cifra de control. Exemplul din document: 179132 → 17913 → 29 → rest 9 → 11−9 = 2 → cifra 2. Implementarea mea reproduce exemplul.
 - **🛑 Datele nu respectă algoritmul pentru 77 de coduri din 16.978 (0,45%).** 16.901 coduri îl respectă, inclusiv toate cazurile cu rest 0 (1.685 din 1.693); cele 77 sunt răspândite uniform pe toate resturile, deci nu e o diferență de interpretare a algoritmului. Sunt **68 de comune (`TIP 3`) și 9 sate (`TIP 23`)**, din 15 județe (JUD 1–5, 7–10, 12–14, 16, 17, 19), cu coduri între 9019 și 86519. Sectoarele și județele trec. Metodologia nu spune nimic despre excepții.
-- **Decizie cerută (🛑, regula din prompt):** cum tratăm cele 77. Opțiuni în raportul din sesiune.
+- **Decizia utilizatorului (2026-11-18): excepții documentate, cu întărire.** Importul verifică cifra de control oficială pentru fiecare cod. Sunt acceptate DOAR cele 77 de coduri identificate, legate de tuplul exact (cod SIRUTA, nume, cod părinte, tip), cu lista în fișierul derivat și motivul «nu respectă cifra de control oficială, preluat ca atare din INS S1 2026». Orice altă nepotrivire, sau o schimbare a numelui, părintelui sau tipului unui rând din listă, respinge tot importul (tranzacție unică). La o versiune nouă raportul de diferențe include și excepțiile (noi, dispărute, schimbate), iar decizia o ia utilizatorul. Numele original (cu diacritice normalizate la ș/ț) rămâne pentru căutare și potrivire; numele de afișare se calculează separat (litere mici, inițiale mari, cuvinte de legătură mici). Lista de coduri nu se scrie în conversație sau în acest document: stă doar în fișierul derivat.
 
 ## Surse citite
 
