@@ -11,15 +11,15 @@ import {
   type ShippingRuntimeSettings,
 } from "../shipping/shipping-service";
 import type { ShippingRateProvider } from "../shipping/types";
-import { inRolledBackTransaction, type TestTx } from "../test-utils/rollback";
+import { inRolledBackTransaction, type TestTx } from "./rollback";
 import {
   addStockProduct,
   createStockContext,
   type ProductSpec,
   type StockContext,
-} from "../test-utils/stock-fixtures";
-import { CHECKOUT_TERMS_CONSENT } from "./consent";
-import { CheckoutService, type CheckoutSettings } from "./checkout-service";
+} from "./stock-fixtures";
+import { CHECKOUT_TERMS_CONSENT } from "../orders/consent";
+import { CheckoutService, type CheckoutSettings } from "../orders/checkout-service";
 
 /**
  * Fixture-uri comune ale testelor de checkout, comenzi, plăți și expirare: un coș cu produse reale într-o tranzacție ANULATĂ,

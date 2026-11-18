@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
-import { NOW, codeOf, harness, orderOf, q, type Harness } from "./checkout-fixtures";
+import { NOW, codeOf, harness, orderOf, q, type Harness } from "../test-utils/checkout-fixtures";
 import { confirmBankTransferPayment, expireDueTransferOrders } from "./order-payments";
 
 /** Confirmarea transferului și anularea automată la expirare (Faza 9), pe Postgres real, în tranzacție anulată. */

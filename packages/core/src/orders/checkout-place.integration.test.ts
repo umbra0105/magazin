@@ -6,7 +6,7 @@ import { DemoShippingRateProvider } from "../shipping/demo-rates";
 import type { ShippingRateProvider } from "../shipping/types";
 import type { TestTx } from "../test-utils/rollback";
 import { CHECKOUT_TERMS_CONSENT } from "./consent";
-import { NOW, codeOf, harness, orderOf, q, type Harness } from "./checkout-fixtures";
+import { NOW, codeOf, harness, orderOf, q, type Harness } from "../test-utils/checkout-fixtures";
 
 /**
  * Plasarea comenzii pe Postgres real, în tranzacție anulată (fixture-urile sunt în `checkout-fixtures.ts`). Concurența cu date

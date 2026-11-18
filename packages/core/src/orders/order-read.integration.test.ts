@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
-import { harness, q } from "./checkout-fixtures";
+import { harness, q } from "../test-utils/checkout-fixtures";
 import { getOrderSummary, normalizeTrackingKey, trackOrder } from "./order-read";
 
 const db = getDb();

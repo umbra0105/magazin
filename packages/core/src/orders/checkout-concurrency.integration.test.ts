@@ -13,7 +13,7 @@ import {
   purgeStockLeftovers,
   type StockContext,
 } from "../test-utils/stock-fixtures";
-import { CHECKOUT_SETTINGS } from "./checkout-fixtures";
+import { CHECKOUT_SETTINGS } from "../test-utils/checkout-fixtures";
 import { CHECKOUT_TERMS_CONSENT } from "./consent";
 import { CheckoutService } from "./checkout-service";
 
@@ -23,10 +23,10 @@ import { CheckoutService } from "./checkout-service";
  * comise nu se amestecă cu testele în tranzacție anulată); datele se șterg la sfârșitul fiecărui test.
  */
 const pool = getDb();
-const NAMESPACE = "chkcc";
+const STOCK_NAMESPACE = "chkcc";
 
 afterAll(async () => {
-  await purgeStockLeftovers(pool, NAMESPACE);
+  await purgeStockLeftovers(pool, STOCK_NAMESPACE);
   await pool.$disconnect();
 });
 
@@ -61,8 +61,8 @@ interface Env {
 }
 
 async function withEnv<T>(fn: (env: Env) => Promise<T>): Promise<T> {
-  await purgeStockLeftovers(pool, NAMESPACE);
-  const ctx = await createStockContext(pool, { namespace: NAMESPACE });
+  await purgeStockLeftovers(pool, STOCK_NAMESPACE);
+  const ctx = await createStockContext(pool, { namespace: STOCK_NAMESPACE });
   const sirutaCodes: number[] = [];
   const orderIds: string[] = [];
   const channelExisted = (await pool.salesChannel.findUnique({ where: { code: "web" } })) !== null;

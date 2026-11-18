@@ -16,6 +16,9 @@ import { describe, expect, it } from "vitest";
  *     literal zecimal. Sumele sunt `int` în bani, TVA-ul se extrage cu `vat.ts`.
  *  6. Costul de achiziție nu apare în zonele comenzii, livrării, geografiei și checkout-ului (nici în interfața lor).
  *  7. Niciun apel direct la ANAF în afara clientului din `packages/integrations/src/anaf`.
+ *  8. Rambursul interzis la liniile «La comandă» (regulă fixă): decizia stă DOAR în `orders/payment-rules.ts`; `CheckoutService`
+ *     o apelează și la previzualizare (`availablePaymentMethods`) ȘI la plasare (`assertPaymentMethodAllowed`); interfața din
+ *     checkout și codul de transport nu o refac (niciun `"on_order"` în componentele de checkout, în `checkout-dto` doar ca motiv).
  *
  * Funcțiile `find…` sunt pure și testate pe cazuri sintetice, ca testul să nu poată trece «în gol».
  */
@@ -255,6 +258,39 @@ export function findAnafCalls(files: readonly SourceFile[]): Violation[] {
   );
 }
 
+const PAYMENT_RULES = "packages/core/src/orders/payment-rules.ts";
+
+/** Regula rambursului stă într-un singur loc, iar serverul o aplică și la previzualizare, și la plasare. */
+export function findCodRuleBypass(files: readonly SourceFile[]): Violation[] {
+  const found = scan(
+    files,
+    (path) =>
+      path !== PAYMENT_RULES &&
+      (/^packages\/core\/src\/(orders|shipping)\//.test(path) ||
+        /^apps\/web\/src\/(components\/storefront\/checkout|app\/\(checkout\))/.test(path)),
+    [
+      [/\bon_order\b/, "stare «La comandă» citită în afara payment-rules pentru a decide plata"],
+      [/\bhas_on_order_line\b/, "motivul regulii rambursului construit în afara payment-rules"],
+    ],
+    stripComments,
+  ).filter(
+    (v) =>
+      // locuri legitime: starea fizică a liniei (stoc, termen de livrare), nu decizia de plată
+      !/^packages\/core\/src\/(orders\/(checkout-service|order-read)\.ts|shipping\/)/.test(v.path),
+  );
+  const service = files.find((f) => f.path === CHECKOUT_SERVICE);
+  const text = service ? stripComments(service.content) : "";
+  for (const call of ["availablePaymentMethods(", "assertPaymentMethodAllowed("]) {
+    if (!text.includes(call))
+      found.push({
+        path: CHECKOUT_SERVICE,
+        line: 1,
+        rule: `CheckoutService nu mai apelează ${call}): rambursul la «La comandă» nu mai e validat`,
+      });
+  }
+  return found;
+}
+
 const file = (path: string, content: string): SourceFile => ({ path, content });
 
 describe("funcțiile de verificare găsesc încălcările (cazuri sintetice)", () => {
@@ -338,6 +374,31 @@ describe("funcțiile de verificare găsesc încălcările (cazuri sintetice)", (
   });
 });
 
+describe("regula rambursului (cazuri sintetice)", () => {
+  const service = (body: string) => file(CHECKOUT_SERVICE, body);
+  const ok = service("availablePaymentMethods({}); assertPaymentMethodAllowed({}, m);");
+  it("trece când serverul aplică regula în ambele locuri", () => {
+    expect(findCodRuleBypass([ok])).toEqual([]);
+  });
+  it("pică dacă la plasare nu se mai validează metoda", () => {
+    expect(findCodRuleBypass([service("availablePaymentMethods({});")]).length).toBe(1);
+  });
+  it("pică dacă previzualizarea nu mai calculează metodele", () => {
+    expect(findCodRuleBypass([service("assertPaymentMethodAllowed({}, m);")]).length).toBe(1);
+  });
+  it("pică dacă interfața de checkout re-decide rambursul", () => {
+    const ui = file(
+      "apps/web/src/components/storefront/checkout/checkout-flow.tsx",
+      'const noCod = lines.some((l) => l.state === "on_order");',
+    );
+    expect(findCodRuleBypass([ok, ui]).length).toBe(1);
+  });
+  it("pică dacă un alt fișier din orders/ refolosește motivul", () => {
+    const other = file("packages/core/src/orders/x.ts", 'const r = "has_on_order_line";');
+    expect(findCodRuleBypass([ok, other]).length).toBe(1);
+  });
+});
+
 describe("codul de producție respectă regulile comenzilor", () => {
   const files = productionFiles();
   const show = (violations: Violation[]) => violations.map((v) => `${v.path}:${v.line} ${v.rule}`);
@@ -370,5 +431,8 @@ describe("codul de producție respectă regulile comenzilor", () => {
   });
   it("ANAF se apelează doar din clientul dedicat", () => {
     expect(show(findAnafCalls(files))).toEqual([]);
+  });
+  it("rambursul interzis la «La comandă»: o singură regulă, aplicată la previzualizare și la plasare", () => {
+    expect(show(findCodRuleBypass(files))).toEqual([]);
   });
 });

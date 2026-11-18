@@ -36,7 +36,11 @@ function dayKey(utcMidnightMs: number): string {
 export function isValidCalendarDate(value: string): boolean {
   const m = ISO_DAY.exec(value);
   if (!m) return false;
-  const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const [year, month, day] = [1, 2, 3].map((i) => Number.parseInt(m[i] ?? "", 10)) as [
+    number,
+    number,
+    number,
+  ];
   const probe = new Date(Date.UTC(year, month - 1, day));
   return (
     probe.getUTCFullYear() === year &&
