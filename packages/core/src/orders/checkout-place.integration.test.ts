@@ -178,28 +178,24 @@ describe("comandă cu transfer bancar", () => {
   });
 
   it("zilele nelucrătoare din setări mută termenul rezervării", async () => {
-    await harness(async (h) => {
-      const a = await h.product();
-      const owner = await h.fill([{ variantId: a.variantId }]);
-      const result = await h.checkout.place(
-        owner,
-        await h.input(owner, { paymentMethod: "bank_transfer" }),
-      );
-      const plain = (await orderOf(h.tx, result.orderId)).reservationExpiresAt!;
-      await harness(
-        async (h2) => {
-          const b = await h2.product();
-          const owner2 = await h2.fill([{ variantId: b.variantId }]);
-          const result2 = await h2.checkout.place(
-            owner2,
-            await h2.input(owner2, { paymentMethod: "bank_transfer" }),
+    // două plasări una după alta (fiecare în tranzacția ei anulată): două tranzacții deschise deodată ar insera același seed de bază
+    // și s-ar bloca una pe alta pe o bază doar migrată
+    const placeReservationEnd = (settings: Partial<Harness["settings"]>) =>
+      harness(
+        async (h) => {
+          const a = await h.product();
+          const owner = await h.fill([{ variantId: a.variantId }]);
+          const result = await h.checkout.place(
+            owner,
+            await h.input(owner, { paymentMethod: "bank_transfer" }),
           );
-          const shifted = (await orderOf(h2.tx, result2.orderId)).reservationExpiresAt!;
-          expect(shifted.getTime()).toBeGreaterThan(plain.getTime());
+          return (await orderOf(h.tx, result.orderId)).reservationExpiresAt!;
         },
-        { settings: { nonWorkingDates: ["2030-06-17", "2030-06-18"] } },
+        { settings },
       );
-    });
+    const plain = await placeReservationEnd({});
+    const shifted = await placeReservationEnd({ nonWorkingDates: ["2030-06-17", "2030-06-18"] });
+    expect(shifted.getTime()).toBeGreaterThan(plain.getTime());
   });
 
   it("fără datele bancare ale magazinului, transferul nu se poate plasa", async () => {
