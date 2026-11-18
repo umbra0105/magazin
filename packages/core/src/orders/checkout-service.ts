@@ -67,6 +67,8 @@ export interface CheckoutDeps {
   cui: CuiLookupPort;
   readSettings: () => Promise<CheckoutSettings>;
   now?: () => Date;
+  /** Depozitul din care se ia stocul; implicit depozitul implicit (testele cu date proprii îl dau explicit). */
+  warehouseId?: string;
 }
 
 export interface CheckoutDestinationInput {
@@ -702,6 +704,7 @@ export class CheckoutService {
       const ref = { refType: ORDER_REF_TYPE, refId: order.id };
       const stockLines = view.lines.map((line) => ({
         variantId: line.variantId,
+        ...(this.deps.warehouseId ? { warehouseId: this.deps.warehouseId } : {}),
         quantity: quantityFromTicks(BigInt(line.quantityTicks)),
       }));
       if (isTransfer && reservationEnd) await stock.reserve(ref, stockLines, reservationEnd);
