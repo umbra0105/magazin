@@ -4,8 +4,9 @@
  * azi (un colet logic pe linie, tarifare pe cea mai mare dintre greutatea reală și cea volumetrică) e în `parcels.ts`.
  */
 
-export const SHIPPING_CLASSES = ["standard", "oversized", "pallet"] as const;
-export type ShippingClass = (typeof SHIPPING_CLASSES)[number];
+import { SHIPPING_CLASSES, type ShippingClass } from "../catalog/constants";
+
+export { SHIPPING_CLASSES, type ShippingClass };
 
 export interface Parcel {
   variantId: string;
