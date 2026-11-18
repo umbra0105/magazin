@@ -167,9 +167,9 @@ CREATE TABLE "address" (
     "vatIdVerification" TEXT,
     "tradeRegisterNo" TEXT,
     "phone" TEXT NOT NULL,
-    "countyCode" INTEGER NOT NULL,
+    "countySirutaCode" INTEGER NOT NULL,
     "countyName" TEXT NOT NULL,
-    "localityCode" INTEGER NOT NULL,
+    "localitySirutaCode" INTEGER NOT NULL,
     "localityName" TEXT NOT NULL,
     "street" TEXT NOT NULL,
     "postalCode" TEXT NOT NULL,
@@ -264,10 +264,10 @@ CREATE UNIQUE INDEX "payment_idempotencyKey_key" ON "payment"("idempotencyKey");
 CREATE INDEX "payment_orderId_idx" ON "payment"("orderId");
 
 -- CreateIndex
-CREATE INDEX "address_countyCode_idx" ON "address"("countyCode");
+CREATE INDEX "address_countySirutaCode_idx" ON "address"("countySirutaCode");
 
 -- CreateIndex
-CREATE INDEX "address_localityCode_idx" ON "address"("localityCode");
+CREATE INDEX "address_localitySirutaCode_idx" ON "address"("localitySirutaCode");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "address_orderId_kind_key" ON "address"("orderId", "kind");
@@ -309,10 +309,10 @@ ALTER TABLE "payment" ADD CONSTRAINT "payment_orderId_fkey" FOREIGN KEY ("orderI
 ALTER TABLE "address" ADD CONSTRAINT "address_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "customer_order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "address" ADD CONSTRAINT "address_countyCode_fkey" FOREIGN KEY ("countyCode") REFERENCES "siruta_unit"("code") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "address" ADD CONSTRAINT "address_countySirutaCode_fkey" FOREIGN KEY ("countySirutaCode") REFERENCES "siruta_unit"("code") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "address" ADD CONSTRAINT "address_localityCode_fkey" FOREIGN KEY ("localityCode") REFERENCES "siruta_unit"("code") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "address" ADD CONSTRAINT "address_localitySirutaCode_fkey" FOREIGN KEY ("localitySirutaCode") REFERENCES "siruta_unit"("code") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "shipping_method" ADD CONSTRAINT "shipping_method_zoneId_fkey" FOREIGN KEY ("zoneId") REFERENCES "shipping_zone"("id") ON DELETE CASCADE ON UPDATE CASCADE;

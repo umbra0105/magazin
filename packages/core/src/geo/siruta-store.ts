@@ -183,14 +183,19 @@ export class GeoService {
   async resolveLocation(
     countyCode: number,
     localityCode: number,
-  ): Promise<{ countyName: string; localityName: string }> {
+  ): Promise<{
+    countyName: string;
+    localityName: string;
+    countySirutaCode: number;
+    localitySirutaCode: number;
+  }> {
     const locality = await this.db.sirutaUnit.findUnique({
       where: { code: localityCode },
       select: { level: true, isActive: true, countyCode: true, name: true },
     });
     const county = await this.db.sirutaUnit.findFirst({
       where: { level: 1, isActive: true, countyCode },
-      select: { name: true },
+      select: { code: true, name: true },
     });
     if (
       !locality ||
@@ -206,6 +211,8 @@ export class GeoService {
     return {
       countyName: countyDisplayName(county.name),
       localityName: displayName(locality.name),
+      countySirutaCode: county.code,
+      localitySirutaCode: localityCode,
     };
   }
 }

@@ -1420,35 +1420,35 @@ model Payment {
   @@map("payment")
 }
 
-/// Adresa unei comenzi (livrare sau facturare), snapshot imuabil: textul rămâne cel de la plasare; codurile SIRUTA leagă de
-/// nomenclator. Codul poștal e introdus de client (doar format). La facturare pe firmă: `vatId` (CUI) cu `vatIdVerification`
+/// Adresa unei comenzi (livrare sau facturare), snapshot imuabil: textul rămâne cel de la plasare; `countySirutaCode` și
+/// `localitySirutaCode` sunt coduri SIRUTA (cheie străină spre nomenclator; NU codul `JUD`). Codul poștal e introdus de client (doar format). La facturare pe firmă: `vatId` (CUI) cu `vatIdVerification`
 /// = verified | unverified (ANAF nu a răspuns: comanda NU se blochează).
 model Address {
-  id                String     @id @default(cuid())
-  orderId           String
-  order             Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id                 String     @id @default(cuid())
+  orderId            String
+  order              Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
   /// shipping | billing
-  kind              String
-  fullName          String
-  company           String?
-  vatId             String?
-  vatIdVerification String?
-  tradeRegisterNo   String?
-  phone             String
-  countyCode        Int
-  county            SirutaUnit @relation("AddressCounty", fields: [countyCode], references: [code], onDelete: Restrict)
-  countyName        String
-  localityCode      Int
-  locality          SirutaUnit @relation("AddressLocality", fields: [localityCode], references: [code], onDelete: Restrict)
-  localityName      String
-  street            String
-  postalCode        String
-  country           String     @default("RO")
-  createdAt         DateTime   @default(now())
+  kind               String
+  fullName           String
+  company            String?
+  vatId              String?
+  vatIdVerification  String?
+  tradeRegisterNo    String?
+  phone              String
+  countySirutaCode   Int
+  county             SirutaUnit @relation("AddressCounty", fields: [countySirutaCode], references: [code], onDelete: Restrict)
+  countyName         String
+  localitySirutaCode Int
+  locality           SirutaUnit @relation("AddressLocality", fields: [localitySirutaCode], references: [code], onDelete: Restrict)
+  localityName       String
+  street             String
+  postalCode         String
+  country            String     @default("RO")
+  createdAt          DateTime   @default(now())
 
   @@unique([orderId, kind])
-  @@index([countyCode])
-  @@index([localityCode])
+  @@index([countySirutaCode])
+  @@index([localitySirutaCode])
   @@map("address")
 }
 
