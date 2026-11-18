@@ -1,9 +1,9 @@
 # Sursa pentru județe și localități (SIRUTA) — propunere pentru Faza 9
 
-**Stare:** 🛑 propunere, **neaprobată**. Nu s-a descărcat și nu s-a instalat nimic; nicio linie de cod nu s-a scris pentru ea.
+**Stare:** sursa a fost **aprobată** de utilizator (INS, SIRUTA semestrul 1 din 2026, varianta A, CC BY 4.0). Încărcarea e **oprită la 🛑** de la verificarea cifrei de control (vezi secțiunea 7).
 **Întocmit:** 2026-11-18, la începutul Fazei 9. Citirea paginilor s-a făcut doar în browser/HTTP (fără descărcarea fișierelor de date).
 
-**Cum aprobi:** lipești în sesiune `Sursa SIRUTA aprobată: <sursă, licență>` (poți alege varianta A sau B de mai jos sau altă sursă).
+**Aprobare:** «Sursa SIRUTA aprobată: INS, registrul SIRUTA semestrul 1 din 2026, varianta A (CSV de pe data.gov.ro), licență CC BY 4.0», 2026-11-18. Fișierul stă în `local-data/siruta/` (necomis).
 
 ## 1. Ce este și cine o publică
 
@@ -21,12 +21,12 @@ SIRUTA este registrul oficial al unităților administrativ-teritoriale din Rom�
 
 Pagina INS nu enumeră numele coloanelor (menționează proprietățile TIP, MED, REG, ZONA, FSL; FSL este un factor intern de sortare și de relație copil–părinte). **Coloanele exacte le verific din legendă și din fișier abia după aprobare**; dacă nu se potrivesc cu ce presupune planul de mai jos, mă opresc.
 
-## 3. Licență și condiții de reutilizare (cum rezultă din surse, nu din memorie)
+## 3. Licență și condiții de reutilizare (corectat după aprobare, 2026-11-18)
 
-- Pagina de drepturi de autor a INS (https://insse.ro/cms/ro/content/copyrightro-0) spune că reutilizarea se face «numai conform licenței pentru o guvernare deschisă», cu trimitere la **OGL-ROU-1.0** (`http://data.gov.ro/base/images/logoinst/OGL-ROU-1.0.pdf`), și cere «indicarea clară și precisă a sursei».
-- Setul «SIRUTA» (INS) de pe data.gov.ro (versiunea veche, 2014) are licența afișată **OGL-ROU-1.0**.
-- **Neconfirmat de mine:** pagina setului `siruta_s1-2026` de pe data.gov.ro nu a arătat licența în textul citit; textul PDF-ului OGL-ROU-1.0 nu l-am citit. De aceea licența se aplică pe baza notei de pe insse.ro, nu a unei etichete a setului. Dacă vrei certitudine, deschide tu pagina setului și PDF-ul licenței înainte să aprobi.
-- Consecințe practice dacă licența e OGL-ROU-1.0: reutilizare (inclusiv comercială) și redistribuire permise **cu indicarea sursei** (INS, SIRUTA, versiunea). Atribuirea o punem în `THIRD-PARTY-NOTICES.md` și în metadatele seed-ului. Textul exact al licenței se citește la aprobare; nu inventez condiții.
+- **Pentru fișierul folosit (`siruta_s1_2026.csv`, setul https://data.gov.ro/dataset/siruta_s1-2026) se aplică licența **CC BY 4.0** (https://creativecommons.org/licenses/by/4.0/)**, așa cum a confirmat utilizatorul pe pagina setului. Aceasta e licența setului; ea înlocuiește ce scria aici înainte.
+- Nota generală de pe insse.ro (https://insse.ro/cms/ro/content/copyrightro-0) trimite la OGL-ROU-1.0 (`http://data.gov.ro/base/images/logoinst/OGL-ROU-1.0.pdf`); setul vechi «SIRUTA» (2014) de pe data.gov.ro are și el OGL-ROU-1.0. Pentru **acest** fișier nu se aplică ele, ci CC BY 4.0.
+- Condițiile CC BY 4.0 care ne privesc: atribuire (creditul sursei), link către licență, mențiunea că datele au fost modificate, fără formulări care sugerează că titularul ne susține. Redistribuirea (fișierul derivat din repo) și folosirea comercială sunt permise cu aceste condiții.
+- **Atribuirea (decizia utilizatorului):** doar în `THIRD-PARTY-NOTICES.md` și în metadatele seed-ului (nu într-un loc vizibil din aplicație, fiindcă legea nu o cere acum). Text: «Institutul Național de Statistică (INS), registrul SIRUTA, semestrul 1 din 2026», linkul către licență, mențiunea «Date modificate: coloane selectate, diacritice normalizate» (la afișare numele se transformă și din majuscule în litere mici cu inițiale mari; mențiunea se completează cu asta), fără nicio formulare care să sugereze susținerea INS.
 
 ## 4. Două variante de încărcare (cer decizia ta)
 
@@ -47,6 +47,18 @@ Pagina INS nu enumeră numele coloanelor (menționează proprietățile TIP, MED
 
 Nu descarc nimic în repo, nu instalez nimic, nu scriu migrarea, seed-ul sau codul care depinde de această sursă. Restul Fazei 9 (cod fără date reale SIRUTA) începe abia după mesajul tău de aprobare, cum ai cerut.
 
+## 7. Verificarea fișierului (2026-11-18, înainte de orice cod)
+
+Verificat cu un script de probă (în afara repo-ului, doar numere), pe `local-data/siruta/siruta_s1_2026.csv` (UTF-8 cu BOM, separator «;», 16.978 de rânduri), față de **Metodologie.doc** (INS): [https://insse.ro/cms/files/siruta/2026/Metodologie.doc](https://insse.ro/cms/files/siruta/2026/Metodologie.doc).
+
+- **Coloane:** `SIRUTA;DENLOC;CODP;JUD;SIRSUP;TIP;NIV;MED;REGIUNE;FSJ;NUTS;LAU`. Corespund planului: cod, nume, cod părinte (`SIRSUP`), tip (`TIP`), județ (`JUD`). **Observație:** fișierul conține și `CODP` (cod poștal pe localitate). Conform deciziei, **nu se stochează**: codul poștal rămâne câmp introdus de client, validat doar ca format.
+- **Numărătoare:** 16.978 de rânduri; nivelurile NIV 1/2/3 = 42 / 3.181 / 13.755, **identic** cu pagina INS. Fără coduri duplicate. Tipuri (din metodologie): 40 județ, 6 sector al Municipiului București, 1–5 municipii și orașe, 3 comună, 9–11 și 17–19 localități componente, 22–23 sate.
+- **Sectoare:** există 6 rânduri cu `TIP = 6` (sectoarele 1–6, cu `JUD = 40` și părintele 179132 = Municipiul București), deci condiția 4 se poate îndeplini.
+- **Diacritice:** numele sunt în **majuscule**, cu sedilă (`Ţ`, `Ş`) în mare parte și câteva cu virgulă (`Ș`): normalizarea la ș/ț e necesară.
+- **Cifra de control:** algoritmul oficial din metodologie (secțiunea «Codul de identificare SIRUTA»): primele 5 cifre ale codului de 6 cifre (completat cu zerouri la stânga) se înmulțesc cu ponderile **7, 5, 3, 2, 1**; produsele se adună **cifră cu cifră** (35 contează 3+5); restul sumei la 10 se scade din 11; restul acelui rezultat la 10 e cifra de control. Exemplul din document: 179132 → 17913 → 29 → rest 9 → 11−9 = 2 → cifra 2. Implementarea mea reproduce exemplul.
+- **🛑 Datele nu respectă algoritmul pentru 77 de coduri din 16.978 (0,45%).** 16.901 coduri îl respectă, inclusiv toate cazurile cu rest 0 (1.685 din 1.693); cele 77 sunt răspândite uniform pe toate resturile, deci nu e o diferență de interpretare a algoritmului. Sunt **68 de comune (`TIP 3`) și 9 sate (`TIP 23`)**, din 15 județe (JUD 1–5, 7–10, 12–14, 16, 17, 19), cu coduri între 9019 și 86519. Sectoarele și județele trec. Metodologia nu spune nimic despre excepții.
+- **Decizie cerută (🛑, regula din prompt):** cum tratăm cele 77. Opțiuni în raportul din sesiune.
+
 ## Surse citite
 
 - https://insse.ro/cms/ro/siruta
@@ -55,3 +67,4 @@ Nu descarc nimic în repo, nu instalez nimic, nu scriu migrarea, seed-ul sau cod
 - https://data.gov.ro/dataset/siruta_s1-2026
 - https://data.gov.ro/dataset/legenda-siruta-registrul-unitatilor-administrativ-teritoriale-ale-romaniei
 - https://data.gov.ro/dataset/coduri-postale-romania
+- https://insse.ro/cms/files/siruta/2026/Metodologie.doc
