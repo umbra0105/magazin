@@ -21,6 +21,7 @@ const MODE_A = [
   "19",
   "20",
   "poarta-draft",
+  "ci-joburi",
 ];
 const MODE_B = ["8", "9", "10", "13", "14b", "15", "15b"];
 const MODE_C = ["6", "7", "18", "22"];
@@ -108,6 +109,31 @@ describe("faza 15d (mini-fază, modul A)", () => {
     expect(branchOf("15d")).toBe("faza-15d");
     expect(tagsOf("15d")).toEqual({ pre: "pre-faza-15d", done: "faza-15d-completa" });
     expect(isValidPhaseId("15d")).toBe(true);
+  });
+});
+
+describe("faza ci-joburi (mini-fază, modul A)", () => {
+  it("modul A; ramura faza-ci-joburi, etichetele pre-faza-ci-joburi și faza-ci-joburi-completa", () => {
+    expect(modeOf("ci-joburi")).toBe("A");
+    expect(branchOf("ci-joburi")).toBe("faza-ci-joburi");
+    expect(tagsOf("ci-joburi")).toEqual({
+      pre: "pre-faza-ci-joburi",
+      done: "faza-ci-joburi-completa",
+    });
+    expect(isValidPhaseId("ci-joburi")).toBe(true);
+  });
+
+  it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
+    const branch = branchOf("ci-joburi");
+    expect(isPhaseBranch(branch)).toBe(true);
+    const problems = approvalsGuardProblems({
+      branch,
+      baseAvailable: true,
+      ci: false,
+      touchingCommits: ["abc1234"],
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("abc1234");
   });
 });
 
