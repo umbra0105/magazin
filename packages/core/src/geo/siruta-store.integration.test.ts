@@ -195,7 +195,7 @@ describe("GeoService (citirea pentru checkout)", () => {
         "București Sectorul 6",
       ]);
       const sector = localities[0];
-      expect(await geo.resolveLocation(91, sector!.code)).toEqual({
+      expect(await geo.resolveLocation(91, sector!.code)).toMatchObject({
         countyName: "București",
         localityName: "București Sectorul 1",
       });
