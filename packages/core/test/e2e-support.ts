@@ -2360,3 +2360,182 @@ export async function seedE2eFilterCatalog(tag: string): Promise<{
   });
   return { categoryPath, brandA, brandB, attributeCode, attributeName, products };
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Coșul (Faza 8): produse de probă cu pas, preț și stare de stoc la alegere; relații cross-sell; curățarea coșurilor.
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface E2eCartProduct {
+  productId: string;
+  variantId: string;
+  slug: string;
+  title: string;
+  sku: string;
+}
+
+export interface E2eCartProductSpec {
+  /** Prețul brut pe bază, în bani. */
+  price: number;
+  salePrice?: number;
+  /** Codul unei unități create cu `seedE2eUnit` (pas fracționar); gol = bucăți. */
+  unitCode?: string;
+  /** Pasul de vânzare în zecimi de miime (20300 = 2,03). */
+  saleStep?: number;
+  saleStepLabel?: string;
+  minSteps?: number;
+  priceBasis?: "unit" | "step";
+  stockStatus?: "instock" | "outofstock" | "onbackorder";
+  leadTimeDays?: number;
+  status?: "active" | "draft" | "archived";
+}
+
+const trackedCartVariants = new Set<string>();
+
+/** Un produs ACTIV, cu stoc negestionat, o variantă și (opțional) unitate cu pas. Se șterge cu `removeE2eProducts`. */
+export async function seedE2eCartProduct(
+  tag: string,
+  key: string,
+  spec: E2eCartProductSpec,
+): Promise<E2eCartProduct> {
+  const slug = `e2e-cos-${tag}-${key}`;
+  const title = `Produs coș ${key} ${tag}`;
+  const sku = `E2E-COS-${tag}-${key}`.toUpperCase();
+  trackedProducts.add(slug);
+  return withClient(async (db) => {
+    const unit = spec.unitCode
+      ? ((await db.query(`select id from measure_unit where code = $1`, [spec.unitCode])).rows[0]
+          ?.id as string | undefined)
+      : undefined;
+    const product = await db.query(
+      `insert into product (id, slug, title, status, "manageStock", "stockStatus", "publishedAt", "updatedAt",
+                            "priceBasis", "saleStep", "saleStepLabel", "minSteps", "measureUnitId", "leadTimeDays")
+       values (gen_random_uuid()::text, $1, $2, $3, false, $4, now(), now(), $5, $6, $7, $8, $9, $10) returning id`,
+      [
+        slug,
+        title,
+        spec.status ?? "active",
+        spec.stockStatus ?? "instock",
+        spec.priceBasis ?? "unit",
+        spec.saleStep ?? null,
+        spec.saleStepLabel ?? null,
+        spec.minSteps ?? null,
+        unit ?? null,
+        spec.leadTimeDays ?? null,
+      ],
+    );
+    const productId = product.rows[0]?.id as string;
+    const variant = await db.query(
+      `insert into product_variant (id, "productId", sku, price, "salePrice", "saleStartsAt", "saleEndsAt", "isDefault", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, true, now()) returning id`,
+      [
+        productId,
+        sku,
+        spec.price,
+        spec.salePrice ?? null,
+        spec.salePrice ? new Date(Date.now() - 86_400_000) : null,
+        spec.salePrice ? new Date(Date.now() + 86_400_000) : null,
+      ],
+    );
+    const variantId = variant.rows[0]?.id as string;
+    trackedCartVariants.add(variantId);
+    return { productId, variantId, slug, title, sku };
+  });
+}
+
+/** Schimbă ce se poate schimba în admin după ce clientul are produsul în coș (preț, stoc, stare, pas). */
+export async function changeE2eCartProduct(
+  product: E2eCartProduct,
+  change: {
+    price?: number;
+    stockStatus?: "instock" | "outofstock" | "onbackorder";
+    status?: "active" | "draft" | "archived";
+    saleStep?: number;
+  },
+): Promise<void> {
+  await withClient(async (db) => {
+    if (change.price !== undefined) {
+      await db.query(`update product_variant set price = $2, "updatedAt" = now() where id = $1`, [
+        product.variantId,
+        change.price,
+      ]);
+    }
+    if (change.stockStatus !== undefined) {
+      await db.query(`update product set "stockStatus" = $2, "updatedAt" = now() where id = $1`, [
+        product.productId,
+        change.stockStatus,
+      ]);
+    }
+    if (change.status !== undefined) {
+      await db.query(`update product set status = $2, "updatedAt" = now() where id = $1`, [
+        product.productId,
+        change.status,
+      ]);
+    }
+    if (change.saleStep !== undefined) {
+      await db.query(`update product set "saleStep" = $2, "updatedAt" = now() where id = $1`, [
+        product.productId,
+        change.saleStep,
+      ]);
+    }
+  });
+}
+
+/** Leagă două produse de probă printr-o relație (de exemplu `crosssell` sau `spare_part`). */
+export async function linkE2eProducts(
+  mainProductId: string,
+  relatedProductId: string,
+  type: "crosssell" | "spare_part",
+): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `insert into product_relation (id, "productId", "relatedProductId", type, position)
+       values (gen_random_uuid()::text, $1, $2, $3, 0)`,
+      [mainProductId, relatedProductId, type],
+    );
+  });
+}
+
+/** Șterge coșurile care conțin variantele de probă ale acestui worker (înainte de ștergerea produselor). */
+export async function removeE2eCarts(): Promise<number> {
+  const ids = [...trackedCartVariants];
+  trackedCartVariants.clear();
+  if (ids.length === 0) return 0;
+  return withClient(async (db) => {
+    const result = await db.query(
+      `delete from cart where id in (select "cartId" from cart_item where "variantId" = any($1::text[]))`,
+      [ids],
+    );
+    return result.rowCount ?? 0;
+  });
+}
+
+/** Valoarea unei setări (JSON) scrisă direct; cache-ul setărilor se golește. Doar baza de test. */
+export async function setE2eSetting(key: string, value: unknown): Promise<void> {
+  const group = key.split(".")[0] as string;
+  await withClient(async (db) => {
+    await db.query(
+      `insert into setting (key, "group", value, "updatedAt") values ($1, $2, $3::jsonb, now())
+       on conflict (key) do update set value = excluded.value, "updatedAt" = now()`,
+      [key, group, JSON.stringify(value)],
+    );
+  });
+  await withRedis((redis) => redis.del("ecom:settings:v1"));
+}
+
+export async function clearE2eSetting(key: string): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`delete from setting where key = $1`, [key]);
+  });
+  await withRedis((redis) => redis.del("ecom:settings:v1"));
+}
+
+/** Câte linii are coșul unui client de test (după email), direct din baza de test. */
+export async function countE2eCartLines(email: string): Promise<number> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select count(*)::int as n from cart_item ci join cart c on c.id = ci."cartId" join "user" u on u.id = c."userId" where u.email = $1`,
+      [email],
+    );
+    return (result.rows[0]?.n as number | undefined) ?? 0;
+  });
+}

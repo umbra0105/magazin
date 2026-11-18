@@ -6,6 +6,16 @@
  * bannerul reapare.
  */
 export const CONSENT_COOKIE = "ecom_consent";
+
+/**
+ * Cookie-ul coșului de oaspete: STRICT NECESAR (fără el coșul nu funcționează), deci nu cere consimțământ și nu apare ca alegere,
+ * ci în categoria «necesare» din banner. Valoare aleatorie, `httpOnly`, `SameSite=Lax`, valabilitate din setări
+ * (`docs/INTREBARI-AVOCAT.md` §3.4: formularea din politica de cookie-uri se confirmă cu avocatul).
+ */
+export const CART_COOKIE = "ecom_cart";
+
+/** Cookie-urile strict necesare ale aplicației (lista din politica de cookie-uri); niciunul nu depinde de alegerea vizitatorului. */
+export const NECESSARY_COOKIES = [CART_COOKIE] as const;
 export const CONSENT_VERSION = 1;
 export const CONSENT_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 

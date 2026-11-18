@@ -95,6 +95,23 @@ export const settingGroups = {
   },
   checkout: {
     guestCheckoutEnabled: z.boolean().default(true),
+    /**
+     * Pragul de transport gratuit, în BANI ÎNTREGI (cu TVA): se compară cu totalul coșului după reduceri, fără transport.
+     * GOL = dezactivat (indicatorul din coș nu apare deloc). Pragul pe clasă de transport și pe produs vine în Faza 9.
+     */
+    freeShippingThreshold: z.number().int().min(1).max(1_000_000_000).nullable().default(null),
+  },
+  cart: {
+    /** Cât rămâne un coș de oaspete (și cookie-ul lui), în zile; fiecare modificare îl prelungește. */
+    guestCartDays: z.number().int().min(1).max(365).default(30),
+    /** Cât rămâne coșul unui client autentificat, în zile; fiecare modificare îl prelungește. */
+    userCartDays: z.number().int().min(1).max(730).default(90),
+    /** Linii într-un coș (limită tehnică împotriva abuzului). */
+    maxLines: z.number().int().min(1).max(500).default(50),
+    /** Cantitatea maximă pe linie, în PAȘI de vânzare (limită tehnică; peste valoarea maximă a liniei se refuză oricum). */
+    maxStepsPerLine: z.number().int().min(1).max(1_000_000).default(1000),
+    /** Operații de adăugare/modificare pe minut, pe aceeași adresă IP (și pe același coș). */
+    mutationsPerMinute: z.number().int().min(1).max(10_000).default(60),
   },
   email: {
     fromName: z.string().default(""),

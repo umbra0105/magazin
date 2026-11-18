@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { loadEnv } from "@ecom/config";
+import type { PageSaleInfo } from "@ecom/core";
+import { QUANTITY_FACTOR, formatQuantity, quantityFromTicks } from "@ecom/shared/quantity";
 import { Container, EnergyLabel, SectionHeading } from "@ecom/ui";
 import { RichTextView } from "@/components/rich-text/rich-text";
 import { Breadcrumbs } from "@/components/storefront/catalog/breadcrumbs";
@@ -218,6 +220,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
           </header>
           {defaultVariant ? (
             <PurchasePanel
+              productTitle={product.title}
               options={product.options}
               defaultVariantId={defaultVariant.id}
               contact={{
@@ -231,6 +234,11 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
                 label: v.label,
                 optionValues: v.optionValues,
                 priceText: formatPrice(v.price.amount, format),
+                priceSuffix: priceSuffix(v.sale),
+                stepTicks: v.sale.stepTicks,
+                minSteps: v.sale.minSteps ?? 1,
+                unitSymbol: v.sale.unitSymbol,
+                stepLabel: v.sale.stepLabel,
                 compareAtText: v.price.compareAt ? formatPrice(v.price.compareAt, format) : null,
                 availabilityLabel: availabilityLabel(v.availability.state),
                 availabilityDetail: availabilityDetail(v.availability),
@@ -276,6 +284,16 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
       ) : null}
     </Container>
   );
+}
+
+/** «/ mp» la prețul pe unitate, «/ sac de 25 kg» la prețul pe pas; nimic la bucăți (prețul e pe bucată). */
+function priceSuffix(sale: PageSaleInfo): string | null {
+  const p = m.product;
+  const step = quantityFromTicks(BigInt(sale.stepTicks));
+  if (sale.basis === "step" && BigInt(step) !== QUANTITY_FACTOR) {
+    return p.perStep(sale.stepLabel, formatQuantity(step), sale.unitSymbol);
+  }
+  return sale.unitSymbol === "buc" ? null : p.perUnit(sale.unitSymbol);
 }
 
 type Gpsr = {

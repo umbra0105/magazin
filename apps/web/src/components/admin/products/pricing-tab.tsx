@@ -197,8 +197,8 @@ function PricePreview({
           );
         })}
       </ul>
-      <p className="text-label text-ink-secondary" data-price-provisional>
-        {pd.provisional}
+      <p className="text-label text-ink-secondary" data-price-note>
+        {pd.note}
       </p>
     </section>
   );

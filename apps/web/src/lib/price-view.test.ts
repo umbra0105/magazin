@@ -95,7 +95,6 @@ describe("textele prețului", () => {
       per: "buc",
       perUnit: null,
       stepPrice: null,
-      provisional: true,
     });
   });
 
@@ -109,9 +108,5 @@ describe("textele prețului", () => {
         showStepPrice: true,
       }).stepPrice,
     ).toBe("Bucată de 1,8 ml = 81,00 RON");
-  });
-
-  it("afișarea e mereu marcată provizoriu", () => {
-    expect(lines({}).provisional).toBe(true);
   });
 });

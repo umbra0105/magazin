@@ -10,6 +10,7 @@ import { startMediaWorkerFromEnv } from "./media-runtime";
 import { startEmailWorkerFromEnv } from "./runtime";
 import { startPriceJobsFromEnv } from "./price-jobs";
 import { startStockJobsFromEnv } from "./stock-jobs";
+import { startCartJobsFromEnv } from "./cart-jobs";
 
 try {
   process.loadEnvFile(new URL("../../../.env", import.meta.url));
@@ -25,6 +26,7 @@ const importImages = startImageImportWorkerFromEnv();
 const authRetention = startAuthRetentionFromEnv();
 const stockJobs = startStockJobsFromEnv();
 const priceJobs = startPriceJobsFromEnv();
+const cartJobs = startCartJobsFromEnv();
 logger.info(
   { queues: ["emails", "media", "product-import", "product-import-images"] },
   "worker pornit (Ctrl+C pentru oprire)",
@@ -39,6 +41,7 @@ async function shutdown(signal: string): Promise<void> {
     authRetention.close();
     stockJobs.close();
     priceJobs.close();
+    cartJobs.close();
     await Promise.all([email.close(), media.close(), imports.close(), importImages.close()]);
   } finally {
     process.exit(0);

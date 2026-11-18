@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ACCEPT_ALL,
+  CART_COOKIE,
+  CONSENT_CATEGORIES,
+  NECESSARY_COOKIES,
   CONSENT_COOKIE,
   CONSENT_MAX_AGE_SECONDS,
   CONSENT_VERSION,
@@ -85,5 +88,14 @@ describe("readConsentCookie", () => {
 
   it("nu confundă un cookie cu nume asemănător", () => {
     expect(readConsentCookie(`x_${CONSENT_COOKIE}=v1.a1.m1`)).toBeNull();
+  });
+});
+
+describe("cookie-ul coșului de oaspete (strict necesar)", () => {
+  it("e în lista cookie-urilor necesare și nu depinde de nicio categorie care cere consimțământ", () => {
+    expect(NECESSARY_COOKIES).toContain(CART_COOKIE);
+    expect(CART_COOKIE).toBe("ecom_cart");
+    // refuzul tuturor categoriilor nu atinge cookie-ul coșului: nu există categorie «coș» printre cele care cer acord
+    expect((CONSENT_CATEGORIES as readonly string[]).some((c) => /cart|cos/i.test(c))).toBe(false);
   });
 });

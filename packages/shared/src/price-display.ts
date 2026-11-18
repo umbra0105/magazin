@@ -3,13 +3,13 @@ import {
   exactLineValue,
   exactUnitPrice,
   quantityFromTicks,
-  splitScaledMoney,
   type Quantity,
 } from "./quantity";
+import { exactFraction, roundHalfUp } from "./money";
 
 /**
- * Afișarea prețului pe UNITATE și pe PAS (Faza 5, punctul 9b). PROVIZORIE: aparține motorului de prețuri din Faza 8 și va fi
- * mutată sau înlocuită acolo. Funcție PURĂ, doar cu `Quantity` (fără `float`): primește prețul introdus de administrator (în
+ * Afișarea prețului pe UNITATE și pe PAS (Faza 5, punctul 9b), pentru admin. Rotunjirea e cea decisă la 2026-11-17 (`money.ts`),
+ * nu mai e provizorie. Funcție PURĂ, doar cu `Quantity` (fără `float`): primește prețul introdus de administrator (în
  * bani, cu TVA) și configurarea de vânzare și întoarce VALORI (nu text); textele în română le asamblează aplicația.
  *
  * Reguli:
@@ -17,8 +17,7 @@ import {
  *  - baza «pe unitate» + «arată prețul pasului»: prețul unui pas = preț × pas («Rolă de 41,25 mp ≈ 3.603,19 lei»);
  *  - baza «pe pas»: prețul pe unitate = preț ÷ pas, informativ («(4,80 lei/kg)»);
  *  - «≈» (`exact: false`) când suma nu iese exactă în bani. Suma afișată e cea exactă rotunjită la 2 zecimale, half-up: DOAR
- *    pentru text. NU e regula de rotunjire a liniei de comandă: nu se salvează, nu intră în coș, iar totalul îl calculează
- *    motorul de prețuri (R1/R2, Faza 8).
+ *    pentru text. NU calculează totalul liniei de comandă: nu se salvează, nu intră în coș, iar totalul îl dă motorul de prețuri (R1/R2).
  *  - un pas de o singură unitate nu repetă prețul (se tratează ca preț pe unitate).
  */
 
@@ -52,17 +51,14 @@ export interface PriceDisplay {
   perUnit: DisplayAmount | null;
   /** Prețul unui pas (doar la baza «pe unitate», cu «arată prețul pasului», dacă pasul ≠ o unitate) */
   stepPrice: { amount: DisplayAmount; step: Quantity; label: string | null; symbol: string } | null;
-  /** Mereu `true`: afișare informativă până la motorul de prețuri (Faza 8) */
-  provisional: true;
 }
 
 /** Valoarea în bani × 10⁻⁴ → bani întregi half-up (doar pentru text), cu indicatorul de exactitate. */
 function forDisplay(scaledMinor: bigint, lossy: boolean): DisplayAmount {
-  const { wholeMinor, remainderScaled } = splitScaledMoney(scaledMinor);
-  const roundUp = remainderScaled * 2n >= QUANTITY_FACTOR;
+  // aceeași rotunjire half-up ca a liniei de comandă (`money.ts`: singurul loc care rotunjește sume)
   return {
-    minor: roundUp ? wholeMinor + 1n : wholeMinor,
-    exact: !lossy && remainderScaled === 0n,
+    minor: roundHalfUp(exactFraction(scaledMinor, QUANTITY_FACTOR)),
+    exact: !lossy && scaledMinor % QUANTITY_FACTOR === 0n,
   };
 }
 
@@ -86,7 +82,6 @@ export function describePrice(input: PriceDisplayInput): PriceDisplay {
       },
       perUnit: forDisplay(unitPrice.scaledMinor, unitPrice.lossy),
       stepPrice: null,
-      provisional: true,
     };
   }
 
@@ -99,5 +94,5 @@ export function describePrice(input: PriceDisplayInput): PriceDisplay {
           symbol: input.unitSymbol,
         }
       : null;
-  return { reference: { amount: entered, per: unit }, perUnit: null, stepPrice, provisional: true };
+  return { reference: { amount: entered, per: unit }, perUnit: null, stepPrice };
 }

@@ -21,6 +21,7 @@
     "./vat": "./src/vat.ts",
     "./decimal": "./src/decimal.ts",
     "./quantity": "./src/quantity.ts",
+    "./money": "./src/money.ts",
     "./price-display": "./src/price-display.ts",
     "./zoned-time": "./src/zoned-time.ts",
     "./plural": "./src/plural.ts"

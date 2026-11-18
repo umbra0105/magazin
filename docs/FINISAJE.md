@@ -36,7 +36,7 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Redirecționări (Faza 7) | adresa veche și forma cu litere mari redirecționează cu 308 (permanent, echivalent pentru Google cu 301), cum face Next din pagini; același comportament ca redirecturile adminului | -
 - [ ] S3 | Setări (Faza 7) | `catalog.showSalePricing` (oprit) nu are încă ecran în admin: rămâne oprit până la răspunsul avocatului (Omnibus) | -
 - [ ] S3 | Temă închisă, imagini de produs (Faza 7) | masa foto a cardurilor și a galeriei rămâne deschisă la culoare în tema închisă (decizie de design din Faza 6: fotografiile au fundal alb), iar substituentul «Fără imagine» e un bloc luminos pe pagină întunecată | local-data/capturi-faza7/checkpoint/produs-inchis-1440.png
-- [ ] S3 | Pagina de produs (Faza 7) | blocul «Cum comanzi» nu apare cât telefonul și emailul firmei sunt goale în setări: produsul nu are atunci nicio cale de comandă vizibilă (până la coș, Faza 8); de completat datele firmei | local-data/capturi-faza7/checkpoint/produs-deschis-1440.png
+- [x] S3 | Pagina de produs (Faza 7) | (rezolvat în Faza 8: «Adaugă în coș» e acțiunea principală; blocul de contact rămâne ca ajutor informativ, «Ai nevoie de ajutor la comandă?», doar când datele firmei există) blocul «Cum comanzi» nu apare cât telefonul și emailul firmei sunt goale în setări: produsul nu are atunci nicio cale de comandă vizibilă (până la coș, Faza 8); de completat datele firmei | local-data/capturi-faza7/checkpoint/produs-deschis-1440.png
 - [x] S3 | Liste (Faza 7) | pe telefon, grila de 2 coloane strânge numele lungi de produs (6–7 rânduri într-un card) | local-data/capturi-faza7/checkpoint/magazin-deschis-390.png — parțial: titlurile lungi de produs sunt mai mici pe pagina de produs; cardurile păstrează numele întreg (2 coloane pe telefon)
 - [ ] S3 | «Anunță-mă când revine» (Faza 7) | o adresă care a atins plafonul de cereri în așteptare (10, setabil) primește un refuz la o cerere pentru încă o variantă, în timp ce o adresă deja înscrisă primește «Gata»: răspunsul diferă și trădează existența cererilor pe adresă; de uniformizat (răspuns identic, cu mesaj generic) | -
 - [x] S3 | Pagina de produs (Faza 7) | blocul «Cum comanzi» apare și la produsele indisponibile, lângă «Anunță-mă»; de decis dacă la «Indisponibil» se arată doar formularul | local-data/capturi-faza7/checkpoint/produs-epuizat-deschis-1440.png — rezolvat: apare doar la produsele care se pot comanda; la cele indisponibile rămâne formularul «Anunță-mă»
@@ -52,9 +52,19 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Filtre (Faza 7) | sertarul de filtre de pe telefon e o secțiune care se deschide deasupra listei (`details`, funcționează fără JavaScript), nu un panou pe tot ecranul
 - [ ] S3 | Colecții (Faza 7) | colecțiile automate (`type = automated`, reguli) nu au motor de reguli: arată doar produsele atașate explicit
 - [ ] S3 | Căutare (Faza 7) | potrivirea aproximativă (trigrame) nu folosește indexul (`similarity() >= 0,45`): la ~500 de produse e instant; de trecut pe operatorul `%` cu prag setat dacă catalogul crește mult
-- [ ] S3 | Piese de schimb (Faza 7) | rândul din tabelul pieselor are «Vezi piesa», nu «Adaugă în coș»: coșul vine în Faza 8
+- [x] S3 | Piese de schimb (Faza 7) | rândul din tabelul pieselor are «Vezi piesa», nu «Adaugă în coș» — rezolvat în Faza 8: rândul are «Adaugă în coș» (piesa cu o singură variantă, în cantitatea minimă) și legătura «Vezi piesa»
 
 - [x] S3 | Test E2E intermitent, depozite (descoperit la `verify:full` din Faza 7) | `e2e/warehouses.spec.ts:448` pica când eticheta hex aleatorie a produsului conținea «77» (ex. «775ec5»): aserțiunea `not.toContainText("77")` o confunda cu cantitatea din W1; acum caută «77 buc». Doar test, fără cod de producție; în afara scopului Fazei 7 (S2 de proces, ca la Faza 6)
+
+- [ ] S3 | Coș (Faza 8) | bannerul de cookie-uri de la prima vizită (fix, jos) acoperă bara lipicioasă «Adaugă în coș» de pe telefon până răspunde vizitatorul; butonul din panou rămâne accesibil prin derulare | -
+- [ ] S3 | Coș (Faza 8) | limitele tehnice `cart.*` (zile de păstrare, linii, pași pe linie, modificări pe minut) nu au ecran în admin, doar valorile implicite din registru; ecranul «Coș și transport» are doar pragul de transport gratuit | -
+- [ ] S3 | Coș (Faza 8) | excluderea din prețul de grup (`excludeFromGroupDiscount`) se citește de pe produs și categoriile directe; propagarea pe ascendenții categoriei vine cu grupurile de clienți (Faza 15) | -
+- [ ] S3 | Coș (Faza 8) | lista de recomandări de pe `/cos` nu se reîncarcă după ce coșul se golește din interfață (se reîmprospătează la reîncărcarea paginii) | -
+
+- [ ] S3 | Coș (Faza 8) | butonul dezactivat «Finalizarea comenzii se activează în curând» are text alb pe albastru deschis (contrast mic, opacitate de element dezactivat) și se rupe pe două rânduri în cardul îngust de la 1440 px | local-data/capturi-faza8/real-cos-1440.png
+- [ ] S3 | Pagina de produs (Faza 8) | pe telefon (390 px) «Adaugă în coș» stă sub imaginea mare, în afara primului ecran; bara lipicioasă apare abia când prețul iese din ecran, deci cumpărătorul trebuie să deruleze ca să găsească acțiunea | local-data/capturi-faza8/real-produs-390.png
+
+- [ ] S3 | CI (Faza 8) | jobul unic `check` e aproape de limită (verde în 13–19 min 36 s, cu E2E de ~8 min și S3 de ~3 min, în creștere cu suita); timeout-ul a fost ridicat de la 20 la 35 de minute (autorizat de utilizator, 2026-11-18); de împărțit în joburi paralele (lint + unitare | integrare | E2E) înainte de Faza 9 | -
 
 ## Rezolvate
 

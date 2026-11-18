@@ -1,5 +1,10 @@
 import { quantityFromTicks, sumQuantities, type Quantity } from "@ecom/shared";
-import { computeAvailability, type StockStatusValue, type VisibleStockState } from "./availability";
+import {
+  computeAvailability,
+  type Availability,
+  type StockStatusValue,
+  type VisibleStockState,
+} from "./availability";
 
 /**
  * Modelul de afișare al ecranului de stoc (Faza 5, punctul 8): FUNCȚII PURE care transformă o variantă (cu unitatea, pasul,
@@ -97,20 +102,20 @@ export interface StockOverviewRow {
   lowStockReason: LowStockReason | null;
 }
 
-export function buildStockOverviewRow(
+/** Disponibilitatea unei variante dintr-o sursă (aceeași regulă pentru ecranul de stoc, vitrină și coș; nimic nu se recalculează în alt loc). */
+export function availabilityOfSource(
   source: StockOverviewSource,
   settings: StockOverviewSettings,
-): StockOverviewRow {
+): Availability {
   const kind: StockRowKind =
     source.productType === "digital" ? "digital" : source.manageStock ? "managed" : "unmanaged";
-  const step = quantityFromTicks(source.saleStep);
   const item = kind === "managed" ? source.item : null;
-  const availability = computeAvailability({
+  return computeAvailability({
     isDigital: kind === "digital",
     manageStock: kind === "managed",
     stockStatus: source.stockStatus,
     allowBackorder: source.allowBackorder,
-    step,
+    step: quantityFromTicks(source.saleStep),
     minSteps: source.minSteps,
     inventory: item
       ? {
@@ -128,6 +133,17 @@ export function buildStockOverviewRow(
       globalDays: settings.defaultLeadTimeDays,
     },
   });
+}
+
+export function buildStockOverviewRow(
+  source: StockOverviewSource,
+  settings: StockOverviewSettings,
+): StockOverviewRow {
+  const kind: StockRowKind =
+    source.productType === "digital" ? "digital" : source.manageStock ? "managed" : "unmanaged";
+  const step = quantityFromTicks(source.saleStep);
+  const item = kind === "managed" ? source.item : null;
+  const availability = availabilityOfSource(source, settings);
   const zero = 0n as Quantity;
   const managed = kind === "managed";
   const lowStock = availability.lowStock;

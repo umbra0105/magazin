@@ -127,6 +127,8 @@ Excel). Exemple de verificat: **3 × 2,03 = 6,09 exact**; 2 × 41,25 = 82,5; 7 �
 
 ### D11.5 Rotunjirea liniei, TVA-ul inclus și factura SmartBill
 
+> **Decisă 2026-11-17 (R1 pe unitate / R2 pe pas, nu mai e provizorie):** răspuns de la utilizator, nu de la contabil în scris: SmartBill preia exact suma comenzilor din website, fără rotunjire proprie, și acceptă 2 zecimale. **De confirmat în sandbox-ul SmartBill (Faza 13); o diferență de 1 ban acolo = 🛑.**
+
 Reguli care **nu se schimbă**: prețurile sunt brute (cu TVA), în bani; TVA-ul se extrage din brutul liniei; **o singură rotunjire pe linie**; totalul = suma liniilor.
 
 | Variantă | Cum se calculează linia | Unde se potrivește | Consecințe |

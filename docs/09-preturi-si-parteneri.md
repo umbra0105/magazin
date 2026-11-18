@@ -91,6 +91,8 @@ tva       = 19900 - 16446        =  3454  →  34,54 lei
 
 **Excepția controlată: `costPrice` e NET (fără TVA)**, pentru că așa apare pe NIR. Se transformă în brut doar în formula de la §3.
 
+**TVA-ul unui coș (decis la Faza 8, 2026-11-18):** TVA-ul se extrage din totalul fiecărei LINII rotunjite (`net = round(total / (1 + cotă))`, `TVA = total − net`, `packages/shared/src/vat.ts`), iar TVA-ul coșului e **suma TVA-urilor pe linii**; netul coșului e suma netelor. Nu se extrage din totalul general. Exemplu: 751,81 + 240,00 + 9.490,00 = 10.481,81 lei; TVA pe linii 130,48 + 41,65 + 1.647,02 = **1.819,15**; extras din total ar fi 1.819,16 (1 ban diferență). Motiv: linia de comandă păstrează rata și valoarea TVA ca snapshot, totalul e suma liniilor, iar documentele (factură, retur parțial, storno parțial) se refac linie cu linie. **Neconfirmat:** dacă SmartBill calculează TVA-ul pe linie sau pe baza totală a cotei; la Faza 13 se compară în sandbox și TVA-ul facturii (nu doar totalul brut) cu cel din magazin, pe coșul de mai sus; o diferență de 1 ban = 🛑. Testele: `engine.test.ts`, `cart-dto.test.ts` (TVA afișat = TVA din motor pe un coș cu 3 linii), `cart-service.integration.test.ts`.
+
 **Reguli obligatorii (sunt și în `CLAUDE.md`):**
 - Toate sumele sunt `int` în bani. Procentele sunt `int` în puncte de bază. Niciodată `float`.
 - **Rotunjirea se face pe linie de comandă, o singură dată.** Totalul comenzii e suma liniilor rotunjite.

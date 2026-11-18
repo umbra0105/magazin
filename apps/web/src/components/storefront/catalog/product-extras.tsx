@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { PageDiagram, PageDocument, ListedProduct } from "@ecom/core";
 import { StoreImage } from "@ecom/ui";
 import { formatPrice, type StorefrontFormat } from "@/lib/storefront-catalog";
+import { QuickAddButton } from "@/components/storefront/cart/quick-add-button";
 import { productHref } from "@/lib/storefront-urls";
 import { getMessages } from "@/messages";
 
@@ -71,7 +72,7 @@ export function DownloadsList({
 
 /**
  * Tabul «Piese de schimb»: fișa explodată (imaginea cu punctele numerotate, ca legături către rândurile tabelului) și tabelul numerotat
- * cu piesele. Până la coș (Faza 8) rândul are legătură către piesă, nu «Adaugă în coș». Fără fișă, piesele (relația `spare_part`)
+ * cu piesele; rândul are «Adaugă în coș» (piesa cu o singură variantă, în cantitatea minimă) și legătura către piesă. Fără fișă, piesele (relația `spare_part`)
  * apar numerotate 1…n în același tabel.
  */
 export function PartsTab({
@@ -89,12 +90,16 @@ export function PartsTab({
         title: part.product?.title ?? part.label ?? m.spareParts.noProduct,
         slug: part.product?.slug ?? null,
         price: part.product?.price ?? null,
+        variantId: part.product?.variantId ?? null,
+        purchasable: part.product?.availability.purchasable ?? false,
       }))
     : spareParts.map((product, index) => ({
         number: index + 1,
         title: product.title,
         slug: product.slug,
         price: product.price,
+        variantId: product.variantId,
+        purchasable: product.availability.purchasable,
       }));
   return (
     <div className="flex flex-col gap-8">
@@ -164,14 +169,24 @@ export function PartsTab({
                   {row.price ? formatPrice(row.price.amount, format) : ""}
                 </td>
                 <td className="py-3 align-top">
-                  {row.slug ? (
-                    <Link
-                      href={productHref(row.slug)}
-                      className="text-sm underline underline-offset-2 hover:no-underline"
-                    >
-                      {m.spareParts.view}
-                    </Link>
-                  ) : null}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    {row.variantId && row.purchasable ? (
+                      <QuickAddButton
+                        variantId={row.variantId}
+                        title={row.title}
+                        label={m.spareParts.add}
+                        ariaLabel={m.spareParts.addLabel(row.title)}
+                      />
+                    ) : null}
+                    {row.slug ? (
+                      <Link
+                        href={productHref(row.slug)}
+                        className="inline-flex min-h-11 items-center text-sm underline underline-offset-2 hover:no-underline"
+                      >
+                        {m.spareParts.view}
+                      </Link>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -30,17 +30,16 @@ test.describe("pagina principală și cadrul real", () => {
     await expect(page.locator("main#continut")).toHaveCount(1);
   });
 
-  test("căutarea e activă (Faza 7); coșul rămâne dezactivat (structură, fără funcție), favoritele ascunse fără steag", async ({
+  test("căutarea (Faza 7) și coșul (Faza 8) sunt active, favoritele ascunse fără steag", async ({
     page,
   }) => {
     await page.goto("/");
     const header = page.getByRole("banner");
     // căutarea e activă: câmp cu rol `combobox` (autocomplete), în formularul `role=search`, fără `disabled`
     await expect(header.getByRole("combobox").first()).toBeEnabled();
-    await expect(header.getByRole("button", { name: /Coșul tău/ })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    // coșul e o legătură reală către /cos (și deschide sertarul cu JavaScript)
+    await expect(header.getByRole("link", { name: /Coșul tău/ })).toHaveAttribute("href", "/cos");
+    await expect(header.getByRole("button", { name: /Coșul tău/ })).toHaveCount(0);
     await expect(header.getByRole("button", { name: /Favorite/ })).toHaveCount(0);
     await expect(header.getByRole("link", { name: "Contul meu" })).toHaveAttribute("href", "/cont");
   });

@@ -106,6 +106,14 @@ ca să fie pregătit răspunsul.)*
 
 Răspuns:
 
+**3.4. Cookie-ul coșului de oaspete (adăugată în Faza 8).** Coșul unui vizitator neautentificat se păstrează cu un cookie propriu
+(valoare aleatorie, `httpOnly`, `SameSite=Lax`, `Secure` în producție, valabilitate setabilă din admin; în baza de date stă doar
+amprenta lui, nu valoarea). Îl tratăm ca **strict necesar** (fără el coșul nu funcționează): nu cere consimțământ și apare în
+categoria «necesar» din consimțământ, nu ca alegere. **Cookie-ul coșului de oaspete e tehnic necesar: de confirmat formularea din
+politica de cookie-uri** (durata, scopul, dacă trebuie menționat separat de cookie-ul de consimțământ).
+
+Răspuns:
+
 ---
 
 ## 4. Vânzarea la metru, pe suprafață și în ambalaje (adăugată de Claude)

@@ -199,6 +199,7 @@ export const ro = {
       warehouses: "Depozite",
       appearance: "Aspect",
       maintenance: "Mentenanță",
+      cartSettings: "Coș și transport",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {
@@ -337,6 +338,27 @@ export const ro = {
         brandName: "Magazinul tău",
         imageCaption: "Imagine demonstrativă",
       },
+    },
+    /** Coșul și transportul gratuit: `/admin/setari/cos`. */
+    cartSettings: {
+      title: "Coș și transport",
+      description:
+        "Pragul de transport gratuit apare în coș ca indicator («Mai ai … până la transport gratuit»). Se compară cu totalul coșului după reduceri, cu TVA, fără transport.",
+      readOnly: "Poți vedea setările coșului, dar nu le poți modifica.",
+      threshold: "Prag de transport gratuit",
+      thresholdHelp:
+        "Suma în lei, cu TVA (de exemplu 500 sau 499,90). Gol = dezactivat: indicatorul nu apare deloc în coș. Pragul pe clasă de transport și pe produs vine odată cu livrarea.",
+      thresholdOn: (amount: string) => `Indicatorul e pornit: transport gratuit de la ${amount}.`,
+      thresholdOff: "Indicatorul e oprit: coșul nu arată niciun prag.",
+      thresholdInvalid:
+        "Introdu o sumă în lei, cu cel mult două zecimale (de exemplu 500 sau 499,90), sau lasă gol.",
+      save: "Salvează",
+      saving: "Se salvează…",
+      saved: "Setările coșului au fost salvate.",
+      unsaved: "Modificări nesalvate",
+      saveFailed: "Nu am putut salva. Încearcă din nou.",
+      fixErrors: "Corectează câmpul marcat, apoi salvează.",
+      delayNote: "Schimbarea apare în coș imediat.",
     },
     /** Modul de mentenanță: `/admin/setari/mentenanta`. */
     maintenance: {
@@ -911,8 +933,7 @@ export const ro = {
     /** Afișarea prețului pe unitate și pe pas (9b). PROVIZORIE: informativă, până la motorul de prețuri (Faza 8). */
     priceDisplay: {
       heading: "Cum se afișează prețul",
-      provisional:
-        "Afișare provizorie, doar informativă: totalul comenzii îl calculează coșul. «≈» înseamnă că suma nu iese exactă în bani.",
+      note: "Afișare informativă: totalul comenzii îl calculează motorul de prețuri, o singură rotunjire pe linie. «≈» înseamnă că suma nu iese exactă în bani.",
       defaultUnit: "buc",
       /** Ce urmează după «/»: simbolul unității, sau pasul întreg cu denumirea lui */
       perUnit: (symbol: string) => symbol,
@@ -3194,6 +3215,78 @@ export const ro = {
     skipToContent: "Sari la conținut",
     /** Numele regiunii bara de anunț (cititoare de ecran). */
     announcementLabel: "Anunț",
+    cart: {
+      title: "Coșul tău",
+      drawerLabel: "Coșul tău",
+      close: "Închide coșul",
+      /** Eticheta butonului din header: numărul de produse din coș. */
+      openLabel: (count: number) =>
+        count === 0
+          ? "Coșul tău, gol"
+          : `Coșul tău, ${countOf(count, "produs", "produse", "de produse")}`,
+      loading: "Se încarcă coșul…",
+      loadFailed: "Nu am putut încărca coșul. Încearcă din nou.",
+      retry: "Încearcă din nou",
+      empty: "Coșul tău este gol",
+      emptyLede: "Adaugă produse din magazin și le găsești aici.",
+      suggestionsTitle: "Te-ar putea interesa",
+      continueShopping: "Continuă cumpărăturile",
+      viewCart: "Vezi coșul",
+      checkout: "Finalizează comanda",
+      checkoutSoon: "Finalizarea comenzii se activează în curând",
+      shippingNote: "Transportul se calculează la finalizarea comenzii",
+      linesLabel: "Produsele din coș",
+      summaryTitle: "Sumar",
+      products: "Produse",
+      vatIncluded: (vat: string) => `din care TVA: ${vat}`,
+      shipping: "Transport",
+      shippingLater: "La finalizarea comenzii",
+      total: "Total (TVA inclus)",
+      itemCount: (count: number) => countOf(count, "produs", "produse", "de produse"),
+      remove: (title: string) => `Scoate din coș: ${title}`,
+      removeShort: "Scoate din coș",
+      removed: (title: string) => `${title} a fost scos din coș.`,
+      quantityOf: (title: string) => `Cantitate pentru ${title}`,
+      decrease: "Micșorează cantitatea",
+      increase: "Mărește cantitatea",
+      stepNote: (step: string, unit: string, label: string | null) =>
+        label
+          ? `Se vinde în multipli de ${step} ${unit} (${label})`
+          : `Se vinde în multipli de ${step} ${unit}`,
+      minNote: (quantity: string, unit: string) => `Comandă minimă: ${quantity} ${unit}`,
+      lineTotal: "Total linie",
+      excluded: "Nu intră în total",
+      issueUnavailable: "Produsul nu mai este disponibil și nu intră în total. Scoate-l din coș.",
+      issueExceeds: (available: string) => `Sunt disponibile doar ${available}.`,
+      issueAdjust: (available: string) => `Ajustează la ${available}`,
+      issueInvalid: "Cantitatea nu mai este potrivită pentru acest produs. Alege altă cantitate.",
+      issuePriceChanged: (from: string, to: string) =>
+        `Prețul s-a schimbat: de la ${from} la ${to}.`,
+      issueAcknowledge: "Am înțeles",
+      issueTooExpensive: "Valoarea liniei depășește maximul permis. Scade cantitatea.",
+      leadTime: (days: number) =>
+        `Livrare toată odată, în aproximativ ${countOf(days, "zi", "zile", "de zile")}`,
+      freeShippingRemaining: (amount: string) => `Mai ai ${amount} până la transport gratuit`,
+      freeShippingReached: "Ai transport gratuit",
+      freeShippingLabel: "Progres spre transport gratuit",
+      /** Mesajele de după o acțiune (anunțate cu aria-live). */
+      added: (title: string) => `${title} a fost adăugat în coș.`,
+      updated: "Coșul a fost actualizat.",
+      errors: {
+        not_sellable: "Produsul nu mai poate fi comandat.",
+        invalid_quantity: "Cantitatea nu este potrivită pentru acest produs.",
+        unavailable: "Produsul este indisponibil.",
+        exceeds_available: "Cantitatea cerută depășește stocul disponibil.",
+        exceeds_limit: "Cantitatea cerută depășește limita pe linie.",
+        too_many_lines: "Coșul a atins numărul maxim de produse.",
+        line_too_expensive: "Valoarea liniei depășește maximul permis.",
+        not_in_cart: "Produsul nu mai este în coș.",
+        rate_limited:
+          "Prea multe modificări într-un timp scurt. Încearcă din nou peste puțin timp.",
+        invalid_input: "Cererea nu este validă.",
+        failed: "Nu am putut actualiza coșul. Încearcă din nou.",
+      },
+    },
     header: {
       mainNav: "Navigare principală",
       openMenu: "Deschide meniul",
@@ -3212,7 +3305,8 @@ export const ro = {
       wishlist: "Favorite",
       wishlistSoon: "Favoritele vor fi disponibile în curând.",
       cart: "Coșul tău",
-      cartSoon: "Coșul va fi disponibil în curând.",
+      /** Doar în previzualizări și galerie, unde coșul e structură fără funcționalitate. */
+      cartSoon: "Coșul nu e activ în această previzualizare.",
       call: (phone: string) => `Sună la ${phone}`,
     },
     footer: {
@@ -3447,6 +3541,19 @@ export const ro = {
         },
         stickyOrder: "Cum comanzi",
         stickyNotify: "Anunță-mă",
+        stickyAdd: "Adaugă în coș",
+        addToCart: "Adaugă în coș",
+        adding: "Se adaugă…",
+        viewCart: "Vezi coșul",
+        quantity: "Cantitate",
+        quantityHint: (step: string, unit: string, label: string | null) =>
+          label ? `${label} de ${step} ${unit}` : `multipli de ${step} ${unit}`,
+        quantityTotal: (total: string, unit: string) => `În total: ${total} ${unit}`,
+        perUnit: (unit: string) => `/ ${unit}`,
+        perStep: (label: string | null, step: string, unit: string) =>
+          label ? `/ ${label} de ${step} ${unit}` : `/ ${step} ${unit}`,
+        contactTitle: "Ai nevoie de ajutor la comandă?",
+        contactLine: "Ne poți contacta direct:",
         downloads: {
           empty: "Pentru acest produs nu sunt documente de descărcat.",
           download: "Descarcă",
@@ -3478,6 +3585,8 @@ export const ro = {
           part: "Piesă",
           price: "Preț",
           view: "Vezi piesa",
+          add: "Adaugă în coș",
+          addLabel: (title: string) => `Adaugă în coș: ${title}`,
           noProduct: "Piesă fără produs în magazin",
           caption: "Piesele de schimb numerotate ca în fișă",
           pointLabel: (n: number) => `Piesa ${n}`,

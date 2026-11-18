@@ -8,6 +8,7 @@ import { getMessages } from "@/messages";
 import { telHref, type SlotState } from "@/lib/storefront-chrome-rules";
 import { MegaMenu, type MegaMenuItem } from "./mega-menu";
 import { MobileNav } from "./mobile-nav";
+import { HeaderCartButton } from "./cart/cart-drawer";
 
 const m = getMessages().storefront.header;
 
@@ -186,9 +187,13 @@ export function StoreHeader({
           >
             <Heart aria-hidden="true" className="size-6" />
           </HeaderAction>
-          <HeaderAction state={slots.cart} label={m.cart} hint={m.cartSoon} href="/cos">
-            <ShoppingBag aria-hidden="true" className="size-6" />
-          </HeaderAction>
+          {slots.cart === "active" ? (
+            <HeaderCartButton />
+          ) : (
+            <HeaderAction state={slots.cart} label={m.cart} hint={m.cartSoon} href="/cos">
+              <ShoppingBag aria-hidden="true" className="size-6" />
+            </HeaderAction>
+          )}
         </div>
       </Container>
       <Container className="pb-3 md:hidden">

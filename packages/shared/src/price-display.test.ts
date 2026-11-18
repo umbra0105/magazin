@@ -37,7 +37,6 @@ describe("cele 6 produse-model", () => {
     });
     expect(d.perUnit).toEqual({ minor: 480n, exact: true });
     expect(d.stepPrice).toBeNull();
-    expect(d.provisional).toBe(true);
   });
 
   it("liner: 87,35/mp, rola de 41,25 mp ≈ 3.603,19 (exact 3.603,1875)", () => {

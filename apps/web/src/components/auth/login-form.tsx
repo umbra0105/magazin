@@ -7,6 +7,8 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button, Input, PasswordInput } from "@ecom/ui";
+import { mergeGuestCartAction } from "@/app/(storefront)/cos/actions";
+import { resetCart } from "@/components/storefront/cart/cart-store";
 import { authErrorMessage, authPost } from "@/lib/auth-client";
 import { getMessages } from "@/messages";
 import { AuthField, describedBy } from "./auth-field";
@@ -56,6 +58,13 @@ export function LoginForm({
     setNotVerified(false);
     const result = await authPost("/api/auth/sign-in/email", values);
     if (result.ok) {
+      // coșul de oaspete (din cookie) se îmbină în coșul contului; o eroare aici nu oprește autentificarea
+      try {
+        await mergeGuestCartAction();
+      } catch {
+        // se reia la prima operație pe coș (rețea de siguranță în server actions)
+      }
+      resetCart();
       router.replace(nextPath ?? "/cont");
       router.refresh();
       return;
