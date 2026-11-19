@@ -70,8 +70,11 @@ export interface CartDto {
   totals: { productsText: string; vatText: string; totalText: string } | null;
   leadTimeText: string | null;
   freeShipping: { text: string; percent: number; reached: boolean } | null;
-  /** Finalizarea nu există în Faza 8: butonul e mereu dezactivat, cu explicație. */
-  checkoutNote: string;
+  /** Coșul poate trece la finalizare (are linii și nicio problemă care cere o decizie). */
+  canCheckout: boolean;
+  checkoutLabel: string;
+  /** Explicația de sub butonul dezactivat (coșul are probleme de rezolvat). */
+  checkoutBlockedNote: string;
   shippingNote: string;
 }
 
@@ -212,7 +215,9 @@ export function toCartDto(view: CartView, format: CartFormat): CartDto {
           reached: free.reached,
         }
       : null,
-    checkoutNote: text.checkoutSoon,
+    canCheckout: view.canCheckout,
+    checkoutLabel: text.checkout,
+    checkoutBlockedNote: text.checkoutBlocked,
     shippingNote: text.shippingNote,
   };
 }

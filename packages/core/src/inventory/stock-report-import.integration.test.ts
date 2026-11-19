@@ -819,7 +819,7 @@ describe("D1 și listele", () => {
     await withImport(async (h) => {
       const a = await h.product({ variants: [{ physical: "10" }] });
       const stock = new StockService({ db: h.tx, now: () => NOW });
-      const ref = { refType: "order", refId: `${h.ctx.tag}-fereastra` };
+      const ref = { refType: "stock_test", refId: `${h.ctx.tag}-fereastra` };
       await stock.commitDirect(ref, [
         { variantId: a.id, warehouseId: h.ctx.warehouseId, quantity: q("3") },
       ]);
@@ -838,7 +838,7 @@ describe("D1 și listele", () => {
     await withImport(async (h) => {
       const a = await h.product({ variants: [{ physical: "10" }] });
       const stock = new StockService({ db: h.tx, now: () => NOW });
-      const ref = { refType: "order", refId: `${h.ctx.tag}-veche` };
+      const ref = { refType: "stock_test", refId: `${h.ctx.tag}-veche` };
       await stock.commitDirect(ref, [
         { variantId: a.id, warehouseId: h.ctx.warehouseId, quantity: q("3") },
       ]);

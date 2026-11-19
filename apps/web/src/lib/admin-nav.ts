@@ -40,7 +40,8 @@ export type AdminNavItemId =
   | "warehouses"
   | "appearance"
   | "maintenance"
-  | "cartSettings";
+  | "cartSettings"
+  | "shippingZones";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -122,6 +123,7 @@ export const SETTINGS_ITEMS: readonly AdminNavItem[] = [
   { id: "appearance", href: "/admin/setari/aspect", permission: "settings.read" },
   { id: "maintenance", href: "/admin/setari/mentenanta", permission: "settings.read" },
   { id: "cartSettings", href: "/admin/setari/cos", permission: "settings.read" },
+  { id: "shippingZones", href: "/admin/setari/livrare", permission: "settings.read" },
 ];
 
 export const ADMIN_NAV: readonly AdminNavEntry[] = [

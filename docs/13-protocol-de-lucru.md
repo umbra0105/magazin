@@ -198,7 +198,7 @@ Nu bifa nimic la încredere. La aceste momente, deschide browserul:
 | 5 | Modifici stocul, vezi mișcarea în istoric |
 | 7 | Găsești produsul pe site, filtrezi, deschizi pagina lui |
 | 8 | Adaugi în coș, schimbi cantitatea, aplici un cupon |
-| 9 | **Plasezi o comandă completă cu ramburs**, primești confirmarea |
+| 9 | **(1) Plasezi o comandă completă cu ramburs**, primești confirmarea; **(2) o comandă cu transfer bancar** (date bancare, rezervare până la termen); **(3) o comandă cu un produs «La comandă»**: rambursul nu se oferă, doar transferul; **(4) limita de ramburs**: peste 10.000 lei (persoană fizică) sau 5.000 lei (cu CUI) metoda dispare, cu explicație |
 | 10 | **Plasezi o comandă cu card în sandbox**, verifici că statusul se schimbă |
 | 11 | Procesezi comanda din admin, primești emailurile |
 | 12 | Generezi un AWB, descarci eticheta |

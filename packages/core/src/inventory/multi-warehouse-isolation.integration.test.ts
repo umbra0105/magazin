@@ -162,15 +162,15 @@ async function story(extraWarehouses: boolean): Promise<unknown> {
     });
 
     const trace: Record<string, unknown> = {};
-    const refA = { refType: "order", refId: `iso-a-${ctx.tag}` };
-    const refB = { refType: "order", refId: `iso-b-${ctx.tag}` };
+    const refA = { refType: "stock_test", refId: `iso-a-${ctx.tag}` };
+    const refB = { refType: "stock_test", refId: `iso-b-${ctx.tag}` };
     const read = async (variantId: string) => stock.readInventory(variantId);
 
     trace["reserve"] = await stock.reserve(refA, [{ variantId: va.id, quantity: q("3") }], EXPIRES);
     trace["afterReserve"] = [await read(va.id), await read(vb.id)];
     trace["reserveTooMuch"] = await stock
       .reserve(
-        { refType: "order", refId: `iso-big-${ctx.tag}` },
+        { refType: "stock_test", refId: `iso-big-${ctx.tag}` },
         [{ variantId: va.id, quantity: q("999") }],
         EXPIRES,
       )

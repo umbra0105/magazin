@@ -118,6 +118,10 @@ Răspuns:
 
 Răspuns:
 
+**12. TVA la transport și la taxa de ramburs (adăugată în Faza 9).** Transportul și taxa de ramburs sunt sume cu TVA inclus, ca prețurile produselor: TVA-ul se extrage din ele cu aceeași cotă (`tax.standardRate`, 21%), ca la linii. Provizoriu, așa le tratăm. E corect? Taxa de ramburs apare pe factură ca linie separată (serviciu) sau e inclusă în transport? Cota TVA a transportului urmează cota produselor sau e mereu cea standard?
+
+Răspuns:
+
 **11. Transportul la retur parțial.** La storno parțial pentru produse, transportul plătit de client se returnează, se păstrează sau depinde de motiv?
 
 Răspuns:

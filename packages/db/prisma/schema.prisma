@@ -223,38 +223,38 @@ model MediaFolder {
 /// regenera variantele); `variants` = lista variantelor generate din job. Numele original
 /// al fișierului e doar informativ în admin și nu apare niciodată într-un URL.
 model Media {
-  id              String         @id @default(cuid())
+  id                  String                    @id @default(cuid())
   /// "pending" | "processing" | "ready" | "failed" (constrângere CHECK în migrație)
-  status          String         @default("pending")
-  mime            String
-  sizeBytes       Int
-  width           Int?
-  height          Int?
+  status              String                    @default("pending")
+  mime                String
+  sizeBytes           Int
+  width               Int?
+  height              Int?
   /// SHA-256 (hex) al originalului stocat; permite detectarea dublurilor
-  checksum        String
+  checksum            String
   /// SHA-256 (hex) al adresei sursă normalizate, pentru imaginile aduse prin import din adresă (idempotență: aceeași
   /// adresă nu produce un al doilea fișier). `null` la fișierele încărcate de utilizator.
-  sourceHash      String?        @unique
-  originalName    String
-  storageKey      String         @unique
+  sourceHash          String?                   @unique
+  originalName        String
+  storageKey          String                    @unique
   /// [{ name, format, key, width, height, sizeBytes }]
-  variants        Json           @default("[]")
-  blurhash        String?
-  alt             String         @default("")
-  tags            String[]       @default([])
-  folderId        String?
-  folder          MediaFolder?   @relation(fields: [folderId], references: [id], onDelete: Restrict)
-  processingError String?
-  uploadedById    String?
-  uploadedBy      User?          @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
-  productMedia    ProductMedia[]
+  variants            Json                      @default("[]")
+  blurhash            String?
+  alt                 String                    @default("")
+  tags                String[]                  @default([])
+  folderId            String?
+  folder              MediaFolder?              @relation(fields: [folderId], references: [id], onDelete: Restrict)
+  processingError     String?
+  uploadedById        String?
+  uploadedBy          User?                     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  productMedia        ProductMedia[]
   /// Folosit în descrierea bogată a unor produse (`<img data-media-id>`); FK Restrict, ca la `productMedia`
   productDescriptions ProductDescriptionMedia[]
-  partsDiagrams   PartsDiagram[]
-  categories      Category[]
-  brands          Brand[]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  partsDiagrams       PartsDiagram[]
+  categories          Category[]
+  brands              Brand[]
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
 
   @@index([folderId])
   @@index([status])
@@ -329,24 +329,24 @@ model Category {
 /// simplu are o singură variantă implicită). `slug` e unic pe TOATE produsele, inclusiv cele șterse (index
 /// `product_slug_key`, fără diferență de majuscule). `deletedAt` = soft delete.
 model Product {
-  id                       String                @id @default(cuid())
+  id                       String                    @id @default(cuid())
   slug                     String
   title                    String
   subtitle                 String?
   description              String?
   /// "draft" | "active" | "archived" (CHECK în migrație)
-  status                   String                @default("draft")
+  status                   String                    @default("draft")
   /// "physical" | "digital" (CHECK în migrație)
-  type                     String                @default("physical")
+  type                     String                    @default("physical")
   /// Opțional: magazinul poate să nu folosească mărci. Obligatoriu doar la publicarea pe un canal care îl cere (eMAG).
   brandId                  String?
-  brand                    Brand?                @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  brand                    Brand?                    @relation(fields: [brandId], references: [id], onDelete: Restrict)
   /// Pregătit pentru cote reduse; nefolosit (vezi `TaxClass`). Calculul folosește `tax.standardRate`.
   taxClassId               String?
-  taxClass                 TaxClass?             @relation(fields: [taxClassId], references: [id], onDelete: Restrict)
+  taxClass                 TaxClass?                 @relation(fields: [taxClassId], references: [id], onDelete: Restrict)
   /// "standard" | "oversized" | "pallet" (CHECK în migrație). Regulile pe clase vin la Faza 12.
-  shippingClass            String                @default("standard")
-  requiresInstallation     Boolean               @default(false)
+  shippingClass            String                    @default("standard")
+  requiresInstallation     Boolean                   @default(false)
   /// Clasa energetică afișată înaintea finalizării comenzii: A+++ … G (CHECK în migrație)
   energyClass              String?
   /// Link către înregistrarea EPREL (https, CHECK în migrație)
@@ -361,18 +361,18 @@ model Product {
   safetyWarnings           String?
   /// Câmpuri pregătitoare (Faza 5 / Val 2), nefolosite încă
   expectedRestockDate      DateTime?
-  allowBackorder           Boolean               @default(false)
+  allowBackorder           Boolean                   @default(false)
   /// Valoarea implicită vine din setarea `inventory.manageStock`; aici e suprascrierea per produs.
-  manageStock              Boolean               @default(true)
+  manageStock              Boolean                   @default(true)
   /// "instock" | "outofstock" | "onbackorder" (CHECK); folosit când `manageStock = false`
-  stockStatus              String                @default("instock")
+  stockStatus              String                    @default("instock")
   /// Termenul „La comandă” în zile (0–365); gol = implicitul brandului, apoi setarea globală
   leadTimeDays             Int?
   /// Unitatea de măsură a produsului (D11); gol = bucată (pas 1). Varianta o poate suprascrie.
   measureUnitId            String?
-  measureUnit              MeasureUnit?          @relation(fields: [measureUnitId], references: [id], onDelete: Restrict)
+  measureUnit              MeasureUnit?              @relation(fields: [measureUnitId], references: [id], onDelete: Restrict)
   /// La ce se referă `price` al variantelor: "unit" (preț pe unitate: lei/ml) | "step" (preț pe pas: lei/sac); CHECK
-  priceBasis               String                @default("unit")
+  priceBasis               String                    @default("unit")
   /// Pasul de vânzare în zecimi de miime de unitate (25000 = 2,5 ml); gol = o unitate. Cantitatea comandată e multiplu exact.
   saleStep                 Int?
   /// Denumirea pasului pentru afișarea prețului pe pas («sac», «rolă»); gol = fără denumire. 1–30 de caractere (CHECK)
@@ -380,32 +380,33 @@ model Product {
   /// Minimul comandat, în pași (gol = 1)
   minSteps                 Int?
   /// Arată și prețul unui pas (ex. „Rola de 41,25 mp ≈ …”)
-  showStepPrice            Boolean               @default(false)
-  excludeFromGroupDiscount Boolean               @default(false)
+  showStepPrice            Boolean                   @default(false)
+  excludeFromGroupDiscount Boolean                   @default(false)
   seoTitle                 String?
   seoDescription           String?
   publishedAt              DateTime?
-  sortOrder                Int                   @default(0)
-  metadata                 Json                  @default("{}")
-  legacyId                 String?               @unique
+  sortOrder                Int                       @default(0)
+  metadata                 Json                      @default("{}")
+  legacyId                 String?                   @unique
   legacyUrl                String?
   deletedAt                DateTime?
   variants                 ProductVariant[]
+  freeShippingExclusion    FreeShippingExclusion?
   categories               ProductCategory[]
   media                    ProductMedia[]
   descriptionMedia         ProductDescriptionMedia[]
   options                  ProductOption[]
   attributes               AttributeValue[]
   collections              CollectionProduct[]
-  relations                ProductRelation[]     @relation("ProductRelations")
-  relatedTo                ProductRelation[]     @relation("RelatedProducts")
+  relations                ProductRelation[]         @relation("ProductRelations")
+  relatedTo                ProductRelation[]         @relation("RelatedProducts")
   importImages             ProductImportImage[]
   documents                ProductDocument[]
   channelListings          ChannelListing[]
   partsDiagrams            PartsDiagramProduct[]
   hotspots                 PartsDiagramHotspot[]
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
 
   @@index([brandId])
   @@index([taxClassId])
@@ -481,6 +482,7 @@ model ProductVariant {
   stockMovements         StockMovement[]
   backInStockAlerts      BackInStockAlert[]
   cartItems              CartItem[]
+  orderLines             OrderLine[]
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
@@ -837,6 +839,7 @@ model SalesChannel {
   config        Json                     @default("{}")
   listings      ChannelListing[]
   categoryMaps  ChannelCategoryMapping[]
+  orders        Order[]
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
 
@@ -1115,12 +1118,17 @@ model StockReservation {
   status      String        @default("active")
   refType     String
   refId       String
+  /// Faza 9: cheie străină spre comandă. Setat DOAR când `refType = 'order'` (atunci `orderId = refId`; CHECK în migrație);
+  /// celelalte tipuri de referință (ex. teste) rămân generice și au `orderId` nul.
+  orderId     String?
+  order       Order?        @relation(fields: [orderId], references: [id], onDelete: Restrict)
   expiresAt   DateTime
   confirmedAt DateTime?
   releasedAt  DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  @@index([orderId])
   @@index([status, expiresAt])
   @@index([variantId, warehouseId, status])
   @@index([refType, refId])
@@ -1140,6 +1148,9 @@ model StockCommitment {
   status      String        @default("open")
   refType     String
   refId       String
+  /// Faza 9: cheie străină spre comandă (vezi `StockReservation.orderId`).
+  orderId     String?
+  order       Order?        @relation(fields: [orderId], references: [id], onDelete: Restrict)
   committedAt DateTime      @default(now())
   invoicedAt  DateTime?
   mirroredAt  DateTime?
@@ -1148,6 +1159,7 @@ model StockCommitment {
   updatedAt   DateTime      @updatedAt
 
   @@unique([refType, refId, variantId, warehouseId], map: "stock_commitment_ref_key")
+  @@index([orderId])
   @@index([variantId, warehouseId, status])
   @@map("stock_commitment")
 }
@@ -1220,4 +1232,271 @@ model CartItem {
   @@unique([cartId, variantId])
   @@index([variantId])
   @@map("cart_item")
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Faza 9: checkout și comenzi. Sumele sunt întregi în bani (`...Minor`), niciodată float. Comanda e un snapshot imuabil:
+// nicio cale din aplicație nu modifică liniile, adresele sau sumele după plasare (doar starea, prin state machine, iar
+// evenimentele se adaugă). `costPrice` nu apare nicăieri aici.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/// Nomenclatorul SIRUTA (INS, CC BY 4.0; `docs/SIRUTA-SURSA.md`): județe (nivel 1), UAT-uri (nivel 2), localități și sectoare
+/// (nivel 3). Rândurile dispărute dintr-o versiune nouă se marchează `isActive = false`, nu se șterg (adresele păstrează codul).
+/// Numele e cel din registru (majuscule, diacritice normalizate, pentru căutare); numele de afișare se calculează la citire.
+model SirutaUnit {
+  code          Int          @id
+  countyCode    Int
+  name          String
+  parentCode    Int?
+  parent        SirutaUnit?  @relation("SirutaTree", fields: [parentCode], references: [code], onDelete: Restrict)
+  children      SirutaUnit[] @relation("SirutaTree")
+  tip           Int
+  level         Int
+  isActive      Boolean      @default(true)
+  sourceVersion String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  countyOf      Address[]    @relation("AddressCounty")
+  localityOf    Address[]    @relation("AddressLocality")
+
+  @@index([countyCode, level])
+  @@index([parentCode])
+  @@map("siruta_unit")
+}
+
+/// Contorul numerelor de comandă: un singur rând, blocat în aceeași tranzacție cu plasarea (fără goluri; NU secvență Postgres,
+/// care sare valori la rollback). Numărul = prefix (`checkout.orderNumberPrefix`) + contor cu zerouri la stânga.
+model OrderCounter {
+  id        String   @id
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("order_counter")
+}
+
+/// Comanda (Faza 9: doar oaspete, `customerId` gol; plata: ramburs sau transfer bancar). Trei statusuri separate, cu tranziții
+/// validate de state machine (`packages/core/src/orders`); valorile sunt păzite de CHECK în migrație.
+model Order {
+  id                    String             @id @default(cuid())
+  number                String             @unique
+  channelId             String
+  channel               SalesChannel       @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  externalId            String?
+  /// JSON brut de la canalul extern (eMAG), pentru depanare; nul la comenzile web.
+  externalData          Json?
+  parentSubscriptionId  String?
+  /// Gol în Faza 9 (checkout doar pentru oaspete); contul de client vine în Faza 14.
+  customerId            String?
+  email                 String
+  phone                 String
+  currency              String             @default("RON")
+  /// pending | confirmed | processing | completed | cancelled | returned | draft
+  status                String             @default("pending")
+  /// pending | authorized | paid | partially_refunded | refunded | failed | cancelled | chargeback
+  paymentStatus         String             @default("pending")
+  /// unfulfilled | partially_fulfilled | fulfilled | in_transit | delivered | returned | cancelled
+  fulfillmentStatus     String             @default("unfulfilled")
+  subtotalMinor         Int
+  discountMinor         Int                @default(0)
+  shippingMinor         Int
+  codFeeMinor           Int                @default(0)
+  /// TVA extras din transport și din taxa de ramburs (sume cu TVA inclus, ca liniile; docs/09 §2).
+  shippingTaxMinor      Int                @default(0)
+  codFeeTaxMinor        Int                @default(0)
+  /// TVA total = suma TVA pe linii + shippingTaxMinor + codFeeTaxMinor (verificat în bază, la commit).
+  taxMinor              Int
+  totalMinor            Int
+  /// Cota standard de TVA la plasare, în puncte de bază (2100 = 21%), ca snapshot.
+  taxRateBps            Int
+  groupPricingType      String             @default("none")
+  /// Metoda de livrare aleasă: cod (courier | pickup | …) și snapshot-ul ofertei (curier, serviciu, preț, zile, sursa).
+  shippingMethodCode    String
+  shippingSnapshot      Json
+  /// cod | bank_transfer (cardul vine în Faza 10)
+  paymentMethod         String
+  customerNote          String?
+  adminNote             String?
+  installationRequested Boolean            @default(false)
+  installationNote      String?
+  /// Consimțământul pentru Termeni: textul exact, versiunea și momentul. Fără IP și fără user-agent (decizie Faza 9).
+  termsAcceptedAt       DateTime
+  termsConsentText      String
+  termsConsentVersion   String
+  /// Transfer bancar: până când ține rezervarea; la expirare comanda se anulează automat.
+  reservationExpiresAt  DateTime?
+  /// Cheia de idempotență a plasării (protecție la dublu-click): aceeași cheie întoarce aceeași comandă.
+  idempotencyKey        String             @unique
+  source                String             @default("web")
+  placedAt              DateTime           @default(now())
+  confirmedAt           DateTime?
+  cancelledAt           DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  lines                 OrderLine[]
+  events                OrderEvent[]
+  payments              Payment[]
+  addresses             Address[]
+  stockReservations     StockReservation[]
+  stockCommitments      StockCommitment[]
+
+  @@index([status, paymentStatus])
+  @@index([email])
+  @@index([reservationExpiresAt])
+  @@index([channelId])
+  @@index([placedAt])
+  @@map("customer_order")
+}
+
+/// O linie de comandă: snapshot imuabil (preț, TVA, cantitate). `productSnapshot` NU conține `costPrice`. `lineTotalMinor` e suma
+/// rotunjită O SINGURĂ DATĂ pe linie; `netMinor + taxMinor = lineTotalMinor` (CHECK).
+model OrderLine {
+  id              String          @id @default(cuid())
+  orderId         String
+  order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId       String?
+  variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  sku             String
+  title           String
+  variantTitle    String?
+  imageUrl        String?
+  /// Zecimi de miime de unitate (`Quantity`), > 0.
+  quantity        BigInt
+  unitSymbol      String
+  unitDecimals    Int
+  unitPriceMinor  Int
+  discountMinor   Int             @default(0)
+  lineTotalMinor  Int
+  netMinor        Int
+  taxMinor        Int
+  taxRateBps      Int
+  /// Starea de stoc la plasare: in_stock | limited | on_order (D6) și termenul, în zile, la «La comandă».
+  stockState      String
+  leadTimeDays    Int?
+  /// Clasa de transport la plasare (standard | oversized | pallet), pentru reguli (easybox) și transport.
+  shippingClass   String
+  productSnapshot Json
+  createdAt       DateTime        @default(now())
+
+  @@unique([orderId, variantId])
+  @@index([variantId])
+  @@map("order_line")
+}
+
+/// Jurnalul comenzii (timeline). Se adaugă, nu se modifică: nicio cale din aplicație nu face update sau delete.
+model OrderEvent {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type       String
+  message    String
+  data       Json?
+  /// Cine a făcut acțiunea (admin); gol la evenimentele clientului sau ale sistemului.
+  actorLabel String?
+  createdAt  DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@map("order_event")
+}
+
+/// Plata unei comenzi. Faza 9: `cod` (ramburs: se încasează la livrare) și `bank_transfer`. `status`: pending | paid | failed |
+/// cancelled | refunded. Confirmarea transferului există doar în serviciu (ecranul de admin vine în Faza 11).
+model Payment {
+  id             String    @id @default(cuid())
+  orderId        String
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider       String
+  method         String
+  amountMinor    Int
+  currency       String    @default("RON")
+  status         String    @default("pending")
+  providerRef    String?
+  idempotencyKey String?   @unique
+  rawPayload     Json?
+  capturedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([orderId])
+  @@map("payment")
+}
+
+/// Adresa unei comenzi (livrare sau facturare), snapshot imuabil: textul rămâne cel de la plasare; `countySirutaCode` și
+/// `localitySirutaCode` sunt coduri SIRUTA (cheie străină spre nomenclator; NU codul `JUD`). Codul poștal e introdus de client (doar format). La facturare pe firmă: `vatId` (CUI) cu `vatIdVerification`
+/// = verified | unverified (ANAF nu a răspuns: comanda NU se blochează).
+model Address {
+  id                 String     @id @default(cuid())
+  orderId            String
+  order              Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// shipping | billing
+  kind               String
+  fullName           String
+  company            String?
+  vatId              String?
+  vatIdVerification  String?
+  tradeRegisterNo    String?
+  phone              String
+  countySirutaCode   Int
+  county             SirutaUnit @relation("AddressCounty", fields: [countySirutaCode], references: [code], onDelete: Restrict)
+  countyName         String
+  localitySirutaCode Int
+  locality           SirutaUnit @relation("AddressLocality", fields: [localitySirutaCode], references: [code], onDelete: Restrict)
+  localityName       String
+  street             String
+  postalCode         String
+  country            String     @default("RO")
+  createdAt          DateTime   @default(now())
+
+  @@unique([orderId, kind])
+  @@index([countySirutaCode])
+  @@index([localitySirutaCode])
+  @@map("address")
+}
+
+/// Zonă de livrare pe județe (coduri `JUD` din SIRUTA), cu tarife fixe: REZERVA folosită când furnizorul de tarife nu răspunde.
+model ShippingZone {
+  id          String           @id @default(cuid())
+  name        String
+  isActive    Boolean          @default(true)
+  countyCodes Int[]
+  position    Int              @default(0)
+  methods     ShippingMethod[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("shipping_zone")
+}
+
+/// Metodă de livrare cu tarif propriu. `zoneId` nul = disponibilă oriunde (ridicare personală). Tipuri: flat (preț fix),
+/// weight (preț de bază pentru `rules.includedKg` kg + `rules.perExtraKgMinor` pe fiecare kg început în plus), pickup.
+model ShippingMethod {
+  id             String        @id @default(cuid())
+  zoneId         String?
+  zone           ShippingZone? @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  carrier        String?
+  type           String
+  priceMinor     Int
+  rules          Json          @default("{}")
+  /// Prag de transport gratuit propriu metodei (bani, cu TVA); nul = fără prag.
+  freeAboveMinor Int?
+  codFeeMinor    Int           @default(0)
+  estimatedDays  Int?
+  isActive       Boolean       @default(true)
+  position       Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([zoneId, isActive])
+  @@map("shipping_method")
+}
+
+/// Produse la care pragul de transport gratuit NU se aplică (bifat din ecranul «Coș și transport»; pe clasă: setarea
+/// `checkout.freeShippingClasses`).
+model FreeShippingExclusion {
+  productId String   @id
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("free_shipping_exclusion")
 }

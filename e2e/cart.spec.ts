@@ -130,14 +130,15 @@ test.describe("adăugare din pagina de produs", () => {
     await expect(page.locator("[data-order-summary]")).toContainText("34,54");
   });
 
-  test("finalizarea e dezactivată cu explicația cerută, transportul se calculează mai târziu, fără câmp de cupon și fără reduceri", async ({
+  test("finalizarea duce la /checkout când coșul nu are probleme, transportul se calculează la finalizare, fără câmp de cupon și fără reduceri", async ({
     page,
   }) => {
     await addFromProductPage(page, bucati);
     await page.goto("/cos");
     const checkout = page.locator("[data-checkout]");
-    await expect(checkout).toHaveText("Finalizarea comenzii se activează în curând");
-    await expect(checkout).toHaveAttribute("aria-disabled", "true");
+    await expect(checkout).toHaveText("Finalizează comanda");
+    await expect(checkout).toHaveAttribute("href", "/checkout");
+    await expect(checkout).not.toHaveAttribute("aria-disabled", "true");
     await expect(page.locator("main")).toContainText(
       "Transportul se calculează la finalizarea comenzii",
     );

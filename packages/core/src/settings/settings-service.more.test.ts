@@ -60,6 +60,7 @@ describe("SettingsService: cache și grupuri", () => {
       currency: "EUR",
       locale: "ro-RO",
       timezone: "Europe/Bucharest",
+      nonWorkingDates: [],
     });
   });
 

@@ -272,6 +272,23 @@ export class CartService {
     return this.buildView(items, settings);
   }
 
+  /**
+   * Faza 9: blochează rândul coșului (`FOR UPDATE`) pe durata tranzacției de plasare a comenzii, ca două plasări sau o modificare
+   * a coșului să nu se calce. `false` dacă proprietarul nu are un coș viu.
+   */
+  async lockForCheckout(owner: CartOwner): Promise<boolean> {
+    const cart = await this.findLiveCart(owner);
+    if (!cart) return false;
+    await this.lock(this.db, [cart.id]);
+    return true;
+  }
+
+  /** Faza 9: golește coșul la plasarea comenzii (șterge coșul și liniile lui). Cookie-ul rămas nu mai găsește niciun coș. */
+  async clearAfterOrder(owner: CartOwner): Promise<void> {
+    const cart = await this.findLiveCart(owner);
+    if (cart) await this.db.cart.delete({ where: { id: cart.id } });
+  }
+
   /** Numărul de LINII din coș (insigna din header); cantitățile pot fi zecimale, deci nu se adună. */
   async lineCount(owner: CartOwner): Promise<number> {
     const cart = await this.findLiveCart(owner);

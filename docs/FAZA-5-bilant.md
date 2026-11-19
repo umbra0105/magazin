@@ -15,7 +15,7 @@ Cele 14 puncte ale planului (`docs/FAZA-5-plan.md`): schema și migrația; canti
 | **Cheie străină spre `Order`/`OrderLine`** în locul referinței generice (tip + id) a angajării, cu validarea datelor existente | Nu exista `Order` când s-a construit angajarea; testele de concurență din Faza 5 se rulează din nou pe schema nouă | Faza 9 |
 | **Formularul și ruta publică «Anunță-mă»**, textul GDPR | Vitrina nu există (formular: Faza 7); textul legal merge cu restul textelor legale | Faza 7 / 18 |
 | **Emailul «sincronizarea SmartBill e neactualizată»** | Panoul și bannerul avertizează deja; emailul vine cu modulul de emailuri de admin. Jobul scrie în audit (`stock.snapshot.stale` / `recovered`) | Faza 11 |
-| **Calendarul zilelor nelucrătoare** pentru expirarea transferului bancar | «Zile lucrătoare» e acum luni–vineri; setarea `regional.nonWorkingDates` se adaugă odată cu checkout-ul care o folosește | Faza 10 |
+| **Calendarul zilelor nelucrătoare** pentru expirarea transferului bancar | «Zile lucrătoare» e acum luni–vineri; setarea `regional.nonWorkingDates` se adaugă odată cu checkout-ul care o folosește | Faza 9 (mutat din Faza 10, 2026-11-18) |
 | **Greutatea liniei = greutate pe unitate × cantitate** | Transportul nu există | Faza 12 |
 | **Unitatea în care se trimite stocul către eMAG** (`ChannelListing.stock` e `Int?`, stocul nostru e `Quantity` cu pas) | De decis cu datele reale ale canalului | Faza 22b |
 | **Motorul de prețuri cu cantitate `bigint`** și regula finală de rotunjire pe linie (R1/R2, provizorie) | Rotunjirea ține de motorul de prețuri și de răspunsul contabilului | Faza 8 |

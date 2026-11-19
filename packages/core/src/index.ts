@@ -17,3 +17,7 @@ export * from "./inventory";
 export * from "./storefront";
 export * from "./pricing";
 export * from "./cart";
+export * from "./orders";
+export * from "./shipping";
+export * from "./geo";
+export * from "./db-tx";

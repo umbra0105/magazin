@@ -43,7 +43,7 @@ afterAll(async () => {
 
 const q = (text: string): Quantity => parseQuantity(text);
 const soon = (): Date => new Date(Date.now() + 15 * 60_000);
-const ref = (name: string) => ({ refType: "order", refId: `${ctx.tag}-${name}` });
+const ref = (name: string) => ({ refType: "stock_test", refId: `${ctx.tag}-${name}` });
 const line = (variantId: string, quantity: string) => ({
   variantId,
   warehouseId: ctx.warehouseId,
@@ -488,7 +488,7 @@ describe("igiena datelor comise", () => {
     const orphan = await createStockContext(db, { namespace: STOCK_NAMESPACE });
     const added = await addStockProduct(db, orphan, { variants: [{ physical: "5" }] });
     await service.reserve(
-      { refType: "order", refId: `${orphan.tag}-rest` },
+      { refType: "stock_test", refId: `${orphan.tag}-rest` },
       [{ variantId: added.variants[0]!.id, warehouseId: orphan.warehouseId, quantity: q("2") }],
       soon(),
     );

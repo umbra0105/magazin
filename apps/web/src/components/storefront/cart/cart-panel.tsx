@@ -209,14 +209,31 @@ export function OrderSummary({ cart }: { cart: CartDto }) {
       <p className="text-sm text-ink-secondary" id="cart-shipping-note">
         {cart.shippingNote}
       </p>
-      <StoreButton
-        aria-disabled="true"
-        aria-describedby="cart-shipping-note"
-        data-checkout
-        className="w-full whitespace-normal text-center"
-      >
-        {cart.checkoutNote}
-      </StoreButton>
+      {cart.canCheckout ? (
+        <Link
+          href="/checkout"
+          aria-describedby="cart-shipping-note"
+          data-checkout
+          onClick={closeDrawer}
+          className={cn(storeButtonVariants({ variant: "primary" }), "w-full text-center")}
+        >
+          {cart.checkoutLabel}
+        </Link>
+      ) : (
+        <>
+          <StoreButton
+            aria-disabled="true"
+            aria-describedby="cart-checkout-blocked"
+            data-checkout
+            className="w-full whitespace-normal text-center"
+          >
+            {cart.checkoutLabel}
+          </StoreButton>
+          <p id="cart-checkout-blocked" className="text-sm text-ink-secondary">
+            {cart.checkoutBlockedNote}
+          </p>
+        </>
+      )}
     </section>
   );
 }

@@ -184,6 +184,8 @@ ReturnRequest     orderId, customerId, status, reason, items, refundMethod,
                   awb?, receivedAt, resolvedAt, refundId?
 ```
 
+**Implementat în Faza 9 (diferențe față de schița de mai sus):** tabela se numește `customer_order`; sumele au sufixul `Minor` (`subtotalMinor`, `discountMinor`, `shippingMinor`, `codFeeMinor`, `taxMinor`, `totalMinor`) și, în plus, `shippingTaxMinor` și `codFeeTaxMinor` (TVA extras din transport și din taxa de ramburs); adresele sunt rânduri în tabela `address` (livrare și facturare, imuabile, legate de nomenclatorul SIRUTA și cu CUI + «verified/unverified»), nu JSON; consimțământul pentru Termeni stă pe comandă (`termsConsentText`, `termsConsentVersion`, `termsAcceptedAt`), **fără IP și user-agent** (decizie, `INTREBARI-AVOCAT` 7.2); `idempotencyKey` unic; `reservationExpiresAt` pentru transfer; `customerId` gol (checkout doar pentru oaspete). Baza verifică la commit că `subtotalMinor` = suma liniilor și `taxMinor` = suma TVA pe linii + transport + taxă, și refuză modificarea sumelor după plasare (triggere). Rezervările și angajările de stoc au `orderId` (cheie străină spre `customer_order`) când `refType = 'order'`.
+
 ### Promoții
 ```
 Discount          code?, type(percentage|fixed|free_shipping|bxgy),

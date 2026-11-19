@@ -438,6 +438,29 @@ export function divideByFactor(value: Quantity, factor: Quantity): ScaledQuantit
 }
 
 // ---------------------------------------------------------------------------
+// Mărime pe unitate × cantitate (greutate, volum): EXACT, fără rotunjire
+// ---------------------------------------------------------------------------
+
+/**
+ * `valoare pe unitate (întreg ≥ 0, ex. grame) × cantitate`, EXACT: partea întreagă și restul în zecimi de miime (restul e
+ * între 0 și 9999). Cine are nevoie de o rotunjire (ex. în sus la gram) o alege din rest; aici nu se rotunjește.
+ */
+export function scaleWholeByQuantity(
+  unitValue: number | bigint,
+  quantity: Quantity,
+): { whole: bigint; remainderTicks: bigint } {
+  const unit =
+    typeof unitValue === "bigint"
+      ? unitValue
+      : Number.isSafeInteger(unitValue)
+        ? BigInt(unitValue)
+        : -1n;
+  if (unit < 0n) fail("invalid_argument", "Valoarea pe unitate trebuie să fie un întreg ≥ 0.");
+  const product = unit * quantityFromTicks(quantity);
+  return { whole: product / QUANTITY_FACTOR, remainderTicks: product % QUANTITY_FACTOR };
+}
+
+// ---------------------------------------------------------------------------
 // Preț × cantitate: valoare EXACTĂ, fără regula de rotunjire
 // ---------------------------------------------------------------------------
 

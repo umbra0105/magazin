@@ -200,9 +200,11 @@ describe("coșul pentru interfață (texte gata formatate pe server)", () => {
     expect(reached.freeShipping).toMatchObject({ reached: true, percent: 100 });
   });
 
-  it("finalizarea e dezactivată cu explicație, iar transportul se calculează mai târziu; nicio reducere în coș", () => {
+  it("finalizarea se activează doar când coșul nu are probleme, iar transportul se calculează la finalizare; nicio reducere în coș", () => {
     const dto = toCartDto(view([line()]), FORMAT);
-    expect(dto.checkoutNote).toBe("Finalizarea comenzii se activează în curând");
+    expect(dto.canCheckout).toBe(true);
+    expect(dto.checkoutLabel).toBe("Finalizează comanda");
+    expect(dto.checkoutBlockedNote).toContain("Rezolvă mai întâi");
     expect(dto.shippingNote).toBe("Transportul se calculează la finalizarea comenzii");
     expect(JSON.stringify(dto).toLowerCase()).not.toContain("reducere");
     expect(JSON.stringify(dto)).not.toContain("compareAt");

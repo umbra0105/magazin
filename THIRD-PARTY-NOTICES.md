@@ -13,6 +13,10 @@ Acest fișier este GENERAT (`node scripts/generate-third-party-notices.mjs`) din
 - **MPL-2.0 — `lightningcss`, `axe-core` (doar dezvoltare/test, nu se livrează în producție).**
 - **MIT-0 — `nodemailer`; BlueOak-1.0.0 — `glob`, `lru-cache`, `minimatch`, `minipass`, `path-scurry`; 0BSD — `tslib`.**
 
+## Date incluse în produs
+
+- **CC BY 4.0 — registrul SIRUTA (județe și localități).** Credit: Institutul Național de Statistică (INS), registrul SIRUTA, semestrul 1 din 2026 (https://data.gov.ro/dataset/siruta_s1-2026). Licența: https://creativecommons.org/licenses/by/4.0/. Date modificate: coloane selectate, diacritice normalizate (ș/ț); la afișare, majusculele sunt convertite în litere mici cu inițiale mari. Fișierul din repo: `packages/core/data/siruta/siruta-s1-2026.json`. Produsul nu este susținut de INS.
+
 ## Binare native opționale ale lui sharp (din lockfile)
 
 Pachetele `@img/sharp-<platformă>` (și `@img/sharp-libvips-<platformă>`) se instalează doar pe platforma potrivită. Conform documentației `sharp`, `@img/sharp-*` sunt `Apache-2.0 AND LGPL-3.0-or-later`, iar `@img/sharp-libvips-*` sunt `LGPL-3.0-or-later`. Licența a fost verificată direct în `package.json` doar pentru pachetul instalat pe mașina de generare; pentru celelalte platforme se bazează pe documentația `sharp` (de reverificat la livrare).

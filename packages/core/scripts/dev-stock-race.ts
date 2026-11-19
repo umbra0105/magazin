@@ -74,7 +74,7 @@ await scenario(
   async (ctx, [id]) => {
     const r = await settle(10, (i) =>
       service.reserve(
-        { refType: "order", refId: `${ctx.tag}-${i}` },
+        { refType: "stock_test", refId: `${ctx.tag}-${i}` },
         [{ variantId: id!, warehouseId: ctx.warehouseId, quantity: q("1") }],
         soon(),
       ),
@@ -89,7 +89,7 @@ await scenario(
   async (ctx, [id]) => {
     const r = await settle(100, (i) =>
       service.reserve(
-        { refType: "order", refId: `${ctx.tag}-${i}` },
+        { refType: "stock_test", refId: `${ctx.tag}-${i}` },
         [{ variantId: id!, warehouseId: ctx.warehouseId, quantity: q("1") }],
         soon(),
       ),
@@ -104,7 +104,7 @@ await scenario(
   async (ctx, [id]) => {
     const r = await settle(10, (i) =>
       service.reserve(
-        { refType: "order", refId: `${ctx.tag}-${i}` },
+        { refType: "stock_test", refId: `${ctx.tag}-${i}` },
         [{ variantId: id!, warehouseId: ctx.warehouseId, quantity: q("0,3") }],
         soon(),
       ),
@@ -119,7 +119,7 @@ await scenario(
   async (ctx, [id]) => {
     const r = await settle(5, (i) =>
       service.reserve(
-        { refType: "order", refId: `${ctx.tag}-${i}` },
+        { refType: "stock_test", refId: `${ctx.tag}-${i}` },
         [{ variantId: id!, warehouseId: ctx.warehouseId, quantity: q("41,25") }],
         soon(),
       ),
@@ -139,7 +139,7 @@ await scenario(
         quantity: q("1"),
       }));
       return service.reserve(
-        { refType: "order", refId: `${ctx.tag}-${i}` },
+        { refType: "stock_test", refId: `${ctx.tag}-${i}` },
         i % 2 === 0 ? lines : lines.reverse(),
         soon(),
       );
@@ -152,7 +152,7 @@ await scenario(
   "webhook dublu: 8 confirmări simultane ale aceleiași plăți",
   { variants: [{ physical: "5" }] },
   async (ctx, [id]) => {
-    const ref = { refType: "order", refId: `${ctx.tag}-plata` };
+    const ref = { refType: "stock_test", refId: `${ctx.tag}-plata` };
     await service.reserve(
       ref,
       [{ variantId: id!, warehouseId: ctx.warehouseId, quantity: q("2") }],
@@ -172,7 +172,7 @@ await scenario(
   async (ctx, [id]) => {
     let exact = 0;
     for (let round = 0; round < 10; round++) {
-      const ref = { refType: "order", refId: `${ctx.tag}-cursa${round}` };
+      const ref = { refType: "stock_test", refId: `${ctx.tag}-cursa${round}` };
       await service.reserve(
         ref,
         [{ variantId: id!, warehouseId: ctx.warehouseId, quantity: q("1") }],
