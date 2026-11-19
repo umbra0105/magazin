@@ -65,7 +65,10 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
       ? ([
           [
             m.detail.captured,
-            `${money(payment.capturedAmountMinor)} ${payment.capturedCurrency ?? ""}`.trim(),
+            // moneda apare separat doar dacă procesatorul a raportat alta decât RON (formatarea include deja moneda magazinului)
+            payment.capturedCurrency && payment.capturedCurrency !== "RON"
+              ? `${money(payment.capturedAmountMinor)} (${payment.capturedCurrency})`
+              : money(payment.capturedAmountMinor),
           ],
         ] as Array<[string, string]>)
       : []),

@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { Client } from "pg";
 import { Redis } from "ioredis";
 import { assertTestDatabase, assertTestRedis } from "../../../test/support/test-env";
@@ -2939,4 +2940,17 @@ export async function removeE2eCartStock(variantIds: readonly string[]): Promise
       throw error;
     }
   });
+}
+
+/** Emite un jeton «reîncearcă plata» pentru comandă (doar amprenta ajunge în bază, ca în aplicație); întoarce jetonul în clar. */
+export async function issueE2eRetryToken(number: string): Promise<string> {
+  const token = randomBytes(32).toString("base64url");
+  await withClient(async (db) => {
+    await db.query(
+      `insert into payment_retry_token (id, "orderId", "tokenHash", "expiresAt")
+       select gen_random_uuid()::text, id, $2, "paymentRetryDeadlineAt" from customer_order where number = $1`,
+      [number, createHash("sha256").update(token).digest("hex")],
+    );
+  });
+  return token;
 }
