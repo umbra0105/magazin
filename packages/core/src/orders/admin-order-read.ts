@@ -7,7 +7,7 @@ import { listOrderNotes, type OrderNoteDto } from "./order-notes";
  * Citirea detaliului unei comenzi pentru ADMIN (Faza 11): liniile (snapshot imuabil), sumele, adresele, plățile cu rambursările,
  * cronologia din `OrderEvent`, notele interne și emailurile comenzii. Fiecare secțiune sensibilă se ia DOAR dacă apelantul are
  * dreptul (`viewer`): contactul și adresele cer date personale, plățile cer `payments.read`, emailurile cer `email.read`. Fără
- * drept, secțiunea întoarce `null`, nu o variantă ascunsă din interfață. `costPrice` nu apare nicăieri (snapshot-ul liniei îl
+ * drept, secțiunea întoarce `null`, nu o variantă ascunsă din interfață. prețul de achiziție nu apare nicăieri (snapshot-ul liniei îl
  * exclude din construcție); `productSnapshot` nu se întoarce deloc.
  */
 export interface AdminOrderViewer {

@@ -85,7 +85,7 @@ export default async function PaymentSettingsPage() {
         {counters.attention > 0 && (
           <p className="rounded-lg bg-tone-warning-bg p-3 text-body text-tone-warning-fg">
             {m.health.attention(counters.attention)}{" "}
-            <Link className="underline" href="/admin/plati?vedere=atentie">
+            <Link className="underline" href="/admin/comenzi/plati?vedere=atentie">
               {m.health.attentionLink}
             </Link>
           </p>

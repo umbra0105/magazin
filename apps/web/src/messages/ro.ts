@@ -4,6 +4,7 @@
  * aceeași formă. Funcțiile primesc valorile dinamice (minute, lungimi), ca acordul să fie corect.
  */
 import { pluralRo } from "@ecom/shared/plural";
+import { adminEmailRo, adminOrdersRo } from "./admin-orders-ro";
 
 /** Acord cu numărul în română (1 = singular, 0 și 2–19 = plural, 20+ cu «de»); funcția comună și testată din `@ecom/shared`. */
 const countOf = pluralRo;
@@ -135,6 +136,9 @@ export const ro = {
     },
   },
   admin: {
+    /** Comenzile și emailurile lor (Faza 11): textele stau în `admin-orders-ro.ts`. */
+    orders: adminOrdersRo,
+    email: adminEmailRo,
     metaTitle: "Administrare",
     skipToContent: "Sari la conținut",
     sidebarLabel: "Navigare principală",
@@ -401,6 +405,11 @@ export const ro = {
         "Suma în lei, cu TVA. Peste limită, rambursul dispare din checkout, cu explicație. Rambursul nu se oferă niciodată la comenzile cu produse «La comandă» (regulă fixă).",
       codInvalid:
         "Introdu o sumă în lei, cu cel mult două zecimale (de exemplu 10000 sau 5000,50).",
+      supportRefundLimit: "Limita de rambursare a rolului Suport",
+      supportRefundLimitHelp:
+        "Suma maximă, cumulată pe comandă, pe care o poate rambursa un rol fără permisiunea «Rambursează plăți» (Suport clienți). Peste ea rambursează doar Manager, Admin sau Owner. 0 = Suportul nu poate rambursa. Se aplică pe server, imediat.",
+      supportRefundLimitInvalid:
+        "Introdu o sumă în lei, cu cel mult două zecimale (de exemplu 500 sau 0).",
       orderPrefix: "Prefixul numărului de comandă",
       orderPrefixHelp:
         "Cel mult 10 caractere: litere, cifre sau cratimă (de exemplu WEB-). Gol = doar cifre.",
@@ -491,7 +500,7 @@ export const ro = {
         } as Record<string, string>,
       },
     },
-    /** Plățile cu cardul și rambursările (Faza 10): `/admin/plati`. Se integrează în detaliul comenzii în Faza 11. */
+    /** Plățile cu cardul și rambursările (Faza 10): acum sub grupul «Comenzi». Se integrează în detaliul comenzii în Faza 11. */
     payments: {
       title: "Plăți cu cardul",
       description:

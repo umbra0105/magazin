@@ -2,6 +2,7 @@ export * from "./payload-seal";
 export * from "./links";
 export * from "./dispatch";
 export * from "./dispatch-resend";
+export * from "./email-overrides";
 export * from "./order-email-triggers";
 export * from "./sanitize";
 export * from "./smtp-config";

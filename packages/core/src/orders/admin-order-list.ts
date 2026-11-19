@@ -5,7 +5,7 @@ import type { AttentionReason } from "../payments/payment-errors";
 /**
  * Lista comenzilor din admin (Faza 11): vederi implicite, căutare, filtre, sortare deterministă și numărători. Fiecare interogare
  * are `ORDER BY` determinist (cheia aleasă + `id`), deci paginile nu se suprapun și nu sar rânduri. Căutarea nu citește
- * `costPrice` și nu întoarce `productSnapshot`; contactul clientului (email, telefon, nume) se întoarce doar cu `pii`.
+ * prețul de achiziție și nu întoarce `productSnapshot`; contactul clientului (email, telefon, nume) se întoarce doar cu `pii`.
  */
 export const ORDER_VIEWS = [
   "all",
@@ -239,7 +239,8 @@ export async function listAdminOrders(
   const pageSize = (PAGE_SIZES as readonly number[]).includes(query.pageSize ?? 25)
     ? (query.pageSize ?? 25)
     : 25;
-  const page = Math.max(1, Math.trunc(query.page ?? 1));
+  const requested = query.page ?? 1;
+  const page = Number.isSafeInteger(requested) && requested > 1 ? requested : 1;
   const [total, rows] = await Promise.all([
     db.order.count({ where }),
     db.order.findMany({

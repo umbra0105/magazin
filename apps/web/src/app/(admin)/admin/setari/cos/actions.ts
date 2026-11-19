@@ -29,6 +29,7 @@ const input = z.strictObject({
   groundNotice: z.string().max(2000),
   codIndividual: z.string().max(40),
   codCompany: z.string().max(40),
+  supportRefundLimit: z.string().max(40),
   orderPrefix: z.string().max(40),
   orderDigits: z.number().int(),
   nonWorkingDates: z.string().max(20_000),
@@ -58,6 +59,9 @@ export const saveCartSettings = withPermission(
     const codCompany = parseMoneyInput(data.codCompany.trim());
     if (codCompany === null) errors["codCompany"] = "invalid";
 
+    const supportRefundLimit = parseMoneyInput(data.supportRefundLimit.trim());
+    if (supportRefundLimit === null) errors["supportRefundLimit"] = "invalid";
+
     const dates = [
       ...new Set(
         data.nonWorkingDates
@@ -75,6 +79,7 @@ export const saveCartSettings = withPermission(
       ["shipping.groundLevelNotice", data.groundNotice.trim()],
       ["payment.codMaxAmountIndividual", codIndividual],
       ["payment.codMaxAmountCompany", codCompany],
+      ["payment.supportRefundLimit", supportRefundLimit],
       ["checkout.orderNumberPrefix", data.orderPrefix.trim()],
       ["checkout.orderNumberDigits", data.orderDigits],
       ["regional.nonWorkingDates", dates],

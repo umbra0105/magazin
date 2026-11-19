@@ -20,6 +20,7 @@ export interface CartSettingsValues {
   groundNotice: string;
   codIndividual: string;
   codCompany: string;
+  supportRefundLimit: string;
   orderPrefix: string;
   orderDigits: string;
   nonWorkingDates: string;
@@ -48,6 +49,7 @@ const normalize = (v: CartSettingsValues) =>
     groundNotice: v.groundNotice.trim(),
     codIndividual: v.codIndividual.trim(),
     codCompany: v.codCompany.trim(),
+    supportRefundLimit: v.supportRefundLimit.trim(),
     orderPrefix: v.orderPrefix.trim(),
     orderDigits: v.orderDigits.trim(),
     nonWorkingDates: v.nonWorkingDates
@@ -117,6 +119,8 @@ function Form({
     }
     if (parseMoneyInput(form.codIndividual.trim()) === null) found["codIndividual"] = m.codInvalid;
     if (parseMoneyInput(form.codCompany.trim()) === null) found["codCompany"] = m.codInvalid;
+    if (parseMoneyInput(form.supportRefundLimit.trim()) === null)
+      found["supportRefundLimit"] = m.supportRefundLimitInvalid;
     if (!/^[A-Za-z0-9-]{0,10}$/.test(form.orderPrefix.trim()))
       found["orderPrefix"] = m.orderPrefixInvalid;
     const digits = Number(form.orderDigits);
@@ -137,6 +141,7 @@ function Form({
           groundNotice: form.groundNotice,
           codIndividual: form.codIndividual,
           codCompany: form.codCompany,
+          supportRefundLimit: form.supportRefundLimit,
           orderPrefix: form.orderPrefix,
           orderDigits: digits,
           nonWorkingDates: form.nonWorkingDates,
@@ -150,6 +155,7 @@ function Form({
             threshold: m.thresholdInvalid,
             codIndividual: m.codInvalid,
             codCompany: m.codInvalid,
+            supportRefundLimit: m.supportRefundLimitInvalid,
             orderPrefix: m.orderPrefixInvalid,
             orderDigits: m.orderDigitsInvalid,
             groundNotice: m.groundNoticeInvalid,
@@ -306,6 +312,24 @@ function Form({
         <p id={`${base}-codIndividual-help`} className="text-label text-ink-secondary">
           {m.codHelp}
         </p>
+        <div className="flex max-w-sm flex-col gap-1.5">
+          <Label htmlFor={`${base}-supportRefundLimit`}>
+            {m.supportRefundLimit} ({currency})
+          </Label>
+          <Input
+            {...field("supportRefundLimit")}
+            inputMode="decimal"
+            autoComplete="off"
+            value={form.supportRefundLimit}
+            disabled={!canSave}
+            aria-describedby={`${base}-supportRefundLimit-help`}
+            onChange={(event) => set({ supportRefundLimit: event.target.value })}
+          />
+          <span id={`${base}-supportRefundLimit-help`} className="text-label text-ink-secondary">
+            {m.supportRefundLimitHelp}
+          </span>
+          {errorFor("supportRefundLimit")}
+        </div>
       </Section>
 
       <Section id="orders" title={m.sections.orders}>

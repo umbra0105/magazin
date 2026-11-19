@@ -130,6 +130,9 @@ describe("grupul «Comenzi» din meniu (același model ca «Catalog»)", () => {
     for (const item of ORDERS_ITEMS) {
       expect(urls.has(item.href), item.href).toBe(true);
       expect(pathInGroup(item.href, group?.href ?? ""), item.href).toBe(true);
+    }
+    // ca la «Catalog»: primul element are adresa grupului; celelalte nu sunt și intrări separate de meniu
+    for (const item of ORDERS_ITEMS.filter((i) => i.href !== group?.href)) {
       expect(
         ADMIN_NAV.map((e) => e.href),
         item.href,
@@ -287,6 +290,7 @@ describe("adresele vechi există doar în tabelul de redirecturi", () => {
         "/admin/branduri",
         "/admin/categorii",
         "/admin/fise-explodate",
+        "/admin/plati",
         "/admin/stoc",
         "/admin/unitati-de-masura",
       ].sort(),

@@ -110,7 +110,7 @@ export const CATALOG_ITEMS: readonly AdminNavItem[] = [
 
 /**
  * Ecranele grupului «Comenzi» (Faza 11), în ordinea din meniu. «Comenzi» ține evidențiat și detaliul comenzii; «Plăți» (mutat din
- * `/admin/plati`, cu redirect 308) vede plățile cu cardul, rambursările și ce necesită atenție; «Șabloane email» are și jurnalul de
+ * adresa veche a plăților, cu redirect 308) vede plățile cu cardul, rambursările și ce necesită atenție; «Șabloane email» are și jurnalul de
  * trimiteri; «Cereri de instalare» apare doar cu flag-ul `installationRequests`.
  */
 export const ORDERS_ITEMS: readonly AdminNavItem[] = [
