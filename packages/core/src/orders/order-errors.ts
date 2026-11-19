@@ -18,6 +18,18 @@ export const ORDER_ERROR_CODES = [
   "ORDER_CARD_UNAVAILABLE",
   /** Marcajul «La furnizor»: comandă care nu mai e activă sau text prea lung. */
   "ORDER_SUPPLIER_MARK_INVALID",
+  /** Anularea: motiv lipsă sau prea lung, comandă care nu mai poate fi anulată (încheiată, expediată). */
+  "ORDER_CANCEL_INVALID",
+  /** Anularea unei comenzi plătite cere decizia explicită «NU se rambursează automat». */
+  "ORDER_CANCEL_PAID_NEEDS_DECISION",
+  "ORDER_PROCESSING_INVALID",
+  /** Corectarea contactului sau a adresei: date invalide sau comandă care nu se mai editează. */
+  "ORDER_EDIT_INVALID",
+  "ORDER_NOTE_INVALID",
+  /** «Marchează plătit» (transfer): suma primită diferă de total (fără decizie explicită), sumă sau referință invalide. */
+  "ORDER_PAYMENT_AMOUNT_MISMATCH",
+  "ORDER_PAYMENT_AMOUNT_INVALID",
+  "ORDER_PAYMENT_REFERENCE_INVALID",
 ] as const;
 export type OrderErrorCode = (typeof ORDER_ERROR_CODES)[number];
 

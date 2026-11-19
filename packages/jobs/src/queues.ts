@@ -49,6 +49,21 @@ export async function enqueueBackInStock(
   });
 }
 
+/**
+ * Pune în coadă emailul unui rând `EmailDispatch` (Faza 11). `jobId`-ul e derivat din rând: cât timp jobul există, o a doua
+ * punere în coadă a aceluiași rând (măturătorul, mai multe instanțe) e ignorată de BullMQ; oricum, trimiterea se
+ * «revendică» atomic în bază.
+ */
+export async function enqueueOrderEmail(
+  queue: EmailQueue,
+  appKey: string,
+  dispatchId: string,
+): Promise<void> {
+  await queue.add("send", sealEmailPayload(appKey, { kind: "order-email", dispatchId }), {
+    jobId: `order-email-${dispatchId}`,
+  });
+}
+
 /** Pune un email în coadă, cu payload-ul criptat cu o cheie derivată din `APP_KEY`. */
 export async function enqueueEmail(
   queue: EmailQueue,

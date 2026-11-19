@@ -182,7 +182,9 @@ async function applyRefundConfirmed(tx: Db, refund: RefundRow, now: Date): Promi
       status: { in: ["requested", "manual_required", "failed"] },
     },
   });
-  if (open === 0) await resolveAttention(tx, refund.paymentId, now);
+  // «comandă anulată cu plata încasată»: alerta se închide doar când banii s-au întors integral (o rambursare parțială nu o rezolvă)
+  const keepsAlert = payment.attentionReason === "order_cancelled_paid" && !full;
+  if (open === 0 && !keepsAlert) await resolveAttention(tx, refund.paymentId, now);
 }
 
 /** Confirmarea unei cereri de către procesator (notificare de credit), în tranzacția apelantului, cu comanda și plata blocate. */

@@ -34,6 +34,11 @@ export interface BackInStockDelivery {
   complete(alertId: string): Promise<boolean>;
 }
 
+/** Ce îi trebuie procesorului pentru emailurile comenzilor (`createOrderEmailDelivery`). */
+export interface OrderEmailDeliveryLike {
+  (dispatchId: string, run: { jobId: string; attempt: number; maxAttempts: number }): Promise<void>;
+}
+
 export interface EmailProcessorDeps {
   appKey: string;
   /** URL-ul public al aplicației (`APP_URL`); linkurile se construiesc DOAR din el. */
@@ -44,15 +49,19 @@ export interface EmailProcessorDeps {
   logger: JobLogger;
   /** Doar pentru emailurile «Anunță-mă»; fără el, un astfel de job eșuează definitiv. */
   backInStock?: BackInStockDelivery;
+  /** Emailurile comenzilor (Faza 11); fără el, un astfel de job eșuează definitiv. */
+  orderEmail?: OrderEmailDeliveryLike;
 }
 
 export interface EmailJobLike {
   id?: string | undefined;
   data: SealedEmailJob;
   attemptsMade: number;
+  /** Câte încercări are jobul în total (opțiunile cozii); implicit 5. */
+  maxAttempts?: number;
 }
 
-type TokenPayload = Exclude<EmailPayload, { kind: "back-in-stock" }>;
+type TokenPayload = Exclude<EmailPayload, { kind: "back-in-stock" | "order-email" }>;
 
 const linkFor = (payload: TokenPayload, appUrl: string): string =>
   payload.kind === "verify-email"
@@ -160,6 +169,21 @@ export function createEmailProcessor(deps: EmailProcessorDeps) {
 
     if (payload.kind === "back-in-stock") {
       await processBackInStock(payload.alertId, jobId, job.attemptsMade);
+      return;
+    }
+    if (payload.kind === "order-email") {
+      if (!deps.orderEmail) {
+        deps.logger.error(
+          { jobId, kind },
+          "email: livrarea emailurilor de comenzi lipsește din worker, renunț",
+        );
+        throw new UnrecoverableError("EMAIL_NOT_CONFIGURED");
+      }
+      await deps.orderEmail(payload.dispatchId, {
+        jobId,
+        attempt: job.attemptsMade + 1,
+        maxAttempts: job.maxAttempts ?? 5,
+      });
       return;
     }
 

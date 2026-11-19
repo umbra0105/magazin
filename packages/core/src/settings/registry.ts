@@ -196,6 +196,14 @@ export const settingGroups = {
     fromName: z.string().default(""),
     fromAddress: z.string().default(""),
     replyTo: z.string().default(""),
+    /**
+     * Destinatarii notificărilor interne (comandă nouă, stoc epuizat), adrese de email. Gol = fără notificări interne. Alertele
+     * pe permisiune (de exemplu sincronizarea SmartBill) se trimit utilizatorilor cu permisiunea, nu acestei liste.
+     */
+    internalRecipients: z
+      .array(z.string().trim().toLowerCase().email().max(200))
+      .max(20)
+      .default([]),
   },
   legal: {
     anpcUrl: z.string().default(""),

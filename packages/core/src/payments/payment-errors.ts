@@ -49,5 +49,7 @@ export const ATTENTION_REASONS = [
   "reconciliation_mismatch",
   /** Notificare de credit (rambursare) fără rambursare corespunzătoare la noi. */
   "credit_unmatched",
+  /** Comanda a fost anulată de admin cu plata încasată: banii rămân la noi până la rambursarea INTEGRALĂ (Faza 11). */
+  "order_cancelled_paid",
 ] as const;
 export type AttentionReason = (typeof ATTENTION_REASONS)[number];

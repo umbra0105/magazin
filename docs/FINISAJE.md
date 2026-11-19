@@ -82,6 +82,9 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Plăți, ecrane (Faza 10) | lista și detaliul plăților sunt ecrane minime (fără filtre pe dată, furnizor sau sumă, fără căutare după număr de comandă); lista comenzilor, detaliul comenzii și clopoțelul de «necesită atenție» vin în Faza 11, care integrează aceste ecrane. Paginarea listei e cu legături simple, nu cu componenta `Pagination` | -
 - [ ] S3 | Plăți, emailuri (Faza 10) | fără emailuri pentru plată eșuată, rambursare sau STOCK_RESERVATION_LOST (vin în Faza 11): acum doar `OrderEvent`, pagina comenzii și urmărirea; linkul «reîncearcă plata» se arată doar pe pagina de așteptare, nu se trimite pe email | -
 
+- [ ] S3 | Emailuri de autentificare (Faza 11) | verificarea emailului, resetarea parolei și «anunță-mă când revine» rămân pe randarea lor veche (`renderEmail`) și nu au suprascriere din admin: mutarea pe sistemul de șabloane cere regresii în fluxurile de autentificare, în afara scopului pașilor 1–2; catalogul nu le listează | -
+- [ ] S3 | Emailul de confirmare, formulări juridice (Faza 11) | dreptul de retragere, excepția «La comandă», garanția și reclamațiile sunt formulări prudente, marcate în INTREBARI-AVOCAT §9; până la răspuns nu se publică un text final | -
+
 ## Rezolvate
 
 - [x] S3 | Mega meniu, plăci de categorie (Faza 6) | plăcile aveau cadre diferite (una cu fundal rotunjit, alta fără; imaginile tăiate cu `object-cover`) și stăteau în rânduri improvizate; acum toate au același cadru 4:3 pe «masa foto» din token, imaginea întreagă (`object-contain`) cu umplutură, într-o grilă cu 3 coloane fixe, iar categoriile text stau sub o linie fină pe aceleași coloane (test E2E pe dimensiuni, culoare, umplutură, încadrare și coloane, în 3 presets × 2 teme) | local-data/capturi-faza6/final/minimal-deschisa-meniu-1440.png

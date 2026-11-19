@@ -29,6 +29,12 @@ export const emailPayloadSchema = z.discriminatedUnion("kind", [
     kind: z.literal("back-in-stock"),
     alertId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
   }),
+  // Emailurile comenzilor (Faza 11): doar identificatorul rândului `EmailDispatch`; adresa, comanda și corpul se citesc din baza de
+  // date în momentul trimiterii, deci nu ajung niciodată în Redis.
+  z.object({
+    kind: z.literal("order-email"),
+    dispatchId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  }),
 ]);
 
 export type EmailPayload = z.infer<typeof emailPayloadSchema>;

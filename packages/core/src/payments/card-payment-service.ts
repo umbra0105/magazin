@@ -178,50 +178,7 @@ export class CardPaymentService {
 
   /** Jetonul nou pentru «reîncearcă plata» (cel vechi se invalidează). Întoarce jetonul în clar o singură dată. */
   async issueRetryToken(orderId: string): Promise<{ token: string; expiresAt: Date }> {
-    const { db, now } = this.deps;
-    const order = await db.order.findUnique({
-      where: { id: orderId },
-      select: {
-        status: true,
-        paymentStatus: true,
-        paymentMethod: true,
-        paymentRetryDeadlineAt: true,
-      },
-    });
-    const at = now();
-    if (
-      !order ||
-      order.paymentMethod !== "card" ||
-      order.status !== "pending" ||
-      order.paymentStatus !== "pending" ||
-      !order.paymentRetryDeadlineAt
-    ) {
-      throw new PaymentError(
-        "PAYMENT_RETRY_UNAVAILABLE",
-        "Plata acestei comenzi nu mai poate fi reîncercată",
-      );
-    }
-    if (order.paymentRetryDeadlineAt <= at) {
-      throw new PaymentError(
-        "PAYMENT_RETRY_EXPIRED",
-        "Fereastra de reîncercare a plății a expirat",
-      );
-    }
-    const token = (this.deps.randomBytes ?? randomBytes)(32).toString("base64url");
-    await inTx(db, async (tx) => {
-      await tx.paymentRetryToken.updateMany({
-        where: { orderId, usedAt: null },
-        data: { usedAt: at },
-      });
-      await tx.paymentRetryToken.create({
-        data: {
-          orderId,
-          tokenHash: sha256Hex(token),
-          expiresAt: order.paymentRetryDeadlineAt as Date,
-        },
-      });
-    });
-    return { token, expiresAt: order.paymentRetryDeadlineAt };
+    return issueRetryTokenFor(this.deps, orderId);
   }
 
   /** Comanda din spatele unui jeton valid, sau `null` (jeton necunoscut, invalidat sau expirat; fără detalii despre motiv). */
@@ -529,4 +486,55 @@ export async function expireDueCardOrders(
     }
   }
   return { cancelled, failed, more: due.length > limit };
+}
+
+/**
+ * Jetonul «reîncearcă plata» al unei comenzi cu card în așteptare (cel vechi se invalidează). Funcție independentă, ca emailul
+ * «plată eșuată» (workerul, Faza 11) să-l poată emite fără să construiască tot serviciul de plată.
+ */
+export async function issueRetryTokenFor(
+  deps: Pick<CardPaymentDeps, "db" | "now" | "randomBytes">,
+  orderId: string,
+): Promise<{ token: string; expiresAt: Date }> {
+  const { db, now } = deps;
+  const order = await db.order.findUnique({
+    where: { id: orderId },
+    select: {
+      status: true,
+      paymentStatus: true,
+      paymentMethod: true,
+      paymentRetryDeadlineAt: true,
+    },
+  });
+  const at = now();
+  if (
+    !order ||
+    order.paymentMethod !== "card" ||
+    order.status !== "pending" ||
+    order.paymentStatus !== "pending" ||
+    !order.paymentRetryDeadlineAt
+  ) {
+    throw new PaymentError(
+      "PAYMENT_RETRY_UNAVAILABLE",
+      "Plata acestei comenzi nu mai poate fi reîncercată",
+    );
+  }
+  if (order.paymentRetryDeadlineAt <= at) {
+    throw new PaymentError("PAYMENT_RETRY_EXPIRED", "Fereastra de reîncercare a plății a expirat");
+  }
+  const token = (deps.randomBytes ?? randomBytes)(32).toString("base64url");
+  await inTx(db, async (tx) => {
+    await tx.paymentRetryToken.updateMany({
+      where: { orderId, usedAt: null },
+      data: { usedAt: at },
+    });
+    await tx.paymentRetryToken.create({
+      data: {
+        orderId,
+        tokenHash: sha256Hex(token),
+        expiresAt: order.paymentRetryDeadlineAt as Date,
+      },
+    });
+  });
+  return { token, expiresAt: order.paymentRetryDeadlineAt };
 }

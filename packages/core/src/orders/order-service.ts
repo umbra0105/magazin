@@ -1,5 +1,6 @@
 import type { Prisma } from "@ecom/db";
 import type { Db } from "../db-tx";
+import { scheduleOrderEmails } from "../email/order-email-triggers";
 import { OrderError } from "./order-errors";
 import {
   assertTransition,
@@ -116,7 +117,7 @@ export async function addOrderEvent(
   orderId: string,
   event: OrderEventInput,
 ): Promise<void> {
-  await tx.orderEvent.create({
+  const created = await tx.orderEvent.create({
     data: {
       orderId,
       type: event.type,
@@ -125,4 +126,6 @@ export async function addOrderEvent(
       ...(event.actorLabel !== undefined && { actorLabel: event.actorLabel }),
     },
   });
+  // emailurile declanșate de eveniment se scriu în aceeași tranzacție (outbox); trimiterea o face workerul, prin coadă
+  await scheduleOrderEmails(tx, orderId, { id: created.id, type: event.type, data: event.data });
 }

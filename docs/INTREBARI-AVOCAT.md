@@ -232,3 +232,44 @@ să spunem clientului, înainte de plată, termenul de 24 de ore și faptul că 
 pagina de eșec, email)?
 
 Răspuns:
+
+---
+
+## 9. Emailurile comenzilor (adăugată în Faza 11)
+
+Emailul de confirmare conține acum informațiile precontractuale (identitatea comerciantului din setări, produsele, prețul total cu TVA și
+costul livrării, plata, livrarea și termenul, dreptul de retragere, formularul-model, garanția, reclamațiile și linkurile ANPC / SAL / SOL, dacă
+sunt setate). Formulările de mai jos sunt PRUDENTE și provizorii; nu citează niciun temei legal. Textele stau în `packages/emails/src/catalog.ts`.
+
+**9.1. Dreptul de retragere și produsele «La comandă».** În email scriem: «Ai dreptul să te retragi din contract, fără să dai vreun motiv, în
+14 zile de la primirea produselor» și, la comenzile cu produse «La comandă», că acestea sunt o excepție, cu «condițiile comunicate înainte de
+comandă». Atenție la legătura cu 1.6: nu afirmăm că produsele doar aduse de la furnizor nu se pot returna. Care e formularea corectă a excepției
+(doar produsele făcute după specificațiile clientului), și ce trebuie să spunem despre produsele aduse doar la comandă?
+
+Răspuns:
+
+**9.2. Formularul-model de retragere în email.** Includem, ca text, modelul de formular (către comerciant, produsele, datele comenzii, numele și
+adresa consumatorului, semnătura și data). E suficient în corpul emailului sau trebuie atașat ca document / link către o pagină?
+
+Răspuns:
+
+**9.3. Garanția legală.** Scriem doar că produsele beneficiază de garanția legală de conformitate, «a cărei durată și condiții sunt cele prevăzute de
+lege», fără durată. Trebuie menționată durata (și, la produsele cu garanție comercială suplimentară, diferența)?
+
+Răspuns:
+
+**9.4. Reclamații, ANPC, SAL și SOL.** Punem datele de contact ale magazinului pentru reclamații și, dacă sunt setate, linkurile ANPC, SAL și SOL.
+Sunt suficiente aceste informații în email, sau trebuie și un text explicit despre procedura de reclamație și termenele de răspuns?
+
+Răspuns:
+
+**9.5. Anularea unei comenzi plătite și rambursarea.** Când admin-ul anulează o comandă plătită, comanda NU se rambursează automat: emailul spune
+«te anunțăm printr-un email separat când rambursarea este confirmată» și nu promite o sumă sau un termen; emailul de rambursare spune «banii ajung în
+contul tău în funcție de banca ta». Sunt formulările corecte? Trebuie un termen maxim de returnare a banilor (de exemplu 14 zile)?
+
+Răspuns:
+
+**9.6. Păstrarea emailurilor trimise.** Păstrăm pe comandă doar starea trimiterii (șablon, destinatar, moment, stare), nu corpul emailului. Cât timp
+păstrăm aceste rânduri (conțin adresa clientului)? Este suficient să dovedim trimiterea cu starea și momentul, sau trebuie păstrat și textul trimis?
+
+Răspuns:

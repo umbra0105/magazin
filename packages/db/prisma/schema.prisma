@@ -1353,6 +1353,8 @@ model Order {
   stockCommitments       StockCommitment[]
   refunds                Refund[]
   paymentRetryTokens     PaymentRetryToken[]
+  emailDispatches        EmailDispatch[]
+  notes                  OrderNote[]
 
   @@index([status, paymentStatus])
   @@index([email])
@@ -1517,6 +1519,64 @@ model PaymentWebhookEvent {
   @@index([status, receivedAt])
   @@index([paymentId])
   @@map("payment_webhook_event")
+}
+
+/// Notele interne ale comenzii (Faza 11): text liber al echipei, cu autor și moment. Doar se adaugă. Textul poate conține date
+/// personale: nu intră în `OrderEvent` (evenimentul spune doar că s-a adăugat o notă) și nu se loghează.
+model OrderNote {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  authorLabel String
+  body        String
+  createdAt   DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@map("order_note")
+}
+
+/// Un email tranzacțional de trimis (Faza 11), în stil «outbox»: rândul se scrie ÎN ACEEAȘI tranzacție cu evenimentul care îl
+/// declanșează (OrderEvent), iar trimiterea o face workerul, prin coada «emails». Unicitatea `(eventKey, template, recipient)` e
+/// garanția «o singură dată per eveniment», în bază, nu în memorie: același eveniment procesat de două ori (retry, webhook
+/// repetat, două workere) dă UN singur rând. «Retrimite» e o acțiune separată, cu `eventKey` propriu (`resend:…`).
+/// `status`: queued | sending | sent | failed (dead-letter, vizibil în admin) | skipped. O trimitere rămasă «sending» fără
+/// rezultat NU se retrimite automat (risc de email dublu): devine «failed» și se retrimite doar din admin.
+/// `data` poartă doar câmpuri mici și ne-sensibile (motiv, sumă), niciodată tokenuri sau corpul emailului.
+model EmailDispatch {
+  id         String    @id @default(cuid())
+  template   String
+  eventKey   String
+  recipient  String
+  /// customer | internal
+  audience   String    @default("customer")
+  orderId    String?
+  order      Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status     String    @default("queued")
+  attempts   Int       @default(0)
+  /// Eroarea curățată (fără adrese, tokenuri sau corp), doar pentru diagnostic.
+  lastError  String?
+  data       Json?
+  claimedAt  DateTime?
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([eventKey, template, recipient])
+  @@index([status, createdAt])
+  @@index([orderId])
+  @@map("email_dispatch")
+}
+
+/// Suprascrierea unui șablon de email (Faza 11): doar subiectul și textul de început; informațiile obligatorii legal ale
+/// confirmării nu se pot scoate. Variabilele permise sunt ale șablonului (validate la salvare). Ștergerea rândului = revenire la implicit.
+model EmailTemplateOverride {
+  template  String   @id
+  subject   String
+  intro     String
+  updatedBy String
+  updatedAt DateTime @updatedAt
+
+  @@map("email_template_override")
 }
 
 /// Linkul «reîncearcă plata»: jetonul în clar nu se stochează, doar amprenta SHA-256. Valabil până la `expiresAt`

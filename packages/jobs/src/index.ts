@@ -20,3 +20,23 @@ export * from "./cart-jobs";
 export * from "./order-jobs";
 export * from "./payment-queue";
 export * from "./payment-jobs";
+export * from "./order-email-context";
+export * from "./order-email-delivery";
+export * from "./order-email-jobs";
+export { buildEmailTheme, loadStoreEmailSettings } from "./runtime";
+// catalogul de șabloane și randarea, pentru administrare (previzualizare, trimitere de test): web nu depinde direct de pachetul de emailuri
+export {
+  TEMPLATE_CATALOG,
+  templateDefinition,
+  renderTemplateEmail,
+  sampleContext,
+  validateOverride,
+  placeholdersOf,
+  SUBJECT_MAX,
+  INTRO_MAX,
+  type TemplateDefinition,
+  type TemplateContext,
+  type TemplateOverride,
+  type OverrideProblem,
+  type EmailTheme,
+} from "@ecom/emails";
