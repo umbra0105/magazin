@@ -249,6 +249,25 @@ describe("reîncercarea: re-validează stocul și rezervă din nou doar dacă ex
     });
   });
 
+  it("tentativele vin în ordinea numărului, oricare ar fi ordinea fizică a rândurilor (regresie din CI, rularea 165)", async () => {
+    await cardHarness(async (h) => {
+      const { orderId, paymentId } = await placeCardOrder(h);
+      const deps = processorDeps(h);
+      const { svc } = service(h, deps);
+      await failFirstAttempt(h, deps, paymentId);
+      deps.clock.now = new Date(NOW.getTime() + 10 * 60_000);
+      const { token } = await svc.issueRetryToken(orderId);
+      await svc.startRetry(token);
+      // rescrierea unui rând (aceleași valori) îl mută fizic DUPĂ celelalte: o interogare fără ORDER BY nu mai are ordinea de inserare
+      await h.tx.payment.updateMany({
+        where: { orderId, attemptNo: 1 },
+        data: { status: "failed" },
+      });
+      const order = await orderOf(h.tx, orderId);
+      expect(order.payments.map((p) => p.attemptNo)).toEqual([1, 2]);
+    });
+  });
+
   it("fără stoc: mesaj clar (PAYMENT_RETRY_NO_STOCK), nicio tentativă nouă, nicio supravânzare", async () => {
     await cardHarness(async (h) => {
       const { orderId, paymentId, variantId } = await placeCardOrder(h, { physical: "1" });

@@ -302,7 +302,8 @@ export const orderOf = (tx: TestTx, id: string) =>
     include: {
       lines: true,
       addresses: true,
-      payments: true,
+      // fără ORDER BY, Postgres nu garantează ordinea: un rând rescris (UPDATE) apare fizic după cele inserate ulterior
+      payments: { orderBy: { attemptNo: "asc" } },
       events: { orderBy: { createdAt: "asc" } },
       stockCommitments: true,
       stockReservations: true,
