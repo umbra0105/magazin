@@ -32,6 +32,8 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
     "confirmare de email cu token unic, fără sesiune și fără fișiere; are rate limit pe IP",
   "apps/web/src/app/api/back-in-stock/route.ts":
     "«Anunță-mă când revine»: public (fără sesiune), verifică originea cererii, are capcană pentru roboți, limită pe IP și plafoane în serviciu; fără fișiere",
+  "apps/web/src/app/api/webhooks/payments/[provider]/route.ts":
+    "webhook de plată (Faza 10): server-la-server, fără sesiune și fără origine de browser; singura autentificare e semnătura procesatorului, verificată în timp constant pe corpul brut (fără semnătură validă: respins, înregistrat fără conținut și fără niciun efect); corp limitat; fără fișiere. Păzit de testul de arhitectură `payments`",
   "apps/web/src/app/api/internal/revalidate/route.ts":
     "invalidare de cache cerută de worker: nu are sesiune, ci semnătură HMAC cu marcă de timp (cheie derivată din APP_KEY) și etichete dintr-o listă strictă; fără fișiere",
 };

@@ -26,6 +26,15 @@ export function OrderSummaryView({
   const fulfilLabel = m.fulfillmentStatuses[order.fulfillmentStatus] ?? order.fulfillmentStatus;
   return (
     <div className="flex flex-col gap-8" data-order-summary-view>
+      {order.paymentNotice === "stock_lost" ? (
+        <p
+          role="note"
+          className="rounded-card bg-tone-warning-bg p-4 text-tone-warning-fg"
+          data-payment-notice
+        >
+          {m.stockLostNotice}
+        </p>
+      ) : null}
       <dl className="grid gap-4 sm:grid-cols-3">
         <div>
           <dt className="text-sm text-ink-secondary">{m.status}</dt>

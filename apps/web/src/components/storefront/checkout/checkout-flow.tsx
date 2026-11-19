@@ -40,7 +40,7 @@ interface Values {
   street: string;
   postalCode: string;
   offerCode: string;
-  paymentMethod: "" | "cod" | "bank_transfer";
+  paymentMethod: "" | "cod" | "bank_transfer" | "card";
   billingSame: boolean;
   billing: {
     fullName: string;
@@ -389,6 +389,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
           window.sessionStorage.removeItem(ATTEMPT_KEY);
         } catch {
           // nimic de curățat
+        }
+        if (result.redirect) {
+          // card: clientul pleacă la pagina procesatorului (sau la pagina de plată dacă pornirea a eșuat)
+          window.location.assign(result.redirect);
+          return;
         }
         router.push("/comanda/confirmare");
         return;

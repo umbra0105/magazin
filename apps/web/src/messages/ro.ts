@@ -3711,6 +3711,9 @@ export const ro = {
       paymentCodHelp: (fee: string) =>
         `Plătești curierului la primirea coletului. Taxă de ramburs: ${fee}.`,
       paymentCodFree: "Plătești curierului la primirea coletului.",
+      paymentCard: "Card online",
+      paymentCardHelp:
+        "Plătești acum, pe pagina securizată a procesatorului de plăți. Nu păstrăm datele cardului. Dacă plata nu reușește, comanda rămâne în așteptare și o poți reîncerca.",
       paymentTransfer: "Transfer bancar",
       paymentTransferHelp:
         "Plătești în avans, prin transfer. Rezervăm produsele până la termenul de plată; după el comanda se anulează automat.",
@@ -3768,6 +3771,7 @@ export const ro = {
           "Metoda de plată aleasă nu mai este disponibilă pentru această comandă.",
         ORDER_PAYMENT_METHOD_UNKNOWN: "Metoda de plată aleasă nu este disponibilă.",
         ORDER_BANK_DETAILS_MISSING: "Transferul bancar nu este disponibil acum. Alege altă metodă.",
+        ORDER_CARD_UNAVAILABLE: "Plata cu cardul nu este disponibilă acum. Alege altă metodă.",
         ORDER_COUNTRY_NOT_ALLOWED: "Livrăm doar în România.",
         ORDER_CUI_INVALID: "CUI-ul nu este valid.",
         ORDER_DIGITAL_NOT_SUPPORTED: "Produsele digitale nu se pot comanda încă.",
@@ -3779,6 +3783,74 @@ export const ro = {
       },
     },
     /** Confirmarea comenzii și urmărirea ei (fără cont). */
+    /** Plata cu cardul pe vitrină (Faza 10): pagina de retur și de așteptare, reîncercarea și pagina DEMO. */
+    cardPayment: {
+      title: "Plata cu cardul",
+      orderLine: (number: string) => `Comanda ${number}`,
+      states: {
+        checking: {
+          title: "Verificăm plata",
+          body: "Procesatorul de plăți ne confirmă plata. Rămâi pe pagină: durează de obicei câteva secunde.",
+          slow: "Încă nu am primit confirmarea. Poți aștepta în continuare sau poți reîncerca plata.",
+        },
+        paid: {
+          title: "Plata a fost confirmată",
+          body: (number: string) => `Comanda ${number} este confirmată.`,
+        },
+        failed: {
+          title: "Plata nu a reușit",
+          body: "Plata a fost refuzată sau anulată. Comanda ta rămâne în așteptare, dar produsele nu mai sunt rezervate până o reîncerci.",
+        },
+        cancelled: {
+          title: "Comanda a fost anulată",
+          body: "Termenul de plată a expirat și comanda a fost anulată. Poți plasa o comandă nouă.",
+        },
+        stockLost: {
+          title: "Comanda a fost anulată",
+          body: "Plata a ajuns după expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.",
+        },
+        attention: {
+          title: "Verificăm plata",
+          body: "Suma sau moneda raportată de procesator nu corespunde comenzii. O verificăm noi și te contactăm; nu ai nimic de făcut acum.",
+        },
+      },
+      retry: {
+        button: "Reîncearcă plata",
+        starting: "Se pornește plata…",
+        until: (when: string) => `Poți reîncerca până la ${when}.`,
+        failed: "Nu am putut porni plata. Încearcă din nou.",
+        unavailable: "Plata cu cardul nu este disponibilă acum. Încearcă mai târziu.",
+        noStock:
+          "Produsele din comandă nu mai sunt în stoc în cantitatea comandată, deci plata nu poate fi reluată. Nu s-a încasat nimic.",
+        expired: "Termenul de reîncercare a expirat.",
+      },
+      link: {
+        title: "Plătește comanda",
+        body: (number: string, amount: string) =>
+          `Comanda ${number}, în valoare de ${amount}. Plata se face pe pagina securizată a procesatorului de plăți.`,
+        pay: "Plătește cu cardul",
+        invalidTitle: "Linkul de plată nu mai este valabil",
+        invalidBody:
+          "Comanda a fost deja plătită sau anulată, ori termenul de reîncercare a expirat. Poți verifica starea comenzii în urmărire.",
+      },
+      track: "Vezi comanda în urmărire",
+      home: "Înapoi în magazin",
+      noAccess: "Nu putem arăta starea acestei plăți de pe acest dispozitiv.",
+      noAccessBody:
+        "Pentru siguranță, starea plății se vede doar de pe dispozitivul cu care ai plasat comanda. Poți folosi urmărirea comenzii, cu numărul ei și emailul.",
+      demo: {
+        title: "Plată DEMO",
+        note: "Pagină de test: simulează procesatorul de plăți. Nu există într-un magazin real.",
+        order: (number: string, amount: string) => `Comanda ${number}, ${amount}`,
+        pay: "Plătește",
+        payWrong: "Plătește altă sumă",
+        fail: "Refuză plata",
+        cancel: "Anulează plata",
+        triple: "Plătește, cu notificarea trimisă de 3 ori",
+        sent: "Notificarea a fost trimisă. Te ducem înapoi la comandă.",
+        notFound: "Plata nu există.",
+      },
+    },
     order: {
       confirmationTitle: "Comanda a fost plasată",
       confirmationLede: (number: string) => `Numărul comenzii tale este ${number}.`,
@@ -3788,6 +3860,9 @@ export const ro = {
       trackLink: "Urmărește comanda",
       whatNext: "Ce urmează",
       nextCod: "Comanda este confirmată. Plătești curierului la primirea coletului.",
+      nextCardPaid: "Plata cu cardul a fost confirmată, iar comanda este confirmată.",
+      stockLostNotice:
+        "Plata a ajuns după expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.",
       nextTransfer: (deadline: string) =>
         `Plătește prin transfer bancar până la ${deadline}. Rezervăm produsele până atunci; după termen comanda se anulează automat.`,
       nextEmail:
@@ -3799,10 +3874,11 @@ export const ro = {
         `Comanda se livrează toată odată, în aproximativ ${countOf(days, "zi", "zile", "de zile")}.`,
       installRequested: "Ai cerut o ofertă pentru instalare; te contactăm.",
       payment: "Plată",
-      paymentMethods: { cod: "Ramburs (la livrare)", bank_transfer: "Transfer bancar" } as Record<
-        string,
-        string
-      >,
+      paymentMethods: {
+        cod: "Ramburs (la livrare)",
+        bank_transfer: "Transfer bancar",
+        card: "Card online",
+      } as Record<string, string>,
       status: "Stare",
       statuses: {
         pending: "În așteptare",

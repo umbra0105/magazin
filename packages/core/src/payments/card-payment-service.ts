@@ -364,6 +364,8 @@ export type CardPaymentState =
 
 export interface CardPaymentView {
   orderNumber: string;
+  /** Ultima tentativă de plată (pagina de retur/așteptare pornește de la ea). */
+  paymentId: string | null;
   state: CardPaymentState;
   canRetry: boolean;
   retryDeadlineAt: Date | null;
@@ -410,6 +412,7 @@ export async function readCardPaymentView(
       : 0;
   return {
     orderNumber: order.number,
+    paymentId: last?.id ?? null,
     state,
     canRetry:
       retryOpen &&

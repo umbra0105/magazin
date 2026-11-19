@@ -47,6 +47,11 @@ export interface OrderSummary {
     totalMinor: number;
   };
   installationRequested: boolean;
+  /**
+   * Mesaje pentru client legate de plată: `stock_lost` = plata a ajuns după expirarea rezervării, produsele nu mai erau în stoc,
+   * comanda a fost anulată și suma plătită va fi returnată (fără să spunem «rambursat» până nu e confirmat; textul îl dă interfața).
+   */
+  paymentNotice: "stock_lost" | null;
 }
 
 const SELECT = {
@@ -64,6 +69,7 @@ const SELECT = {
   taxMinor: true,
   totalMinor: true,
   installationRequested: true,
+  events: { where: { type: "payment.stock_lost" }, select: { id: true }, take: 1 },
   lines: {
     orderBy: { createdAt: "asc" },
     select: {
@@ -135,6 +141,7 @@ function toSummary(row: Row): OrderSummary {
       totalMinor: row.totalMinor,
     },
     installationRequested: row.installationRequested,
+    paymentNotice: row.events.length > 0 ? "stock_lost" : null,
   };
 }
 

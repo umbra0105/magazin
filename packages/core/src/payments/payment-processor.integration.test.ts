@@ -11,6 +11,7 @@ import {
   SIGNING_KEY,
 } from "../test-utils/payment-fixtures";
 import { StockService } from "../inventory/stock-service";
+import { getOrderSummary } from "../orders/order-read";
 import { ORDER_REF_TYPE } from "../inventory/constants";
 import { checkMoneyInvariant } from "./money-invariant";
 import { ingestPaymentWebhook, processPaymentEvent, sweepPaymentEvents } from "./payment-processor";
@@ -295,6 +296,8 @@ describe("plată târzie: cu stoc liber re-rezervă și confirmă, fără stoc r
       });
       expect(payment.attentionResolvedAt).not.toBeNull();
       expect(deps.audits).toContain("payment.stock_reservation_lost");
+      // mesajul pentru client (pagina comenzii și urmărirea) vine din model: anulată, suma va fi returnată
+      expect((await getOrderSummary(h.tx, orderId))?.paymentNotice).toBe("stock_lost");
       // stocul celuilalt client nu a fost atins
       expect((await stockOf(h, variantId)).committed).toBe(q("1"));
       expect(await checkMoneyInvariant(h.tx, paymentId)).toBe("refunded");

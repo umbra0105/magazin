@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getOrderSummary } from "@ecom/core";
+import { redirect } from "next/navigation";
 import { Container, storeButtonVariants } from "@ecom/ui";
 import { getDb } from "@ecom/db";
 import { OrderSummaryView } from "@/components/storefront/order/order-summary-view";
 import { readBankDetails, readOrderAccess } from "@/lib/checkout";
+import { getCardPayments } from "@/lib/payments";
 import { formatDateTime } from "@/lib/format-date";
 import { getSettings } from "@/lib/services";
 import { getStorefrontFormat } from "@/lib/storefront-catalog";
@@ -36,6 +38,15 @@ export default async function OrderConfirmationPage() {
         </Link>
       </Container>
     );
+  }
+  // card: până la confirmare, clientul stă pe pagina plății (starea vine din notificările procesatorului)
+  if (
+    summary.paymentMethod === "card" &&
+    summary.paymentStatus !== "paid" &&
+    summary.status !== "cancelled"
+  ) {
+    const card = orderId ? await getCardPayments().stateOfOrder(orderId) : null;
+    if (card?.paymentId) redirect(`/comanda/plata/${encodeURIComponent(card.paymentId)}`);
   }
   const [format, regional, bank] = await Promise.all([
     getStorefrontFormat(),
@@ -71,6 +82,8 @@ export default async function OrderConfirmationPage() {
         </h2>
         {summary.paymentMethod === "cod" ? (
           <p>{m.nextCod}</p>
+        ) : summary.paymentMethod === "card" ? (
+          <p>{summary.paymentNotice === "stock_lost" ? m.stockLostNotice : m.nextCardPaid}</p>
         ) : (
           <>
             <p>{deadline ? m.nextTransfer(deadline) : null}</p>

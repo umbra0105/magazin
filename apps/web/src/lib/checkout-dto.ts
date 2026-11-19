@@ -27,7 +27,7 @@ export interface CheckoutOfferDto {
 }
 
 export interface CheckoutMethodDto {
-  method: "cod" | "bank_transfer";
+  method: "cod" | "bank_transfer" | "card";
   available: boolean;
   label: string;
   helpText: string;
@@ -90,6 +90,15 @@ function methodDto(
 ): CheckoutMethodDto {
   const text = m();
   const money = (minor: number) => formatMoney(minor, format.currency, format.locale);
+  if (entry.method === "card") {
+    return {
+      method: "card",
+      available: true,
+      label: text.paymentCard,
+      helpText: text.paymentCardHelp,
+      reasonText: null,
+    };
+  }
   if (entry.method === "bank_transfer") {
     return {
       method: "bank_transfer",
