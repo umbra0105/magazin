@@ -14,15 +14,28 @@ export function createPrismaIntegrationStore(db: PrismaClient): IntegrationStore
             credentials: row.credentials,
             config: row.config,
             isActive: row.isActive,
+            verifiedInSandboxAt: row.verifiedInSandboxAt,
           }
         : null;
     },
-    async upsert({ type, provider, credentials, config, isActive }) {
+    async upsert({ type, provider, credentials, config, isActive, verifiedInSandboxAt }) {
       const json = config as Prisma.InputJsonValue;
       await db.integration.upsert({
         where: { type_provider: { type, provider } },
-        create: { type, provider, credentials, config: json, isActive },
-        update: { credentials, config: json, isActive },
+        create: {
+          type,
+          provider,
+          credentials,
+          config: json,
+          isActive,
+          verifiedInSandboxAt: verifiedInSandboxAt ?? null,
+        },
+        update: {
+          credentials,
+          config: json,
+          isActive,
+          ...(verifiedInSandboxAt !== undefined ? { verifiedInSandboxAt } : {}),
+        },
       });
     },
   };

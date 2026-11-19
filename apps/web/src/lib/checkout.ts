@@ -20,6 +20,7 @@ import { getDb } from "@ecom/db";
 import { AnafClient } from "@ecom/integrations";
 import { ORDER_ACCESS_COOKIE } from "./consent";
 import { getStorage } from "./media";
+import { getPaymentConfig } from "./payments";
 import { readCartSettings } from "./cart";
 import { getCounterStore, getSettings } from "./services";
 import { getStorefrontFormat } from "./storefront-catalog";
@@ -58,6 +59,9 @@ export async function readCheckoutSettings(): Promise<CheckoutSettings> {
     codMaxCompanyMinor: payment.codMaxAmountCompany,
     bankDetailsConfigured: company.iban.trim() !== "",
     guestCheckoutEnabled: checkout.guestCheckoutEnabled,
+    // cardul se oferă doar dacă există un furnizor activ, configurat (și, la LIVE, verificat în sandbox)
+    cardProvider: await getPaymentConfig().activeCardProvider(),
+    cardRetryHours: payment.cardRetryHours,
   };
 }
 

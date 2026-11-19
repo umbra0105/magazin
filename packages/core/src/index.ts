@@ -21,3 +21,4 @@ export * from "./orders";
 export * from "./shipping";
 export * from "./geo";
 export * from "./db-tx";
+export * from "./payments";

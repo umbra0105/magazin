@@ -321,7 +321,12 @@ describe("idempotență (dublu-click)", () => {
       const input = await h.input(owner);
       const first = await h.checkout.place(owner, input);
       const second = await h.checkout.place(owner, input);
-      expect(second).toEqual({ orderId: first.orderId, number: first.number, replayed: true });
+      expect(second).toEqual({
+        orderId: first.orderId,
+        number: first.number,
+        replayed: true,
+        paymentId: null,
+      });
       expect(await h.tx.order.count({ where: { id: first.orderId } })).toBe(1);
       const item = await h.tx.inventoryItem.findUniqueOrThrow({
         where: {

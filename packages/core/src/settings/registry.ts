@@ -150,6 +150,13 @@ export const settingGroups = {
       .min(0)
       .max(1_000_000_000)
       .default(PAYMENT_RULE_DEFAULTS.codMaxCompanyMinor),
+    /**
+     * Furnizorul folosit de butonul «Card online» (Faza 10): netopia | euplatesc | demo (doar dezvoltare). Gol = cardul nu apare.
+     * Cheile sunt cu două segmente (`grup.nume`), deci nu `payment.card.provider`.
+     */
+    cardProvider: z.enum(["", "netopia", "euplatesc", "demo"]).default(""),
+    /** Cât timp se poate reîncerca plata cu cardul după plasare, în ore; la expirare comanda se anulează automat. */
+    cardRetryHours: z.number().int().min(1).max(168).default(24),
   },
   shipping: {
     /** Ridicare personală de la sediu (adresa din `company.address`). */

@@ -1,7 +1,7 @@
 import { DomainError } from "@ecom/shared";
 
 /**
- * Metodele de plată disponibile la checkout (Faza 9: ramburs și transfer bancar; cardul vine în Faza 10) și regulile lor.
+ * Metodele de plată disponibile la checkout (ramburs și transfer bancar din Faza 9; cardul din Faza 10, doar cu un furnizor activ) și regulile lor.
  *
  * ⚠️ REGULĂ FIXĂ, NU SETARE: rambursul e INTERZIS la orice comandă cu cel puțin o linie «La comandă» (produsul se aduce de la
  * furnizor după comandă; clientul care refuză colețul ne lasă cu un produs adus special). Rămâne doar transferul bancar (cardul,
@@ -9,7 +9,7 @@ import { DomainError } from "@ecom/shared";
  * nu depinde de nicio setare. Limitele de ramburs (setări `payment.cod.*`) se aplică restului comenzilor.
  */
 
-export const PAYMENT_METHODS = ["cod", "bank_transfer"] as const;
+export const PAYMENT_METHODS = ["cod", "bank_transfer", "card"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 /** Valorile implicite ale limitelor, în bani: 10.000 lei persoane fizice, 5.000 lei persoane juridice (editabile din admin). */
@@ -30,6 +30,11 @@ export interface PaymentRuleInput {
   isCompany: boolean;
   codMaxIndividualMinor: number;
   codMaxCompanyMinor: number;
+  /**
+   * Există cel puțin un furnizor de card activ (Faza 10). Fără el, cardul nu apare și magazinul se comportă ca înainte.
+   * Cardul NU are limită de valoare și NU are regula «La comandă» (plata se face integral în avans).
+   */
+  cardAvailable?: boolean;
 }
 
 export type PaymentMethodAvailability =
@@ -62,7 +67,11 @@ function codAvailability(input: PaymentRuleInput): PaymentMethodAvailability {
 
 /** Toate metodele, în ordinea afișării, cu starea fiecăreia (cele indisponibile poartă motivul, pentru explicația din interfață). */
 export function availablePaymentMethods(input: PaymentRuleInput): PaymentMethodAvailability[] {
-  return [codAvailability(input), { method: "bank_transfer", available: true }];
+  return [
+    ...(input.cardAvailable ? [{ method: "card" as const, available: true as const }] : []),
+    codAvailability(input),
+    { method: "bank_transfer", available: true },
+  ];
 }
 
 /** Validarea de la plasare: aceeași regulă ca la afișare, pe server; o metodă ascunsă sau necunoscută nu se acceptă. */

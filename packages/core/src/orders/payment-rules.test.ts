@@ -15,7 +15,7 @@ const base: PaymentRuleInput = {
   codMaxCompanyMinor: 500_000,
 };
 const withInput = (over: Partial<PaymentRuleInput>): PaymentRuleInput => ({ ...base, ...over });
-const methodOf = (input: PaymentRuleInput, code: "cod" | "bank_transfer") =>
+const methodOf = (input: PaymentRuleInput, code: "cod" | "bank_transfer" | "card") =>
   availablePaymentMethods(input).find((m) => m.method === code);
 
 describe("ramburs interzis la «La comandă» (regulă fixă)", () => {
@@ -145,5 +145,47 @@ describe("assertPaymentMethodAllowed (validare la plasare)", () => {
     expect(() => assertPaymentMethodAllowed(base, "cod")).not.toThrow();
     expect(() => assertPaymentMethodAllowed(base, "bank_transfer")).not.toThrow();
     expect(() => assertPaymentMethodAllowed(base, "card" as never)).toThrow();
+  });
+});
+
+describe("cardul online (Faza 10)", () => {
+  const withCard = (over: Partial<PaymentRuleInput> = {}) =>
+    withInput({ cardAvailable: true, ...over });
+  const cardOf = (input: PaymentRuleInput) =>
+    availablePaymentMethods(input).find((m) => m.method === "card");
+
+  it("apare DOAR dacă există un furnizor activ (altfel magazinul se comportă ca înainte)", () => {
+    expect(cardOf(base)).toBeUndefined();
+    expect(cardOf(withInput({ cardAvailable: false }))).toBeUndefined();
+    expect(availablePaymentMethods(base).map((m) => m.method)).toEqual(["cod", "bank_transfer"]);
+    expect(cardOf(withCard())).toEqual({ method: "card", available: true });
+  });
+
+  it("e primul în ordinea afișării", () => {
+    expect(availablePaymentMethods(withCard()).map((m) => m.method)).toEqual([
+      "card",
+      "cod",
+      "bank_transfer",
+    ]);
+  });
+
+  it("NU are limită de valoare: rămâne disponibil peste limitele de ramburs", () => {
+    const input = withCard({ payableOnDeliveryMinor: 50_000_000, isCompany: true });
+    expect(methodOf(input, "cod")?.available).toBe(false);
+    expect(cardOf(input)?.available).toBe(true);
+  });
+
+  it("NU are regula «La comandă»: rambursul se ascunde, cardul și transferul rămân", () => {
+    const input = withCard({ lines: [{ stockState: "on_order" }] });
+    expect(methodOf(input, "cod")).toMatchObject({ available: false, reason: "has_on_order_line" });
+    expect(cardOf(input)?.available).toBe(true);
+    expect(methodOf(input, "bank_transfer")?.available).toBe(true);
+  });
+
+  it("la plasare: cardul e acceptat doar când e disponibil; altfel «metodă necunoscută»", () => {
+    expect(() => assertPaymentMethodAllowed(withCard(), "card")).not.toThrow();
+    expect(() => assertPaymentMethodAllowed(base, "card")).toThrowError(
+      expect.objectContaining({ code: "ORDER_PAYMENT_METHOD_UNKNOWN" }),
+    );
   });
 });

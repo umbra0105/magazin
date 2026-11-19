@@ -1472,6 +1472,9 @@ model Refund {
   /// «Am rambursat manual»: referința din contul procesatorului.
   manualReference  String?
   resolvedManually Boolean   @default(false)
+  /// Momentul în care cererea a fost TRIMISĂ procesatorului. O cerere trimisă și rămasă fără rezultat nu se retrimite automat
+  /// (risc de rambursare dublă): devine «manual_required».
+  sentAt           DateTime?
   confirmedAt      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

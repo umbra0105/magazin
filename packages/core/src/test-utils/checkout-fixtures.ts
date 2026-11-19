@@ -60,6 +60,8 @@ export const CHECKOUT_SETTINGS: CheckoutSettings = {
   codMaxCompanyMinor: 500_000,
   bankDetailsConfigured: true,
   guestCheckoutEnabled: true,
+  cardProvider: null,
+  cardRetryHours: 24,
 };
 
 const SHIPPING_SETTINGS: ShippingRuntimeSettings = {
@@ -260,7 +262,7 @@ export async function harness<T>(
               postalCode: "123456",
             },
             offerCode: merged.shippingOfferCode as string,
-            paymentMethod: merged.paymentMethod as "cod" | "bank_transfer",
+            paymentMethod: merged.paymentMethod as "cod" | "bank_transfer" | "card",
             vatId: (merged["company"] as { vatId?: string } | null)?.vatId ?? null,
           });
           merged["expectedTotalMinor"] = preview.totals?.totalMinor ?? 1;

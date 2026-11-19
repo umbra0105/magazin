@@ -16,6 +16,8 @@ export interface IntegrationRecord {
   credentials: string | null;
   config: unknown;
   isActive: boolean;
+  /** Faza 10: plata de probă confirmată cu semnătură validă (furnizori de plată reali). */
+  verifiedInSandboxAt?: Date | null;
 }
 
 /** Ce îi trebuie serviciului din baza de date (satisfăcut de Prisma și de fake-uri de test). */
@@ -40,6 +42,8 @@ export interface SaveIntegrationInput {
   credentials?: IntegrationCredentials;
   config?: unknown;
   isActive?: boolean;
+  /** Omis = rămâne cum era; `null` = se șterge marca. */
+  verifiedInSandboxAt?: Date | null;
 }
 
 export class IntegrationService {
@@ -63,6 +67,10 @@ export class IntegrationService {
       credentials,
       config: input.config ?? existing?.config ?? {},
       isActive: input.isActive ?? existing?.isActive ?? false,
+      verifiedInSandboxAt:
+        input.verifiedInSandboxAt !== undefined
+          ? input.verifiedInSandboxAt
+          : (existing?.verifiedInSandboxAt ?? null),
     });
   }
 
