@@ -118,14 +118,17 @@ model FeatureFlag {
 /// Integrări externe (plăți, curieri, facturare). `credentials` e criptat AES-256-GCM
 /// cu APP_KEY și nu iese niciodată în clar din server.
 model Integration {
-  id          String   @id @default(cuid())
-  type        String
-  provider    String
-  credentials String?
-  config      Json     @default("{}")
-  isActive    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  type                String
+  provider            String
+  credentials         String?
+  config              Json      @default("{}")
+  isActive            Boolean   @default(false)
+  /// Faza 10, furnizori de plată reali: momentul în care o plată în mod test a fost confirmată printr-un IPN/callback cu
+  /// semnătură validă. Fără el, trecerea în LIVE e refuzată pe server. Se șterge când se schimbă credențialele.
+  verifiedInSandboxAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@unique([type, provider])
   @@map("integration")
@@ -1277,67 +1280,73 @@ model OrderCounter {
 /// Comanda (Faza 9: doar oaspete, `customerId` gol; plata: ramburs sau transfer bancar). Trei statusuri separate, cu tranziții
 /// validate de state machine (`packages/core/src/orders`); valorile sunt păzite de CHECK în migrație.
 model Order {
-  id                    String             @id @default(cuid())
-  number                String             @unique
-  channelId             String
-  channel               SalesChannel       @relation(fields: [channelId], references: [id], onDelete: Restrict)
-  externalId            String?
+  id                     String              @id @default(cuid())
+  number                 String              @unique
+  channelId              String
+  channel                SalesChannel        @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  externalId             String?
   /// JSON brut de la canalul extern (eMAG), pentru depanare; nul la comenzile web.
-  externalData          Json?
-  parentSubscriptionId  String?
+  externalData           Json?
+  parentSubscriptionId   String?
   /// Gol în Faza 9 (checkout doar pentru oaspete); contul de client vine în Faza 14.
-  customerId            String?
-  email                 String
-  phone                 String
-  currency              String             @default("RON")
+  customerId             String?
+  email                  String
+  phone                  String
+  currency               String              @default("RON")
   /// pending | confirmed | processing | completed | cancelled | returned | draft
-  status                String             @default("pending")
+  status                 String              @default("pending")
   /// pending | authorized | paid | partially_refunded | refunded | failed | cancelled | chargeback
-  paymentStatus         String             @default("pending")
+  paymentStatus          String              @default("pending")
   /// unfulfilled | partially_fulfilled | fulfilled | in_transit | delivered | returned | cancelled
-  fulfillmentStatus     String             @default("unfulfilled")
-  subtotalMinor         Int
-  discountMinor         Int                @default(0)
-  shippingMinor         Int
-  codFeeMinor           Int                @default(0)
+  fulfillmentStatus      String              @default("unfulfilled")
+  subtotalMinor          Int
+  discountMinor          Int                 @default(0)
+  shippingMinor          Int
+  codFeeMinor            Int                 @default(0)
   /// TVA extras din transport și din taxa de ramburs (sume cu TVA inclus, ca liniile; docs/09 §2).
-  shippingTaxMinor      Int                @default(0)
-  codFeeTaxMinor        Int                @default(0)
+  shippingTaxMinor       Int                 @default(0)
+  codFeeTaxMinor         Int                 @default(0)
   /// TVA total = suma TVA pe linii + shippingTaxMinor + codFeeTaxMinor (verificat în bază, la commit).
-  taxMinor              Int
-  totalMinor            Int
+  taxMinor               Int
+  totalMinor             Int
   /// Cota standard de TVA la plasare, în puncte de bază (2100 = 21%), ca snapshot.
-  taxRateBps            Int
-  groupPricingType      String             @default("none")
+  taxRateBps             Int
+  groupPricingType       String              @default("none")
   /// Metoda de livrare aleasă: cod (courier | pickup | …) și snapshot-ul ofertei (curier, serviciu, preț, zile, sursa).
-  shippingMethodCode    String
-  shippingSnapshot      Json
-  /// cod | bank_transfer (cardul vine în Faza 10)
-  paymentMethod         String
-  customerNote          String?
-  adminNote             String?
-  installationRequested Boolean            @default(false)
-  installationNote      String?
+  shippingMethodCode     String
+  shippingSnapshot       Json
+  /// cod | bank_transfer | card (Faza 10)
+  paymentMethod          String
+  customerNote           String?
+  adminNote              String?
+  installationRequested  Boolean             @default(false)
+  installationNote       String?
   /// Consimțământul pentru Termeni: textul exact, versiunea și momentul. Fără IP și fără user-agent (decizie Faza 9).
-  termsAcceptedAt       DateTime
-  termsConsentText      String
-  termsConsentVersion   String
-  /// Transfer bancar: până când ține rezervarea; la expirare comanda se anulează automat.
-  reservationExpiresAt  DateTime?
+  termsAcceptedAt        DateTime
+  termsConsentText       String
+  termsConsentVersion    String
+  /// Transfer bancar: până când ține rezervarea; la expirare comanda se anulează automat. Card (Faza 10): sfârșitul
+  /// rezervării curente (15 minute de la ultima inițiere a plății).
+  reservationExpiresAt   DateTime?
+  /// Card (Faza 10): sfârșitul ferestrei de reîncercare a plății (24 h de la plasare); la expirare comanda se anulează
+  /// automat. Nul la ramburs și transfer.
+  paymentRetryDeadlineAt DateTime?
   /// Cheia de idempotență a plasării (protecție la dublu-click): aceeași cheie întoarce aceeași comandă.
-  idempotencyKey        String             @unique
-  source                String             @default("web")
-  placedAt              DateTime           @default(now())
-  confirmedAt           DateTime?
-  cancelledAt           DateTime?
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
-  lines                 OrderLine[]
-  events                OrderEvent[]
-  payments              Payment[]
-  addresses             Address[]
-  stockReservations     StockReservation[]
-  stockCommitments      StockCommitment[]
+  idempotencyKey         String              @unique
+  source                 String              @default("web")
+  placedAt               DateTime            @default(now())
+  confirmedAt            DateTime?
+  cancelledAt            DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  lines                  OrderLine[]
+  events                 OrderEvent[]
+  payments               Payment[]
+  addresses              Address[]
+  stockReservations      StockReservation[]
+  stockCommitments       StockCommitment[]
+  refunds                Refund[]
+  paymentRetryTokens     PaymentRetryToken[]
 
   @@index([status, paymentStatus])
   @@index([email])
@@ -1398,26 +1407,118 @@ model OrderEvent {
   @@map("order_event")
 }
 
-/// Plata unei comenzi. Faza 9: `cod` (ramburs: se încasează la livrare) și `bank_transfer`. `status`: pending | paid | failed |
-/// cancelled | refunded. Confirmarea transferului există doar în serviciu (ecranul de admin vine în Faza 11).
+/// Plata unei comenzi = O TENTATIVĂ de plată (la card, o comandă are mai multe, `attemptNo` 1, 2, …). `provider`: cod |
+/// bank_transfer | netopia | euplatesc | demo. `status`: pending | paid | failed | cancelled | refunded. Sumele sunt bani
+/// întregi; `capturedAmountMinor` e suma confirmată de procesator (trebuie să fie egală cu `amountMinor`, altfel plata
+/// intră în «necesită atenție»). `refundCommittedMinor` = suma angajată în rambursări (cerute, confirmate sau manuale),
+/// plafonată de `amountMinor` și în bază. Niciodată PAN, CVV sau date complete de card: doar ultimele 4 cifre, dacă le trimite
+/// procesatorul. `rawPayload` nu conține secrete.
 model Payment {
-  id             String    @id @default(cuid())
-  orderId        String
-  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  provider       String
-  method         String
-  amountMinor    Int
-  currency       String    @default("RON")
-  status         String    @default("pending")
-  providerRef    String?
-  idempotencyKey String?   @unique
-  rawPayload     Json?
-  capturedAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                   String                @id @default(cuid())
+  orderId              String
+  order                Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider             String
+  method               String
+  amountMinor          Int
+  currency             String                @default("RON")
+  status               String                @default("pending")
+  providerRef          String?
+  idempotencyKey       String?               @unique
+  rawPayload           Json?
+  capturedAt           DateTime?
+  /// Faza 10: tentativa (1, 2, …), modul (test | live | demo; nul la ramburs și transfer), ultimele 4 cifre ale cardului,
+  /// suma și moneda confirmate de procesator, suma angajată în rambursări.
+  attemptNo            Int                   @default(1)
+  mode                 String?
+  cardLast4            String?
+  capturedAmountMinor  Int?
+  capturedCurrency     String?
+  refundCommittedMinor Int                   @default(0)
+  failureCode          String?
+  /// «Necesită atenție»: motivul (cod stabil), momentul și rezolvarea.
+  attentionReason      String?
+  attentionAt          DateTime?
+  attentionResolvedAt  DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  refunds              Refund[]
+  webhookEvents        PaymentWebhookEvent[]
+
+  @@unique([orderId, attemptNo])
+  @@unique([provider, providerRef])
+  @@index([orderId])
+  @@index([status, createdAt])
+  @@index([attentionAt])
+  @@map("payment")
+}
+
+/// Rambursarea unei plăți (Faza 10). `status`: requested | confirmed | failed | manual_required. Idempotentă prin
+/// `idempotencyKey` (la rambursările automate derivată din plată: o singură rambursare per plată și motiv).
+model Refund {
+  id               String    @id @default(cuid())
+  paymentId        String
+  payment          Payment   @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  orderId          String
+  order            Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  amountMinor      Int
+  reason           String
+  /// admin | auto_stock_lost | auto_late_payment
+  kind             String
+  status           String    @default("requested")
+  providerRef      String?
+  idempotencyKey   String    @unique
+  actorLabel       String?
+  failureMessage   String?
+  /// «Am rambursat manual»: referința din contul procesatorului.
+  manualReference  String?
+  resolvedManually Boolean   @default(false)
+  confirmedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([paymentId])
+  @@index([orderId])
+  @@index([status, createdAt])
+  @@map("refund")
+}
+
+/// Evenimentele webhook/IPN primite de la procesatori: unicitate pe (furnizor, eventId) = idempotență. `status`: received |
+/// processed | failed | rejected. Un eveniment RESPINS (semnătură invalidă) păstrează doar motivul și hash-ul corpului, fără
+/// conținut și fără date personale. `normalized` conține doar câmpurile verificate și nesensibile.
+model PaymentWebhookEvent {
+  id           String    @id @default(cuid())
+  provider     String
+  eventId      String
+  status       String    @default("received")
+  rejectReason String?
+  bodyHash     String
+  paymentId    String?
+  payment      Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  normalized   Json?
+  attempts     Int       @default(0)
+  lastError    String?
+  receivedAt   DateTime  @default(now())
+  processedAt  DateTime?
+
+  @@unique([provider, eventId])
+  @@index([status, receivedAt])
+  @@index([paymentId])
+  @@map("payment_webhook_event")
+}
+
+/// Linkul «reîncearcă plata»: jetonul în clar nu se stochează, doar amprenta SHA-256. Valabil până la `expiresAt`
+/// (maximum sfârșitul ferestrei de 24 h a comenzii); un jeton nou îl invalidează pe cel vechi (`usedAt`).
+model PaymentRetryToken {
+  id        String    @id @default(cuid())
+  orderId   String
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([orderId])
-  @@map("payment")
+  @@map("payment_retry_token")
 }
 
 /// Adresa unei comenzi (livrare sau facturare), snapshot imuabil: textul rămâne cel de la plasare; `countySirutaCode` și
