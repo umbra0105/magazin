@@ -16,6 +16,8 @@ export const ORDER_ERROR_CODES = [
   "ORDER_PAYMENT_NOT_PENDING",
   "ORDER_RESERVATION_EXPIRED",
   "ORDER_CARD_UNAVAILABLE",
+  /** Marcajul «La furnizor»: comandă care nu mai e activă sau text prea lung. */
+  "ORDER_SUPPLIER_MARK_INVALID",
 ] as const;
 export type OrderErrorCode = (typeof ORDER_ERROR_CODES)[number];
 

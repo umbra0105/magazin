@@ -86,6 +86,30 @@ export async function setReservationExpiry(
   await tx.order.update({ where: { id: orderId }, data: { reservationExpiresAt } });
 }
 
+/**
+ * Câmpurile comenzii care NU sunt stări și NU sunt bani, stoc sau linii: marcajul «La furnizor», contactul clientului și nota
+ * internă. Singura cale de scriere a lor (alături de `transitionOrder` pentru stări), ca regula «un singur loc care scrie pe
+ * comandă» din `orders.architecture` să rămână adevărată. Tipul nu permite statusuri, sume, linii sau rezervări.
+ */
+export interface OrderAnnotationFields {
+  supplierMarkedAt?: Date | null;
+  supplierMarkedBy?: string | null;
+  supplierName?: string | null;
+  supplierNote?: string | null;
+  adminNote?: string | null;
+  email?: string;
+  phone?: string;
+}
+
+/** Apelantul ține comanda blocată (`lockOrder`) și scrie `OrderEvent` separat. */
+export async function updateOrderAnnotations(
+  tx: Db,
+  orderId: string,
+  fields: OrderAnnotationFields,
+): Promise<void> {
+  await tx.order.update({ where: { id: orderId }, data: fields });
+}
+
 /** Adaugă o intrare în jurnalul comenzii (timeline); intrările nu se modifică și nu se șterg. */
 export async function addOrderEvent(
   tx: Db,

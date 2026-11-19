@@ -34,7 +34,7 @@ const PICKUP: RateOffer = offer({
     county: "Alba",
     postalCode: "510000",
     country: "RO",
-    text: "Strada Exemplu 1, Alba Iulia, Alba, 510000, RO",
+    text: "Strada Exemplu 1, 510000 Alba Iulia, Alba",
   },
 });
 
@@ -59,7 +59,7 @@ describe("oferta de ridicare în previzualizarea checkout-ului", () => {
 
   it("arată «Adresa de ridicare: <adresa magazinului>»", () => {
     expect(pickup?.addressLine).toBe(
-      "Adresa de ridicare: Strada Exemplu 1, Alba Iulia, Alba, 510000, RO",
+      "Adresa de ridicare: Strada Exemplu 1, 510000 Alba Iulia, Alba",
     );
   });
 
@@ -77,5 +77,36 @@ describe("oferta de ridicare în previzualizarea checkout-ului", () => {
 
   it("eticheta ofertei rămâne «Ridicare personală»", () => {
     expect(pickup?.label).toBe("Ridicare personală");
+  });
+});
+
+/** Rambursul la ridicare (decizia din 2026-11-19): rămâne oferit, dar cu textul «în magazin», nu «curierului». */
+describe("rambursul oferit la ridicarea personală", () => {
+  const withMethods = (selected: RateOffer, fee: number) =>
+    toCheckoutPreviewDto(
+      {
+        ...preview([offer({ codFeeMinor: fee }), PICKUP], selected),
+        methods: [{ method: "cod", available: true, reason: null }],
+      } as unknown as CheckoutPreview,
+      FORMAT,
+      LIMITS,
+      { isCompany: false },
+    ).methods?.find((m) => m.method === "cod");
+
+  it("la ridicare: «Plătești în magazin la ridicare», fără «curierului»", () => {
+    const cod = withMethods(PICKUP, 0);
+    expect(cod?.available).toBe(true);
+    expect(cod?.helpText).toBe("Plătești în magazin la ridicare.");
+    expect(cod?.helpText).not.toMatch(/curier/i);
+  });
+
+  it("la ridicare cu taxă de ramburs, taxa se arată tot cu textul din magazin", () => {
+    const cod = withMethods({ ...PICKUP, codFeeMinor: 500 }, 0);
+    expect(cod?.helpText).toMatch(/^Plătești în magazin la ridicare\. Taxă de ramburs: /);
+  });
+
+  it("la livrare cu curier rămâne «curierului»", () => {
+    const courier = offer();
+    expect(withMethods(courier, 0)?.helpText).toBe("Plătești curierului la primirea coletului.");
   });
 });

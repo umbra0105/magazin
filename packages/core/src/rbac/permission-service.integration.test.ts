@@ -30,12 +30,13 @@ describe("PermissionService pe baza de test", () => {
     await db.$disconnect();
   });
 
-  it("Suport: poate anula, nu poate rambursa și nici arhiva produse (permisiunile vin din DB)", async () => {
+  it("Suport: poate anula și rambursa din comandă (cu limită), dar nu are payments.refund și nu poate arhiva produse (permisiunile vin din DB)", async () => {
     await withUser(["support"], async (service, id) => {
       const subject = await service.loadSubject(id);
       expect(subject?.roles).toEqual(["support"]);
       expect(can(subject, "orders.cancel")).toBe(true);
-      expect(can(subject, "orders.refund")).toBe(false);
+      expect(can(subject, "orders.refund")).toBe(true);
+      expect(can(subject, "payments.refund")).toBe(false);
       expect(can(subject, "products.archive")).toBe(false);
     });
   });

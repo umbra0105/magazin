@@ -9,6 +9,7 @@ export * from "./order-payments";
 export * from "./order-read";
 export * from "./order-service";
 export * from "./order-state";
+export * from "./order-supplier";
 export * from "./order-totals";
 export * from "./payment-rules";
 export * from "./order-access";

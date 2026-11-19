@@ -28,6 +28,8 @@ export interface CreateRefundInput {
   kind: "admin" | "auto_stock_lost" | "auto_late_payment";
   idempotencyKey: string;
   actorLabel?: string;
+  /** Rambursare cerută de un actor CU LIMITĂ (Suport): se numără în limita de pe comandă (`order-refund.ts`). */
+  limitedActor?: boolean;
 }
 
 export type RefundRow = Prisma.RefundGetPayload<object>;
@@ -72,6 +74,7 @@ export async function createRefundInTx(
       kind: input.kind,
       idempotencyKey: input.idempotencyKey,
       ...(input.actorLabel ? { actorLabel: input.actorLabel } : {}),
+      ...(input.limitedActor ? { limitedActor: true } : {}),
     },
   });
   await tx.payment.update({

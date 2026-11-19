@@ -157,6 +157,12 @@ export const settingGroups = {
     cardProvider: z.enum(["", "netopia", "euplatesc", "demo"]).default(""),
     /** Cât timp se poate reîncerca plata cu cardul după plasare, în ore; la expirare comanda se anulează automat. */
     cardRetryHours: z.number().int().min(1).max(168).default(24),
+    /**
+     * Limita de rambursare a rolului Suport (Faza 11, decizia 2026-11-19), în bani (50000 = 500,00 lei): suma cumulată
+     * rambursată pe o comandă de actori cu limită (`orders.refund` fără `payments.refund`) nu poate depăși valoarea. 0 = Suportul
+     * nu poate rambursa. Regula e pe server (`payments/refund-limit.ts`); o setare care nu se poate citi = refuz.
+     */
+    supportRefundLimit: z.number().int().min(0).max(1_000_000_000).default(50_000),
   },
   shipping: {
     /** Ridicare personală de la sediu (adresa din `company.address`). */

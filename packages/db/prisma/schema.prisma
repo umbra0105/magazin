@@ -1337,6 +1337,12 @@ model Order {
   placedAt               DateTime            @default(now())
   confirmedAt            DateTime?
   cancelledAt            DateTime?
+  /// Marcajul «La furnizor» (Faza 11, decizia 2026-11-19): NU e stare și nu atinge stocul, banii sau statusurile. Toate nule
+  /// (nemarcată) sau `supplierMarkedAt` + `supplierMarkedBy` setate (CHECK în migrație); furnizorul și nota sunt text liber.
+  supplierMarkedAt       DateTime?
+  supplierMarkedBy       String?
+  supplierName           String?
+  supplierNote           String?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   lines                  OrderLine[]
@@ -1353,6 +1359,7 @@ model Order {
   @@index([reservationExpiresAt])
   @@index([channelId])
   @@index([placedAt])
+  @@index([supplierMarkedAt])
   @@map("customer_order")
 }
 
@@ -1472,6 +1479,9 @@ model Refund {
   /// «Am rambursat manual»: referința din contul procesatorului.
   manualReference  String?
   resolvedManually Boolean   @default(false)
+  /// Faza 11 (decizia 2026-11-19): rambursarea a fost cerută de un actor CU LIMITĂ (rolul Suport: `orders.refund` fără
+  /// `payments.refund`). Limita se aplică pe suma acestor rambursări pe comandă, sub blocare.
+  limitedActor     Boolean   @default(false)
   /// Momentul în care cererea a fost TRIMISĂ procesatorului. O cerere trimisă și rămasă fără rezultat nu se retrimite automat
   /// (risc de rambursare dublă): devine «manual_required».
   sentAt           DateTime?

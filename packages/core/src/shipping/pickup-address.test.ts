@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatCompanyAddress,
   formatPickupAddress,
   isPickupAddressComplete,
   normalizePickupAddress,
@@ -39,20 +40,36 @@ describe("adresa de ridicare: completitudine", () => {
 });
 
 describe("adresa de ridicare: formatare", () => {
-  it("stradă, oraș, județ, cod poștal, țară, separate prin virgulă", () => {
-    expect(formatPickupAddress(address())).toBe("Strada Exemplu 1, Alba Iulia, Alba, 510000, RO");
+  it("un singur format al adresei magazinului: «stradă, cod poștal oraș, județ» (subsol, ridicare, emailuri)", () => {
+    expect(formatPickupAddress(address())).toBe("Strada Exemplu 1, 510000 Alba Iulia, Alba");
+    expect(formatCompanyAddress(address())).toBe(formatPickupAddress(address()));
+  });
+
+  it("țara apare doar când nu e România", () => {
+    expect(formatCompanyAddress(address({ country: "RO" }))).not.toMatch(/RO$/);
+    expect(formatCompanyAddress(address({ country: "ro" }))).not.toMatch(/ro$/i);
+    expect(formatCompanyAddress(address({ country: "MD" }))).toBe(
+      "Strada Exemplu 1, 510000 Alba Iulia, Alba, MD",
+    );
+  });
+
+  it("fără oraș, codul poștal rămâne singur; fără cod poștal, orașul singur", () => {
+    expect(formatCompanyAddress(address({ city: "" }))).toBe("Strada Exemplu 1, 510000, Alba");
+    expect(formatCompanyAddress(address({ postalCode: "" }))).toBe(
+      "Strada Exemplu 1, Alba Iulia, Alba",
+    );
   });
 
   it("sare peste părțile goale, fără virgule duble", () => {
     expect(formatPickupAddress(address({ county: "", postalCode: "  " }))).toBe(
-      "Strada Exemplu 1, Alba Iulia, RO",
+      "Strada Exemplu 1, Alba Iulia",
     );
   });
 
   it("taie spațiile din jurul fiecărei părți", () => {
     expect(
       formatPickupAddress(address({ street: "  Strada Exemplu 1 ", city: " Alba Iulia" })),
-    ).toBe("Strada Exemplu 1, Alba Iulia, Alba, 510000, RO");
+    ).toBe("Strada Exemplu 1, 510000 Alba Iulia, Alba");
   });
 });
 
@@ -64,7 +81,7 @@ describe("adresa de ridicare: normalizare pentru snapshot", () => {
       county: "Alba",
       postalCode: "510000",
       country: "RO",
-      text: "Strada Exemplu 1, Alba Iulia, Alba, 510000, RO",
+      text: "Strada Exemplu 1, 510000 Alba Iulia, Alba",
     });
   });
 

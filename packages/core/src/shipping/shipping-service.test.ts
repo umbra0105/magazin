@@ -164,7 +164,7 @@ describe("ridicarea personală și adresa magazinului (`company.address`)", () =
       county: "Alba",
       postalCode: "510000",
       country: "RO",
-      text: "Strada Exemplu 1, Alba Iulia, Alba, 510000, RO",
+      text: "Strada Exemplu 1, 510000 Alba Iulia, Alba",
     });
     // destinația clientului (Alba Iulia, 510005) nu intră nicăieri în oferta de ridicare
     expect(JSON.stringify(offer)).not.toContain("510005");
@@ -197,7 +197,7 @@ describe("ridicarea personală și adresa magazinului (`company.address`)", () =
         country: "RO",
       },
     });
-    expect(offer?.pickupAddress?.text).toBe("Strada Exemplu 1, Alba Iulia, RO");
+    expect(offer?.pickupAddress?.text).toBe("Strada Exemplu 1, Alba Iulia");
   });
 
   it("ofertele de curier nu poartă adresă de ridicare", async () => {

@@ -463,7 +463,9 @@ Vezi `09-preturi-si-parteneri.md` §5.
 | **Admin** | Tot, mai puțin actualizări de sistem și chei de integrare |
 | **Manager** | Comenzi, produse (inclusiv prețul de achiziție, `products.cost.view`), clienți, reduceri, rapoarte |
 | **Editor conținut** | CMS, blog, SEO, media și conținutul produselor (`products.content.write`: descriere, SEO, media, documente), fără prețuri, stoc sau cost |
-| **Suport clienți** | Vede comenzi și clienți, poate anula comenzi. **Rambursarea (`orders.refund`) rămâne la Manager, Admin și Owner până există o limită de rambursare** (decizie utilizator) |
+| **Suport clienți** | Vede comenzi și clienți, poate anula comenzi și **rambursa din detaliul comenzii DOAR până la o limită** (decizie utilizator, 2026-11-19; Faza 11). Are `orders.refund`, dar NU `payments.refund`. Limita e setarea `payment.supportRefundLimit` (implicit 500 lei, editabilă din admin de cine are `settings.write`): suma cumulată rambursată pe o comandă de actori cu limită nu poate depăși valoarea (exact limita trece, limita + 1 ban nu; rambursările eșuate nu se numără; setarea lipsă sau care nu se poate citi = refuz). Peste limită rambursează doar Manager, Admin sau Owner. Regula se aplică pe server, sub blocarea comenzii (`packages/core/src/payments/refund-limit.ts` și `order-refund.ts`), nu în interfață |
+
+**Cum se leagă `orders.refund` și `payments.refund`:** `orders.refund` deschide acțiunea «Rambursează» din comandă; `payments.refund` deschide ecranul de plăți și «am rambursat manual» și, pentru rambursare, ÎNLĂTURĂ limita (Manager, Admin, Owner). Un rol cu `orders.refund` fără `payments.refund` (Suport sau un rol creat de magazin) e un actor cu limită; Suport nu poate ocoli limita pe nicio cale (nu are `payments.refund`, deci nu atinge ecranul de plăți, și nu poate confirma rambursări manuale).
 | **Depozit** | Comenzi (doar fulfillment), stoc, AWB — fără prețuri și date financiare |
 | **Contabil** | Rapoarte, facturi, export — doar citire |
 
@@ -636,7 +638,7 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `orders.read` — Vede comenzile | ✓ | ✓ | ✓ |  | ✓ | ✓ | ✓ |
 | `orders.write` — Modifică comenzile | ✓ | ✓ | ✓ |  |  |  |  |
 | `orders.cancel` — Anulează comenzi | ✓ | ✓ | ✓ |  | ✓ |  |  |
-| `orders.refund` — Rambursează comenzi | ✓ | ✓ | ✓ |  |  |  |  |
+| `orders.refund` — Rambursează din detaliul comenzii; fără payments.refund, doar până la limita din setări (rolul Suport) | ✓ | ✓ | ✓ |  | ✓ |  |  |
 | `orders.fulfill` — Pregătește și expediază comenzi (fulfillment, AWB) | ✓ | ✓ | ✓ |  |  | ✓ |  |
 | `products.read` — Vede produsele | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |
 | `products.write` — Creează și modifică produse (prețuri, stoc, variante, clasă de livrare, TVA) | ✓ | ✓ | ✓ |  |  |  |  |

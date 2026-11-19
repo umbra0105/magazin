@@ -11,12 +11,12 @@ describe("rbac:revoke (scoatere explicită a unei permisiuni)", () => {
     await db.$disconnect();
   });
 
-  it("baza veche (Suport cu orders.refund): simularea nu schimbă nimic, --apply scoate, seed-ul nu o readuce", async () => {
+  it("baza veche (Suport cu orders.fulfill): simularea nu schimbă nimic, --apply scoate, seed-ul nu o readuce", async () => {
     const out = await inRolledBackTransaction(db, async (tx) => {
       await runBaseSeed(tx);
-      // Starea unei baze create înainte de schimbare: Suport are orders.refund.
+      // Starea unei baze create înainte de schimbare: Suport are orders.fulfill (nu e în catalogul lui).
       const support = await tx.role.findUniqueOrThrow({ where: { key: "support" } });
-      const refund = await tx.permission.findUniqueOrThrow({ where: { key: "orders.refund" } });
+      const refund = await tx.permission.findUniqueOrThrow({ where: { key: "orders.fulfill" } });
       await tx.rolePermission.create({ data: { roleId: support.id, permissionId: refund.id } });
       const has = () =>
         tx.rolePermission.count({ where: { roleId: support.id, permissionId: refund.id } });
@@ -25,11 +25,11 @@ describe("rbac:revoke (scoatere explicită a unei permisiuni)", () => {
         await runBaseSeed(tx);
         return has();
       })();
-      const dry = await revokeRolePermission(tx, "support", "orders.refund", false);
+      const dry = await revokeRolePermission(tx, "support", "orders.fulfill", false);
       const afterDry = await has();
-      const applied = await revokeRolePermission(tx, "support", "orders.refund", true);
+      const applied = await revokeRolePermission(tx, "support", "orders.fulfill", true);
       const afterApply = await has();
-      const again = await revokeRolePermission(tx, "support", "orders.refund", true);
+      const again = await revokeRolePermission(tx, "support", "orders.fulfill", true);
       await runBaseSeed(tx);
       const afterSeed = await has();
       return { seedDoesNotRemove, dry, afterDry, applied, afterApply, again, afterSeed };

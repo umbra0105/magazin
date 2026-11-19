@@ -3719,6 +3719,10 @@ export const ro = {
       paymentCodHelp: (fee: string) =>
         `Plătești curierului la primirea coletului. Taxă de ramburs: ${fee}.`,
       paymentCodFree: "Plătești curierului la primirea coletului.",
+      // ridicare personală: nu există curier, plata se face în magazin (decizia 2026-11-19)
+      paymentCodHelpPickup: (fee: string) =>
+        `Plătești în magazin la ridicare. Taxă de ramburs: ${fee}.`,
+      paymentCodFreePickup: "Plătești în magazin la ridicare.",
       paymentCard: "Card online",
       paymentCardHelp:
         "Plătești acum, pe pagina securizată a procesatorului de plăți. Nu păstrăm datele cardului. Dacă plata nu reușește, comanda rămâne în așteptare și o poți reîncerca.",
@@ -3868,6 +3872,7 @@ export const ro = {
       trackLink: "Urmărește comanda",
       whatNext: "Ce urmează",
       nextCod: "Comanda este confirmată. Plătești curierului la primirea coletului.",
+      nextCodPickup: "Comanda este confirmată. Plătești în magazin la ridicare.",
       nextCardPaid: "Plata cu cardul a fost confirmată, iar comanda este confirmată.",
       stockLostNotice:
         "Plata a ajuns după expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.",
@@ -3889,6 +3894,10 @@ export const ro = {
         cod: "Ramburs (la livrare)",
         bank_transfer: "Transfer bancar",
         card: "Card online",
+      } as Record<string, string>,
+      // ridicare personală: același ramburs, plătit în magazin
+      paymentMethodsPickup: {
+        cod: "Ramburs (în magazin, la ridicare)",
       } as Record<string, string>,
       status: "Stare",
       statuses: {

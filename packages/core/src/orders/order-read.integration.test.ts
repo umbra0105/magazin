@@ -76,7 +76,7 @@ describe("urmărirea comenzii (număr + email)", () => {
       const summary = await getOrderSummary(h.tx, placed.orderId);
       expect(summary?.shipping.kind).toBe("pickup");
       expect(summary?.shipping.pickupAddressText).toBe(
-        "Strada Magazinului 7, Alba Iulia, Alba, 510000, RO",
+        "Strada Magazinului 7, 510000 Alba Iulia, Alba",
       );
       // localitatea clientului nu mai e o «destinație» a comenzii cu ridicare
       expect(summary?.destination).toBeNull();

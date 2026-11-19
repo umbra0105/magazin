@@ -38,12 +38,20 @@ describe("can(): fiecare rol are acces exact la ce trebuie", () => {
     expect(can(support, "orders.cancel")).toBe(true);
   });
 
-  it("rambursarea: doar Manager, Admin și Owner; Suportul nu, până există limita de rambursare", () => {
+  it("rambursarea din comandă (orders.refund): Manager, Admin, Owner și Suport (cu limită, decizia 2026-11-19)", () => {
     const allowed = DEFAULT_ROLES.filter((r) => can(subjectFor([r.key]), "orders.refund")).map(
       (r) => r.key,
     );
-    expect(allowed.sort()).toEqual(["admin", "manager", "owner"]);
-    expect(can(subjectFor(["support"]), "orders.refund")).toBe(false);
+    expect(allowed.sort()).toEqual(["admin", "manager", "owner", "support"]);
+  });
+
+  it("Suport NU are payments.refund: nu poate ocoli limita pe ecranul de plăți și nu confirmă rambursări manuale", () => {
+    const support = subjectFor(["support"]);
+    expect(can(support, "orders.refund")).toBe(true);
+    expect(can(support, "payments.refund")).toBe(false);
+    expect(can(support, "payments.read")).toBe(false);
+    expect(can(support, "payments.configure")).toBe(false);
+    expect(can(support, "settings.write")).toBe(false);
   });
 
   it("Depozit nu rambursează și nu vede prețul de achiziție; Contabil nu modifică comenzi", () => {

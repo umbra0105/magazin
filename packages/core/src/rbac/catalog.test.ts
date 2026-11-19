@@ -108,8 +108,16 @@ describe("permisiunile plăților (Faza 10)", () => {
     expect(rolesWith("payments.read")).toEqual(["owner", "admin", "manager", "accountant"]);
   });
 
-  it("rambursarea: doar Owner, Admin, Manager (Suport, Contabil, Depozit, Editor nu)", () => {
+  it("rambursarea fără limită (payments.refund): doar Owner, Admin, Manager (Suport, Contabil, Depozit, Editor nu)", () => {
     expect(rolesWith("payments.refund")).toEqual(["owner", "admin", "manager"]);
+  });
+
+  it("rambursarea din comandă (orders.refund): Owner, Admin, Manager și Suport; Suport o are CU LIMITĂ (fără payments.refund), decizia 2026-11-19", () => {
+    expect(rolesWith("orders.refund")).toEqual(["owner", "admin", "manager", "support"]);
+    const support = DEFAULT_ROLES.find((r) => r.key === "support");
+    expect(support?.permissions).toContain("orders.refund");
+    expect(support?.permissions).not.toContain("payments.refund");
+    expect(support?.description).toMatch(/limit/i);
   });
 
   it("configurarea (chei, mod test/live): DOAR Owner, ca la cheile de integrare; Adminul nu are acces la chei", () => {

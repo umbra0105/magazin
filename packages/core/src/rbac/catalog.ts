@@ -8,7 +8,8 @@ export const PERMISSIONS = {
   "orders.read": "Vede comenzile",
   "orders.write": "Modifică comenzile",
   "orders.cancel": "Anulează comenzi",
-  "orders.refund": "Rambursează comenzi",
+  "orders.refund":
+    "Rambursează din detaliul comenzii; fără payments.refund, doar până la limita din setări (rolul Suport)",
   "orders.fulfill": "Pregătește și expediază comenzi (fulfillment, AWB)",
   "products.read": "Vede produsele",
   "products.write": "Creează și modifică produse (prețuri, stoc, variante, clasă de livrare, TVA)",
@@ -125,11 +126,13 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
     key: "support",
     name: "Suport clienți",
     description:
-      "Vede comenzi și clienți, poate anula comenzi (rambursarea: până există limita de rambursare)",
+      "Vede comenzi și clienți, poate anula comenzi și rambursa DOAR până la limita de rambursare din setări (payment.supportRefundLimit); peste limită rambursează Manager, Admin sau Owner",
     permissions: [
       "admin.access",
       "orders.read",
       "orders.cancel",
+      // rambursare cu LIMITĂ: fără `payments.refund` (care înlătură limita), deci nu poate ocoli limita pe nicio cale
+      "orders.refund",
       "customers.read",
       "customers.read_pii",
     ],
