@@ -125,3 +125,21 @@ Răspuns:
 **11. Transportul la retur parțial.** La storno parțial pentru produse, transportul plătit de client se returnează, se păstrează sau depinde de motiv?
 
 Răspuns:
+
+**13. Momentul facturii la plata cu cardul confirmată după reîncercare (adăugată în Faza 10).** Cardul: factura se emite la plata confirmată
+(Faza 13). Dacă prima încercare a eșuat și clientul a plătit la a doua (sau a treia), factura se emite o singură dată, la confirmarea plății
+care a reușit, pe aceeași comandă? Data facturii e data confirmării plății, nu data plasării comenzii?
+
+Răspuns:
+
+**14. Rambursare parțială: ce document se emite (adăugată în Faza 10).** Rambursarea parțială a unei plăți cu cardul (de exemplu un produs
+deteriorat, sau o diferență) cere storno parțial al facturii, notă de credit sau doar rambursarea banilor fără alt document? Cum se tratează
+transportul în rambursările care nu sunt retururi? (Rambursarea din Faza 10 face doar banii; documentul fiscal vine în Faza 13.)
+
+Răspuns:
+
+**15. Comisionul procesatorului (adăugată în Faza 10).** Procesatorii rețin un comision din fiecare încasare, iar la rambursare comisionul
+poate să nu se returneze. Cum se înregistrează: cheltuială lunară pe baza extrasului procesatorului, sau pe fiecare tranzacție? Avem nevoie
+în aplicație de câmpuri pentru comision (suma netă virată) sau reconcilierea se face din extrasul procesatorului?
+
+Răspuns:

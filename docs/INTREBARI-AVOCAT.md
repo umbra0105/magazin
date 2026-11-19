@@ -199,3 +199,36 @@ Răspuns:
 **7.3. Formularea consimțământului pentru Termeni.** Bifa obligatorie, nepre-bifată: «Am citit și sunt de acord cu Termenii și condițiile» (cu legături către pagini). Salvăm pe comandă textul exact, versiunea și momentul. Este suficient? Ce alte acorduri trebuie bifate separat la comandă (politica de confidențialitate, informații precontractuale)? *(Paginile legale reale vin în Faza 16; până atunci legăturile duc la pagini provizorii, noindex, marcate «în curs de redactare».)*
 
 Răspuns:
+
+---
+
+## 8. Plățile online cu card (adăugată în Faza 10)
+
+**8.1. Mesajul către client la rambursarea automată.** Când o plată cu cardul ajunge după expirarea rezervării și produsele nu mai sunt
+în stoc, comanda se anulează, iar plata se rambursează automat. Pe pagina comenzii și în urmărire scriem acum: «Plata a ajuns după
+expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.» (cu Netopia, unde
+rambursarea poate cere o acțiune manuală, nu scriem niciodată «rambursat» până nu e confirmat). Formularea e corectă juridic? Trebuie
+menționat un termen în care banii ajung înapoi la client (depinde de bancă) și un contact?
+
+Răspuns:
+
+**8.2. Ce păstrăm de la procesator și cât timp.** Păstrăm pe plată: referința procesatorului, suma și moneda confirmate, ultimele 4 cifre
+ale cardului (doar dacă le trimite procesatorul) și starea; NU păstrăm niciodată numărul cardului, CVV sau alte date de card. Evenimentele
+primite (notificările) păstrează doar câmpurile verificate, nu corpul complet; cele respinse păstrează doar motivul și un hash al corpului.
+Este în regulă ultimele 4 cifre ca dată personală? Cât timp păstrăm plățile, evenimentele și notificările respinse (acum fără ștergere
+automată; propunere: plățile cât timp comenzile, 10 ani fiscal; evenimentele și respingerile 12 luni)?
+
+Răspuns:
+
+**8.3. Procesatorii în politica de confidențialitate.** Netopia și EuPlătesc devin împuterniciți/operatori asociați pentru plățile cu
+card. Ce trebuie scris în politica de confidențialitate (identitate, scop, temei, destinatari, transfer în afara UE dacă e cazul) și avem
+nevoie de contracte separate de prelucrare cu fiecare?
+
+Răspuns:
+
+**8.4. Textul legal al reîncercării plății.** Când o plată cu cardul eșuează, comanda rămâne în așteptare 24 de ore (setabil) și clientul
+poate reîncerca plata dintr-un link; stocul se rezervă din nou doar dacă mai există. După 24 de ore comanda se anulează automat. Trebuie
+să spunem clientului, înainte de plată, termenul de 24 de ore și faptul că produsele nu sunt rezervate între încercări? Unde (checkout,
+pagina de eșec, email)?
+
+Răspuns:
