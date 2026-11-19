@@ -178,19 +178,19 @@ test.describe("permisiuni", () => {
     browser,
   }) => {
     const s = await asAccount(browser, support, "/admin");
-    await s.page.goto("/admin/plati");
+    await s.page.goto("/admin/comenzi/plati");
     await denied(s.page);
     await s.page.goto("/admin/setari/plati");
     await denied(s.page);
     await s.close();
 
-    const m = await asAccount(browser, manager, "/admin/plati");
+    const m = await asAccount(browser, manager, "/admin/comenzi/plati");
     await expect(m.page.getByRole("heading", { level: 1, name: /Plăți cu cardul/ })).toBeVisible();
     await m.page.goto("/admin/setari/plati");
     await denied(m.page);
     await m.close();
 
-    const a = await asAccount(browser, accountant, "/admin/plati");
+    const a = await asAccount(browser, accountant, "/admin/comenzi/plati");
     await expect(a.page.getByRole("heading", { level: 1, name: /Plăți cu cardul/ })).toBeVisible();
     await a.page.goto("/admin/setari/plati");
     await denied(a.page);
@@ -198,7 +198,7 @@ test.describe("permisiuni", () => {
   });
 
   test("meniul arată «Plăți» doar celor care au dreptul", async ({ browser }) => {
-    const a = await asAccount(browser, accountant, "/admin/plati");
+    const a = await asAccount(browser, accountant, "/admin/comenzi/plati");
     await expect(a.page.getByRole("link", { name: "Plăți", exact: true })).toBeVisible();
     await a.close();
     const s = await asAccount(browser, support, "/admin");
@@ -222,14 +222,14 @@ test.describe("rambursări și «necesită atenție»", () => {
     // Contabil: citește, nu rambursează
     const readerContext = await browser.newContext();
     const reader = await readerContext.newPage();
-    await login(reader, accountant, `/admin/plati/${paymentId}`);
+    await login(reader, accountant, `/admin/comenzi/plati/${paymentId}`);
     await expect(reader.getByRole("heading", { level: 1 })).toContainText(number);
     await expect(reader.getByRole("button", { name: "Rambursează…" })).toHaveCount(0);
     await expect(reader.getByText("Poți vedea plățile, dar nu poți rambursa.")).toBeVisible();
     await readerContext.close();
 
     // Manager: rambursează parțial 50,00 lei
-    await login(page, manager, `/admin/plati/${paymentId}`);
+    await login(page, manager, `/admin/comenzi/plati/${paymentId}`);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(number);
     await page.getByLabel("Suma de rambursat (lei)").fill("50,00");
     // fără motiv: eroare pe câmp, nimic trimis
@@ -290,7 +290,7 @@ test.describe("rambursări și «necesită atenție»", () => {
       timeout: 30_000,
     });
     const paymentId = (await readE2eLastPaymentId(number)) as string;
-    await login(page, manager, `/admin/plati/${paymentId}`);
+    await login(page, manager, `/admin/comenzi/plati/${paymentId}`);
     await page.getByLabel("Suma de rambursat (lei)").fill("10,00");
     await page.getByLabel("Motivul rambursării").fill("Test manual");
     await page.getByRole("button", { name: "Rambursează…" }).click();
@@ -305,11 +305,11 @@ test.describe("rambursări și «necesită atenție»", () => {
     await expect(page.getByText(/Rambursează din contul procesatorului/).first()).toBeVisible();
 
     // lista «Necesită atenție» o conține
-    await page.goto("/admin/plati?vedere=atentie");
+    await page.goto("/admin/comenzi/plati?vedere=atentie");
     await expect(page.getByRole("link", { name: number })).toBeVisible();
 
     // «Am rambursat manual»
-    await page.goto(`/admin/plati/${paymentId}`);
+    await page.goto(`/admin/comenzi/plati/${paymentId}`);
     await page.getByLabel("Referința operațiunii din contul procesatorului").fill("TX-E2E-1");
     await page.getByRole("button", { name: "Am rambursat manual…" }).click();
     await page
@@ -330,9 +330,9 @@ test.describe("rambursări și «necesită atenție»", () => {
       timeout: 30_000,
     });
     const paymentId = (await readE2eLastPaymentId(number)) as string;
-    await login(page, manager, "/admin/plati?vedere=atentie");
+    await login(page, manager, "/admin/comenzi/plati?vedere=atentie");
     await expect(page.getByRole("link", { name: number })).toBeVisible();
-    await page.goto(`/admin/plati/${paymentId}`);
+    await page.goto(`/admin/comenzi/plati/${paymentId}`);
     await expect(
       page.getByRole("heading", { name: /Necesită atenție: Sumă diferită/ }),
     ).toBeVisible();

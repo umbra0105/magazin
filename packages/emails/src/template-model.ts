@@ -95,6 +95,7 @@ export const TEMPLATE_KEYS = [
   "order.stock_lost",
   "internal.order_new",
   "internal.stock_out",
+  "internal.installation_request",
   "internal.stock_sync_stale",
   "return.received",
   "return.approved",

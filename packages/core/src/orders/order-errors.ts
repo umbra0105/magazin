@@ -30,6 +30,13 @@ export const ORDER_ERROR_CODES = [
   "ORDER_PAYMENT_AMOUNT_MISMATCH",
   "ORDER_PAYMENT_AMOUNT_INVALID",
   "ORDER_PAYMENT_REFERENCE_INVALID",
+  /** Vederile salvate: nume sau filtre invalide, nume duplicat, limită atinsă, vedere inexistentă. */
+  "ORDER_VIEW_INVALID",
+  "ORDER_VIEW_DUPLICATE",
+  "ORDER_VIEW_LIMIT",
+  "ORDER_VIEW_NOT_FOUND",
+  /** Cererea de instalare: comanda nu are cerere sau starea nu e validă. */
+  "ORDER_INSTALLATION_INVALID",
 ] as const;
 export type OrderErrorCode = (typeof ORDER_ERROR_CODES)[number];
 

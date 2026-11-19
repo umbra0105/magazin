@@ -11,6 +11,8 @@ export const PERMISSIONS = {
   "orders.refund":
     "Rambursează din detaliul comenzii; fără payments.refund, doar până la limita din setări (rolul Suport)",
   "orders.fulfill": "Pregătește și expediază comenzi (fulfillment, AWB)",
+  "orders.mark_paid":
+    "Marchează ca plătite comenzile cu transfer bancar (suma primită și referința din extras)",
   "products.read": "Vede produsele",
   "products.write": "Creează și modifică produse (prețuri, stoc, variante, clasă de livrare, TVA)",
   "products.content.write":
@@ -39,6 +41,12 @@ export const PERMISSIONS = {
     "Rambursează plăți cu card (parțial sau total) și confirmă rambursări făcute manual",
   "payments.configure":
     "Configurează furnizorii de plăți cu card (chei, mod test/live, activare); doar Owner, ca la cheile de integrare",
+  "email.read":
+    "Vede șabloanele de email, previzualizările și jurnalul de trimiteri (inclusiv emailurile blocate)",
+  "email.write":
+    "Suprascrie șabloanele de email, trimite emailuri de test și retrimite emailuri din jurnal",
+  "email.configure":
+    "Configurează serverul SMTP (parola, testul conexiunii); doar Owner, ca la cheile de integrare",
   "invoices.read": "Vede facturile",
   "invoices.write": "Emite și stornează facturi",
   "reports.read": "Vede rapoartele operaționale",
@@ -73,9 +81,14 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
   {
     key: "admin",
     name: "Admin",
-    description: "Tot, mai puțin actualizări de sistem, chei de integrare și chei de plăți",
+    description:
+      "Tot, mai puțin actualizări de sistem, chei de integrare, chei de plăți și serverul SMTP",
     permissions: ALL.filter(
-      (p) => p !== "system.update" && p !== "integrations.write" && p !== "payments.configure",
+      (p) =>
+        p !== "system.update" &&
+        p !== "integrations.write" &&
+        p !== "payments.configure" &&
+        p !== "email.configure",
     ),
   },
   {
@@ -89,6 +102,8 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "orders.cancel",
       "orders.refund",
       "orders.fulfill",
+      "orders.mark_paid",
+      "email.read",
       "payments.read",
       "payments.refund",
       "products.read",

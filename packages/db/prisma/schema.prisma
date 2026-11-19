@@ -21,6 +21,7 @@ model User {
   mediaUploads   Media[]
   productImports ProductImport[]
   cart           Cart?
+  savedOrderViews OrderSavedView[]
 
   @@unique([email])
   @@map("user")
@@ -1321,6 +1322,10 @@ model Order {
   adminNote              String?
   installationRequested  Boolean             @default(false)
   installationNote       String?
+  /// Starea de urmărire a cererii de instalare (docs/15 §4): requested | contacted | scheduled | done | declined; nulă dacă nu s-a
+  /// cerut instalare (CHECK în migrație). Schimbările scriu OrderEvent și audit.
+  installationStatus     String?
+  installationStatusAt   DateTime?
   /// Consimțământul pentru Termeni: textul exact, versiunea și momentul. Fără IP și fără user-agent (decizie Faza 9).
   termsAcceptedAt        DateTime
   termsConsentText       String
@@ -1362,6 +1367,7 @@ model Order {
   @@index([channelId])
   @@index([placedAt])
   @@index([supplierMarkedAt])
+  @@index([installationStatus])
   @@map("customer_order")
 }
 
@@ -1519,6 +1525,21 @@ model PaymentWebhookEvent {
   @@index([status, receivedAt])
   @@index([paymentId])
   @@map("payment_webhook_event")
+}
+
+/// Vederile salvate ale listei de comenzi (Faza 11), proprii fiecărui utilizator: numele și șirul de interogare al filtrelor.
+model OrderSavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  query     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId, createdAt])
+  @@map("order_saved_view")
 }
 
 /// Notele interne ale comenzii (Faza 11): text liber al echipei, cu autor și moment. Doar se adaugă. Textul poate conține date

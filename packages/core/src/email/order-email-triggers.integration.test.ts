@@ -261,3 +261,31 @@ describe("evenimentele plăților", () => {
     });
   });
 });
+
+describe("cererea de instalare", () => {
+  it("o comandă cu cerere de instalare notifică echipa (cu observațiile în date nu, ci în comandă); fără cerere, nu", async () => {
+    await harness(async (h) => {
+      await setRecipients(h, ["echipa@exemplu.ro"]);
+      const plain = await placed(h);
+      expect(
+        (await dispatches(h, plain.orderId)).filter(
+          (r) => r.template === "internal.installation_request",
+        ),
+      ).toEqual([]);
+      const product = await h.product({ physical: "100" });
+      const owner = await h.fill([{ variantId: product.variantId, quantity: q("1") }]);
+      const wants = await h.checkout.place(
+        owner,
+        await h.input(owner, {
+          installation: { requested: true, note: "Piscină 8x4, acces camion" },
+        }),
+      );
+      const rows = (await dispatches(h, wants.orderId)).filter(
+        (r) => r.template === "internal.installation_request",
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ recipient: "echipa@exemplu.ro", audience: "internal" });
+      expect(JSON.stringify(rows[0]?.data)).not.toContain("camion");
+    });
+  });
+});

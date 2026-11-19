@@ -45,6 +45,7 @@ describe("catalogul șabloanelor", () => {
       "order.stock_lost",
       "internal.order_new",
       "internal.stock_out",
+      "internal.installation_request",
     ] as const) {
       expect(def(key).wired, key).toBe(true);
     }

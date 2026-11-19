@@ -469,6 +469,42 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
         : [],
   },
   {
+    key: "internal.installation_request",
+    label: "Notificare internă: cerere de instalare",
+    description:
+      "Trimis echipei (setarea `email.internalRecipients`) când o comandă are cerere de ofertă pentru instalare (docs/15 §4); statusul de urmărire se schimbă din «Cereri de instalare».",
+    audience: "internal",
+    wired: true,
+    phaseNote: null,
+    variables: [
+      COMMON.magazin,
+      COMMON.numar,
+      v("client", "Numele clientului", "Ana Popescu"),
+      v(
+        "nota",
+        "Observațiile clientului (tip de piscină, locație, acces)",
+        "Piscină 8x4 m, acces cu camionul",
+      ),
+      v("linkAdmin", "Linkul comenzii în admin", "https://magazin.exemplu/admin/comenzi/exemplu"),
+    ],
+    defaultSubject: "Cerere de instalare la comanda {{numar}}",
+    heading: "Cerere de instalare",
+    preview: "Comanda {{numar}} cere ofertă pentru instalare.",
+    defaultIntro:
+      "Clientul {{client}} a cerut o ofertă pentru instalare la comanda {{numar}}. Contactează-l telefonic. Observații: {{nota}}",
+    build: (context) => [
+      ...(context.vars["linkAdmin"]
+        ? [
+            {
+              type: "button",
+              label: "Deschide comanda",
+              link: context.vars["linkAdmin"],
+            } satisfies EmailBlock,
+          ]
+        : []),
+    ],
+  },
+  {
     key: "internal.stock_sync_stale",
     label: "Alertă internă: sincronizarea SmartBill e neactualizată",
     description:

@@ -93,7 +93,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
     <div className="flex max-w-4xl flex-col gap-6">
       <div className="flex flex-col gap-2">
         <Link
-          href="/admin/plati"
+          href="/admin/comenzi/plati"
           className="text-body text-link underline-offset-2 hover:underline"
         >
           {m.detail.back}
@@ -203,7 +203,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
             <li key={attempt.id}>
               <Link
                 className="text-link underline-offset-2 hover:underline"
-                href={`/admin/plati/${attempt.id}`}
+                href={`/admin/comenzi/plati/${attempt.id}`}
               >
                 {m.attempt(attempt.attemptNo)}
               </Link>{" "}

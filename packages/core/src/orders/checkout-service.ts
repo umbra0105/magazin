@@ -673,6 +673,9 @@ export class CheckoutService {
           paymentMethod: input.paymentMethod,
           ...(input.customerNote ? { customerNote: input.customerNote } : {}),
           installationRequested: input.installation.requested,
+          ...(input.installation.requested
+            ? { installationStatus: "requested", installationStatusAt: now }
+            : {}),
           ...(input.installation.requested && input.installation.note
             ? { installationNote: input.installation.note }
             : {}),

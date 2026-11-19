@@ -210,6 +210,7 @@ export async function buildOrderEmailContext(
       email: true,
       paymentRetryDeadlineAt: true,
       reservationExpiresAt: true,
+      installationNote: true,
       addresses: { where: { kind: "billing" }, select: { fullName: true } },
     },
   });
@@ -226,6 +227,7 @@ export async function buildOrderEmailContext(
     link: `${base}/comanda/urmarire`,
     metodaPlata: METHOD_LABELS[summary.paymentMethod] ?? summary.paymentMethod,
     linkAdmin: `${base}/admin/comenzi/${order.id}`,
+    nota: order.installationNote?.trim() || "nespecificate",
   };
 
   switch (dispatch.template) {

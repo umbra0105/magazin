@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CATALOG_ITEMS } from "./admin-nav";
+import { CATALOG_ITEMS, ORDERS_ITEMS } from "./admin-nav";
 import { LEGACY_ADMIN_ROUTES, legacyAdminRedirects } from "./admin-redirects";
 
 describe("redirecturile adreselor vechi de admin", () => {
@@ -13,7 +13,7 @@ describe("redirecturile adreselor vechi de admin", () => {
     );
   });
 
-  it("acoperă exact cele șase adrese mutate", () => {
+  it("acoperă exact cele șapte adrese mutate (șase sub «Produse», plățile sub «Comenzi»)", () => {
     expect(LEGACY_ADMIN_ROUTES).toEqual([
       { from: "/admin/categorii", to: "/admin/produse/categorii" },
       { from: "/admin/branduri", to: "/admin/produse/branduri" },
@@ -21,16 +21,17 @@ describe("redirecturile adreselor vechi de admin", () => {
       { from: "/admin/unitati-de-masura", to: "/admin/produse/unitati-de-masura" },
       { from: "/admin/fise-explodate", to: "/admin/produse/fise-explodate" },
       { from: "/admin/stoc", to: "/admin/produse/stoc" },
+      { from: "/admin/plati", to: "/admin/comenzi/plati" },
     ]);
   });
 
-  it("destinația fiecărei redirecționări e un element real al grupului «Catalog»", () => {
-    const tabHrefs = new Set(CATALOG_ITEMS.map((item) => item.href));
+  it("destinația fiecărei redirecționări e un element real al unui grup din meniu («Catalog» sau «Comenzi»)", () => {
+    const tabHrefs = new Set([...CATALOG_ITEMS, ...ORDERS_ITEMS].map((item) => item.href));
     for (const { to } of LEGACY_ADMIN_ROUTES) expect(tabHrefs.has(to), to).toBe(true);
   });
 
   it("nicio adresă veche nu mai e un element al grupului și nicio sursă nu se repetă", () => {
-    const tabHrefs = new Set(CATALOG_ITEMS.map((item) => item.href));
+    const tabHrefs = new Set([...CATALOG_ITEMS, ...ORDERS_ITEMS].map((item) => item.href));
     const sources = LEGACY_ADMIN_ROUTES.map((r) => r.from);
     for (const from of sources) expect(tabHrefs.has(from), from).toBe(false);
     expect(new Set(sources).size).toBe(sources.length);

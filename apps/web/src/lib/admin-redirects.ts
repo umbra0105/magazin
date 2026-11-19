@@ -10,6 +10,8 @@ export const LEGACY_ADMIN_ROUTES: readonly { from: string; to: string }[] = [
   { from: "/admin/unitati-de-masura", to: "/admin/produse/unitati-de-masura" },
   { from: "/admin/fise-explodate", to: "/admin/produse/fise-explodate" },
   { from: "/admin/stoc", to: "/admin/produse/stoc" },
+  // Faza 11: plățile cu cardul intră în grupul «Comenzi»
+  { from: "/admin/plati", to: "/admin/comenzi/plati" },
 ];
 
 export function legacyAdminRedirects(): { source: string; destination: string; permanent: true }[] {

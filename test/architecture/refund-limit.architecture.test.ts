@@ -59,9 +59,11 @@ function callers(name: string): string[] {
 
 describe("limita de rambursare: nicio cale de ocolire", () => {
   it("`requestRefund` (fără limită) se apelează doar din acțiunea ecranului de plăți", () => {
-    expect(callers("requestRefund")).toEqual(["apps/web/src/app/(admin)/admin/plati/actions.ts"]);
+    expect(callers("requestRefund")).toEqual([
+      "apps/web/src/app/(admin)/admin/comenzi/plati/actions.ts",
+    ]);
     const source = readFileSync(
-      join(root, "apps/web/src/app/(admin)/admin/plati/actions.ts"),
+      join(root, "apps/web/src/app/(admin)/admin/comenzi/plati/actions.ts"),
       "utf8",
     );
     expect(source).toMatch(/withPermission\(\s*"payments\.refund"/);

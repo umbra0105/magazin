@@ -43,7 +43,11 @@ export type AdminNavItemId =
   | "maintenance"
   | "cartSettings"
   | "shippingZones"
-  | "paymentSettings";
+  | "paymentSettings"
+  | "emailSettings"
+  | "allOrders"
+  | "emailTemplates"
+  | "installRequests";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -104,6 +108,23 @@ export const CATALOG_ITEMS: readonly AdminNavItem[] = [
   },
 ];
 
+/**
+ * Ecranele grupului «Comenzi» (Faza 11), în ordinea din meniu. «Comenzi» ține evidențiat și detaliul comenzii; «Plăți» (mutat din
+ * `/admin/plati`, cu redirect 308) vede plățile cu cardul, rambursările și ce necesită atenție; «Șabloane email» are și jurnalul de
+ * trimiteri; «Cereri de instalare» apare doar cu flag-ul `installationRequests`.
+ */
+export const ORDERS_ITEMS: readonly AdminNavItem[] = [
+  { id: "allOrders", href: "/admin/comenzi", permission: "orders.read" },
+  { id: "payments", href: "/admin/comenzi/plati", permission: "payments.read" },
+  { id: "emailTemplates", href: "/admin/comenzi/sabloane-email", permission: "email.read" },
+  {
+    id: "installRequests",
+    href: "/admin/comenzi/cereri-instalare",
+    permission: "orders.read",
+    feature: "installationRequests",
+  },
+];
+
 /** Destinația unui element, cu parametrii păstrați din ecranul curent (vezi `keepParams`). */
 export function itemHref(
   item: Pick<AdminNavItem, "href" | "keepParams">,
@@ -128,15 +149,15 @@ export const SETTINGS_ITEMS: readonly AdminNavItem[] = [
   { id: "shippingZones", href: "/admin/setari/livrare", permission: "settings.read" },
   // cheile furnizorilor de plată: doar cu `payments.configure` (Owner), ca la integrări
   { id: "paymentSettings", href: "/admin/setari/plati", permission: "payments.configure" },
+  // serverul SMTP (parola criptată): doar cu `email.configure` (Owner), ca la integrări
+  { id: "emailSettings", href: "/admin/setari/email", permission: "email.configure" },
 ];
 
 export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "dashboard", href: "/admin" },
-  { id: "orders", href: "/admin/comenzi", permission: "orders.read" },
+  { id: "orders", href: "/admin/comenzi", children: ORDERS_ITEMS },
   { id: "catalog", href: "/admin/produse", children: CATALOG_ITEMS },
   { id: "customers", href: "/admin/clienti", permission: "customers.read" },
-  // plățile cu card și rambursările (Faza 10); Faza 11 le integrează în detaliul comenzii
-  { id: "payments", href: "/admin/plati", permission: "payments.read" },
   { id: "discounts", href: "/admin/reduceri", permission: "discounts.read" },
   { id: "reviews", href: "/admin/recenzii", permission: "content.read", feature: "reviews" },
   { id: "blog", href: "/admin/blog", permission: "content.read", feature: "blog" },

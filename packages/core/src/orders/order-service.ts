@@ -98,6 +98,8 @@ export interface OrderAnnotationFields {
   supplierName?: string | null;
   supplierNote?: string | null;
   adminNote?: string | null;
+  installationStatus?: string;
+  installationStatusAt?: Date;
   email?: string;
   phone?: string;
 }

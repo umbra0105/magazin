@@ -64,7 +64,7 @@ export default async function PaymentsPage({
   const pageCount = Math.max(1, Math.ceil(list.total / PAGE_SIZE));
   const money = (minor: number) => formatMoney(minor, regional.currency, regional.locale);
   const href = (param: string, p = 1) =>
-    `/admin/plati?vedere=${param}${p > 1 ? `&pagina=${p}` : ""}`;
+    `/admin/comenzi/plati?vedere=${param}${p > 1 ? `&pagina=${p}` : ""}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -109,7 +109,7 @@ export default async function PaymentsPage({
               <Tr key={row.id}>
                 <RowHeader stack="title" className="font-medium">
                   <Link
-                    href={`/admin/plati/${row.id}`}
+                    href={`/admin/comenzi/plati/${row.id}`}
                     className="text-link underline-offset-2 hover:underline"
                   >
                     {row.orderNumber}
@@ -145,7 +145,7 @@ export default async function PaymentsPage({
                 </Td>
                 <Td priority="primary" stack="actions">
                   <Link
-                    href={`/admin/plati/${row.id}`}
+                    href={`/admin/comenzi/plati/${row.id}`}
                     className="inline-flex min-h-11 items-center text-link underline-offset-2 hover:underline md:min-h-0"
                   >
                     {m.view}

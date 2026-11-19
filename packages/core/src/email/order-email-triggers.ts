@@ -109,7 +109,13 @@ export async function scheduleOrderEmails(
   if (!rules) return;
   const order = await tx.order.findUnique({
     where: { id: orderId },
-    select: { email: true, paymentMethod: true, paymentStatus: true, externalId: true },
+    select: {
+      email: true,
+      paymentMethod: true,
+      paymentStatus: true,
+      externalId: true,
+      installationRequested: true,
+    },
   });
   if (!order) return;
   const inputs: DispatchInput[] = [];
@@ -140,6 +146,18 @@ export async function scheduleOrderEmails(
           orderId,
           data: { eventType: event.type },
         });
+      }
+      if (order.installationRequested) {
+        for (const to of recipients) {
+          inputs.push({
+            template: "internal.installation_request",
+            eventKey: `event:${event.id}`,
+            recipient: to,
+            audience: "internal",
+            orderId,
+            data: { eventType: event.type },
+          });
+        }
       }
       for (const variantId of await soldOutVariants(tx, orderId)) {
         for (const to of recipients) {

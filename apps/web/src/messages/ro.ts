@@ -203,6 +203,10 @@ export const ro = {
       shippingZones: "Zone de livrare",
       paymentSettings: "Plăți cu card",
       payments: "Plăți",
+      emailSettings: "Email (SMTP)",
+      allOrders: "Comenzi",
+      emailTemplates: "Șabloane email",
+      installRequests: "Cereri de instalare",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {

@@ -132,3 +132,30 @@ describe("permisiunile plăților (Faza 10)", () => {
     }
   });
 });
+
+describe("permisiunile comenzilor și emailurilor (Faza 11)", () => {
+  const rolesWith = (permission: (typeof PERMISSION_KEYS)[number]) =>
+    DEFAULT_ROLES.filter((r) => r.permissions.includes(permission)).map((r) => r.key);
+
+  it("«marchează plătit» (transfer bancar): Owner, Admin, Manager; nu Suport, Depozit, Editor, Contabil", () => {
+    expect(rolesWith("orders.mark_paid")).toEqual(["owner", "admin", "manager"]);
+  });
+
+  it("emailurile: citirea (șabloane, jurnal) Owner, Admin, Manager; scrierea (suprascriere, test, retrimitere) Owner, Admin", () => {
+    expect(rolesWith("email.read")).toEqual(["owner", "admin", "manager"]);
+    expect(rolesWith("email.write")).toEqual(["owner", "admin"]);
+  });
+
+  it("serverul SMTP: DOAR Owner, ca la cheile de integrare (Adminul nu vede parola SMTP)", () => {
+    expect(rolesWith("email.configure")).toEqual(["owner"]);
+  });
+
+  it("scrierea cere citirea: nimeni nu suprascrie șabloane fără să le vadă", () => {
+    for (const role of DEFAULT_ROLES) {
+      if (role.permissions.includes("email.write"))
+        expect(role.permissions, role.key).toContain("email.read");
+      if (role.permissions.includes("email.configure"))
+        expect(role.permissions, role.key).toContain("email.read");
+    }
+  });
+});

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition } from "react";
 import { Button, Dialog, Input, Label, Textarea } from "@ecom/ui";
-import { markRefundDoneManually, refundPayment } from "@/app/(admin)/admin/plati/actions";
+import { markRefundDoneManually, refundPayment } from "@/app/(admin)/admin/comenzi/plati/actions";
 import { formatMoney, formatMoneyInput, parseMoneyInput } from "@/lib/money-input";
 import { getMessages } from "@/messages";
 

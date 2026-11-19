@@ -224,7 +224,7 @@ describe("plățile respectă regulile (codul real)", () => {
         f.path.startsWith("packages/core/src/payments/") ||
         f.path.startsWith(ADAPTERS) ||
         f.path.startsWith("packages/shared/src/payment-provider") ||
-        f.path.includes("/admin/plati/") ||
+        f.path.includes("/admin/comenzi/plati/") ||
         f.path.includes("/comanda/plata/"),
     );
     expect(findFloatMoney(scope)).toEqual([]);
