@@ -2747,3 +2747,196 @@ export async function readE2eShippingZone(name: string): Promise<{
     };
   });
 }
+
+// ------------------------------------------------------------------------------------------- plăți cu card (Faza 10)
+
+/** Activează furnizorul DEMO și îl alege pentru butonul «Card online» (doar în baza de test; DEMO cere E2E_HARNESS=1 pe server). */
+export async function seedE2eDemoPayments(
+  refund: "confirmed" | "pending" | "failed" | "manual_required" = "confirmed",
+): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `insert into integration (id, type, provider, config, "isActive", "updatedAt")
+       values (gen_random_uuid()::text, 'payment', 'demo', $1::jsonb, true, now())
+       on conflict (type, provider) do update set config = excluded.config, "isActive" = true, "updatedAt" = now()`,
+      [JSON.stringify({ mode: "test", demoRefund: refund })],
+    );
+  });
+  await setE2eSettings({ "payment.cardProvider": "demo" });
+}
+
+/** Șterge tot ce a creat fluxul cu card al testelor: rambursările, evenimentele DEMO, integrarea DEMO și alegerea furnizorului. */
+export async function removeE2eDemoPayments(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `delete from refund where "orderId" in (select id from customer_order where email like $1)`,
+      [`%${E2E_ORDER_EMAIL_DOMAIN}`],
+    );
+    await db.query(
+      `delete from payment_webhook_event where provider = 'demo' or status = 'rejected'`,
+    );
+    await db.query(`delete from integration where type = 'payment' and provider = 'demo'`);
+  });
+  await clearE2eSettings(["payment.cardProvider"]);
+}
+
+/** Stare reală a plăților unei comenzi: tentative, rambursări, evenimente webhook înregistrate pentru ele. */
+export interface E2ePaymentsSnapshot {
+  orderStatus: string;
+  orderPaymentStatus: string;
+  payments: Array<{
+    attemptNo: number;
+    provider: string;
+    status: string;
+    amountMinor: number;
+    capturedAmountMinor: number | null;
+    refundCommittedMinor: number;
+    attentionReason: string | null;
+    cardLast4: string | null;
+  }>;
+  refunds: Array<{ amountMinor: number; status: string; kind: string; reason: string }>;
+  events: string[];
+  processedWebhookEvents: number;
+  commitments: number;
+  activeReservations: number;
+}
+
+export async function readE2ePayments(number: string): Promise<E2ePaymentsSnapshot | null> {
+  return withClient(async (db) => {
+    const order = (
+      await db.query(`select id, status, "paymentStatus" from customer_order where number = $1`, [
+        number,
+      ])
+    ).rows[0];
+    if (!order) return null;
+    const [payments, refunds, events, processed, commitments, reservations] = await Promise.all([
+      db.query(
+        `select "attemptNo", provider, status, "amountMinor", "capturedAmountMinor", "refundCommittedMinor",
+                "attentionReason", "cardLast4"
+           from payment where "orderId" = $1 order by "attemptNo"`,
+        [order.id],
+      ),
+      db.query(
+        `select "amountMinor", status, kind, reason from refund where "orderId" = $1 order by "createdAt"`,
+        [order.id],
+      ),
+      db.query(`select type from order_event where "orderId" = $1 order by "createdAt", id`, [
+        order.id,
+      ]),
+      db.query(
+        `select count(*)::int as n from payment_webhook_event
+          where status = 'processed' and "paymentId" in (select id from payment where "orderId" = $1)`,
+        [order.id],
+      ),
+      db.query(`select count(*)::int as n from stock_commitment where "orderId" = $1`, [order.id]),
+      db.query(
+        `select count(*)::int as n from stock_reservation where "orderId" = $1 and status = 'active'`,
+        [order.id],
+      ),
+    ]);
+    return {
+      orderStatus: order.status as string,
+      orderPaymentStatus: order.paymentStatus as string,
+      payments: payments.rows as E2ePaymentsSnapshot["payments"],
+      refunds: refunds.rows as E2ePaymentsSnapshot["refunds"],
+      events: events.rows.map((row) => row.type as string),
+      processedWebhookEvents: processed.rows[0]?.n ?? 0,
+      commitments: commitments.rows[0]?.n ?? 0,
+      activeReservations: reservations.rows[0]?.n ?? 0,
+    };
+  });
+}
+
+/** Id-ul ultimei plăți a comenzii (pentru adresele de admin). */
+export async function readE2eLastPaymentId(number: string): Promise<string | null> {
+  return withClient(async (db) => {
+    const found = await db.query(
+      `select p.id from payment p join customer_order o on o.id = p."orderId"
+        where o.number = $1 order by p."attemptNo" desc limit 1`,
+      [number],
+    );
+    return (found.rows[0]?.id as string | undefined) ?? null;
+  });
+}
+
+/** Pune stoc fizic gestionat pentru o variantă din coș (produsul devine cu stoc gestionat), în depozitul implicit. */
+export async function setE2eCartStock(variantId: string, physical: string): Promise<void> {
+  await withClient(async (db) => {
+    const warehouse = (await db.query(`select id from warehouse where "isDefault" limit 1`)).rows[0]
+      ?.id as string | undefined;
+    if (!warehouse) throw new Error("Nu există depozitul implicit în baza de test (seed lipsă?)");
+    await db.query(
+      `update product set "manageStock" = true where id = (select "productId" from product_variant where id = $1)`,
+      [variantId],
+    );
+    await db.query(
+      `insert into inventory_item (id, "variantId", "warehouseId", physical, "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $3::bigint, now())
+       on conflict ("variantId", "warehouseId") do update set physical = excluded.physical`,
+      [variantId, warehouse, e2eTicks(physical)],
+    );
+  });
+}
+
+/** Trece timpul pentru rezervările comenzii: expiră ca la jobul de stoc (rezervarea se eliberează, contorul scade). */
+export async function expireE2eOrderReservations(number: string): Promise<number> {
+  return withClient(async (db) => {
+    await db.query("BEGIN");
+    try {
+      const rows = await db.query(
+        `update stock_reservation r set status = 'expired', "releasedAt" = now(), "updatedAt" = now()
+          where r.status = 'active' and r."orderId" = (select id from customer_order where number = $1)
+        returning r."variantId", r."warehouseId", r.quantity`,
+        [number],
+      );
+      for (const row of rows.rows) {
+        await db.query(
+          `update inventory_item set reserved = reserved - $3::bigint, "updatedAt" = now()
+            where "variantId" = $1 and "warehouseId" = $2`,
+          [row.variantId, row.warehouseId, row.quantity],
+        );
+      }
+      await db.query("COMMIT");
+      return rows.rowCount ?? 0;
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
+/** Un alt client cumpără tot stocul rămas al variantei (angajare directă, fără comandă a testului). */
+export async function takeE2eCartStock(variantId: string): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `update inventory_item set committed = physical - reserved, "updatedAt" = now() where "variantId" = $1`,
+      [variantId],
+    );
+  });
+}
+
+/** Curăță stocul gestionat al produselor din coș ale testelor (mișcările sunt jurnal imuabil: triggerul se oprește doar aici). */
+export async function removeE2eCartStock(variantIds: readonly string[]): Promise<void> {
+  if (variantIds.length === 0) return;
+  await withClient(async (db) => {
+    await db.query("BEGIN");
+    try {
+      await db.query(
+        'ALTER TABLE "stock_movement" DISABLE TRIGGER "stock_movement_no_update_delete"',
+      );
+      await db.query(`delete from stock_movement where "variantId" = any($1::text[])`, [
+        variantIds,
+      ]);
+      await db.query(
+        'ALTER TABLE "stock_movement" ENABLE TRIGGER "stock_movement_no_update_delete"',
+      );
+      await db.query(`delete from inventory_item where "variantId" = any($1::text[])`, [
+        variantIds,
+      ]);
+      await db.query("COMMIT");
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
