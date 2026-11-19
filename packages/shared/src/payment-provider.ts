@@ -183,9 +183,9 @@ export interface PaymentProvider {
 /** Suma `bani` ca text zecimal cu 2 zecimale («12345» → «123.45»), fără `float`. */
 export function minorToDecimalString(minor: number): string {
   if (!Number.isSafeInteger(minor) || minor < 0) throw new RangeError("Suma în bani nu e validă");
-  const whole = Math.floor(minor / 100);
-  const cents = minor % 100;
-  return `${whole}.${String(cents).padStart(2, "0")}`;
+  // pe cifre, fără împărțire: «5» → «005» → «0.05»
+  const digits = String(minor).padStart(3, "0");
+  return `${digits.slice(0, -2)}.${digits.slice(-2)}`;
 }
 
 /**
@@ -195,7 +195,6 @@ export function minorToDecimalString(minor: number): string {
 export function decimalStringToMinor(text: string): number | null {
   const match = /^(\d{1,9})(?:\.(\d{1,2}))?$/.exec(text);
   if (!match) return null;
-  const whole = Number(match[1]);
-  const cents = match[2] === undefined ? 0 : Number(match[2].padEnd(2, "0"));
-  return whole * 100 + cents;
+  // cifrele întregi urmate de exact două cifre de bani, lipite ca text
+  return Number(`${match[1]}${(match[2] ?? "").padEnd(2, "0")}`);
 }

@@ -20,7 +20,7 @@ import {
  * cale de verificare a semnăturii ca la furnizorii reali) și dependențele procesorului. Cheile sunt generate în test.
  */
 export const DEMO_ENV = { E2E_HARNESS: "1" } as const;
-export const TEST_APP_KEY = "cheie-de-test-pentru-aplicatie-0123456789abcdef";
+export const TEST_APP_KEY = Buffer.alloc(32, 5).toString("base64");
 export const SIGNING_KEY = demoSigningKey(TEST_APP_KEY);
 
 export const CARD_SETTINGS: Partial<CheckoutSettings> = {
