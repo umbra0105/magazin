@@ -73,6 +73,7 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - [ ] S3 | Banner cookie-uri (Faza 9) | pe telefon (390 px) bannerul ocupă ~317 px din 844 (trei butoane unul sub altul), mult din ecran la prima vizită; de compactat (butoane pe un rând sau mai mici) | local-data/capturi-faza9/checkout-6-recapitulare-deschis-390.png
 - [ ] S3 | Zone de livrare (Faza 9) | lista de județe din formular e o grilă de bife cu defilare internă (42 de județe); lipsește o căutare în listă și nu se vede ce județe sunt deja luate de alte zone până la salvare (refuzul vine de la server, cu numele zonei) | local-data/capturi-faza9/zone-livrare-formular-deschis-1440.png
 - [ ] S3 | Cos și transport (Faza 9) | câmpul «Zile nelucrătoare» e un text liber, o dată pe rând; un calendar de ales datele ar fi mai ușor | local-data/capturi-faza9/cos-si-transport-deschis-1440.png
+- [ ] S3 | Test E2E intermitent, import (descoperit la `verify:full` din Faza 9) | `e2e/product-import.spec.ts:326` («câmpul de fișier: buton vizibil în română, accesibil de la tastatură…»): o singură dată în suita completă, `waitForEvent("filechooser")` a expirat (15 s) după `Space` pe butonul de fișier; izolat 6 din 6 verzi; cauză probabilă: focusul tastaturii nu ajunge pe buton sub încărcarea suitei. Doar test, în afara zonei Fazei 9; de investigat (de exemplu așteptarea focusului înainte de Space) | -
 
 ## Rezolvate
 
