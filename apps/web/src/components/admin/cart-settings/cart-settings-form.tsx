@@ -29,6 +29,8 @@ export function CartSettingsForm(props: {
   initial: CartSettingsValues;
   canSave: boolean;
   currency: string;
+  /** Adresa de ridicare formatată (`company.address`), sau `null` dacă lipsește: ridicarea nu se oferă fără ea. */
+  pickupAddress: string | null;
   /** Zona produselor excluse (acțiuni proprii, cu salvare imediată). */
   extra?: React.ReactNode;
 }) {
@@ -60,11 +62,13 @@ function Form({
   initial,
   canSave,
   currency,
+  pickupAddress,
   extra,
 }: {
   initial: CartSettingsValues;
   canSave: boolean;
   currency: string;
+  pickupAddress: string | null;
   extra?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -238,6 +242,19 @@ function Form({
           <span>{m.pickup}</span>
         </label>
         <p className="text-label text-ink-secondary">{m.pickupHelp}</p>
+        {pickupAddress ? (
+          <p className="text-label text-ink-secondary" data-pickup-address>
+            {m.pickupAddressIs(pickupAddress)}
+          </p>
+        ) : (
+          <p
+            role="note"
+            className="rounded-lg bg-tone-warning-bg p-3 text-body text-tone-warning-fg"
+            data-pickup-needs-address
+          >
+            {m.pickupNeedsAddress}
+          </p>
+        )}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`${base}-groundNotice`}>{m.groundNotice}</Label>
           <Textarea

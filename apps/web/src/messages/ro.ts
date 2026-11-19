@@ -385,6 +385,9 @@ export const ro = {
       exclusionRemoved: "Produsul a fost scos din listă.",
       pickup: "Ridicare personală de la sediu",
       pickupHelp: "Adresa sediului e cea din datele firmei. Ridicarea nu are cost de transport.",
+      pickupNeedsAddress:
+        "Ridicarea personală are nevoie de adresa firmei (setarea `company.address`; ecranul pentru datele firmei vine în Faza 13). Până o completezi, ridicarea nu apare în checkout, chiar dacă e bifată.",
+      pickupAddressIs: (address: string) => `Adresa de ridicare din setări: ${address}`,
       groundNotice: "Mesajul despre livrarea la nivelul solului",
       groundNoticeHelp: "Apare la alegerea metodei de livrare, în checkout.",
       groundNoticeInvalid: "Mesajul poate avea cel mult 500 de caractere.",
@@ -3688,6 +3691,11 @@ export const ro = {
           : `Livrare în aproximativ ${countOf(n, "zi", "zile", "de zile")}`,
       pickup: "Ridicare personală",
       pickupLede: "De la sediul magazinului, fără cost de transport.",
+      pickupAddress: (address: string) => `Adresa de ridicare: ${address}`,
+      pickupFrom: (address: string) => `Ridicare personală de la: ${address}`,
+      // cu ridicare personală, adresa cerută la pasul 2 nu e o adresă de livrare: e adresa clientului, pentru contact și facturare
+      stepsPickup: { delivery: "Adresa ta (contact și facturare)" },
+      billingSamePickup: "Aceleași date ca la adresa ta",
       demoBadge: "DEMO",
       demoNote: "Tarif demonstrativ, nu un tarif real de curierat.",
       leadTime: (days: number) =>
@@ -3869,6 +3877,9 @@ export const ro = {
         "Emailul de confirmare nu se trimite încă; păstrează această pagină sau numărul comenzii.",
       delivery: "Livrare",
       deliveryTo: "Livrare în",
+      pickupLabel: "Ridicare",
+      pickupFrom: "Ridicare personală de la:",
+      pickupNoAddress: "Ridicare personală",
       estimate: (days: number) => `Estimare: aproximativ ${countOf(days, "zi", "zile", "de zile")}`,
       leadTime: (days: number) =>
         `Comanda se livrează toată odată, în aproximativ ${countOf(days, "zi", "zile", "de zile")}.`,

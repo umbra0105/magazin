@@ -417,6 +417,12 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
   const countyOptions = props.counties;
   const localitiesOf = (county: string) => localities.cache[county] ?? [];
 
+  // ridicare personală: adresa de la pasul 2 e doar adresa clientului (contact, facturare), NU o adresă de livrare
+  const chosenOffer = preview?.offers.find((o) => o.code === values.offerCode) ?? null;
+  const isPickup = chosenOffer?.kind === "pickup";
+  const pickupFrom =
+    isPickup && chosenOffer?.addressText ? m.pickupFrom(chosenOffer.addressText) : null;
+
   const summaryOf = (id: StepId): string | null => {
     if (stepIndex(id) >= reached && open !== id) return null;
     if (id === "contact") return values.email ? `${values.email} · ${values.phone}` : null;
@@ -425,13 +431,14 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
         ? `${values.fullName}, ${values.street}, ${preview.destination.localityName}, ${preview.destination.countyName}`
         : values.fullName || null;
     }
-    if (id === "shipping")
-      return preview?.offers.find((o) => o.code === values.offerCode)?.label ?? null;
+    if (id === "shipping") return pickupFrom ?? chosenOffer?.label ?? null;
     if (id === "billing") {
       return values.isCompany
         ? `${values.companyName} · ${values.vatId}`
         : values.billingSame
-          ? m.billingSame
+          ? isPickup
+            ? m.billingSamePickup
+            : m.billingSame
           : values.billing.fullName;
     }
     if (id === "payment")
@@ -472,7 +479,9 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
               {index + 1}
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-lg font-semibold">{m.steps[id]}</span>
+              <span className="text-lg font-semibold">
+                {id === "delivery" && isPickup ? m.stepsPickup.delivery : m.steps[id]}
+              </span>
               {!isOpen && summary ? (
                 <span className="truncate text-sm text-ink-secondary" data-step-summary>
                   {summary}
@@ -753,6 +762,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
                     {offer.daysText ? (
                       <span className="text-sm text-ink-secondary">{offer.daysText}</span>
                     ) : null}
+                    {offer.addressLine ? (
+                      <span className="text-sm" data-offer-address>
+                        {offer.addressLine}
+                      </span>
+                    ) : null}
                     {offer.demo ? (
                       <span className="text-sm text-ink-secondary">{m.demoNote}</span>
                     ) : null}
@@ -799,7 +813,7 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
                   onChange={() => set({ billingSame: true })}
                   className="size-5 accent-brand"
                 />
-                {m.billingSame}
+                {isPickup ? m.billingSamePickup : m.billingSame}
               </label>
               <label className="flex min-h-11 items-center gap-3">
                 <input
@@ -1003,6 +1017,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
           "review",
           <>
             <p className="text-ink-secondary">{m.reviewLede}</p>
+            {pickupFrom ? (
+              <p className="font-medium" data-review-pickup>
+                {pickupFrom}
+              </p>
+            ) : null}
             <Field id={`${base}-note`} label={m.fields.note}>
               {(a) => (
                 <textarea
@@ -1161,6 +1180,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
             </div>
           ) : null}
         </dl>
+        {pickupFrom ? (
+          <p className="text-sm" data-summary-pickup>
+            {pickupFrom}
+          </p>
+        ) : null}
         {method?.method === "cod" ? (
           <p className="text-sm text-ink-secondary">{method.helpText}</p>
         ) : null}

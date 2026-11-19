@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { FreeShippingExclusionService, can } from "@ecom/core";
+import {
+  FreeShippingExclusionService,
+  can,
+  formatPickupAddress,
+  isPickupAddressComplete,
+} from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { CartSettingsForm } from "@/components/admin/cart-settings/cart-settings-form";
 import { FreeShippingExclusions } from "@/components/admin/cart-settings/free-shipping-exclusions";
@@ -17,11 +22,12 @@ export const metadata: Metadata = { title: m.title };
 export default async function CartSettingsPage() {
   const subject = await requireAdmin({ permission: "settings.read" });
   const settings = getSettings();
-  const [checkout, shipping, payment, regional] = await Promise.all([
+  const [checkout, shipping, payment, regional, company] = await Promise.all([
     settings.getGroup("checkout"),
     settings.getGroup("shipping"),
     settings.getGroup("payment"),
     settings.getGroup("regional"),
+    settings.getGroup("company"),
   ]);
   const canSave = can(subject, "settings.write");
   const exclusions = await new FreeShippingExclusionService(getDb()).list();
@@ -31,6 +37,9 @@ export default async function CartSettingsPage() {
       <CartSettingsForm
         canSave={canSave}
         currency={regional.currency}
+        pickupAddress={
+          isPickupAddressComplete(company.address) ? formatPickupAddress(company.address) : null
+        }
         extra={<FreeShippingExclusions initial={exclusions} canWrite={canSave} />}
         initial={{
           threshold:

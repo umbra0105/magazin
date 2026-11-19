@@ -55,11 +55,22 @@ export function OrderSummaryView({
           </dd>
         </div>
         <div>
-          <dt className="text-sm text-ink-secondary">{m.delivery}</dt>
+          <dt className="text-sm text-ink-secondary">
+            {order.shipping.kind === "pickup" ? m.pickupLabel : m.delivery}
+          </dt>
           <dd className="mt-1 font-medium">
-            {order.shipping.kind === "pickup"
-              ? order.shipping.carrier
-              : `${order.shipping.carrier}${order.shipping.service ? ` — ${order.shipping.service}` : ""}`}
+            {order.shipping.kind === "pickup" ? (
+              // ridicare: adresa MAGAZINULUI salvată pe comandă; adresa clientului nu apare ca destinație
+              order.shipping.pickupAddressText ? (
+                <span data-pickup-address>
+                  {m.pickupFrom} {order.shipping.pickupAddressText}
+                </span>
+              ) : (
+                m.pickupNoAddress
+              )
+            ) : (
+              `${order.shipping.carrier}${order.shipping.service ? ` — ${order.shipping.service}` : ""}`
+            )}
             {order.destination ? (
               <span className="block text-sm font-normal text-ink-secondary">
                 {m.deliveryTo} {order.destination.localityName}, {order.destination.countyName}

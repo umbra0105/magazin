@@ -67,14 +67,17 @@ export async function readCheckoutSettings(): Promise<CheckoutSettings> {
 
 export async function readShippingSettings(): Promise<ShippingRuntimeSettings> {
   const settings = getSettings();
-  const [checkout, shipping] = await Promise.all([
+  const [checkout, shipping, company] = await Promise.all([
     settings.getGroup("checkout"),
     settings.getGroup("shipping"),
+    settings.getGroup("company"),
   ]);
   return {
     freeShippingThresholdMinor: checkout.freeShippingThreshold,
     freeShippingClasses: checkout.freeShippingClasses,
     pickupEnabled: shipping.pickupEnabled,
+    // ridicarea e de la adresa magazinului (`company.address`); fără ea nu se oferă
+    pickupAddress: company.address,
     easyboxEnabled: shipping.easyboxEnabled,
     quoteTimeoutMs: shipping.quoteTimeoutMs,
   };
