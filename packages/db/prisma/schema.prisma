@@ -22,6 +22,7 @@ model User {
   productImports ProductImport[]
   cart           Cart?
   savedOrderViews OrderSavedView[]
+  notificationReads AdminNotificationRead[]
 
   @@unique([email])
   @@map("user")
@@ -1525,6 +1526,34 @@ model PaymentWebhookEvent {
   @@index([status, receivedAt])
   @@index([paymentId])
   @@map("payment_webhook_event")
+}
+
+/// Notificările interne ale adminului (Faza 11): persistente, fără date personale în titlu, vizibile după `permission`. `dedupKey`
+/// face ca aceeași situație să producă o singură notificare. Citit/necitit se ține per utilizator în `AdminNotificationRead`.
+model AdminNotification {
+  id         String                  @id @default(cuid())
+  kind       String
+  title      String
+  href       String
+  permission String
+  dedupKey   String                  @unique
+  createdAt  DateTime                @default(now())
+  reads      AdminNotificationRead[]
+
+  @@index([createdAt])
+  @@map("admin_notification")
+}
+
+model AdminNotificationRead {
+  notificationId String
+  notification   AdminNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt         DateTime           @default(now())
+
+  @@id([notificationId, userId])
+  @@index([userId])
+  @@map("admin_notification_read")
 }
 
 /// Vederile salvate ale listei de comenzi (Faza 11), proprii fiecărui utilizator: numele și șirul de interogare al filtrelor.

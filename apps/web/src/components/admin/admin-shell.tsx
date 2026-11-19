@@ -14,6 +14,7 @@ import { getMessages } from "@/messages";
 import { Breadcrumbs } from "./breadcrumbs";
 import { SidebarNav, type SidebarNavItem } from "./sidebar-nav";
 import { UserMenu } from "./user-menu";
+import { NotificationsBell, type BellItem } from "./notifications/notifications-bell";
 
 const m = getMessages().admin;
 
@@ -54,12 +55,14 @@ export function AdminShell({
   logoUrl,
   email,
   navItems,
+  bell,
   children,
 }: {
   storeName: string;
   logoUrl: string | null;
   email: string;
   navItems: SidebarNavItem[];
+  bell: { items: BellItem[]; unread: number };
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -187,6 +190,7 @@ export function AdminShell({
           <div className="min-w-0 flex-1">
             <Breadcrumbs />
           </div>
+          <NotificationsBell items={bell.items} unread={bell.unread} />
           <UserMenu email={email} />
         </header>
         <main id="main-content" tabIndex={-1} className="p-4 focus-visible:outline-none lg:p-6">

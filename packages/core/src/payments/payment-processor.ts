@@ -13,6 +13,7 @@ import { inTx, type Db } from "../db-tx";
 import { ORDER_REF_TYPE } from "../inventory/constants";
 import { StockError } from "../inventory/stock-errors";
 import { StockService } from "../inventory/stock-service";
+import { notifyAdmins } from "../notifications/admin-notifications";
 import { addOrderEvent, lockOrder, transitionOrder } from "../orders/order-service";
 import { flagAttention, lockPayment } from "./payment-db";
 import type { AttentionReason } from "./payment-errors";
@@ -564,12 +565,22 @@ export async function processPaymentEvent(
     if (outcome === "skipped") return { status: "skipped" };
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 200) : "EVENT_ERROR";
-    await deps.db.paymentWebhookEvent
+    const failedRow = await deps.db.paymentWebhookEvent
       .update({
         where: { id: eventId },
         data: { status: "failed", attempts: { increment: 1 }, lastError: message },
       })
-      .catch(() => undefined);
+      .catch(() => null);
+    // după toate încercările notificarea rămâne blocată (dead-letter): echipa e anunțată o singură dată
+    if (failedRow && failedRow.attempts >= MAX_EVENT_ATTEMPTS) {
+      await notifyAdmins(deps.db, {
+        kind: "webhook_stuck",
+        title: "O notificare de plată a rămas blocată",
+        href: "/admin/comenzi/plati?vedere=atentie",
+        permission: "payments.read",
+        dedupKey: `webhook-stuck:${eventId}`,
+      }).catch(() => undefined);
+    }
     throw error;
   }
 

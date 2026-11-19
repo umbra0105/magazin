@@ -9,6 +9,7 @@ export * from "./rbac";
 export * from "./seed/base-seed";
 export * from "./auth";
 export * from "./email";
+export * from "./notifications";
 export * from "./admin";
 export * from "./media";
 export * from "./catalog";

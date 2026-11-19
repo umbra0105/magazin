@@ -1,5 +1,6 @@
 import type { Prisma } from "@ecom/db";
 import type { Db } from "../db-tx";
+import { notifyAdmins } from "../notifications/admin-notifications";
 
 /**
  * Emailurile tranzacționale în stil «outbox» (Faza 11). Rândul `EmailDispatch` se scrie în ACEEAȘI tranzacție cu evenimentul care
@@ -76,10 +77,19 @@ export async function releaseDispatch(db: Db, id: string, error: string): Promis
 
 /** Eșec definitiv (dead-letter, vizibil în admin): `sending | queued → failed`. */
 export async function failDispatch(db: Db, id: string, error: string): Promise<void> {
-  await db.emailDispatch.updateMany({
+  const failed = await db.emailDispatch.updateMany({
     where: { id, status: { in: ["sending", "queued"] } },
     data: { status: "failed", lastError: cleanError(error) },
   });
+  if (failed.count === 1) {
+    await notifyAdmins(db, {
+      kind: "email_failed",
+      title: "Un email a rămas netrimis",
+      href: "/admin/comenzi/sabloane-email?vedere=jurnal&filtru=esuate",
+      permission: "email.read",
+      dedupKey: `email-failed:${id}`,
+    });
+  }
 }
 
 /** Nimic de trimis (destinatar invalid, comandă dispărută): `queued | sending → skipped`, cu motivul. */

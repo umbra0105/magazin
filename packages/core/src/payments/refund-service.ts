@@ -2,6 +2,7 @@ import type { Prisma } from "@ecom/db";
 import type { PaymentProvider, RefundOutcome } from "@ecom/shared";
 import { inTx, type Db } from "../db-tx";
 import { addOrderEvent, lockOrder, transitionOrder } from "../orders/order-service";
+import { notifyAdmins } from "../notifications/admin-notifications";
 import { PaymentError } from "./payment-errors";
 import { flagAttention, lockPayment, resolveAttention } from "./payment-db";
 
@@ -303,6 +304,13 @@ async function finishRefund(
       data: { status: "manual_required", failureMessage: outcome.message.slice(0, 500) },
     });
     await flagAttention(tx, refund.paymentId, "refund_manual_required", now);
+    await notifyAdmins(tx, {
+      kind: "refund_manual",
+      title: "O rambursare trebuie făcută manual",
+      href: `/admin/comenzi/plati/${refund.paymentId}`,
+      permission: "payments.refund",
+      dedupKey: `refund-manual:${refundId}`,
+    });
     await addOrderEvent(tx, refund.orderId, {
       type: "refund.manual_required",
       message: "Rambursarea trebuie făcută manual din contul procesatorului",

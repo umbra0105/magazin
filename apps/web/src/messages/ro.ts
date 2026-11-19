@@ -139,6 +139,18 @@ export const ro = {
     /** Comenzile și emailurile lor (Faza 11): textele stau în `admin-orders-ro.ts`. */
     orders: adminOrdersRo,
     email: adminEmailRo,
+    notifications: {
+      title: "Notificări",
+      open: "Notificări",
+      openUnread: (n: number) => `Notificări: ${n} necitite`,
+      close: "Închide notificările",
+      markAll: "Marchează toate citite",
+      empty: "Nicio notificare.",
+      unread: "Necitită",
+    },
+    counters: {
+      pending: (n: number) => `${n} de rezolvat`,
+    },
     metaTitle: "Administrare",
     skipToContent: "Sari la conținut",
     sidebarLabel: "Navigare principală",

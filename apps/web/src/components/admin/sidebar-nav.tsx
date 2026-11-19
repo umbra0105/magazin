@@ -23,7 +23,8 @@ import {
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { cn } from "@ecom/ui";
+import { Counter, cn } from "@ecom/ui";
+import { getMessages } from "@/messages";
 import {
   activeItemId,
   itemHref,
@@ -56,6 +57,8 @@ const ICONS: Record<AdminNavSectionId, LucideIcon> = {
 export interface SidebarNavChild extends Pick<AdminNavItem, "href" | "keepParams"> {
   id: AdminNavIcon;
   label: string;
+  /** Contor de lucruri de rezolvat (doar când există, cu datele lui reale); lipsă sau 0 = fără contor. */
+  count?: number;
 }
 
 export interface SidebarNavItem {
@@ -212,7 +215,15 @@ function SidebarGroup({
                 aria-current={active ? "page" : undefined}
                 className={cn(ROW, "gap-0 px-3", active && "bg-surface-hover font-semibold")}
               >
-                <span className="truncate">{child.label}</span>
+                <span className="flex-1 truncate">{child.label}</span>
+                {child.count ? (
+                  <Counter
+                    data-nav-count={child.id}
+                    aria-label={getMessages().admin.counters.pending(child.count)}
+                  >
+                    {child.count > 99 ? "99+" : child.count}
+                  </Counter>
+                ) : null}
               </Link>
             </li>
           );
