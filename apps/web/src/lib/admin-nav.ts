@@ -14,6 +14,7 @@ import type { FeatureKey, PermissionKey } from "@ecom/core";
 export type AdminNavSectionId =
   | "dashboard"
   | "orders"
+  | "payments"
   | "catalog"
   | "customers"
   | "discounts"
@@ -41,7 +42,8 @@ export type AdminNavItemId =
   | "appearance"
   | "maintenance"
   | "cartSettings"
-  | "shippingZones";
+  | "shippingZones"
+  | "paymentSettings";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -124,6 +126,8 @@ export const SETTINGS_ITEMS: readonly AdminNavItem[] = [
   { id: "maintenance", href: "/admin/setari/mentenanta", permission: "settings.read" },
   { id: "cartSettings", href: "/admin/setari/cos", permission: "settings.read" },
   { id: "shippingZones", href: "/admin/setari/livrare", permission: "settings.read" },
+  // cheile furnizorilor de plată: doar cu `payments.configure` (Owner), ca la integrări
+  { id: "paymentSettings", href: "/admin/setari/plati", permission: "payments.configure" },
 ];
 
 export const ADMIN_NAV: readonly AdminNavEntry[] = [
@@ -131,6 +135,8 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "orders", href: "/admin/comenzi", permission: "orders.read" },
   { id: "catalog", href: "/admin/produse", children: CATALOG_ITEMS },
   { id: "customers", href: "/admin/clienti", permission: "customers.read" },
+  // plățile cu card și rambursările (Faza 10); Faza 11 le integrează în detaliul comenzii
+  { id: "payments", href: "/admin/plati", permission: "payments.read" },
   { id: "discounts", href: "/admin/reduceri", permission: "discounts.read" },
   { id: "reviews", href: "/admin/recenzii", permission: "content.read", feature: "reviews" },
   { id: "blog", href: "/admin/blog", permission: "content.read", feature: "blog" },

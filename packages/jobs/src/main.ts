@@ -1,5 +1,5 @@
 /**
- * Procesul de worker: `pnpm worker`. Consumă cozile `emails`, `media`, `product-import` și `product-import-images`, și rulează periodic retenția conturilor neverificate și joburile de stoc (expirarea rezervărilor, prospețimea pozei, curățarea cererilor «Anunță-mă» și trimiterea emailurilor «Anunță-mă când revine»). În dezvoltare, `pnpm dev:web`
+ * Procesul de worker: `pnpm worker`. Consumă cozile `emails`, `media`, `product-import`, `product-import-images` și `payment-events` (plăți, Faza 10), și rulează periodic retenția conturilor neverificate și joburile de stoc (expirarea rezervărilor, prospețimea pozei, curățarea cererilor «Anunță-mă» și trimiterea emailurilor «Anunță-mă când revine»). În dezvoltare, `pnpm dev:web`
  * pornește aceiași workeri în procesul aplicației, deci nu trebuie rulat separat.
  */
 import { getLogger } from "@ecom/shared";
@@ -12,6 +12,7 @@ import { startPriceJobsFromEnv } from "./price-jobs";
 import { startStockJobsFromEnv } from "./stock-jobs";
 import { startCartJobsFromEnv } from "./cart-jobs";
 import { startOrderJobsFromEnv } from "./order-jobs";
+import { startPaymentJobsFromEnv } from "./payment-jobs";
 
 try {
   process.loadEnvFile(new URL("../../../.env", import.meta.url));
@@ -29,8 +30,9 @@ const stockJobs = startStockJobsFromEnv();
 const priceJobs = startPriceJobsFromEnv();
 const cartJobs = startCartJobsFromEnv();
 const orderJobs = startOrderJobsFromEnv();
+const paymentJobs = startPaymentJobsFromEnv();
 logger.info(
-  { queues: ["emails", "media", "product-import", "product-import-images"] },
+  { queues: ["emails", "media", "product-import", "product-import-images", "payment-events"] },
   "worker pornit (Ctrl+C pentru oprire)",
 );
 
@@ -45,6 +47,7 @@ async function shutdown(signal: string): Promise<void> {
     priceJobs.close();
     cartJobs.close();
     orderJobs.close();
+    await paymentJobs.close();
     await Promise.all([email.close(), media.close(), imports.close(), importImages.close()]);
   } finally {
     process.exit(0);

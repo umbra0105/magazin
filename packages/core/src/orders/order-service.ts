@@ -74,6 +74,18 @@ export async function transitionOrder(
   };
 }
 
+/**
+ * Mută sfârșitul rezervării curente a unei comenzi (card: la fiecare reîncercare). Nu atinge stările: ele se schimbă doar prin
+ * `transitionOrder`. Apelantul ține comanda blocată.
+ */
+export async function setReservationExpiry(
+  tx: Db,
+  orderId: string,
+  reservationExpiresAt: Date,
+): Promise<void> {
+  await tx.order.update({ where: { id: orderId }, data: { reservationExpiresAt } });
+}
+
 /** Adaugă o intrare în jurnalul comenzii (timeline); intrările nu se modifică și nu se șterg. */
 export async function addOrderEvent(
   tx: Db,

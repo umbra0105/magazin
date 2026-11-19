@@ -15,6 +15,7 @@ export const ORDER_ERROR_CODES = [
   "ORDER_NOT_FOUND",
   "ORDER_PAYMENT_NOT_PENDING",
   "ORDER_RESERVATION_EXPIRED",
+  "ORDER_CARD_UNAVAILABLE",
 ] as const;
 export type OrderErrorCode = (typeof ORDER_ERROR_CODES)[number];
 

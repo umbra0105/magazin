@@ -19,13 +19,14 @@ import {
   setOrderAccessCookie,
 } from "@/lib/checkout";
 import { toCheckoutPreviewDto, type CheckoutPreviewDto } from "@/lib/checkout-dto";
+import { getCardPayments } from "@/lib/payments";
 import { getStorefrontFormat } from "@/lib/storefront-catalog";
 import { getMessages } from "@/messages";
 
 /**
  * Acțiunile checkout-ului (Faza 9), apelate din interfață. Fiecare validează intrarea cu Zod, aplică limita de cereri pe IP și
  * lasă serviciile din `@ecom/core` să decidă PE SERVER (livrare, metode de plată, totaluri, plasare). Proprietarul coșului vine
- * din sesiune sau din cookie; clientul nu trimite niciodată id de coș, prețuri sau text juridic. Cardul nu e o opțiune (Faza 10).
+ * din sesiune sau din cookie; clientul nu trimite niciodată id de coș, prețuri sau text juridic. Cardul (Faza 10) se oferă doar cu un furnizor activ.
  */
 
 const m = () => getMessages().storefront.checkout;
@@ -111,7 +112,12 @@ export async function lookupCuiAction(input: unknown): Promise<CuiActionResult> 
 }
 
 export type PlaceActionResult =
-  | { ok: true; number: string }
+  | {
+      ok: true;
+      number: string;
+      /** Card: unde merge clientul (pagina procesatorului, sau pagina de plată dacă pornirea a eșuat); altfel lipsește. */
+      redirect?: string;
+    }
   | {
       ok: false;
       code: string;
@@ -144,6 +150,18 @@ export async function placeOrderAction(input: unknown): Promise<PlaceActionResul
     const { owner } = await resolveOwnerForWrite();
     const result = await getCheckoutService().place(owner, input);
     await setOrderAccessCookie(result.orderId);
+    if (result.paymentId) {
+      // card: pornirea plăților se face în afara tranzacției de plasare, cu timp limită; la eșec comanda rămâne în așteptare
+      const started = await getCardPayments().initiate(result.paymentId);
+      return {
+        ok: true,
+        number: result.number,
+        redirect:
+          started.kind === "redirect"
+            ? started.redirect.url
+            : `/comanda/plata/${encodeURIComponent(result.paymentId)}`,
+      };
+    }
     return { ok: true, number: result.number };
   } catch (error) {
     if (error instanceof DomainError) {

@@ -60,12 +60,22 @@ export const CHECKOUT_SETTINGS: CheckoutSettings = {
   codMaxCompanyMinor: 500_000,
   bankDetailsConfigured: true,
   guestCheckoutEnabled: true,
+  cardProvider: null,
+  cardRetryHours: 24,
 };
 
 const SHIPPING_SETTINGS: ShippingRuntimeSettings = {
   freeShippingThresholdMinor: null,
   freeShippingClasses: ["standard"],
   pickupEnabled: true,
+  // adresa FICTIVĂ a magazinului (`company.address`): ridicarea se oferă doar cu adresă completă
+  pickupAddress: {
+    street: "Strada Magazinului 7",
+    city: "Alba Iulia",
+    county: "Alba",
+    postalCode: "510000",
+    country: "RO",
+  },
   easyboxEnabled: false,
   quoteTimeoutMs: 1000,
 };
@@ -139,6 +149,8 @@ export interface Harness {
   cart: CartService;
   checkout: CheckoutService;
   settings: CheckoutSettings;
+  /** Setările de livrare citite de serviciu la fiecare cerere: un test le poate schimba între cereri. */
+  shippingSettings: ShippingRuntimeSettings;
   product: (opts?: ProductOpts) => Promise<{ variantId: string; productId: string; sku: string }>;
   fill: (
     items: Array<{ variantId: string; quantity?: Quantity | "minimum" }>,
@@ -150,6 +162,7 @@ export async function harness<T>(
   fn: (h: Harness) => Promise<T>,
   over: {
     settings?: Partial<CheckoutSettings>;
+    shipping?: Partial<ShippingRuntimeSettings>;
     provider?: ShippingRateProvider;
     cui?: (cui: string) => Promise<unknown>;
   } = {},
@@ -159,6 +172,7 @@ export async function harness<T>(
     const ctx = await createStockContext(tx, { useDefaultWarehouse: true });
     const geo = await createGeo(tx);
     const settings = { ...CHECKOUT_SETTINGS, ...over.settings };
+    const shippingSettings: ShippingRuntimeSettings = { ...SHIPPING_SETTINGS, ...over.shipping };
     const createCart = (client: typeof tx) =>
       new CartService({
         db: client,
@@ -170,7 +184,7 @@ export async function harness<T>(
     const shipping = new ShippingService({
       provider: over.provider ?? new DemoShippingRateProvider(),
       store: createPrismaShippingStore(tx),
-      readSettings: async () => SHIPPING_SETTINGS,
+      readSettings: async () => shippingSettings,
     });
     const checkout = new CheckoutService({
       db: tx,
@@ -198,6 +212,7 @@ export async function harness<T>(
       cart,
       checkout,
       settings,
+      shippingSettings,
       product: async (opts = {}) => {
         const { price, shippingClass, weightGrams, physical, ...spec } = opts;
         const created = await addStockProduct(tx, ctx, {
@@ -260,7 +275,7 @@ export async function harness<T>(
               postalCode: "123456",
             },
             offerCode: merged.shippingOfferCode as string,
-            paymentMethod: merged.paymentMethod as "cod" | "bank_transfer",
+            paymentMethod: merged.paymentMethod as "cod" | "bank_transfer" | "card",
             vatId: (merged["company"] as { vatId?: string } | null)?.vatId ?? null,
           });
           merged["expectedTotalMinor"] = preview.totals?.totalMinor ?? 1;
@@ -287,7 +302,8 @@ export const orderOf = (tx: TestTx, id: string) =>
     include: {
       lines: true,
       addresses: true,
-      payments: true,
+      // fără ORDER BY, Postgres nu garantează ordinea: un rând rescris (UPDATE) apare fizic după cele inserate ulterior
+      payments: { orderBy: { attemptNo: "asc" } },
       events: { orderBy: { createdAt: "asc" } },
       stockCommitments: true,
       stockReservations: true,

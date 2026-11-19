@@ -3,6 +3,7 @@
 import {
   BarChart3,
   ChevronDown,
+  CreditCard,
   FileText,
   Gift,
   Images,
@@ -35,6 +36,7 @@ import {
 const ICONS: Record<AdminNavSectionId, LucideIcon> = {
   dashboard: LayoutDashboard,
   orders: ShoppingCart,
+  payments: CreditCard,
   catalog: Package,
   customers: Users,
   discounts: Percent,

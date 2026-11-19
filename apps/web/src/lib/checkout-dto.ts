@@ -22,12 +22,16 @@ export interface CheckoutOfferDto {
   priceText: string;
   free: boolean;
   daysText: string | null;
+  /** Doar ridicarea personală: adresa MAGAZINULUI, formatată («Adresa de ridicare: …»); altfel `null`. */
+  addressLine: string | null;
+  /** Doar ridicarea personală: adresa magazinului, fără prefix (pentru rezumate); altfel `null`. */
+  addressText: string | null;
   /** Tarif demonstrativ (furnizorul DEMO): se arată cu o etichetă, ca să nu fie luat drept tarif real. */
   demo: boolean;
 }
 
 export interface CheckoutMethodDto {
-  method: "cod" | "bank_transfer";
+  method: "cod" | "bank_transfer" | "card";
   available: boolean;
   label: string;
   helpText: string;
@@ -77,6 +81,11 @@ function offerDto(offer: RateOffer, format: CheckoutFormat): CheckoutOfferDto {
         : formatMoney(offer.priceMinor, format.currency, format.locale),
     free: offer.priceMinor === 0,
     daysText: offer.kind === "pickup" ? text.pickupLede : days === null ? null : text.days(days),
+    addressLine:
+      offer.kind === "pickup" && offer.pickupAddress
+        ? text.pickupAddress(offer.pickupAddress.text)
+        : null,
+    addressText: offer.kind === "pickup" ? (offer.pickupAddress?.text ?? null) : null,
     demo: offer.demo,
   };
 }
@@ -90,6 +99,15 @@ function methodDto(
 ): CheckoutMethodDto {
   const text = m();
   const money = (minor: number) => formatMoney(minor, format.currency, format.locale);
+  if (entry.method === "card") {
+    return {
+      method: "card",
+      available: true,
+      label: text.paymentCard,
+      helpText: text.paymentCardHelp,
+      reasonText: null,
+    };
+  }
   if (entry.method === "bank_transfer") {
     return {
       method: "bank_transfer",

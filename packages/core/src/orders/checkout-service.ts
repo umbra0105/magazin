@@ -57,6 +57,10 @@ export interface CheckoutSettings {
   /** IBAN-ul magazinului e completat: fără el transferul bancar nu se poate oferi. */
   bankDetailsConfigured: boolean;
   guestCheckoutEnabled: boolean;
+  /** Furnizorul activ al butonului «Card online» (Faza 10); `null` = cardul nu se oferă. */
+  cardProvider: { code: "netopia" | "euplatesc" | "demo"; mode: "test" | "live" | "demo" } | null;
+  /** Fereastra de reîncercare a plății cu cardul, în ore (`payment.cardRetryHours`). */
+  cardRetryHours: number;
 }
 
 export interface CheckoutDeps {
@@ -103,6 +107,8 @@ export interface PlaceOrderResult {
   number: string;
   /** Comanda exista deja pentru această cheie de idempotență (dublu-click, reîncercare). */
   replayed: boolean;
+  /** Card: prima tentativă de plată (de aici pleacă inițierea la furnizor, în afara tranzacției); altfel `null`. */
+  paymentId: string | null;
 }
 
 interface ParcelSource {
@@ -304,6 +310,7 @@ export class CheckoutService {
       isCompany,
       codMaxIndividualMinor: ctx.settings.codMaxIndividualMinor,
       codMaxCompanyMinor: ctx.settings.codMaxCompanyMinor,
+      cardAvailable: ctx.settings.cardProvider !== null,
     });
     return methods;
   }
@@ -398,9 +405,29 @@ export class CheckoutService {
   private async findByKey(key: string): Promise<PlaceOrderResult | null> {
     const found = await this.deps.db.order.findUnique({
       where: { idempotencyKey: key },
-      select: { id: true, number: true },
+      select: { id: true, number: true, paymentMethod: true },
     });
-    return found ? { orderId: found.id, number: found.number, replayed: true } : null;
+    if (!found) return null;
+    return {
+      orderId: found.id,
+      number: found.number,
+      replayed: true,
+      paymentId: await this.firstCardPaymentId(this.deps.db, found.id, found.paymentMethod),
+    };
+  }
+
+  private async firstCardPaymentId(
+    db: Db,
+    orderId: string,
+    method: string,
+  ): Promise<string | null> {
+    if (method !== "card") return null;
+    const payment = await db.payment.findFirst({
+      where: { orderId },
+      orderBy: { attemptNo: "asc" },
+      select: { id: true },
+    });
+    return payment?.id ?? null;
   }
 
   /** Etapa A: validări și calcule fără tranzacție (aici sunt apelurile externe: tarife de livrare, ANAF). */
@@ -477,6 +504,15 @@ export class CheckoutService {
       );
     }
 
+    // ridicarea personală e doar de la adresa magazinului: fără ea comanda nu se plasează (regulă pe server, nu doar în interfață)
+    if (offer.kind === "pickup" && !offer.pickupAddress) {
+      throw new OrderError(
+        "ORDER_OFFER_UNAVAILABLE",
+        "Ridicarea personală nu este disponibilă: magazinul nu are adresa completată",
+        { offer: input.shippingOfferCode },
+      );
+    }
+
     const isCompany = isCompanyBuyer({ vatId: company?.vatId ?? null, groupPricingType: "none" });
     assertPaymentMethodAllowed(
       {
@@ -485,6 +521,7 @@ export class CheckoutService {
         isCompany,
         codMaxIndividualMinor: settings.codMaxIndividualMinor,
         codMaxCompanyMinor: settings.codMaxCompanyMinor,
+        cardAvailable: settings.cardProvider !== null,
       },
       input.paymentMethod,
     );
@@ -538,9 +575,16 @@ export class CheckoutService {
       );
       const existing = await tx.order.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
-        select: { id: true, number: true },
+        select: { id: true, number: true, paymentMethod: true },
       });
-      if (existing) return { orderId: existing.id, number: existing.number, replayed: true };
+      if (existing) {
+        return {
+          orderId: existing.id,
+          number: existing.number,
+          replayed: true,
+          paymentId: await this.firstCardPaymentId(tx, existing.id, existing.paymentMethod),
+        };
+      }
 
       const cart = this.deps.createCart(tx);
       if (!(await cart.lockForCheckout(owner))) {
@@ -566,13 +610,23 @@ export class CheckoutService {
         throw new DomainError("ORDER_CHANNEL_MISSING", "Canalul de vânzare «web» lipsește");
 
       const isTransfer = input.paymentMethod === "bank_transfer";
-      const reservationEnd = isTransfer
-        ? reservationExpiresAt("transfer", now, {
-            reservationMinutes: settings.reservationMinutes,
-            transferReservationWorkdays: settings.transferReservationWorkdays,
-            timeZone: settings.timeZone,
-            nonWorkingDates: settings.nonWorkingDates,
-          })
+      const isCard = input.paymentMethod === "card";
+      const cardProvider = settings.cardProvider;
+      if (isCard && !cardProvider) {
+        throw new OrderError("ORDER_CARD_UNAVAILABLE", "Plata cu cardul nu este disponibilă");
+      }
+      // transfer: până la a N-a zi lucrătoare; card: `inventory.reservationMinutes` minute de la inițierea plății
+      const reservationEnd =
+        isTransfer || isCard
+          ? reservationExpiresAt(isCard ? "card" : "transfer", now, {
+              reservationMinutes: settings.reservationMinutes,
+              transferReservationWorkdays: settings.transferReservationWorkdays,
+              timeZone: settings.timeZone,
+              nonWorkingDates: settings.nonWorkingDates,
+            })
+          : null;
+      const retryDeadline = isCard
+        ? new Date(now.getTime() + settings.cardRetryHours * 3_600_000)
         : null;
 
       const order = await tx.order.create({
@@ -602,6 +656,19 @@ export class CheckoutService {
             source: offer.source,
             demo: offer.demo,
             freeShipping: offer.freeShipping,
+            // ridicare: adresa MAGAZINULUI de la momentul comenzii (snapshot imuabil); adresa clientului nu intră aici
+            ...(offer.kind === "pickup" && offer.pickupAddress
+              ? {
+                  pickupAddress: {
+                    street: offer.pickupAddress.street,
+                    city: offer.pickupAddress.city,
+                    county: offer.pickupAddress.county,
+                    postalCode: offer.pickupAddress.postalCode,
+                    country: offer.pickupAddress.country,
+                    text: offer.pickupAddress.text,
+                  },
+                }
+              : {}),
           },
           paymentMethod: input.paymentMethod,
           ...(input.customerNote ? { customerNote: input.customerNote } : {}),
@@ -613,6 +680,7 @@ export class CheckoutService {
           termsConsentText: CHECKOUT_TERMS_CONSENT.text,
           termsConsentVersion: CHECKOUT_TERMS_CONSENT.version,
           reservationExpiresAt: reservationEnd,
+          paymentRetryDeadlineAt: retryDeadline,
           idempotencyKey: input.idempotencyKey,
           placedAt: now,
         },
@@ -707,15 +775,24 @@ export class CheckoutService {
         ...(this.deps.warehouseId ? { warehouseId: this.deps.warehouseId } : {}),
         quantity: quantityFromTicks(BigInt(line.quantityTicks)),
       }));
-      if (isTransfer && reservationEnd) await stock.reserve(ref, stockLines, reservationEnd);
-      else await stock.commitDirect(ref, stockLines);
+      if ((isTransfer || isCard) && reservationEnd) {
+        await stock.reserve(ref, stockLines, reservationEnd);
+      } else await stock.commitDirect(ref, stockLines);
 
-      await tx.payment.create({
+      const payment = await tx.payment.create({
+        select: { id: true },
         data: {
           orderId: order.id,
-          provider: input.paymentMethod,
+          provider: isCard && cardProvider ? cardProvider.code : input.paymentMethod,
           method: input.paymentMethod,
           amountMinor: totals.totalMinor,
+          ...(isCard && cardProvider
+            ? {
+                attemptNo: 1,
+                mode: cardProvider.mode,
+                idempotencyKey: `card:${order.id}:1`,
+              }
+            : {}),
         },
       });
       await addOrderEvent(tx, order.id, {
@@ -741,13 +818,15 @@ export class CheckoutService {
       } else if (reservationEnd) {
         await addOrderEvent(tx, order.id, {
           type: "stock.reserved",
-          message: "Stoc rezervat până la termenul de plată prin transfer bancar",
+          message: isCard
+            ? "Stoc rezervat cât se încearcă plata cu cardul"
+            : "Stoc rezervat până la termenul de plată prin transfer bancar",
           data: { reservationExpiresAt: reservationEnd.toISOString() },
         });
       }
 
       await cart.clearAfterOrder(owner);
-      return { orderId: order.id, number, replayed: false };
+      return { orderId: order.id, number, replayed: false, paymentId: isCard ? payment.id : null };
     });
   }
 }

@@ -8,6 +8,7 @@ import {
   type FreeShippingEligibility,
 } from "./free-shipping";
 import { chargeableGramsTotal } from "./parcels";
+import { normalizePickupAddress, type PickupAddress } from "./pickup-address";
 import type { Parcel, RateOffer, RateRequest, ShippingClass, ShippingRateProvider } from "./types";
 
 /**
@@ -24,6 +25,11 @@ export interface ShippingRuntimeSettings {
   freeShippingClasses: readonly ShippingClass[];
   /** `shipping.pickupEnabled`. */
   pickupEnabled: boolean;
+  /**
+   * `company.address`: adresa de ridicare. Fără stradă ȘI oraș, ridicarea NU se oferă (nici la previzualizare, nici la plasare),
+   * chiar dacă `pickupEnabled` e pornit.
+   */
+  pickupAddress: PickupAddress | null;
   /** `shipping.easyboxEnabled` (Faza 9: oprit; fără hartă). */
   easyboxEnabled: boolean;
   /** `shipping.quoteTimeoutMs`. */
@@ -145,7 +151,10 @@ export class ShippingService {
     });
     offers = applyFreeShipping(offers, freeShipping.eligible);
 
-    if (settings.pickupEnabled) offers = [...offers, PICKUP_OFFER];
+    const pickupAddress = settings.pickupEnabled
+      ? normalizePickupAddress(settings.pickupAddress)
+      : null;
+    if (pickupAddress) offers = [...offers, { ...PICKUP_OFFER, pickupAddress }];
     offers.sort((a, b) => a.priceMinor - b.priceMinor || a.code.localeCompare(b.code));
 
     return {

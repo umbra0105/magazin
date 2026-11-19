@@ -201,6 +201,8 @@ export const ro = {
       maintenance: "Mentenanță",
       cartSettings: "Coș și transport",
       shippingZones: "Zone de livrare",
+      paymentSettings: "Plăți cu card",
+      payments: "Plăți",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {
@@ -383,6 +385,9 @@ export const ro = {
       exclusionRemoved: "Produsul a fost scos din listă.",
       pickup: "Ridicare personală de la sediu",
       pickupHelp: "Adresa sediului e cea din datele firmei. Ridicarea nu are cost de transport.",
+      pickupNeedsAddress:
+        "Ridicarea personală are nevoie de adresa firmei (setarea `company.address`; ecranul pentru datele firmei vine în Faza 13). Până o completezi, ridicarea nu apare în checkout, chiar dacă e bifată.",
+      pickupAddressIs: (address: string) => `Adresa de ridicare din setări: ${address}`,
       groundNotice: "Mesajul despre livrarea la nivelul solului",
       groundNoticeHelp: "Apare la alegerea metodei de livrare, în checkout.",
       groundNoticeInvalid: "Mesajul poate avea cel mult 500 de caractere.",
@@ -405,6 +410,236 @@ export const ro = {
       nonWorkingDatesInvalid:
         "Fiecare rând trebuie să fie o dată care există, în formatul AAAA-LL-ZZ.",
       saveFailedField: "Verifică câmpurile marcate.",
+    },
+    /** Furnizorii de plăți cu card (Faza 10): `/admin/setari/plati`. Cheile nu se afișează niciodată după salvare. */
+    paymentSettings: {
+      title: "Plăți cu card",
+      description:
+        "Furnizorii de plăți online. Cheile se salvează criptat și nu se mai afișează după salvare: lasă un câmp gol ca să păstrezi valoarea salvată.",
+      readOnly: "Poți vedea configurarea, dar nu o poți modifica.",
+      health: {
+        rejected: (n: number) => `IPN-uri respinse în ultimele 24 h: ${n}`,
+        rejectedHelp:
+          "Procesatorul a trimis notificări pe care nu le-am putut verifica (semnătură greșită sau chei lipsă). Nicio plată nu se confirmă dintr-o notificare nevalidată. Verifică cheile și modul (test sau LIVE) al furnizorului, apoi cere procesatorului să retrimită.",
+        attention: (n: number) => `Plăți care necesită atenție: ${n}`,
+        attentionLink: "Deschide lista",
+        stuck: (n: number) => `Notificări valide rămase neprocesate: ${n}`,
+        stuckHelp:
+          "Au epuizat încercările automate. Apar în lista de plăți și se reiau de un administrator.",
+        ok: "Nicio problemă la notificări în ultimele 24 h.",
+      },
+      cardProvider: {
+        title: "Butonul «Card online»",
+        help: "Clienții văd un singur buton, «Card online». Apare în checkout doar dacă furnizorul ales e activ și configurat; altfel magazinul oferă doar ramburs și transfer bancar.",
+        label: "Furnizorul folosit",
+        none: "Niciunul (cardul nu apare)",
+        save: "Salvează alegerea",
+        saved: "Alegerea a fost salvată.",
+        unavailable:
+          "Acest furnizor nu e activ și configurat: cardul nu va apărea în checkout până îl activezi.",
+      },
+      provider: {
+        active: "Activ",
+        inactive: "Inactiv",
+        configured: "Configurat",
+        notConfigured: "Neconfigurat",
+        activeLabel: "Furnizor activ",
+        activeHelp:
+          "Un furnizor inactiv nu primește plăți noi, dar notificările și rambursările plăților deja făcute merg în continuare.",
+        mode: "Mod",
+        modeTest: "Test (sandbox)",
+        modeLive: "LIVE",
+        verifiedAt: (when: string) => `Verificat în sandbox la ${when}`,
+        notVerified:
+          "Neverificat în sandbox. O plată de probă în modul test, confirmată prin notificare cu semnătură validă, deblochează trecerea în LIVE.",
+        unconfirmed:
+          "Protocolul acestui furnizor nu a fost încă verificat cu un cont real (neconfirmat, de verificat cu sandbox real). Folosește mai întâi modul test.",
+        saved: "Salvat",
+        savedPlaceholder: "Salvat (lasă gol ca să păstrezi)",
+        required: "obligatoriu",
+        save: "Salvează",
+        saving: "Se salvează…",
+        savedOk: "Configurarea a fost salvată.",
+        testConnection: "Testează conexiunea",
+        testing: "Se verifică…",
+        goLive: "Treci în LIVE…",
+        backToTest: "Revino în test",
+        revertedToTest:
+          "Ai schimbat cheile: modul a revenit în test, iar verificarea în sandbox trebuie refăcută.",
+        liveTitle: "Treci în LIVE",
+        liveBody:
+          "Plățile reale ale clienților vor fi încasate prin acest furnizor. Confirmi trecerea în LIVE?",
+        liveConfirm: "Treci în LIVE",
+        cancel: "Anulează",
+        fixErrors: "Verifică câmpurile marcate.",
+        saveFailed: "Nu am putut salva. Încearcă din nou.",
+        forbidden: "Nu ai permisiunea să configurezi plățile.",
+        demoNote: "Furnizor fals, doar pentru dezvoltare și teste. Nu există în producție.",
+        demoRefund: "La rambursare, DEMO răspunde",
+        errors: {
+          PAYMENT_LIVE_NOT_VERIFIED:
+            "Trecerea în LIVE e refuzată: nu există încă o plată de probă confirmată în modul test. Fă o plată de probă, apoi încearcă din nou.",
+          PAYMENT_LIVE_CONFIRMATION_REQUIRED: "Trecerea în LIVE cere confirmare explicită.",
+          PAYMENT_NOT_CONFIGURED:
+            "Nu poți activa furnizorul până nu completezi câmpurile obligatorii.",
+          PAYMENT_CREDENTIALS_INVALID: "Una dintre valori nu are formatul corect.",
+          PAYMENT_DEMO_FORBIDDEN: "Furnizorul DEMO nu e disponibil în această instalare.",
+        } as Record<string, string>,
+      },
+    },
+    /** Plățile cu cardul și rambursările (Faza 10): `/admin/plati`. Se integrează în detaliul comenzii în Faza 11. */
+    payments: {
+      title: "Plăți cu cardul",
+      description:
+        "Plățile online, rambursările și ce necesită atenție. Rambursarea face doar banii: nu modifică stocul și nu înregistrează un retur.",
+      readOnly: "Poți vedea plățile, dar nu poți rambursa.",
+      views: {
+        all: "Toate",
+        attention: (n: number) => `Necesită atenție (${n})`,
+        refunds: "Rambursări",
+      },
+      columns: {
+        order: "Comandă",
+        provider: "Furnizor",
+        amount: "Sumă",
+        status: "Stare",
+        refunded: "Rambursat",
+        date: "Data",
+        actions: "Acțiuni",
+      },
+      view: "Detalii",
+      empty: "Nu există plăți în această vedere.",
+      attempt: (n: number) => `Încercarea ${n}`,
+      providers: { netopia: "Netopia", euplatesc: "EuPlătesc", demo: "DEMO" } as Record<
+        string,
+        string
+      >,
+      modes: { test: "test", live: "LIVE", demo: "demo" } as Record<string, string>,
+      paymentStatus: {
+        pending: "În așteptare",
+        paid: "Încasată",
+        failed: "Eșuată",
+        cancelled: "Anulată",
+        refunded: "Rambursată",
+      } as Record<string, string>,
+      refundStatus: {
+        requested: "Cerută",
+        confirmed: "Confirmată",
+        failed: "Refuzată",
+        manual_required: "Manuală necesară",
+      } as Record<string, string>,
+      refundKind: {
+        admin: "Cerută de administrator",
+        auto_stock_lost: "Automată: fără stoc după plată",
+        auto_late_payment: "Automată: plată în plus sau pe comandă anulată",
+      } as Record<string, string>,
+      attentionTitle: "Necesită atenție",
+      attention: {
+        amount_mismatch: {
+          label: "Sumă diferită",
+          help: "Suma raportată de procesator nu e totalul comenzii. Comanda NU a fost confirmată și nu s-a rambursat nimic. Verifică plata în contul procesatorului; dacă banii sunt la tine, rambursează-i din contul procesatorului.",
+        },
+        currency_mismatch: {
+          label: "Altă monedă",
+          help: "Procesatorul a raportat o plată în altă monedă decât RON. Comanda NU a fost confirmată. Verifică plata în contul procesatorului.",
+        },
+        stock_reservation_lost: {
+          label: "Fără stoc după plată",
+          help: "Plata a ajuns după expirarea rezervării, iar produsele nu mai erau în stoc. Comanda a fost anulată și s-a cerut rambursarea automată. Urmărește starea rambursării mai jos.",
+        },
+        late_payment_cancelled_order: {
+          label: "Plată pe comandă anulată",
+          help: "Plata a ajuns după anularea comenzii. S-a cerut rambursarea automată; urmărește starea ei mai jos.",
+        },
+        duplicate_payment: {
+          label: "Plată dublă",
+          help: "Comanda era deja plătită printr-o altă încercare. S-a cerut rambursarea automată a plății în plus.",
+        },
+        refund_manual_required: {
+          label: "Rambursare manuală",
+          help: "Procesatorul nu a confirmat rambursarea prin API. Rambursează din contul procesatorului, apoi apasă «Am rambursat manual», cu referința operațiunii.",
+        },
+        refund_failed: {
+          label: "Rambursare refuzată",
+          help: "Procesatorul a refuzat rambursarea. Verifică motivul în contul lui și cere din nou rambursarea (suma nu mai e angajată).",
+        },
+        unknown_status: {
+          label: "Stare necunoscută",
+          help: "Procesatorul a raportat o stare pe care nu o cunoaștem. Verifică plata în contul lui.",
+        },
+        unexpected_order_state: {
+          label: "Stare neașteptată a comenzii",
+          help: "Procesatorul a confirmat o plată pe o comandă într-o stare care nu permite confirmarea. Verifică comanda și plata.",
+        },
+        reconciliation_mismatch: {
+          label: "Diferență la reconciliere",
+          help: "Reconcilierea zilnică a găsit o diferență pe care nu o putem repara sigur. Verifică plata în contul procesatorului.",
+        },
+        credit_unmatched: {
+          label: "Credit fără rambursare",
+          help: "Procesatorul a notificat o rambursare pe care nu o avem înregistrată. Verifică în contul lui și în lista rambursărilor.",
+        },
+      } as Record<string, { label: string; help: string }>,
+      detail: {
+        back: "Înapoi la plăți",
+        order: "Comandă",
+        provider: "Furnizor",
+        mode: "Mod",
+        amount: "Sumă",
+        captured: "Confirmat de procesator",
+        card: "Card",
+        providerRef: "Referința procesatorului",
+        failure: "Cod eșec",
+        date: "Creată",
+        capturedAt: "Încasată",
+        refundedTotal: "Rambursat (angajat)",
+        remaining: "Rămas de rambursat",
+        attempts: "Încercări de plată",
+        timeline: "Cronologie",
+        refundsTitle: "Rambursări",
+        noRefunds: "Nicio rambursare.",
+        manualReference: "Referință manuală",
+        notFound: "Plata nu există.",
+      },
+      refund: {
+        title: "Rambursează",
+        help: "Rambursarea pleacă la procesator imediat ce o confirmi. Poți rambursa parțial sau tot, până la suma rămasă.",
+        amount: "Suma de rambursat (lei)",
+        reason: "Motivul rambursării",
+        reasonHelp: "Se păstrează în istoric și în jurnalul de audit.",
+        refundAll: "Rambursează tot",
+        submit: "Rambursează…",
+        confirmTitle: "Confirmi rambursarea?",
+        confirmBody: (amount: string) =>
+          `Suma de ${amount} va fi trimisă procesatorului. Operațiunea nu se poate anula din aplicație.`,
+        confirm: "Rambursează",
+        cancel: "Anulează",
+        done: "Rambursarea a fost trimisă. Starea ei apare mai jos.",
+        amountInvalid: "Introdu o sumă în lei, cu cel mult două zecimale, mai mare ca zero.",
+        amountTooHigh: "Suma depășește ce a rămas de rambursat.",
+        reasonRequired: "Scrie motivul rambursării.",
+        notRefundable: "Această plată nu poate fi rambursată (nu e încasată).",
+        failed: "Nu am putut trimite rambursarea. Verifică datele și încearcă din nou.",
+        forbidden: "Nu ai permisiunea să rambursezi.",
+      },
+      manual: {
+        title: "Am rambursat manual",
+        help: "După ce ai rambursat din contul procesatorului, scrie referința operațiunii. Starea plății se actualizează abia după confirmare.",
+        reference: "Referința operațiunii din contul procesatorului",
+        submit: "Am rambursat manual…",
+        confirmTitle: "Confirmi că suma a fost rambursată din contul procesatorului?",
+        confirmBody:
+          "Confirmarea trece plata în starea rambursată. Confirmă doar dacă ai verificat în contul procesatorului că banii au plecat.",
+        confirm: "Da, am rambursat",
+        done: "Rambursarea a fost marcată ca făcută manual.",
+        referenceRequired: "Scrie referința operațiunii.",
+        failed: "Nu am putut confirma. Încearcă din nou.",
+      },
+      stuck: {
+        title: "Notificări blocate",
+        help: "Notificări cu semnătură validă care nu s-au putut procesa după toate încercările.",
+        none: "Nicio notificare blocată.",
+      },
     },
     /** Zonele de livrare (rezerva când furnizorul de tarife nu răspunde): `/admin/setari/livrare`. */
     shippingZones: {
@@ -3456,6 +3691,11 @@ export const ro = {
           : `Livrare în aproximativ ${countOf(n, "zi", "zile", "de zile")}`,
       pickup: "Ridicare personală",
       pickupLede: "De la sediul magazinului, fără cost de transport.",
+      pickupAddress: (address: string) => `Adresa de ridicare: ${address}`,
+      pickupFrom: (address: string) => `Ridicare personală de la: ${address}`,
+      // cu ridicare personală, adresa cerută la pasul 2 nu e o adresă de livrare: e adresa clientului, pentru contact și facturare
+      stepsPickup: { delivery: "Adresa ta (contact și facturare)" },
+      billingSamePickup: "Aceleași date ca la adresa ta",
       demoBadge: "DEMO",
       demoNote: "Tarif demonstrativ, nu un tarif real de curierat.",
       leadTime: (days: number) =>
@@ -3479,6 +3719,9 @@ export const ro = {
       paymentCodHelp: (fee: string) =>
         `Plătești curierului la primirea coletului. Taxă de ramburs: ${fee}.`,
       paymentCodFree: "Plătești curierului la primirea coletului.",
+      paymentCard: "Card online",
+      paymentCardHelp:
+        "Plătești acum, pe pagina securizată a procesatorului de plăți. Nu păstrăm datele cardului. Dacă plata nu reușește, comanda rămâne în așteptare și o poți reîncerca.",
       paymentTransfer: "Transfer bancar",
       paymentTransferHelp:
         "Plătești în avans, prin transfer. Rezervăm produsele până la termenul de plată; după el comanda se anulează automat.",
@@ -3536,6 +3779,7 @@ export const ro = {
           "Metoda de plată aleasă nu mai este disponibilă pentru această comandă.",
         ORDER_PAYMENT_METHOD_UNKNOWN: "Metoda de plată aleasă nu este disponibilă.",
         ORDER_BANK_DETAILS_MISSING: "Transferul bancar nu este disponibil acum. Alege altă metodă.",
+        ORDER_CARD_UNAVAILABLE: "Plata cu cardul nu este disponibilă acum. Alege altă metodă.",
         ORDER_COUNTRY_NOT_ALLOWED: "Livrăm doar în România.",
         ORDER_CUI_INVALID: "CUI-ul nu este valid.",
         ORDER_DIGITAL_NOT_SUPPORTED: "Produsele digitale nu se pot comanda încă.",
@@ -3547,6 +3791,74 @@ export const ro = {
       },
     },
     /** Confirmarea comenzii și urmărirea ei (fără cont). */
+    /** Plata cu cardul pe vitrină (Faza 10): pagina de retur și de așteptare, reîncercarea și pagina DEMO. */
+    cardPayment: {
+      title: "Plata cu cardul",
+      orderLine: (number: string) => `Comanda ${number}`,
+      states: {
+        checking: {
+          title: "Verificăm plata",
+          body: "Procesatorul de plăți ne confirmă plata. Rămâi pe pagină: durează de obicei câteva secunde.",
+          slow: "Încă nu am primit confirmarea. Poți aștepta în continuare sau poți reîncerca plata.",
+        },
+        paid: {
+          title: "Plata a fost confirmată",
+          body: (number: string) => `Comanda ${number} este confirmată.`,
+        },
+        failed: {
+          title: "Plata nu a reușit",
+          body: "Plata a fost refuzată sau anulată. Comanda ta rămâne în așteptare, dar produsele nu mai sunt rezervate până o reîncerci.",
+        },
+        cancelled: {
+          title: "Comanda a fost anulată",
+          body: "Termenul de plată a expirat și comanda a fost anulată. Poți plasa o comandă nouă.",
+        },
+        stockLost: {
+          title: "Comanda a fost anulată",
+          body: "Plata a ajuns după expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.",
+        },
+        attention: {
+          title: "Verificăm plata",
+          body: "Suma sau moneda raportată de procesator nu corespunde comenzii. O verificăm noi și te contactăm; nu ai nimic de făcut acum.",
+        },
+      },
+      retry: {
+        button: "Reîncearcă plata",
+        starting: "Se pornește plata…",
+        until: (when: string) => `Poți reîncerca până la ${when}.`,
+        failed: "Nu am putut porni plata. Încearcă din nou.",
+        unavailable: "Plata cu cardul nu este disponibilă acum. Încearcă mai târziu.",
+        noStock:
+          "Produsele din comandă nu mai sunt în stoc în cantitatea comandată, deci plata nu poate fi reluată. Nu s-a încasat nimic.",
+        expired: "Termenul de reîncercare a expirat.",
+      },
+      link: {
+        title: "Plătește comanda",
+        body: (number: string, amount: string) =>
+          `Comanda ${number}, în valoare de ${amount}. Plata se face pe pagina securizată a procesatorului de plăți.`,
+        pay: "Plătește cu cardul",
+        invalidTitle: "Linkul de plată nu mai este valabil",
+        invalidBody:
+          "Comanda a fost deja plătită sau anulată, ori termenul de reîncercare a expirat. Poți verifica starea comenzii în urmărire.",
+      },
+      track: "Vezi comanda în urmărire",
+      home: "Înapoi în magazin",
+      noAccess: "Nu putem arăta starea acestei plăți de pe acest dispozitiv.",
+      noAccessBody:
+        "Pentru siguranță, starea plății se vede doar de pe dispozitivul cu care ai plasat comanda. Poți folosi urmărirea comenzii, cu numărul ei și emailul.",
+      demo: {
+        title: "Plată DEMO",
+        note: "Pagină de test: simulează procesatorul de plăți. Nu există într-un magazin real.",
+        order: (number: string, amount: string) => `Comanda ${number}, ${amount}`,
+        pay: "Plătește",
+        payWrong: "Plătește altă sumă",
+        fail: "Refuză plata",
+        cancel: "Anulează plata",
+        triple: "Plătește, cu notificarea trimisă de 3 ori",
+        sent: "Notificarea a fost trimisă. Te ducem înapoi la comandă.",
+        notFound: "Plata nu există.",
+      },
+    },
     order: {
       confirmationTitle: "Comanda a fost plasată",
       confirmationLede: (number: string) => `Numărul comenzii tale este ${number}.`,
@@ -3556,21 +3868,28 @@ export const ro = {
       trackLink: "Urmărește comanda",
       whatNext: "Ce urmează",
       nextCod: "Comanda este confirmată. Plătești curierului la primirea coletului.",
+      nextCardPaid: "Plata cu cardul a fost confirmată, iar comanda este confirmată.",
+      stockLostNotice:
+        "Plata a ajuns după expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.",
       nextTransfer: (deadline: string) =>
         `Plătește prin transfer bancar până la ${deadline}. Rezervăm produsele până atunci; după termen comanda se anulează automat.`,
       nextEmail:
         "Emailul de confirmare nu se trimite încă; păstrează această pagină sau numărul comenzii.",
       delivery: "Livrare",
       deliveryTo: "Livrare în",
+      pickupLabel: "Ridicare",
+      pickupFrom: "Ridicare personală de la:",
+      pickupNoAddress: "Ridicare personală",
       estimate: (days: number) => `Estimare: aproximativ ${countOf(days, "zi", "zile", "de zile")}`,
       leadTime: (days: number) =>
         `Comanda se livrează toată odată, în aproximativ ${countOf(days, "zi", "zile", "de zile")}.`,
       installRequested: "Ai cerut o ofertă pentru instalare; te contactăm.",
       payment: "Plată",
-      paymentMethods: { cod: "Ramburs (la livrare)", bank_transfer: "Transfer bancar" } as Record<
-        string,
-        string
-      >,
+      paymentMethods: {
+        cod: "Ramburs (la livrare)",
+        bank_transfer: "Transfer bancar",
+        card: "Card online",
+      } as Record<string, string>,
       status: "Stare",
       statuses: {
         pending: "În așteptare",

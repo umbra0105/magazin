@@ -169,13 +169,13 @@ describe("comanda: stări și sume", () => {
     );
   });
 
-  it("refuză o metodă de plată necunoscută (cardul nu e încă o metodă)", async () => {
+  it("refuză o metodă de plată necunoscută (cardul e metodă din Faza 10, vezi payments-schema)", async () => {
     await rejects(
       base,
       (tx, b) =>
         tx.order.create({
           data: orderData(b.channel.id, {
-            paymentMethod: "card",
+            paymentMethod: "paypal",
             codFeeMinor: 0,
             codFeeTaxMinor: 0,
             taxMinor: 1_995,

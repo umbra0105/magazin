@@ -112,6 +112,8 @@ interface PaymentProvider {
   getStatus(paymentRef): Promise<PaymentStatus>
 }
 ```
+> ✅ **Implementat în Faza 10** (`packages/shared/src/payment-provider.ts`, adaptoare în `packages/integrations/src/payments`): Netopia (API v2) și EuPlătesc, plus furnizorul fals DEMO (doar dezvoltare). Interfața reală are în plus `testConnection`, iar `getStatus` poate întoarce `null` (Netopia: endpointul de status nu e documentat). **Neconfirmat, de verificat cu sandbox real**: vezi `docs/06`, Faza 20 și 22, și `docs/FINISAJE.md`.
+
 Obligatoriu: mod test/live comutabil din setări · verificare semnătură IPN · idempotență · reconciliere zilnică · pagină de „reîncearcă plata" cu link valabil 24h.
 
 ---

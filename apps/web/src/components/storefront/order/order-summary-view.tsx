@@ -26,6 +26,15 @@ export function OrderSummaryView({
   const fulfilLabel = m.fulfillmentStatuses[order.fulfillmentStatus] ?? order.fulfillmentStatus;
   return (
     <div className="flex flex-col gap-8" data-order-summary-view>
+      {order.paymentNotice === "stock_lost" ? (
+        <p
+          role="note"
+          className="rounded-card bg-tone-warning-bg p-4 text-tone-warning-fg"
+          data-payment-notice
+        >
+          {m.stockLostNotice}
+        </p>
+      ) : null}
       <dl className="grid gap-4 sm:grid-cols-3">
         <div>
           <dt className="text-sm text-ink-secondary">{m.status}</dt>
@@ -46,11 +55,22 @@ export function OrderSummaryView({
           </dd>
         </div>
         <div>
-          <dt className="text-sm text-ink-secondary">{m.delivery}</dt>
+          <dt className="text-sm text-ink-secondary">
+            {order.shipping.kind === "pickup" ? m.pickupLabel : m.delivery}
+          </dt>
           <dd className="mt-1 font-medium">
-            {order.shipping.kind === "pickup"
-              ? order.shipping.carrier
-              : `${order.shipping.carrier}${order.shipping.service ? ` — ${order.shipping.service}` : ""}`}
+            {order.shipping.kind === "pickup" ? (
+              // ridicare: adresa MAGAZINULUI salvată pe comandă; adresa clientului nu apare ca destinație
+              order.shipping.pickupAddressText ? (
+                <span data-pickup-address>
+                  {m.pickupFrom} {order.shipping.pickupAddressText}
+                </span>
+              ) : (
+                m.pickupNoAddress
+              )
+            ) : (
+              `${order.shipping.carrier}${order.shipping.service ? ` — ${order.shipping.service}` : ""}`
+            )}
             {order.destination ? (
               <span className="block text-sm font-normal text-ink-secondary">
                 {m.deliveryTo} {order.destination.localityName}, {order.destination.countyName}
