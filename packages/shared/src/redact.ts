@@ -39,6 +39,12 @@ const FRAGMENTS = [
   "authorization",
   "cookie",
   "link",
+  // plăți (Faza 10): semnătura POS Netopia, utilizatorul API EuPlătesc, semnături de notificare
+  "signature",
+  "userapi",
+  "userkey",
+  "fphash",
+  "verification",
   // costul de achiziție: orice nume care îl conține (newCostPrice, lastCostPriceNet, costNetTotal...)
   "costprice",
   "costnet",

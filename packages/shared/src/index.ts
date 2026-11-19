@@ -15,3 +15,4 @@ export * from "./money";
 export * from "./price-display";
 export * from "./zoned-time";
 export { pluralRo } from "./plural";
+export * from "./payment-provider";

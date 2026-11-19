@@ -54,3 +54,23 @@ describe("redactSensitive", () => {
     expect(redactSensitive(circular)).toEqual({ name: "n", self: "[circular]" });
   });
 });
+
+describe("câmpurile de plată (Faza 10)", () => {
+  it("semnătura POS, utilizatorul API, semnăturile de notificare și cheile sunt sensibile", () => {
+    for (const key of [
+      "posSignature",
+      "userApi",
+      "userKey",
+      "fpHash",
+      "Verification-token",
+      "secretKey",
+      "apiKey",
+      "x-demo-signature",
+    ]) {
+      expect(isSensitiveKey(key), key).toBe(true);
+    }
+    for (const key of ["merchantId", "amountMinor", "providerRef", "paymentRef", "status"]) {
+      expect(isSensitiveKey(key), key).toBe(false);
+    }
+  });
+});
