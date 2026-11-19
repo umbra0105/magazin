@@ -119,9 +119,26 @@ async function applyRefundConfirmed(tx: Db, refund: RefundRow, now: Date): Promi
     await tx.payment.update({ where: { id: payment.id }, data: { status: "refunded" } });
   }
   const states = await lockOrder(tx, refund.orderId);
+  // plata DUBLĂ (o altă tentativă a aceleiași comenzi a fost încasată mai devreme) se returnează fără să atingă starea de
+  // plată a comenzii, care rămâne cea a plății care a confirmat-o
+  const earlierPaid = payment.capturedAt
+    ? await tx.payment.count({
+        where: {
+          orderId: refund.orderId,
+          NOT: { id: payment.id },
+          status: { in: ["paid", "refunded"] },
+          OR: [
+            { capturedAt: { lt: payment.capturedAt } },
+            { capturedAt: payment.capturedAt, attemptNo: { lt: payment.attemptNo } },
+          ],
+        },
+      })
+    : 0;
+  const isDuplicate = earlierPaid > 0;
   const message = full ? "Plata a fost rambursată integral" : "Plata a fost rambursată parțial";
   if (
     states &&
+    !isDuplicate &&
     full &&
     (states.paymentStatus === "paid" || states.paymentStatus === "partially_refunded")
   ) {
@@ -136,7 +153,7 @@ async function applyRefundConfirmed(tx: Db, refund: RefundRow, now: Date): Promi
       },
       now,
     );
-  } else if (states && !full && states.paymentStatus === "paid") {
+  } else if (states && !isDuplicate && !full && states.paymentStatus === "paid") {
     await transitionOrder(
       tx,
       refund.orderId,

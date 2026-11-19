@@ -355,6 +355,15 @@ async function handlePaid(
       return;
     }
     await markPaid(tx, payment, event, now);
+    // celelalte tentative rămase în așteptare nu mai au rost; jetoanele de reîncercare se invalidează
+    await tx.payment.updateMany({
+      where: { orderId, status: "pending", NOT: { id: payment.id } },
+      data: { status: "cancelled" },
+    });
+    await tx.paymentRetryToken.updateMany({
+      where: { orderId, usedAt: null },
+      data: { usedAt: now },
+    });
     await transitionOrder(
       tx,
       orderId,

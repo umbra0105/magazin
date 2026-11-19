@@ -25,7 +25,7 @@ export async function checkMoneyInvariant(db: Db, paymentId: string): Promise<Mo
   if (
     payment.order.status !== "cancelled" &&
     ["paid", "partially_refunded", "refunded"].includes(payment.order.paymentStatus) &&
-    (payment.status === "paid" || payment.status === "refunded")
+    payment.status === "paid"
   ) {
     return "confirmed";
   }
