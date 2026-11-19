@@ -65,6 +65,31 @@ describe("urmărirea comenzii (număr + email)", () => {
     });
   });
 
+  it("ridicare personală: rezumatul dă adresa MAGAZINULUI și nicio destinație a clientului", async () => {
+    await harness(async (h) => {
+      const product = await h.product({ price: 19_900 });
+      const owner = await h.fill([{ variantId: product.variantId }]);
+      const placed = await h.checkout.place(
+        owner,
+        await h.input(owner, { shippingOfferCode: "pickup" }),
+      );
+      const summary = await getOrderSummary(h.tx, placed.orderId);
+      expect(summary?.shipping.kind).toBe("pickup");
+      expect(summary?.shipping.pickupAddressText).toBe(
+        "Strada Magazinului 7, Alba Iulia, Alba, 510000, RO",
+      );
+      // localitatea clientului nu mai e o «destinație» a comenzii cu ridicare
+      expect(summary?.destination).toBeNull();
+      const json = JSON.stringify(summary);
+      expect(json).not.toContain("Sat Test");
+      expect(json).not.toContain("Str. Exemplu");
+      // urmărirea (număr + email) dă același rezumat
+      const tracked = await trackOrder(h.tx, { number: placed.number, email: "client@exemplu.ro" });
+      expect(tracked?.shipping.pickupAddressText).toBe(summary?.shipping.pickupAddressText);
+      expect(tracked?.destination).toBeNull();
+    });
+  });
+
   it("termenul cel mai lung dintre liniile «La comandă» apare în rezumat", async () => {
     await harness(async (h) => {
       const special = await h.product({

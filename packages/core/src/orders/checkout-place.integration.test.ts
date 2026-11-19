@@ -6,6 +6,7 @@ import { DemoShippingRateProvider } from "../shipping/demo-rates";
 import type { ShippingRateProvider } from "../shipping/types";
 import type { TestTx } from "../test-utils/rollback";
 import { CHECKOUT_TERMS_CONSENT } from "./consent";
+import { getOrderSummary } from "./order-read";
 import { NOW, codeOf, harness, orderOf, q, type Harness } from "../test-utils/checkout-fixtures";
 
 /**
@@ -138,6 +139,138 @@ describe("comandă cu ramburs", () => {
       });
       expect(order.totalMinor).toBe(order.subtotalMinor);
     });
+  });
+});
+
+describe("ridicare personală: adresa magazinului, nu a clientului", () => {
+  const STORE_TEXT = "Strada Magazinului 7, Alba Iulia, Alba, 510000, RO";
+  const place = async (h: Harness) => {
+    const a = await h.product();
+    const owner = await h.fill([{ variantId: a.variantId }]);
+    return { owner, a };
+  };
+
+  it("salvează adresa magazinului ca snapshot pe comandă; adresa clientului nu e prezentată ca ridicare", async () => {
+    await harness(async (h) => {
+      const { owner } = await place(h);
+      const result = await h.checkout.place(
+        owner,
+        await h.input(owner, { shippingOfferCode: "pickup" }),
+      );
+      const order = await orderOf(h.tx, result.orderId);
+      const snapshot = order.shippingSnapshot as Record<string, unknown>;
+      expect(snapshot["kind"]).toBe("pickup");
+      expect(snapshot["pickupAddress"]).toEqual({
+        street: "Strada Magazinului 7",
+        city: "Alba Iulia",
+        county: "Alba",
+        postalCode: "510000",
+        country: "RO",
+        text: STORE_TEXT,
+      });
+      // în snapshot-ul de livrare nu ajunge nimic din adresa clientului
+      expect(JSON.stringify(snapshot)).not.toContain("Str. Exemplu");
+      expect(JSON.stringify(snapshot)).not.toContain("Sat Test");
+      // adresa clientului rămâne pe comandă doar ca adresă de contact/facturare (nu se pierde: zona și factura o folosesc)
+      const customer = order.addresses.find((a) => a.kind === "shipping");
+      expect(customer?.street).toBe("Str. Exemplu 1");
+    });
+  });
+
+  it("o schimbare ulterioară a `company.address` nu modifică comenzile vechi", async () => {
+    await harness(async (h) => {
+      const { owner } = await place(h);
+      const result = await h.checkout.place(
+        owner,
+        await h.input(owner, { shippingOfferCode: "pickup" }),
+      );
+      h.shippingSettings.pickupAddress = {
+        street: "Altă Stradă 99",
+        city: "Cluj-Napoca",
+        county: "Cluj",
+        postalCode: "400000",
+        country: "RO",
+      };
+      const summary = await getOrderSummary(h.tx, result.orderId);
+      expect(summary?.shipping.pickupAddressText).toBe(STORE_TEXT);
+      expect(JSON.stringify(summary)).not.toContain("Altă Stradă");
+    });
+  });
+
+  it("comanda cu curier NU poartă adresă de ridicare și își păstrează destinația", async () => {
+    await harness(async (h) => {
+      const { owner } = await place(h);
+      const result = await h.checkout.place(owner, await h.input(owner));
+      const order = await orderOf(h.tx, result.orderId);
+      const snapshot = order.shippingSnapshot as Record<string, unknown>;
+      expect(snapshot["kind"]).toBe("courier");
+      expect(snapshot).not.toHaveProperty("pickupAddress");
+      const summary = await getOrderSummary(h.tx, result.orderId);
+      expect(summary?.shipping.pickupAddressText).toBeNull();
+      expect(summary?.destination).toEqual({ countyName: "Test", localityName: "Sat Test" });
+    });
+  });
+
+  it("fără adresă a magazinului, ridicarea nu se oferă la previzualizare", async () => {
+    await harness(
+      async (h) => {
+        const { owner } = await place(h);
+        const preview = await h.checkout.preview({
+          owner,
+          destination: {
+            countyCode: h.geo.countyCode,
+            localityCode: h.geo.localityCode,
+            postalCode: "123456",
+          },
+          offerCode: "pickup",
+          paymentMethod: "cod",
+        });
+        expect(preview.shipping?.offers.some((o) => o.kind === "pickup")).toBe(false);
+        expect(preview.selectedOffer).toBeNull();
+        expect(preview.totals).toBeNull();
+      },
+      { shipping: { pickupAddress: null } },
+    );
+  });
+
+  it("fără adresă a magazinului, comanda cu ridicare NU se poate plasa (regulă pe server)", async () => {
+    await harness(async (h) => {
+      const { owner } = await place(h);
+      // oferta a fost afișată cât timp adresa exista; apoi adresa a fost ștearsă
+      const input = await h.input(owner, { shippingOfferCode: "pickup" });
+      h.shippingSettings.pickupAddress = null;
+      expect(await codeOf(h.checkout.place(owner, input))).toBe("ORDER_OFFER_UNAVAILABLE");
+      expect(await h.tx.order.count()).toBe(0);
+    });
+  });
+
+  it("strada sau orașul goale (doar spații) blochează și plasarea", async () => {
+    for (const blank of [{ street: "   " }, { city: "" }]) {
+      await harness(async (h) => {
+        const { owner } = await place(h);
+        const input = await h.input(owner, { shippingOfferCode: "pickup" });
+        h.shippingSettings.pickupAddress = {
+          street: "Strada Magazinului 7",
+          city: "Alba Iulia",
+          county: "Alba",
+          postalCode: "510000",
+          country: "RO",
+          ...blank,
+        };
+        expect(await codeOf(h.checkout.place(owner, input))).toBe("ORDER_OFFER_UNAVAILABLE");
+      });
+    }
+  });
+
+  it("fără adresă a magazinului, livrarea cu curier merge neschimbat", async () => {
+    await harness(
+      async (h) => {
+        const { owner } = await place(h);
+        const result = await h.checkout.place(owner, await h.input(owner));
+        expect(result.number).toMatch(/^T-\d{4}$/);
+      },
+      { shipping: { pickupAddress: null } },
+    );
   });
 });
 

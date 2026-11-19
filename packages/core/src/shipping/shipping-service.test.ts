@@ -27,6 +27,13 @@ const settings = (over: Partial<ShippingRuntimeSettings> = {}): ShippingRuntimeS
   freeShippingThresholdMinor: null,
   freeShippingClasses: ["standard"],
   pickupEnabled: true,
+  pickupAddress: {
+    street: "Strada Exemplu 1",
+    city: "Alba Iulia",
+    county: "Alba",
+    postalCode: "510000",
+    country: "RO",
+  },
   easyboxEnabled: false,
   quoteTimeoutMs: 50,
   ...over,
@@ -142,6 +149,62 @@ describe("furnizorul răspunde", () => {
   it("ridicarea personală dispare când e dezactivată din setări", async () => {
     const quote = await service({ settings: { pickupEnabled: false } }).quote(input());
     expect(quote.offers.some((o) => o.kind === "pickup")).toBe(false);
+  });
+});
+
+describe("ridicarea personală și adresa magazinului (`company.address`)", () => {
+  const pickupOf = async (over: Partial<ShippingRuntimeSettings>) =>
+    (await service({ settings: over }).quote(input())).offers.find((o) => o.kind === "pickup");
+
+  it("oferta poartă adresa magazinului, formatată, nu adresa clientului", async () => {
+    const offer = await pickupOf({});
+    expect(offer?.pickupAddress).toEqual({
+      street: "Strada Exemplu 1",
+      city: "Alba Iulia",
+      county: "Alba",
+      postalCode: "510000",
+      country: "RO",
+      text: "Strada Exemplu 1, Alba Iulia, Alba, 510000, RO",
+    });
+    // destinația clientului (Alba Iulia, 510005) nu intră nicăieri în oferta de ridicare
+    expect(JSON.stringify(offer)).not.toContain("510005");
+  });
+
+  it("fără adresă (null) ridicarea NU se oferă, chiar cu ridicarea activată", async () => {
+    expect(await pickupOf({ pickupAddress: null })).toBeUndefined();
+  });
+
+  it("strada sau orașul goale, sau doar spații: ridicarea NU se oferă", async () => {
+    const base = {
+      street: "Strada Exemplu 1",
+      city: "Alba Iulia",
+      county: "",
+      postalCode: "",
+      country: "RO",
+    };
+    expect(await pickupOf({ pickupAddress: { ...base, street: "" } })).toBeUndefined();
+    expect(await pickupOf({ pickupAddress: { ...base, city: "   " } })).toBeUndefined();
+    expect(await pickupOf({ pickupAddress: { ...base, street: " ", city: "" } })).toBeUndefined();
+  });
+
+  it("județul și codul poștal goale nu opresc ridicarea", async () => {
+    const offer = await pickupOf({
+      pickupAddress: {
+        street: "Strada Exemplu 1",
+        city: "Alba Iulia",
+        county: "",
+        postalCode: "",
+        country: "RO",
+      },
+    });
+    expect(offer?.pickupAddress?.text).toBe("Strada Exemplu 1, Alba Iulia, RO");
+  });
+
+  it("ofertele de curier nu poartă adresă de ridicare", async () => {
+    const quote = await service({}).quote(input());
+    for (const offer of quote.offers.filter((o) => o.kind !== "pickup")) {
+      expect(offer.pickupAddress).toBeUndefined();
+    }
   });
 });
 

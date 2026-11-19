@@ -68,6 +68,14 @@ const SHIPPING_SETTINGS: ShippingRuntimeSettings = {
   freeShippingThresholdMinor: null,
   freeShippingClasses: ["standard"],
   pickupEnabled: true,
+  // adresa FICTIVĂ a magazinului (`company.address`): ridicarea se oferă doar cu adresă completă
+  pickupAddress: {
+    street: "Strada Magazinului 7",
+    city: "Alba Iulia",
+    county: "Alba",
+    postalCode: "510000",
+    country: "RO",
+  },
   easyboxEnabled: false,
   quoteTimeoutMs: 1000,
 };
@@ -141,6 +149,8 @@ export interface Harness {
   cart: CartService;
   checkout: CheckoutService;
   settings: CheckoutSettings;
+  /** Setările de livrare citite de serviciu la fiecare cerere: un test le poate schimba între cereri. */
+  shippingSettings: ShippingRuntimeSettings;
   product: (opts?: ProductOpts) => Promise<{ variantId: string; productId: string; sku: string }>;
   fill: (
     items: Array<{ variantId: string; quantity?: Quantity | "minimum" }>,
@@ -152,6 +162,7 @@ export async function harness<T>(
   fn: (h: Harness) => Promise<T>,
   over: {
     settings?: Partial<CheckoutSettings>;
+    shipping?: Partial<ShippingRuntimeSettings>;
     provider?: ShippingRateProvider;
     cui?: (cui: string) => Promise<unknown>;
   } = {},
@@ -161,6 +172,7 @@ export async function harness<T>(
     const ctx = await createStockContext(tx, { useDefaultWarehouse: true });
     const geo = await createGeo(tx);
     const settings = { ...CHECKOUT_SETTINGS, ...over.settings };
+    const shippingSettings: ShippingRuntimeSettings = { ...SHIPPING_SETTINGS, ...over.shipping };
     const createCart = (client: typeof tx) =>
       new CartService({
         db: client,
@@ -172,7 +184,7 @@ export async function harness<T>(
     const shipping = new ShippingService({
       provider: over.provider ?? new DemoShippingRateProvider(),
       store: createPrismaShippingStore(tx),
-      readSettings: async () => SHIPPING_SETTINGS,
+      readSettings: async () => shippingSettings,
     });
     const checkout = new CheckoutService({
       db: tx,
@@ -200,6 +212,7 @@ export async function harness<T>(
       cart,
       checkout,
       settings,
+      shippingSettings,
       product: async (opts = {}) => {
         const { price, shippingClass, weightGrams, physical, ...spec } = opts;
         const created = await addStockProduct(tx, ctx, {

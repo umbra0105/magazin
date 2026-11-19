@@ -504,6 +504,15 @@ export class CheckoutService {
       );
     }
 
+    // ridicarea personală e doar de la adresa magazinului: fără ea comanda nu se plasează (regulă pe server, nu doar în interfață)
+    if (offer.kind === "pickup" && !offer.pickupAddress) {
+      throw new OrderError(
+        "ORDER_OFFER_UNAVAILABLE",
+        "Ridicarea personală nu este disponibilă: magazinul nu are adresa completată",
+        { offer: input.shippingOfferCode },
+      );
+    }
+
     const isCompany = isCompanyBuyer({ vatId: company?.vatId ?? null, groupPricingType: "none" });
     assertPaymentMethodAllowed(
       {
@@ -647,6 +656,19 @@ export class CheckoutService {
             source: offer.source,
             demo: offer.demo,
             freeShipping: offer.freeShipping,
+            // ridicare: adresa MAGAZINULUI de la momentul comenzii (snapshot imuabil); adresa clientului nu intră aici
+            ...(offer.kind === "pickup" && offer.pickupAddress
+              ? {
+                  pickupAddress: {
+                    street: offer.pickupAddress.street,
+                    city: offer.pickupAddress.city,
+                    county: offer.pickupAddress.county,
+                    postalCode: offer.pickupAddress.postalCode,
+                    country: offer.pickupAddress.country,
+                    text: offer.pickupAddress.text,
+                  },
+                }
+              : {}),
           },
           paymentMethod: input.paymentMethod,
           ...(input.customerNote ? { customerNote: input.customerNote } : {}),

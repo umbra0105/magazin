@@ -139,6 +139,7 @@ async function withEnv<T>(fn: (env: Env) => Promise<T>): Promise<T> {
           freeShippingThresholdMinor: null,
           freeShippingClasses: ["standard"],
           pickupEnabled: false,
+          pickupAddress: null,
           easyboxEnabled: false,
           quoteTimeoutMs: 2000,
         }),

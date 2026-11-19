@@ -5,6 +5,7 @@
  */
 
 import { SHIPPING_CLASSES, type ShippingClass } from "../catalog/constants";
+import type { NormalizedPickupAddress } from "./pickup-address";
 
 export { SHIPPING_CLASSES, type ShippingClass };
 
@@ -54,6 +55,8 @@ export interface RateOffer {
   demo: boolean;
   /** Transportul e gratuit (prag atins): `priceMinor` e deja 0. */
   freeShipping: boolean;
+  /** Doar la ridicare personală: adresa MAGAZINULUI (nu a clientului), din `company.address`. */
+  pickupAddress?: NormalizedPickupAddress;
 }
 
 /** Furnizor de tarife de livrare (agregator, curier). Aruncă sau depășește timpul → serviciul cade pe tarifele pe zonă. */

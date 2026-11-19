@@ -1,4 +1,5 @@
 import type { Db } from "../db-tx";
+import { pickupAddressTextFromSnapshot } from "../shipping/pickup-address";
 
 /**
  * Citirea unei comenzi pentru client: pagina de confirmare și urmărirea (`/comanda/urmarire`). Conține doar ce are voie să vadă
@@ -32,7 +33,13 @@ export interface OrderSummary {
     kind: string;
     estimatedDays: number | null;
     freeShipping: boolean;
+    /**
+     * Ridicare personală: adresa MAGAZINULUI salvată pe comandă la plasare (formatată), sau `null` (curier, ori o comandă mai
+     * veche, fără adresă în snapshot: atunci nu se arată nicio adresă, niciodată cea a clientului).
+     */
+    pickupAddressText: string | null;
   };
+  /** Destinația de livrare a clientului (localitatea); `null` la ridicare personală, unde nu există destinație de livrare. */
   destination: { countyName: string; localityName: string } | null;
   /** Transfer bancar: până când ține rezervarea. */
   reservationExpiresAt: Date | null;
@@ -116,10 +123,13 @@ function toSummary(row: Row): OrderSummary {
       estimatedDays:
         typeof snapshot["estimatedDays"] === "number" ? snapshot["estimatedDays"] : null,
       freeShipping: snapshot["freeShipping"] === true,
+      pickupAddressText:
+        snapshot["kind"] === "pickup" ? pickupAddressTextFromSnapshot(snapshot) : null,
     },
-    destination: address
-      ? { countyName: address.countyName, localityName: address.localityName }
-      : null,
+    destination:
+      address && snapshot["kind"] !== "pickup"
+        ? { countyName: address.countyName, localityName: address.localityName }
+        : null,
     reservationExpiresAt: row.reservationExpiresAt,
     longestLeadTimeDays: lead.length > 0 ? Math.max(...lead) : null,
     lines: row.lines.map((line) => ({
