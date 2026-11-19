@@ -5,6 +5,7 @@ import {
   startMediaWorkerFromEnv,
   startCartJobsFromEnv,
   startOrderJobsFromEnv,
+  startPaymentJobsFromEnv,
   startStockJobsFromEnv,
 } from "@ecom/jobs";
 import { getLogger } from "@ecom/shared";
@@ -27,6 +28,7 @@ export function startDevEmailWorker(): void {
     startStockJobsFromEnv();
     startCartJobsFromEnv();
     startOrderJobsFromEnv();
+    startPaymentJobsFromEnv();
     getLogger().info(
       {
         queues: ["emails", "media", "product-import", "product-import-images"],
@@ -37,6 +39,11 @@ export function startDevEmailWorker(): void {
           "stock-back-in-stock",
           "cart-purge-expired",
           "order-expire-transfers",
+          "payment-events (coadă)",
+          "payment-events-sweep",
+          "payment-refunds-sweep",
+          "order-expire-card",
+          "payment-reconcile",
         ],
       },
       "workeri porniți în procesul de dezvoltare",

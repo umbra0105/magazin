@@ -38,6 +38,8 @@ import {
  */
 
 export const MAX_EVENT_ATTEMPTS = 6;
+/** Câte notificări respinse se înregistrează pe oră (peste, doar se refuză: baza nu crește la infinit sub atac). */
+export const MAX_REJECTED_PER_HOUR = 1000;
 
 export interface PaymentProcessorDeps {
   /** Clientul bazei (sau o tranzacție, în teste). */
@@ -74,6 +76,11 @@ async function recordRejected(
 ): Promise<void> {
   const now = deps.now();
   try {
+    // protecție la inundare: peste plafon, respingerile nu se mai înregistrează (răspunsul rămâne 401)
+    const recent = await deps.db.paymentWebhookEvent.count({
+      where: { status: "rejected", receivedAt: { gt: new Date(now.getTime() - 3_600_000) } },
+    });
+    if (recent >= MAX_REJECTED_PER_HOUR) return;
     await deps.db.paymentWebhookEvent.create({
       data: {
         provider,
