@@ -89,6 +89,7 @@ async function recordRejected(
         status: "rejected",
         rejectReason: reason,
         bodyHash: sha256Hex(request.rawBody),
+        receivedAt: now,
         processedAt: now,
       },
     });
@@ -144,6 +145,7 @@ export async function ingestPaymentWebhook(
         status: "received",
         bodyHash: sha256Hex(request.rawBody),
         normalized: normalizedOf(event),
+        receivedAt: deps.now(),
       },
     ],
     skipDuplicates: true,

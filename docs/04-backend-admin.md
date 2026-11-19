@@ -656,6 +656,9 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `content.write` — Editează conținutul (CMS, blog, SEO) | ✓ | ✓ |  | ✓ |  |  |  |
 | `media.read` — Vede biblioteca media și poate alege fișiere în formulare | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |
 | `media.write` — Încarcă și șterge fișiere media | ✓ | ✓ |  | ✓ |  |  |  |
+| `payments.read` — Vede plățile cu card, rambursările și ce necesită atenție | ✓ | ✓ | ✓ |  |  |  | ✓ |
+| `payments.refund` — Rambursează plăți cu card (parțial sau total) și confirmă rambursări făcute manual | ✓ | ✓ | ✓ |  |  |  |  |
+| `payments.configure` — Configurează furnizorii de plăți cu card (chei, mod test/live, activare); doar Owner, ca la cheile de integrare | ✓ |  |  |  |  |  |  |
 | `invoices.read` — Vede facturile | ✓ | ✓ |  |  |  |  | ✓ |
 | `invoices.write` — Emite și stornează facturi | ✓ | ✓ |  |  |  |  |  |
 | `reports.read` — Vede rapoartele operaționale | ✓ | ✓ | ✓ |  |  |  | ✓ |

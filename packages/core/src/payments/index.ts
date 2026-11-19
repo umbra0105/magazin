@@ -8,3 +8,4 @@ export * from "./refund-service";
 export * from "./card-payment-service";
 export * from "./reconcile";
 export * from "./system-audit";
+export * from "./payment-admin";

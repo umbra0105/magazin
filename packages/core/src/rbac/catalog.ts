@@ -33,6 +33,11 @@ export const PERMISSIONS = {
   "content.write": "Editează conținutul (CMS, blog, SEO)",
   "media.read": "Vede biblioteca media și poate alege fișiere în formulare",
   "media.write": "Încarcă și șterge fișiere media",
+  "payments.read": "Vede plățile cu card, rambursările și ce necesită atenție",
+  "payments.refund":
+    "Rambursează plăți cu card (parțial sau total) și confirmă rambursări făcute manual",
+  "payments.configure":
+    "Configurează furnizorii de plăți cu card (chei, mod test/live, activare); doar Owner, ca la cheile de integrare",
   "invoices.read": "Vede facturile",
   "invoices.write": "Emite și stornează facturi",
   "reports.read": "Vede rapoartele operaționale",
@@ -67,8 +72,10 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
   {
     key: "admin",
     name: "Admin",
-    description: "Tot, mai puțin actualizări de sistem și chei de integrare",
-    permissions: ALL.filter((p) => p !== "system.update" && p !== "integrations.write"),
+    description: "Tot, mai puțin actualizări de sistem, chei de integrare și chei de plăți",
+    permissions: ALL.filter(
+      (p) => p !== "system.update" && p !== "integrations.write" && p !== "payments.configure",
+    ),
   },
   {
     key: "manager",
@@ -81,6 +88,8 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "orders.cancel",
       "orders.refund",
       "orders.fulfill",
+      "payments.read",
+      "payments.refund",
       "products.read",
       "products.write",
       "products.content.write",
@@ -149,6 +158,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "reports.financial",
       "invoices.read",
       "orders.read",
+      "payments.read",
       "products.cost.view",
     ],
   },

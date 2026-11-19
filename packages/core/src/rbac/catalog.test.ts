@@ -99,3 +99,28 @@ describe("catalogul RBAC", () => {
     expect(admin).not.toContain("integrations.write");
   });
 });
+
+describe("permisiunile plăților (Faza 10)", () => {
+  const rolesWith = (permission: (typeof PERMISSION_KEYS)[number]) =>
+    DEFAULT_ROLES.filter((r) => r.permissions.includes(permission)).map((r) => r.key);
+
+  it("citirea plăților: Owner, Admin, Manager, Contabil", () => {
+    expect(rolesWith("payments.read")).toEqual(["owner", "admin", "manager", "accountant"]);
+  });
+
+  it("rambursarea: doar Owner, Admin, Manager (Suport, Contabil, Depozit, Editor nu)", () => {
+    expect(rolesWith("payments.refund")).toEqual(["owner", "admin", "manager"]);
+  });
+
+  it("configurarea (chei, mod test/live): DOAR Owner, ca la cheile de integrare; Adminul nu are acces la chei", () => {
+    expect(rolesWith("payments.configure")).toEqual(["owner"]);
+  });
+
+  it("rambursarea și configurarea cer și citirea plăților (nimeni nu poate rambursa fără să vadă plata)", () => {
+    for (const role of DEFAULT_ROLES) {
+      if (role.permissions.includes("payments.refund")) {
+        expect(role.permissions, role.key).toContain("payments.read");
+      }
+    }
+  });
+});

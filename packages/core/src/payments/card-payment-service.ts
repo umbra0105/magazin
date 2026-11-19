@@ -12,7 +12,12 @@ import { ORDER_REF_TYPE } from "../inventory/constants";
 import { StockError } from "../inventory/stock-errors";
 import { StockService } from "../inventory/stock-service";
 import { reservationExpiresAt } from "../inventory/workdays";
-import { addOrderEvent, lockOrder, transitionOrder } from "../orders/order-service";
+import {
+  addOrderEvent,
+  lockOrder,
+  setReservationExpiry,
+  transitionOrder,
+} from "../orders/order-service";
 import { lockPayment } from "./payment-db";
 import { PaymentError } from "./payment-errors";
 
@@ -328,10 +333,7 @@ export class CardPaymentService {
           idempotencyKey: `card:${order.id}:${attemptNo}`,
         },
       });
-      await tx.order.update({
-        where: { id: order.id },
-        data: { reservationExpiresAt: reservationEnd },
-      });
+      await setReservationExpiry(tx, order.id, reservationEnd);
       await addOrderEvent(tx, order.id, {
         type: "payment.retry_started",
         message: "Clientul a reîncercat plata cu cardul; stocul a fost rezervat din nou",

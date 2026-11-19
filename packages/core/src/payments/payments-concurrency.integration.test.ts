@@ -39,11 +39,11 @@ import { requestRefund } from "./refund-service";
  * concurentă cu expirarea. Fișier propriu (datele comise nu se amestecă cu testele în tranzacție anulată).
  */
 const pool = getDb();
-const NAMESPACE = "paycc";
+const STOCK_NAMESPACE = "paycc";
 const EMAIL = "plati-concurenta@exemplu.ro";
 
 afterAll(async () => {
-  await purgeStockLeftovers(pool, NAMESPACE);
+  await purgeStockLeftovers(pool, STOCK_NAMESPACE);
   await pool.$disconnect();
 });
 
@@ -79,8 +79,8 @@ interface Env {
 }
 
 async function withEnv<T>(fn: (env: Env) => Promise<T>): Promise<T> {
-  await purgeStockLeftovers(pool, NAMESPACE);
-  const ctx = await createStockContext(pool, { namespace: NAMESPACE });
+  await purgeStockLeftovers(pool, STOCK_NAMESPACE);
+  const ctx = await createStockContext(pool, { namespace: STOCK_NAMESPACE });
   const sirutaCodes: number[] = [];
   const channelExisted = (await pool.salesChannel.findUnique({ where: { code: "web" } })) !== null;
   if (!channelExisted) {
