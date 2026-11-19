@@ -269,7 +269,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Badge și filtru pentru **cereri de instalare**, cu status de urmărire și notificare pe email
 - [ ] Detaliu comandă: linii, adrese, timeline, plăți, note, client
 - [ ] Acțiuni: confirmă, anulează, rambursează, editează, duplică, retrimite email
-- [ ] Draft order cu link de plată
+- [!] Draft order cu link de plată — 🛑 OPRIT (2026-11-19): cere decizia utilizatorului; vezi mesajul 🛑 și opțiunile A/B/C din docs/PROGRESS.md (Sesiunea 29)
 - [ ] React Email + provider **SMTP configurabil din admin** + queue cu retry
 - [ ] Toate template-urile din `02-complet-si-functional.md` §B8
 - [ ] Preview și trimitere de test din admin, suprascriere de template
