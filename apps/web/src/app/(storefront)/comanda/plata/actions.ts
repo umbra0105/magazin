@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { PaymentError } from "@ecom/core";
+import { errorCodeOf } from "@/lib/error-code";
 import { getDb } from "@ecom/db";
 import { getLogger } from "@ecom/shared";
 import { allowCheckoutRequest, readOrderAccess } from "@/lib/checkout";
@@ -50,12 +50,11 @@ export type RetryResult =
     };
 
 function describe(error: unknown): RetryResult {
-  if (error instanceof PaymentError) {
-    if (error.code === "PAYMENT_RETRY_NO_STOCK") return { ok: false, code: "no_stock" };
-    if (error.code === "PAYMENT_RETRY_EXPIRED") return { ok: false, code: "expired" };
-    if (error.code === "PAYMENT_CARD_UNAVAILABLE") return { ok: false, code: "unavailable" };
-    if (error.code === "PAYMENT_RETRY_UNAVAILABLE") return { ok: false, code: "expired" };
-  }
+  const code = errorCodeOf(error, ["PAYMENT_"]);
+  if (code === "PAYMENT_RETRY_NO_STOCK") return { ok: false, code: "no_stock" };
+  if (code === "PAYMENT_RETRY_EXPIRED") return { ok: false, code: "expired" };
+  if (code === "PAYMENT_CARD_UNAVAILABLE") return { ok: false, code: "unavailable" };
+  if (code === "PAYMENT_RETRY_UNAVAILABLE") return { ok: false, code: "expired" };
   getLogger().error({ err: error }, "reîncercarea plății a eșuat");
   return { ok: false, code: "failed" };
 }

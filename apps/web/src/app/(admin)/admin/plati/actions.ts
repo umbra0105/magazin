@@ -1,7 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { PaymentError, confirmManualRefund, requestRefund } from "@ecom/core";
+import { confirmManualRefund, requestRefund } from "@ecom/core";
+import { errorCodeOf } from "@/lib/error-code";
 import { getDb } from "@ecom/db";
 import { getAudit } from "@/lib/admin-writes";
 import { parseMoneyInput } from "@/lib/money-input";
@@ -59,11 +60,10 @@ export const refundPayment = withPermission(
       }
       return { ok: true };
     } catch (error) {
-      if (error instanceof PaymentError) {
-        if (error.code === "REFUND_EXCEEDS_PAID") return { ok: false, code: "tooHigh" };
-        if (error.code === "PAYMENT_NOT_REFUNDABLE") return { ok: false, code: "notRefundable" };
-        if (error.code === "REFUND_INVALID") return { ok: false, code: "amount" };
-      }
+      const code = errorCodeOf(error, ["REFUND_", "PAYMENT_"]);
+      if (code === "REFUND_EXCEEDS_PAID") return { ok: false, code: "tooHigh" };
+      if (code === "PAYMENT_NOT_REFUNDABLE") return { ok: false, code: "notRefundable" };
+      if (code === "REFUND_INVALID") return { ok: false, code: "amount" };
       return { ok: false, code: "failed" };
     }
   },

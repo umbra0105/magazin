@@ -2775,7 +2775,7 @@ export async function removeE2eDemoPayments(): Promise<void> {
     await db.query(
       `delete from payment_webhook_event where provider = 'demo' or status = 'rejected'`,
     );
-    await db.query(`delete from integration where type = 'payment' and provider = 'demo'`);
+    await db.query(`delete from integration where type = 'payment'`);
   });
   await clearE2eSettings(["payment.cardProvider"]);
 }

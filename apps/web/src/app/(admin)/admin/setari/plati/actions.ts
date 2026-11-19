@@ -1,7 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { PaymentConfigError, isProviderCode } from "@ecom/core";
+import { isProviderCode } from "@ecom/core";
+import { errorCodeOf } from "@/lib/error-code";
 import { getAdminWrites, getAudit } from "@/lib/admin-writes";
 import { getPaymentConfig } from "@/lib/payments";
 import { withPermission } from "@/lib/session";
@@ -67,7 +68,8 @@ export const saveProviderConfig = withPermission(
       }
       return { ok: true, revertedToTest: result.revertedToTest };
     } catch (error) {
-      if (error instanceof PaymentConfigError) return { ok: false, code: error.code };
+      const code = errorCodeOf(error, ["PAYMENT_"]);
+      if (code) return { ok: false, code };
       throw error;
     }
   },
@@ -92,7 +94,9 @@ export const testProviderConnection = withPermission(
       result = {
         ok: false,
         message:
-          error instanceof PaymentConfigError ? error.message : "Verificarea conexiunii a eșuat.",
+          errorCodeOf(error, ["PAYMENT_"]) !== null && error instanceof Error
+            ? error.message
+            : "Verificarea conexiunii a eșuat.",
       };
     }
     await getAudit().record({
