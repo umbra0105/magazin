@@ -35,16 +35,9 @@ if (captureDir) {
   };
   let produs: E2eCartProduct;
   let owner: Account;
-  const SETTING_KEYS = [
-    "company.legalName",
-    "company.bankName",
-    "company.iban",
-    "company.address",
-    "shipping.pickupEnabled",
-    "checkout.orderNumberPrefix",
-    "checkout.orderNumberDigits",
-    "checkout.anafTimeoutMs",
-  ];
+  // doar setarea pe care o schimbă acest spec: celelalte (IBAN, prefix …) sunt folosite și de alte specuri, rulate în paralel de alt worker;
+  // curățarea lor aici ar rupe, de exemplu, comanda cu transfer bancar din `checkout.spec.ts`
+  const SETTING_KEYS = ["company.address"];
 
   test.describe.configure({ mode: "serial" });
 
