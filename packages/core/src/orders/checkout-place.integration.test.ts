@@ -262,6 +262,35 @@ describe("ridicare personală: adresa magazinului, nu a clientului", () => {
     }
   });
 
+  it("o ofertă de tip ridicare venită de la un furnizor, fără adresă a magazinului, e refuzată la plasare", async () => {
+    const provider: ShippingRateProvider = {
+      name: "ridicare-fara-adresa",
+      quote: async () => [
+        {
+          code: "p:ridicare",
+          kind: "pickup",
+          carrier: "Punct de ridicare",
+          service: "",
+          priceMinor: 0,
+          estimatedDays: 0,
+          codFeeMinor: 0,
+          source: "provider",
+          demo: false,
+          freeShipping: false,
+        },
+      ],
+    };
+    await harness(
+      async (h) => {
+        const { owner } = await place(h);
+        const input = await h.input(owner, { shippingOfferCode: "p:ridicare" });
+        expect(await codeOf(h.checkout.place(owner, input))).toBe("ORDER_OFFER_UNAVAILABLE");
+        expect(await h.tx.order.count()).toBe(0);
+      },
+      { provider },
+    );
+  });
+
   it("fără adresă a magazinului, livrarea cu curier merge neschimbat", async () => {
     await harness(
       async (h) => {
