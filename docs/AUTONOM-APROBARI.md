@@ -25,7 +25,7 @@ Câte o linie pentru fiecare fază: `- Faza N: <stare>`. Doar **`aprobat`** (pri
 Modul B:
 
 - Faza 8: aprobat, 2026-11-18, coș verificat
-- Faza 9: în așteptare
+- Faza 9: aprobat, 2026-11-19, comenzi verificate
 - Faza 10: în așteptare
 - Faza 13: în așteptare
 - Faza 14b: în așteptare
