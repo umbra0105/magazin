@@ -186,7 +186,7 @@ if (captureDir) {
         try {
           await login(page, owner, "/admin/setari/cos");
           await expect(page.locator("[data-pickup-needs-address]")).toBeVisible();
-          await page.locator("#shipping").scrollIntoViewIfNeeded();
+          await page.locator("[data-pickup-needs-address]").scrollIntoViewIfNeeded();
           await shot(page, "admin-ridicare-fara-adresa", scheme, width);
         } finally {
           await setE2eSettings({ "company.address": STORE });
