@@ -12,6 +12,7 @@ import {
 } from "@/lib/sidebar-choice";
 import { getMessages } from "@/messages";
 import { Breadcrumbs } from "./breadcrumbs";
+import { CrumbLabelsProvider } from "./crumb-labels";
 import { SidebarNav, type SidebarNavItem } from "./sidebar-nav";
 import { UserMenu } from "./user-menu";
 import { NotificationsBell, type BellItem } from "./notifications/notifications-bell";
@@ -102,101 +103,103 @@ export function AdminShell({
   const collapseLabel = collapsed ? m.expandMenu : m.collapseMenu;
 
   return (
-    <div className="min-h-dvh bg-surface-page text-ink lg:grid lg:grid-cols-[var(--sidebar-w)_minmax(0,1fr)]">
-      <a
-        href="#main-content"
-        className={
-          "sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[60] focus:rounded-md " +
-          "focus:border focus:border-line-control focus:bg-surface-page focus:px-4 focus:py-2 focus:text-body " +
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        }
-      >
-        {m.skipToContent}
-      </a>
+    <CrumbLabelsProvider>
+      <div className="min-h-dvh bg-surface-page text-ink lg:grid lg:grid-cols-[var(--sidebar-w)_minmax(0,1fr)]">
+        <a
+          href="#main-content"
+          className={
+            "sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[60] focus:rounded-md " +
+            "focus:border focus:border-line-control focus:bg-surface-page focus:px-4 focus:py-2 focus:text-body " +
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          }
+        >
+          {m.skipToContent}
+        </a>
 
-      {open ? (
-        <button
-          type="button"
-          aria-label={m.closeMenu}
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 z-30 bg-scrim lg:hidden"
-        />
-      ) : null}
-
-      <aside
-        id="admin-sidebar"
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-(--sidebar-w) flex-col gap-4 overflow-y-auto border-r border-line-subtle bg-surface-page p-3 " +
-            "transition-transform duration-(--motion) lg:static lg:z-auto lg:translate-x-0",
-          // Închis pe telefon: ieșit din ecran ȘI scos din ordinea de tab (invisible).
-          open ? "translate-x-0" : "max-lg:invisible max-lg:-translate-x-full",
-        )}
-      >
-        <div className="flex h-11 items-center justify-between gap-2 px-1">
-          <div className="flex min-w-0 items-center gap-3">
-            <StoreMark storeName={storeName} logoUrl={logoUrl} />
-            <span data-sidebar-label className="truncate text-section">
-              {storeName}
-            </span>
-          </div>
+        {open ? (
           <button
             type="button"
             aria-label={m.closeMenu}
-            onClick={() => {
-              setOpen(false);
-              menuButton.current?.focus();
-            }}
-            className="flex size-(--control-h) items-center justify-center rounded-md transition-colors duration-(--motion) hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:hidden"
-          >
-            <X aria-hidden="true" className="size-5" />
-          </button>
-        </div>
-        <SidebarNav
-          items={navItems}
-          label={m.sidebarLabel}
-          collapsed={collapsed}
-          onExpand={() => chooseSidebar("expanded")}
-        />
-        <button
-          type="button"
-          onClick={() => chooseSidebar(collapsed ? "expanded" : "collapsed")}
-          aria-label={collapseLabel}
-          aria-controls="admin-sidebar"
-          aria-expanded={!collapsed}
-          title={collapseLabel}
-          data-sidebar-toggle
-          className="mt-auto hidden h-(--control-h) items-center gap-3 rounded-md px-2.5 text-body text-ink-secondary transition-colors duration-(--motion) hover:bg-surface-hover hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:flex"
-        >
-          <CollapseIcon aria-hidden="true" className="size-5 shrink-0" />
-          <span data-sidebar-label className="truncate">
-            {collapseLabel}
-          </span>
-        </button>
-      </aside>
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-30 bg-scrim lg:hidden"
+          />
+        ) : null}
 
-      <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-20 flex h-(--topbar-h) items-center gap-2 border-b border-line-subtle bg-surface-page px-4">
-          <button
-            ref={menuButton}
-            type="button"
-            aria-label={m.openMenu}
-            aria-controls="admin-sidebar"
-            aria-expanded={open}
-            onClick={() => setOpen(true)}
-            className="flex size-(--control-h) shrink-0 items-center justify-center rounded-md transition-colors duration-(--motion) hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:hidden"
-          >
-            <Menu aria-hidden="true" className="size-5" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <Breadcrumbs />
+        <aside
+          id="admin-sidebar"
+          className={cn(
+            "fixed inset-y-0 left-0 z-40 flex w-(--sidebar-w) flex-col gap-4 overflow-y-auto border-r border-line-subtle bg-surface-page p-3 " +
+              "transition-transform duration-(--motion) lg:static lg:z-auto lg:translate-x-0",
+            // Închis pe telefon: ieșit din ecran ȘI scos din ordinea de tab (invisible).
+            open ? "translate-x-0" : "max-lg:invisible max-lg:-translate-x-full",
+          )}
+        >
+          <div className="flex h-11 items-center justify-between gap-2 px-1">
+            <div className="flex min-w-0 items-center gap-3">
+              <StoreMark storeName={storeName} logoUrl={logoUrl} />
+              <span data-sidebar-label className="truncate text-section">
+                {storeName}
+              </span>
+            </div>
+            <button
+              type="button"
+              aria-label={m.closeMenu}
+              onClick={() => {
+                setOpen(false);
+                menuButton.current?.focus();
+              }}
+              className="flex size-(--control-h) items-center justify-center rounded-md transition-colors duration-(--motion) hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:hidden"
+            >
+              <X aria-hidden="true" className="size-5" />
+            </button>
           </div>
-          <NotificationsBell items={bell.items} unread={bell.unread} />
-          <UserMenu email={email} />
-        </header>
-        <main id="main-content" tabIndex={-1} className="p-4 focus-visible:outline-none lg:p-6">
-          {children}
-        </main>
+          <SidebarNav
+            items={navItems}
+            label={m.sidebarLabel}
+            collapsed={collapsed}
+            onExpand={() => chooseSidebar("expanded")}
+          />
+          <button
+            type="button"
+            onClick={() => chooseSidebar(collapsed ? "expanded" : "collapsed")}
+            aria-label={collapseLabel}
+            aria-controls="admin-sidebar"
+            aria-expanded={!collapsed}
+            title={collapseLabel}
+            data-sidebar-toggle
+            className="mt-auto hidden h-(--control-h) items-center gap-3 rounded-md px-2.5 text-body text-ink-secondary transition-colors duration-(--motion) hover:bg-surface-hover hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:flex"
+          >
+            <CollapseIcon aria-hidden="true" className="size-5 shrink-0" />
+            <span data-sidebar-label className="truncate">
+              {collapseLabel}
+            </span>
+          </button>
+        </aside>
+
+        <div className="flex min-w-0 flex-col">
+          <header className="sticky top-0 z-20 flex h-(--topbar-h) items-center gap-2 border-b border-line-subtle bg-surface-page px-4">
+            <button
+              ref={menuButton}
+              type="button"
+              aria-label={m.openMenu}
+              aria-controls="admin-sidebar"
+              aria-expanded={open}
+              onClick={() => setOpen(true)}
+              className="flex size-(--control-h) shrink-0 items-center justify-center rounded-md transition-colors duration-(--motion) hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:hidden"
+            >
+              <Menu aria-hidden="true" className="size-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <Breadcrumbs />
+            </div>
+            <NotificationsBell items={bell.items} unread={bell.unread} />
+            <UserMenu email={email} />
+          </header>
+          <main id="main-content" tabIndex={-1} className="p-4 focus-visible:outline-none lg:p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </CrumbLabelsProvider>
   );
 }

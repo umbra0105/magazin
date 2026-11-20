@@ -11,6 +11,14 @@ export const adminOrdersRo = {
   description:
     "Comenzile magazinului: stare, plată, livrare, note și emailuri. Acțiunile cer permisiunea lor și sunt înregistrate în jurnalul de audit.",
   readOnly: "Poți vedea comenzile, dar nu le poți modifica.",
+  /** Numele generice ale ultimei migi pe paginile de detaliu, până când pagina arată numărul (niciodată id-ul intern). */
+  crumbs: {
+    order: "Comandă",
+    offer: "Ofertă",
+    payment: "Plată",
+    template: "Șablon",
+    newOffer: "Ofertă nouă",
+  },
   count: (n: number) => comenzi(n),
   views: {
     all: "Toate",

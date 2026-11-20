@@ -22,6 +22,7 @@ import {
   NoteForm,
   ResendEmailButton,
 } from "@/components/admin/orders/order-panels";
+import { CrumbLabel } from "@/components/admin/crumb-labels";
 import { OrderActions } from "@/components/admin/orders/order-actions";
 import { requireAdmin } from "@/lib/admin-page";
 import { formatDateTime } from "@/lib/format-date";
@@ -95,6 +96,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="flex max-w-5xl flex-col gap-6" data-order-detail>
+      <CrumbLabel label={detail.number} />
       <div className="flex flex-col gap-3">
         <Link
           href="/admin/comenzi"

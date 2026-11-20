@@ -5,6 +5,7 @@ import { can, getEmailOverride } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { renderTemplateEmail, sampleContext, templateDefinition } from "@ecom/jobs";
 import { Badge, Section } from "@ecom/ui";
+import { CrumbLabel } from "@/components/admin/crumb-labels";
 import { OverrideForm, TestSendForm } from "@/components/admin/email/template-forms";
 import { requireAdmin } from "@/lib/admin-page";
 import { currentTheme } from "@/lib/email-admin";
@@ -38,6 +39,7 @@ export default async function EmailTemplatePage({ params }: { params: Promise<{ 
 
   return (
     <div className="flex max-w-5xl flex-col gap-6" data-email-template={definition.key}>
+      <CrumbLabel label={definition.label} />
       <div className="flex flex-col gap-2">
         <Link
           href="/admin/comenzi/sabloane-email"

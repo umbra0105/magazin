@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { can, getOfferDetail } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { Badge, RowHeader, Section, TBody, THead, Table, Td, Th, Tr } from "@ecom/ui";
+import { CrumbLabel } from "@/components/admin/crumb-labels";
 import { OfferDetailActions } from "@/components/admin/offers/offer-detail-actions";
 import { PageHeader } from "@/components/admin/page-header";
 import { requireAdmin } from "@/lib/admin-page";
@@ -41,6 +42,7 @@ export default async function OfferDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="flex flex-col gap-6" data-offer-detail={offer.number}>
+      <CrumbLabel label={offer.number} />
       <PageHeader
         title={`${o.title}: ${offer.number}`}
         description={

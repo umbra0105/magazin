@@ -99,7 +99,13 @@ const openOrder = async (page: Page, number: string) => {
   await expect(row).toBeVisible();
   await row.getByRole("link", { name: number }).first().click();
   await expect(page.locator("[data-order-detail]")).toContainText(number);
+  // firimiturile arată numărul comenzii, nu id-ul intern
+  await expect(crumbLast(page)).toHaveText(number);
 };
+
+/** Ultima migă din firimiturile paginii de admin (pagina curentă). */
+const crumbLast = (page: Page) =>
+  page.getByRole("navigation", { name: "Poziția în pagină" }).locator('[aria-current="page"]');
 
 test.describe("lista, detaliul și acțiunile", () => {
   // emailurile pleacă prin măturătorul de 10 s și workerul: sub sarcină pot dura mai mult decât timpul implicit al testului
@@ -189,6 +195,8 @@ test.describe("șabloanele de email", () => {
       .getByRole("button", { name: "Revino la textul implicit" })
       .click();
     await expect(page.getByText("S-a revenit la textul implicit.")).toBeVisible();
+    // firimiturile arată numele șablonului, nu cheia lui tehnică (verificat la sfârșit: nu schimbă ritmul pașilor de mai sus)
+    await expect(crumbLast(page)).toHaveText("Confirmare comandă");
   });
 });
 
@@ -504,6 +512,8 @@ test.describe("anulare, retrimitere și răspuns identic", () => {
     await login(page, manager, "/admin/comenzi/oferte/nou");
     const { link, detail } = await createOffer(page, produs, emailOf("anulat"));
     await page.goto(detail);
+    // firimiturile arată numărul ofertei, nu id-ul intern
+    await expect(crumbLast(page)).toHaveText(/^OF-\d{4,}$/);
     await page.getByRole("button", { name: "Anulează oferta" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Anulează oferta" }).click();
     await expect(page.locator("[data-offer-detail]")).toContainText("Anulată");

@@ -275,6 +275,8 @@ export function breadcrumbsFor(
     sectionId: AdminNavIcon | null,
     raw: string,
     previous: string | null,
+    /** Adresa completă până la acest segment (cheia etichetelor înregistrate de pagini). */
+    href: string,
   ) => string | null,
   /**
    * Eticheta fixă pentru o cale care nu aparține niciunei secțiuni (pagina 404 din admin): o singură migă după Panou, în loc de
@@ -317,7 +319,7 @@ export function breadcrumbsFor(
       // segment cu % invalid: îl afișăm cum e
     }
     crumbs.push({
-      label: segmentLabel?.(sectionId, raw, rest[index - 1] ?? null) ?? label,
+      label: segmentLabel?.(sectionId, raw, rest[index - 1] ?? null, href) ?? label,
       href,
     });
   }
