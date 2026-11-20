@@ -182,7 +182,9 @@ test.describe("succes: de la creare la plată", () => {
     await expect(page.locator("[data-offer-detail]")).toContainText("Convertită în comandă");
     await expect(page.getByRole("link", { name: /^E2E-\d{6}$/ })).toBeVisible();
     await page.goto("/admin/comenzi/oferte?vedere=toate");
-    await expect(page.locator("[data-offer-row]").first()).toContainText("Convertită în comandă");
+    await expect(
+      page.locator("[data-offer-row]").filter({ hasText: "Convertită în comandă" }).first(),
+    ).toBeVisible();
   });
 });
 

@@ -5,7 +5,18 @@ import { can, getAdminOrderDetail, INSTALLATION_STATUSES } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { templateDefinition } from "@ecom/jobs";
 import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared";
-import { Badge, RowHeader, Section, TBody, THead, Table, Td, Th, Tr } from "@ecom/ui";
+import {
+  Badge,
+  buttonVariants,
+  RowHeader,
+  Section,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@ecom/ui";
 import {
   InstallationStatusForm,
   NoteForm,
@@ -192,7 +203,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <p>
           <Link
             href={`/admin/comenzi/oferte/nou?dinComanda=${encodeURIComponent(detail.id)}`}
-            className="inline-flex h-(--control-h) items-center rounded-md border border-line-input px-4"
+            className={buttonVariants({ variant: "outline" })}
             data-duplicate-offer
           >
             {t.offers.duplicate}

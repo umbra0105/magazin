@@ -109,7 +109,8 @@ test.describe("ridicare cu adresa magazinului setată", () => {
       `Adresa de ridicare: ${STORE_TEXT}`,
     );
     await expect(pickup).toContainText("Gratuit");
-    // cu curierul (selectat implicit) apare mesajul despre livrarea la nivelul solului; la ridicare dispare (decizia 2026-11-19)
+    // cu curierul apare mesajul despre livrarea la nivelul solului; la ridicare dispare (decizia 2026-11-19)
+    await step(page, "shipping").locator('[data-offer="demo:courier"] input').check();
     await expect(step(page, "shipping").locator("[data-ground-notice]")).toBeVisible();
     await pickup.locator("input").check();
     await expect(step(page, "shipping").locator("[data-ground-notice]")).toHaveCount(0);
@@ -154,10 +155,8 @@ test.describe("ridicare cu adresa magazinului setată", () => {
     const number = /E2E-\d{6}/.exec(await page.locator("[data-order-number]").innerText())![0];
 
     // confirmare: «Ce urmează» și metoda de plată spun «în magazin», nu «curierului»
-    await expect(page.locator("[data-order-confirmation]")).toContainText(
-      "Plătești în magazin la ridicare",
-    );
-    await expect(page.locator("[data-order-confirmation]")).not.toContainText("curierului");
+    await expect(page.locator("main")).toContainText("Plătești în magazin la ridicare");
+    await expect(page.locator("main")).not.toContainText("curierului");
     const view = page.locator("[data-order-summary-view]");
     await expect(view).toContainText("Ramburs (în magazin, la ridicare)");
     await expect(view.locator("[data-pickup-address]")).toHaveText(

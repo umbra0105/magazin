@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, useTransition, type FormEvent } from "react";
 import type { CountyOption, LocalityOption, OfferPreview, OfferVariantOption } from "@ecom/core";
-import { Button, Input, Label, Select } from "@ecom/ui";
+import { Button, Input, Label, Select, buttonVariants } from "@ecom/ui";
 import {
   createOfferAction,
   listOfferLocalitiesAction,
@@ -88,7 +88,13 @@ export function OfferWizard({ counties, initialLocalities, initial, currency, lo
   const focus = (id: string) => document.getElementById(`${base}-${id}`)?.focus();
   const heading = useRef<HTMLHeadingElement>(null);
 
+  // focusul trece pe titlul pasului doar la schimbarea pasului, nu la încărcarea paginii
+  const firstRender = useRef(true);
   useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
     heading.current?.focus();
   }, [step]);
 
@@ -228,16 +234,10 @@ export function OfferWizard({ counties, initialLocalities, initial, currency, lo
         </h2>
         <LinkPanel link={created.link} emailQueued={created.emailQueued} />
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/admin/comenzi/oferte/${created.offerId}`}
-            className="inline-flex h-(--control-h) items-center rounded-md bg-brand px-4 text-brand-fg"
-          >
+          <Link href={`/admin/comenzi/oferte/${created.offerId}`} className={buttonVariants()}>
             {t.created.toOffer}
           </Link>
-          <Link
-            href="/admin/comenzi/oferte/nou"
-            className="inline-flex h-(--control-h) items-center rounded-md border border-line-input px-4"
-          >
+          <Link href="/admin/comenzi/oferte/nou" className={buttonVariants({ variant: "outline" })}>
             {t.created.another}
           </Link>
         </div>

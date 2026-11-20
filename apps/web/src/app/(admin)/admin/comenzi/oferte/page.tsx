@@ -4,6 +4,7 @@ import { can, listOffers, type OfferListView } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import {
   Badge,
+  buttonVariants,
   EmptyState,
   Pagination,
   RowHeader,
@@ -83,11 +84,7 @@ export default async function OffersPage({
             {o.views.all}
           </Link>
         </nav>
-        <Link
-          href="/admin/comenzi/oferte/nou"
-          className="inline-flex h-(--control-h) items-center rounded-md bg-brand px-4 text-brand-fg"
-          data-offer-new
-        >
+        <Link href="/admin/comenzi/oferte/nou" className={buttonVariants()} data-offer-new>
           {o.newOffer}
         </Link>
       </div>
