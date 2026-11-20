@@ -119,6 +119,36 @@ if (captureDir) {
     return { page, close: () => context.close() };
   }
 
+  /** Creează o ofertă din ecranul pas cu pas (fără email) și întoarce linkul (afișat o singură dată) și adresa detaliului. */
+  async function createOfferLink(
+    adminPage: Page,
+    email: string,
+  ): Promise<{ link: string; id: string }> {
+    await adminPage.goto("/admin/comenzi/oferte/nou");
+    await adminPage.getByLabel("Caută produs").fill(produs.sku);
+    await adminPage.getByRole("button", { name: "Adaugă" }).click();
+    await adminPage.locator("[data-offer-next]").click();
+    await adminPage.getByLabel("Email client").fill(email);
+    await adminPage.getByLabel("Telefon").fill("0722 123 456");
+    await adminPage.getByLabel("Nume complet").fill("Ion Popescu");
+    await adminPage.getByLabel("Județ").selectOption({ label: "Alba" });
+    await expect(adminPage.getByLabel("Localitate").locator("option")).not.toHaveCount(1);
+    await adminPage.getByLabel("Localitate").selectOption({ label: "Alba Iulia" });
+    await adminPage.getByLabel("Strada și numărul").fill("Str. Exemplu 1, bl. A");
+    await adminPage.getByLabel("Cod poștal").fill("510005");
+    await adminPage.locator("[data-offer-next]").click();
+    await adminPage.locator('input[name="offer"]').first().check();
+    await adminPage.locator("[data-offer-next]").click();
+    await adminPage.getByLabel("Trimite linkul pe email acum").uncheck();
+    await adminPage.getByRole("button", { name: "Creează oferta" }).click();
+    await expect(adminPage.locator("[data-offer-created]")).toBeVisible();
+    const link = await adminPage.locator("[data-offer-link]").inputValue();
+    const href = await adminPage
+      .getByRole("link", { name: "Deschide oferta" })
+      .getAttribute("href");
+    return { link, id: href!.split("/oferte/")[1]! };
+  }
+
   test("pregătește o comandă cu transfer, cu cerere de instalare, și o ofertă activă", async ({
     page,
     browser,
@@ -141,28 +171,22 @@ if (captureDir) {
       .click();
     await expect(admin.page.locator("[data-order-detail]")).toBeVisible();
     state.orderId = admin.page.url().split("/admin/comenzi/")[1]!.split("?")[0]!;
-    await admin.page.goto("/admin/comenzi/oferte/nou");
-    await admin.page.getByLabel("Caută produs").fill(produs.sku);
-    await admin.page.getByRole("button", { name: "Adaugă" }).click();
-    await admin.page.locator("[data-offer-next]").click();
-    await admin.page.getByLabel("Email client").fill(emailOf("oferta"));
-    await admin.page.getByLabel("Telefon").fill("0722 123 456");
-    await admin.page.getByLabel("Nume complet").fill("Ion Popescu");
-    await admin.page.getByLabel("Județ").selectOption({ label: "Alba" });
-    await expect(admin.page.getByLabel("Localitate").locator("option")).not.toHaveCount(1);
-    await admin.page.getByLabel("Localitate").selectOption({ label: "Alba Iulia" });
-    await admin.page.getByLabel("Strada și numărul").fill("Str. Exemplu 1, bl. A");
-    await admin.page.getByLabel("Cod poștal").fill("510005");
-    await admin.page.locator("[data-offer-next]").click();
-    await admin.page.locator('input[name="offer"]').first().check();
-    await admin.page.locator("[data-offer-next]").click();
-    await admin.page.getByLabel("Trimite linkul pe email acum").uncheck();
-    await admin.page.getByRole("button", { name: "Creează oferta" }).click();
-    await expect(admin.page.locator("[data-offer-created]")).toBeVisible();
-    state.offerLink = await admin.page.locator("[data-offer-link]").inputValue();
-    state.offerId = (await admin.page
-      .getByRole("link", { name: "Deschide oferta" })
-      .getAttribute("href"))!.split("/oferte/")[1]!;
+    const created = await createOfferLink(admin.page, emailOf("oferta"));
+    state.offerLink = created.link;
+    state.offerId = created.id;
+
+    // o ofertă învechită (stocul a dispărut înainte de plată): produce în clopoțel o notificare cu context și legătură (C3)
+    const stale = await createOfferLink(admin.page, emailOf("invechita"));
+    await setE2eCartStock(produs.variantId, "0");
+    const buyer = await (await browser.newContext()).newPage();
+    await buyer.goto(stale.link);
+    await buyer.getByRole("checkbox", { name: /Am citit și sunt de acord/ }).check();
+    await buyer.locator("[data-offer-pay-button]").click();
+    await expect(
+      buyer.getByRole("alert").filter({ hasText: "Oferta nu mai este disponibilă" }),
+    ).toBeVisible();
+    await buyer.context().close();
+    await setE2eCartStock(produs.variantId, "50");
     await admin.close();
   });
 
@@ -234,6 +258,26 @@ if (captureDir) {
           page.getByRole("heading", { name: "Oferta nu mai este disponibilă" }),
         ).toBeVisible();
         await shot(page, "vitrina-oferta-indisponibila", scheme, width);
+        await context.close();
+      });
+
+      // corecția C8: oferta deja transformată în comandă, cu plata cu cardul întreruptă, arată «Continuă plata»
+      test(`vitrină ${scheme} ${width}: oferta cu plata întreruptă`, async ({ browser }) => {
+        const admin = await adminPage(browser, "light", 1440, "/admin/comenzi/oferte/nou");
+        const created = await createOfferLink(admin.page, emailOf(`plata-${scheme}-${width}`));
+        await admin.close();
+        const context = await browser.newContext({
+          viewport: { width, height: width === 390 ? 844 : 900 },
+          colorScheme: scheme,
+        });
+        const page = await context.newPage();
+        await page.goto(created.link);
+        await page.getByRole("checkbox", { name: /Am citit și sunt de acord/ }).check();
+        await page.locator("[data-offer-pay-button]").click();
+        await expect(page).toHaveURL(/\/plata-demo\//);
+        await page.goto(created.link);
+        await expect(page.getByRole("heading", { name: "Comanda ta a fost creată" })).toBeVisible();
+        await shot(page, "vitrina-oferta-continua-plata", scheme, width);
         await context.close();
       });
     }
