@@ -5,8 +5,58 @@ import { OrderError } from "./order-errors";
 import { addOrderEvent, lockOrder, transitionOrder } from "./order-service";
 
 /**
- * Confirmarea plății prin transfer bancar (Faza 9: DOAR în serviciu și în teste; ecranul «marchează plătit» din admin vine în
- * Faza 11). Blochează comanda, transformă rezervarea de stoc în angajare (`confirmReservation`), marchează plata ca încasată și
+ * Aceeași confirmare, FĂRĂ tranzacție proprie: apelantul o rulează într-o tranzacție deja deschisă (de exemplu «Marchează plătit» din admin).
+ * O tranzacție imbricată în alta (a doua treaptă de `inTx` pe un client de tranzacție) lasă clientul Prisma într-o stare în care
+ * următoarea tranzacție nouă pică cu «Transaction already closed», deci apelanții din tranzacții folosesc această variantă.
+ */
+export async function confirmBankTransferPaymentInTx(
+  tx: Db,
+  orderId: string,
+  options: { now: Date; actorLabel?: string },
+): Promise<{ alreadyPaid: boolean }> {
+  const states = await lockOrder(tx, orderId);
+  if (!states) throw new OrderError("ORDER_NOT_FOUND", "Comanda nu există", { orderId });
+  const order = await tx.order.findUniqueOrThrow({
+    where: { id: orderId },
+    select: { paymentMethod: true, totalMinor: true },
+  });
+  if (order.paymentMethod !== "bank_transfer") {
+    throw new OrderError(
+      "ORDER_PAYMENT_NOT_PENDING",
+      "Comanda nu se plătește prin transfer bancar",
+    );
+  }
+  if (states.paymentStatus === "paid") return { alreadyPaid: true };
+  if (states.status !== "pending" || states.paymentStatus !== "pending") {
+    throw new OrderError(
+      "ORDER_PAYMENT_NOT_PENDING",
+      "Comanda nu mai așteaptă plata (e anulată sau în altă stare)",
+      { status: states.status, paymentStatus: states.paymentStatus },
+    );
+  }
+  const stock = new StockService({ db: tx, now: () => options.now });
+  await stock.confirmReservation({ refType: ORDER_REF_TYPE, refId: orderId });
+  await tx.payment.updateMany({
+    where: { orderId, status: "pending" },
+    data: { status: "paid", capturedAt: options.now },
+  });
+  await transitionOrder(
+    tx,
+    orderId,
+    { status: "confirmed", paymentStatus: "paid" },
+    {
+      type: "payment.confirmed",
+      message: "Plata prin transfer bancar a fost confirmată; stocul a fost angajat",
+      data: { amountMinor: order.totalMinor },
+      ...(options.actorLabel ? { actorLabel: options.actorLabel } : {}),
+    },
+    options.now,
+  );
+  return { alreadyPaid: false };
+}
+
+/**
+ * Confirmarea plății prin transfer bancar (ecranul «marchează plătit» din admin folosește varianta `InTx`). Blochează comanda, transformă rezervarea de stoc în angajare (`confirmReservation`), marchează plata ca încasată și
  * trece comanda în «confirmed». Idempotentă: o a doua confirmare nu face nimic.
  *
  * Dacă rezervarea a expirat și stocul s-a luat între timp, `confirmReservation` aruncă `STOCK_RESERVATION_LOST` și NU se
@@ -18,47 +68,7 @@ export async function confirmBankTransferPayment(
   orderId: string,
   options: { now: Date; actorLabel?: string },
 ): Promise<{ alreadyPaid: boolean }> {
-  return inTx(db, async (tx) => {
-    const states = await lockOrder(tx, orderId);
-    if (!states) throw new OrderError("ORDER_NOT_FOUND", "Comanda nu există", { orderId });
-    const order = await tx.order.findUniqueOrThrow({
-      where: { id: orderId },
-      select: { paymentMethod: true, totalMinor: true },
-    });
-    if (order.paymentMethod !== "bank_transfer") {
-      throw new OrderError(
-        "ORDER_PAYMENT_NOT_PENDING",
-        "Comanda nu se plătește prin transfer bancar",
-      );
-    }
-    if (states.paymentStatus === "paid") return { alreadyPaid: true };
-    if (states.status !== "pending" || states.paymentStatus !== "pending") {
-      throw new OrderError(
-        "ORDER_PAYMENT_NOT_PENDING",
-        "Comanda nu mai așteaptă plata (e anulată sau în altă stare)",
-        { status: states.status, paymentStatus: states.paymentStatus },
-      );
-    }
-    const stock = new StockService({ db: tx, now: () => options.now });
-    await stock.confirmReservation({ refType: ORDER_REF_TYPE, refId: orderId });
-    await tx.payment.updateMany({
-      where: { orderId, status: "pending" },
-      data: { status: "paid", capturedAt: options.now },
-    });
-    await transitionOrder(
-      tx,
-      orderId,
-      { status: "confirmed", paymentStatus: "paid" },
-      {
-        type: "payment.confirmed",
-        message: "Plata prin transfer bancar a fost confirmată; stocul a fost angajat",
-        data: { amountMinor: order.totalMinor },
-        ...(options.actorLabel ? { actorLabel: options.actorLabel } : {}),
-      },
-      options.now,
-    );
-    return { alreadyPaid: false };
-  });
+  return inTx(db, (tx) => confirmBankTransferPaymentInTx(tx, orderId, options));
 }
 
 export interface ExpireTransfersResult {

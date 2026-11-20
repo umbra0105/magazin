@@ -1,7 +1,7 @@
 import { inTx, type Db } from "../db-tx";
 import { flagAttention } from "../payments/payment-db";
 import { OrderError } from "./order-errors";
-import { confirmBankTransferPayment } from "./order-payments";
+import { confirmBankTransferPaymentInTx } from "./order-payments";
 import { addOrderEvent, lockOrder } from "./order-service";
 
 /**
@@ -73,7 +73,10 @@ export async function markBankTransferPaid(
         },
       );
     }
-    await confirmBankTransferPayment(tx, orderId, { now: input.now, actorLabel: input.actorLabel });
+    await confirmBankTransferPaymentInTx(tx, orderId, {
+      now: input.now,
+      actorLabel: input.actorLabel,
+    });
     const payment = await tx.payment.findFirstOrThrow({
       where: { orderId, status: "paid" },
       orderBy: { attemptNo: "asc" },
