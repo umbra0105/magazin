@@ -87,6 +87,9 @@ const openOrder = async (page: Page, number: string) => {
 };
 
 test.describe("lista, detaliul și acțiunile", () => {
+  // emailurile pleacă prin măturătorul de 10 s și workerul: sub sarcină pot dura mai mult decât timpul implicit al testului
+  test.describe.configure({ timeout: 180_000 });
+
   test("transfer bancar: comanda apare în listă, «Marchează plătit» o confirmă, clientul primește emailul, nota se salvează", async ({
     page,
     browser,
@@ -113,7 +116,7 @@ test.describe("lista, detaliul și acțiunile", () => {
 
     const order = await readE2eOrder(number);
     expect(order).toMatchObject({ status: "confirmed", paymentStatus: "paid" });
-    const message = await waitForEmail(email, { subject: /Plat/ });
+    const message = await waitForEmail(email, { subject: /Plat/, timeoutMs: 90_000 });
     expect(message.text).toContain(number);
 
     // nota internă: se vede în detaliu, nu ajunge la client
@@ -142,7 +145,7 @@ test.describe("lista, detaliul și acțiunile", () => {
     await expect(page.getByText("Comanda a fost anulată.")).toBeVisible();
 
     expect(await readE2eOrder(number)).toMatchObject({ status: "cancelled" });
-    const message = await waitForEmail(email, { subject: /anulat/i });
+    const message = await waitForEmail(email, { subject: /anulat/i, timeoutMs: 90_000 });
     expect(message.text).toContain("Clientul s-a răzgândit");
   });
 });

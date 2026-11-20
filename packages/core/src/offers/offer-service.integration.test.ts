@@ -355,7 +355,9 @@ describe("conversia: recalculare la plată", () => {
       // totalurile înghețate rămân cele văzute de client
       expect(offer.totalMinor).toBe(created.totals.totalMinor);
 
-      const notes = await h.tx.adminNotification.findMany({ where: { kind: "offer_stale" } });
+      const notes = await h.tx.adminNotification.findMany({
+        where: { kind: "offer_stale", dedupKey: `offer_stale:${created.offerId}` },
+      });
       expect(notes).toHaveLength(1);
       expect(notes[0]).toMatchObject({ permission: "orders.offers" });
       expect(notes[0]!.href).toBe(`/admin/comenzi/oferte/${created.offerId}`);
@@ -363,7 +365,11 @@ describe("conversia: recalculare la plată", () => {
 
       // o ofertă «stale» nu se plătește nici la încercarea următoare, și nu mai notifică a doua oară
       expect(await codeOf(offers.convert(created.token, CONSENT))).toBe("OFFER_STALE");
-      expect(await h.tx.adminNotification.count({ where: { kind: "offer_stale" } })).toBe(1);
+      expect(
+        await h.tx.adminNotification.count({
+          where: { kind: "offer_stale", dedupKey: `offer_stale:${created.offerId}` },
+        }),
+      ).toBe(1);
     });
   });
 

@@ -190,7 +190,14 @@ describe("livrarea linkului ofertei", () => {
             where: { offerId: offer.offerId, type: "offer.email_failed" },
           }),
         ).toBe(0);
-        expect(await h.tx.adminNotification.count({ where: { kind: "email_failed" } })).toBe(0);
+        expect(
+          await h.tx.adminNotification.count({
+            where: {
+              kind: "email_failed",
+              dedupKey: { startsWith: `offer_email_failed:${offer.offerId}:` },
+            },
+          }),
+        ).toBe(0);
 
         const last = await run({ attempt: 5, maxAttempts: 5 }).catch((e: unknown) => e as Error);
         expect((last as Error).message).not.toContain(TO);
@@ -199,7 +206,12 @@ describe("livrarea linkului ofertei", () => {
           where: { offerId: offer.offerId, type: "offer.email_failed" },
         });
         expect(events).toHaveLength(1);
-        const notes = await h.tx.adminNotification.findMany({ where: { kind: "email_failed" } });
+        const notes = await h.tx.adminNotification.findMany({
+          where: {
+            kind: "email_failed",
+            dedupKey: { startsWith: `offer_email_failed:${offer.offerId}:` },
+          },
+        });
         expect(notes).toHaveLength(1);
         expect(notes[0]).toMatchObject({
           permission: "orders.offers",
@@ -229,7 +241,14 @@ describe("livrarea linkului ofertei", () => {
             where: { offerId: offer.offerId, type: "offer.email_failed" },
           }),
         ).toBe(1);
-        expect(await h.tx.adminNotification.count({ where: { kind: "email_failed" } })).toBe(1);
+        expect(
+          await h.tx.adminNotification.count({
+            where: {
+              kind: "email_failed",
+              dedupKey: { startsWith: `offer_email_failed:${offer.offerId}:` },
+            },
+          }),
+        ).toBe(1);
       },
       { mailer: null },
     );
