@@ -273,3 +273,17 @@ Răspuns:
 păstrăm aceste rânduri (conțin adresa clientului)? Este suficient să dovedim trimiterea cu starea și momentul, sau trebuie păstrat și textul trimis?
 
 Răspuns:
+
+## 10. Oferta de plată cu link (adăugată în Faza 11)
+
+**10.1. Consimțământul la plata din link.** Clientul primește un link personal către o ofertă pregătită de magazin; pe pagină vede produsele, livrarea și totalul, bifează acordul (aceeași formulare provizorie ca la checkout: «Am citit și sunt de acord cu Termenii și condițiile și cu Politica de confidențialitate») și plătește cu cardul. Comanda se creează abia la plată, iar acordul, textul lui și versiunea se salvează pe comandă. Este suficientă această bifă pentru un contract încheiat la distanță, fiindcă oferta a fost pregătită la cererea clientului? Trebuie arătate pe pagina ofertei informațiile precontractuale complete (identitatea comerciantului, dreptul de retragere, termenul de livrare) înainte de bifă? Unele produse din piscine sunt făcute la comandă: se aplică excepția de la dreptul de retragere?
+
+Răspuns:
+
+**10.2. Valabilitatea ofertei și prețul.** Oferta e valabilă implicit 72 de ore; dacă prețul, transportul, TVA-ul sau stocul se schimbă înainte de plată, oferta devine «învechită» și nu se mai poate plăti (magazinul creează una nouă). Este corect ca magazinul să nu fie obligat la prețul din ofertă după schimbare? Ce mențiune trebuie să apară pe pagina ofertei și în email despre această regulă?
+
+Răspuns:
+
+**10.3. Linkul personal.** Linkul conține un jeton secret și este valabil până la expirare; oricine îl deține poate plăti oferta, dar nu o poate modifica. Emailul cu link se păstrează o singură dată (nu se păstrează jetonul, doar amprenta lui). Este nevoie de o mențiune de confidențialitate suplimentară?
+
+Răspuns:

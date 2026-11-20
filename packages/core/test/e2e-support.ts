@@ -2607,6 +2607,12 @@ export async function seedE2eCheckoutSettings(): Promise<void> {
 export async function removeE2eOrders(): Promise<number> {
   return withClient(async (db) => {
     const pattern = `%${E2E_ORDER_EMAIL_DOMAIN}`;
+    // ofertele de plată referă comanda rezultată (RESTRICT): se șterg întâi, odată cu notificările lor (liniile și jurnalul pleacă în cascadă)
+    await db.query(
+      `delete from admin_notification n where exists (select 1 from order_offer o where o.email like $1 and n."dedupKey" like concat('offer_%:', o.id, '%'))`,
+      [pattern],
+    );
+    await db.query(`delete from order_offer where email like $1`, [pattern]);
     await db.query(
       `delete from stock_commitment where "orderId" in (select id from customer_order where email like $1)`,
       [pattern],

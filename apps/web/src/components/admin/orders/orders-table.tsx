@@ -30,7 +30,7 @@ import {
   type BulkRow,
   type OrderPreview,
 } from "@/app/(admin)/admin/comenzi/lista-actions";
-import { formatQuantity, quantityFromTicks } from "@ecom/shared";
+import { formatQuantity, quantityFromTicks } from "@ecom/shared/quantity";
 import { BULK_LIMIT } from "@/lib/order-bulk";
 import { FULFILLMENT_STATUS_TONE, ORDER_STATUS_TONE, PAYMENT_STATUS_TONE } from "@/lib/order-tones";
 import { getMessages } from "@/messages";
