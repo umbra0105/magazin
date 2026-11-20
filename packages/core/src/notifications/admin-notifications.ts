@@ -14,6 +14,8 @@ export const NOTIFICATION_KINDS = [
   "webhook_stuck",
   "email_failed",
   "stock_sync_stale",
+  /** O ofertă de plată nu mai poate fi plătită (prețul, transportul, TVA-ul sau stocul s-au schimbat). */
+  "offer_stale",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
