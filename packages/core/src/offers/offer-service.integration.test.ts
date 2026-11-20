@@ -557,6 +557,74 @@ describe("ciclul de viață", () => {
     });
   });
 
+  it("prima trimitere: un singur link nou pentru emailul inițial; a doua cerere e refuzată, iar trimiterea eșuată o eliberează", async () => {
+    await withOffers(async ({ h, offers, draft }) => {
+      const a = await h.product();
+      const created = await offers.create(
+        draft([{ variantId: a.variantId, quantity: "1" }]),
+        ACTOR,
+      );
+      expect(
+        (await h.tx.orderOffer.findUniqueOrThrow({ where: { id: created.offerId } })).lastSentAt,
+      ).toBeNull();
+
+      const first = await offers.reissueToken(created.offerId, ACTOR, { firstSendOnly: true });
+      expect(first.token).not.toBe(created.token);
+      // linkul din creare nu mai merge, cel nou da
+      expect(await offers.publicView(created.token)).toBeNull();
+      expect(await offers.publicView(first.token)).not.toBeNull();
+      // trimiterea e «revendicată»: o a doua cerere de prima trimitere NU emite alt jeton (emailul primului rămâne valid)
+      expect(
+        await codeOf(offers.reissueToken(created.offerId, ACTOR, { firstSendOnly: true })),
+      ).toBe("OFFER_STATE_INVALID");
+      expect(await offers.publicView(first.token)).not.toBeNull();
+
+      // emailul n-a putut fi pus în coadă: trimiterea se eliberează și se poate încerca din nou
+      await offers.releaseFirstSend(created.offerId, first.claimedAt);
+      expect(
+        (await h.tx.orderOffer.findUniqueOrThrow({ where: { id: created.offerId } })).lastSentAt,
+      ).toBeNull();
+      const again = await offers.reissueToken(created.offerId, ACTOR, { firstSendOnly: true });
+      expect(again.token).not.toBe(first.token);
+
+      // după ce linkul a plecat, prima trimitere nu se mai poate repeta; urmează «Retrimite» (link nou, regula obișnuită)
+      await offers.recordSend(created.offerId, ACTOR);
+      expect(
+        await codeOf(offers.reissueToken(created.offerId, ACTOR, { firstSendOnly: true })),
+      ).toBe("OFFER_STATE_INVALID");
+      const resent = await offers.reissueToken(created.offerId, ACTOR);
+      expect(resent.token).not.toBe(again.token);
+    });
+  });
+
+  it("prima trimitere: doar oferta activă, neexpirată; eliberarea nu atinge o trimitere făcută între timp", async () => {
+    await withOffers(async ({ h, offers, draft, clock }) => {
+      const a = await h.product();
+      const created = await offers.create(
+        draft([{ variantId: a.variantId, quantity: "1" }]),
+        ACTOR,
+      );
+      const first = await offers.reissueToken(created.offerId, ACTOR, { firstSendOnly: true });
+      await offers.recordSend(created.offerId, ACTOR);
+      // o eliberare cu altă marcă de timp (o revendicare mai veche) nu șterge trimiterea reală
+      await offers.releaseFirstSend(created.offerId, new Date(first.claimedAt.getTime() - 1_000));
+      expect(
+        (await h.tx.orderOffer.findUniqueOrThrow({ where: { id: created.offerId } })).lastSentAt,
+      ).not.toBeNull();
+
+      const second = await offers.create(draft([{ variantId: a.variantId, quantity: "1" }]), ACTOR);
+      await offers.cancel(second.offerId, ACTOR);
+      expect(
+        await codeOf(offers.reissueToken(second.offerId, ACTOR, { firstSendOnly: true })),
+      ).toBe("OFFER_STATE_INVALID");
+      const third = await offers.create(draft([{ variantId: a.variantId, quantity: "1" }]), ACTOR);
+      clock.now = new Date(NOW.getTime() + 100 * 3_600_000);
+      expect(await codeOf(offers.reissueToken(third.offerId, ACTOR, { firstSendOnly: true }))).toBe(
+        "OFFER_STATE_INVALID",
+      );
+    });
+  });
+
   it("retrimiterea: jeton nou, cel vechi nu mai merge; valabilitatea nu se prelungește; doar oferta activă", async () => {
     await withOffers(async ({ h, offers, draft }) => {
       const a = await h.product({ physical: "10" });

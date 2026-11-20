@@ -626,6 +626,10 @@ export const adminOrdersRo = {
       convertedTo: "Comanda rezultată",
       staleNote:
         "Oferta nu mai poate fi plătită. Creează una nouă cu prețurile de acum (Duplică din comandă sau ofertă nouă).",
+      send: "Trimite linkul",
+      sendHelp:
+        "Trimitem clientului linkul pe email. Se generează un link nou: cel afișat la creare, dacă l-ai copiat, nu va mai merge. Valabilitatea ofertei nu se prelungește.",
+      sendConfirm: "Trimite pe email",
       reissue: "Retrimite (link nou)",
       reissueHelp:
         "Generează un link nou; linkul vechi nu va mai merge. Valabilitatea ofertei nu se prelungește.",
@@ -639,6 +643,7 @@ export const adminOrdersRo = {
       events: {
         "offer.created": "Oferta a fost creată",
         "offer.link_queued": "Linkul a fost pus la trimis pe email",
+        "offer.link_issued": "Link generat pentru prima trimitere (cel din creare nu mai merge)",
         "offer.link_reissued": "Link nou generat (cel vechi nu mai merge)",
         "offer.stale": "Oferta a devenit învechită",
         "offer.converted": "Oferta a fost plătită și a devenit comandă",

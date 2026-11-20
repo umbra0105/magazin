@@ -242,6 +242,56 @@ export const reissueOfferAction = withPermission(
   { action: "offer.reissue", entity: "order_offer" },
 );
 
+// --- prima trimitere pe email --------------------------------------------------------------------------------------------
+
+export type SendOfferResult = { ok: true; link: string; emailQueued: boolean } | Fail;
+
+/**
+ * «Trimite linkul» (oferta nu a plecat încă pe email): generează un link nou (cel din creare, dacă a fost copiat, nu mai merge) și
+ * îl trimite pe emailul clientului. Aceleași reguli ca la retrimitere: jetonul din bază se schimbă o singură dată (prima trimitere
+ * se «revendică» atomic, deci un dublu-click sau doi admini nu produc două emailuri cu linkuri diferite), emailul trece prin aceeași
+ * coadă (un singur rând de trimitere per eveniment), iar auditul înregistrează trimiterea fără adresă sau jeton. Dacă emailul nu poate
+ * fi pus în coadă, prima trimitere se eliberează și adminul poate încerca din nou.
+ */
+export const sendOfferAction = withPermission(
+  "orders.offers",
+  async (raw: unknown, subject): Promise<SendOfferResult> => {
+    const parsed = z.strictObject({ offerId: id }).safeParse(raw);
+    if (!parsed.success) return { ok: false, code: "invalid" };
+    const offers = getOfferService();
+    const actor = { id: subject.userId, label: subject.email };
+    try {
+      const issued = await offers.reissueToken(parsed.data.offerId, actor, { firstSendOnly: true });
+      let emailQueued = false;
+      try {
+        const row = await getDb().orderOffer.findUniqueOrThrow({
+          where: { id: parsed.data.offerId },
+          select: { email: true },
+        });
+        emailQueued = await queueOfferLink({
+          offerId: parsed.data.offerId,
+          to: row.email,
+          token: issued.token,
+        });
+      } catch (error) {
+        await offers.releaseFirstSend(parsed.data.offerId, issued.claimedAt);
+        throw error;
+      }
+      if (emailQueued) await offers.recordSend(parsed.data.offerId, actor);
+      else await offers.releaseFirstSend(parsed.data.offerId, issued.claimedAt);
+      await audit(subject, "offer.send", parsed.data.offerId, { emailQueued });
+      return {
+        ok: true,
+        link: buildOfferLink(loadEnv().APP_URL, issued.token),
+        emailQueued,
+      };
+    } catch (error) {
+      return failure(error);
+    }
+  },
+  { action: "offer.send", entity: "order_offer" },
+);
+
 // --- anulare ----------------------------------------------------------------------------------------------------------
 
 export type CancelOfferResult = { ok: true } | Fail;

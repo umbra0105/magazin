@@ -979,24 +979,46 @@ export class OfferService {
     );
   }
 
-  /** Jeton nou (cel vechi nu mai merge); valabilitatea oferei NU se prelungește. Doar pentru o ofertă activă. */
+  /**
+   * Jeton nou (cel vechi nu mai merge); valabilitatea ofertei NU se prelungește. Doar pentru o ofertă activă.
+   *
+   * `firstSendOnly` (butonul «Trimite linkul», când linkul nu a plecat încă pe email): jetonul nou se emite DOAR dacă oferta nu a
+   * fost trimisă niciodată, iar în aceeași instrucțiune SQL trimiterea e «revendicată» (`lastSentAt`): două cereri simultane nu pot
+   * emite două jetoane (emailul primului ar ajunge cu un link deja invalidat). Dacă emailul nu poate fi pus în coadă, apelantul
+   * eliberează revendicarea cu `releaseFirstSend`.
+   */
   async reissueToken(
     offerId: string,
     actor: OfferActor,
-  ): Promise<{ token: string; expiresAt: Date }> {
+    options: { firstSendOnly?: boolean } = {},
+  ): Promise<{ token: string; expiresAt: Date; claimedAt: Date }> {
     const now = this.now();
     const token = this.makeToken();
+    const first = options.firstSendOnly === true;
     const expiresAt = await inTx(this.deps.db, async (tx) => {
       const changed = await tx.orderOffer.updateMany({
-        where: { id: offerId, status: "active", expiresAt: { gt: now } },
-        data: { tokenHash: hashOfferToken(token) },
+        where: {
+          id: offerId,
+          status: "active",
+          expiresAt: { gt: now },
+          ...(first ? { lastSentAt: null } : {}),
+        },
+        data: { tokenHash: hashOfferToken(token), ...(first ? { lastSentAt: now } : {}) },
       });
-      if (changed.count !== 1) await this.rejectState(tx, offerId, "mai poate fi retrimisă");
+      if (changed.count !== 1) {
+        await this.rejectState(
+          tx,
+          offerId,
+          first ? "mai poate fi trimisă pentru prima dată" : "mai poate fi retrimisă",
+        );
+      }
       await this.event(
         tx,
         offerId,
-        "offer.link_reissued",
-        "Link nou generat (cel vechi nu mai merge)",
+        first ? "offer.link_issued" : "offer.link_reissued",
+        first
+          ? "Link generat pentru prima trimitere (cel din creare nu mai merge)"
+          : "Link nou generat (cel vechi nu mai merge)",
         actor.label,
       );
       const row = await tx.orderOffer.findUniqueOrThrow({
@@ -1005,7 +1027,15 @@ export class OfferService {
       });
       return row.expiresAt;
     });
-    return { token, expiresAt };
+    return { token, expiresAt, claimedAt: now };
+  }
+
+  /** Eliberează revendicarea primei trimiteri (emailul n-a putut fi pus în coadă); nu atinge o trimitere făcută între timp. */
+  async releaseFirstSend(offerId: string, claimedAt: Date): Promise<void> {
+    await this.deps.db.orderOffer.updateMany({
+      where: { id: offerId, status: "active", lastSentAt: claimedAt },
+      data: { lastSentAt: null },
+    });
   }
 
   /** Notează că linkul a fost pus la trimis pe email (fără adresă și fără jeton în jurnal). */

@@ -72,7 +72,9 @@ export default async function OfferDetailPage({ params }: { params: Promise<{ id
           </Link>
         </p>
       )}
-      {offer.status === "active" && <OfferDetailActions offerId={offer.id} />}
+      {offer.status === "active" && (
+        <OfferDetailActions offerId={offer.id} neverSent={offer.lastSentAt === null} />
+      )}
 
       <Section id="customer" title={o.detail.customer}>
         {offer.customer ? (

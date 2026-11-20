@@ -533,12 +533,51 @@ test.describe("anulare, retrimitere și răspuns identic", () => {
     await client.context().close();
   });
 
+  test("prima trimitere: «Trimite linkul» (nu «Retrimite»), un singur email, linkul din creare nu mai merge", async ({
+    page,
+    browser,
+  }) => {
+    const email = emailOf("prima");
+    await login(page, manager, "/admin/comenzi/oferte/nou");
+    const { link, detail } = await createOffer(page, produs, email);
+    await page.goto(detail);
+    // linkul nu a plecat niciodată pe email: acțiunea principală e «Trimite linkul», fără «Retrimite»
+    const actions = page.locator("[data-offer-actions]");
+    await expect(actions.getByRole("button", { name: "Trimite linkul" })).toBeVisible();
+    await expect(actions.getByRole("button", { name: /Retrimite/ })).toHaveCount(0);
+    await expect(actions.getByRole("button")).toHaveCount(2);
+    await actions.getByRole("button", { name: "Trimite linkul" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Trimite pe email" }).click();
+    await expect(page.getByText("Linkul a fost pus la trimis pe email.")).toBeVisible();
+    const fresh = await page.locator("[data-offer-link]").inputValue();
+    expect(fresh).not.toBe(link);
+    // după trimitere apare «Retrimite (link nou)», iar «Trimite linkul» dispare
+    await expect(actions.getByRole("button", { name: "Retrimite (link nou)" })).toBeVisible();
+    await expect(actions.getByRole("button", { name: "Trimite linkul" })).toHaveCount(0);
+
+    const message = await waitForEmail(email, { subject: /^Oferta OF-/ });
+    const fromEmail = /https?:\/\/[^\s\])"<>]+\/oferta\/[A-Za-z0-9_-]{43}/.exec(message.text)?.[0];
+    expect(fromEmail).toBe(fresh);
+    const client = await (await browser.newContext()).newPage();
+    await client.goto(link);
+    await expect(
+      client.getByRole("heading", { name: "Oferta nu mai este disponibilă" }),
+    ).toBeVisible();
+    await client.goto(fresh);
+    await expect(client.locator("[data-offer-total]")).toContainText("224,00");
+    await client.context().close();
+  });
+
   test("retrimiterea dă un link nou, iar cel vechi nu mai merge", async ({ page, browser }) => {
     await login(page, manager, "/admin/comenzi/oferte/nou");
-    const { link, detail } = await createOffer(page, produs, emailOf("retrimis"));
+    // oferta a plecat deja pe email: abia acum există «Retrimite (link nou)»
+    const { link, detail } = await createOffer(page, produs, emailOf("retrimis"), {
+      sendEmail: true,
+    });
     await page.goto(detail);
     // linkul nu mai poate fi citit din pagina detaliului
     await expect(page.locator("[data-offer-link]")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Trimite linkul" })).toHaveCount(0);
     await page.getByRole("button", { name: "Retrimite (link nou)" }).click();
     await page.getByRole("dialog").getByLabel("Trimite și pe email").uncheck();
     await page.getByRole("button", { name: "Generează link nou" }).click();
