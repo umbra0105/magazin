@@ -3,14 +3,12 @@
  * într-un proiect Playwright propriu, după proiectul principal, ca alte fișiere să nu schimbe catalogul între previzualizare
  * și aplicare. Tot aici: `appearance-editor.spec.ts`, care schimbă setări comune întregii aplicații (tema, variantele de pagină,
  * modul de mentenanță, care face ca ORICE pagină a vitrinei să răspundă 503): alte specuri care vizitează vitrina nu au voie să ruleze
- * în paralel cu el. `cart-free-shipping.spec.ts` schimbă pragul de transport gratuit, vizibil în coșul oricărui client. `offers.spec.ts` și `orders-admin.spec.ts` (Faza 11) lucrează cu LISTELE comune de comenzi și de oferte din admin și cu curățarea globală a comenzilor E2E (`removeE2eOrders`): rulate în paralel cu alte specuri de comenzi, o comandă în lucru ar putea fi ștearsă de curățarea altui fișier. Motivul și regula: `test/architecture/e2e-global-state.architecture.test.ts`.
+ * în paralel cu el. `cart-free-shipping.spec.ts` schimbă pragul de transport gratuit, vizibil în coșul oricărui client.
  */
 export const GLOBAL_STATE_SPEC_FILES: readonly string[] = [
   "stock.spec.ts",
   "appearance-editor.spec.ts",
   "cart-free-shipping.spec.ts",
-  "offers.spec.ts",
-  "orders-admin.spec.ts",
 ];
 
 const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -18,4 +16,16 @@ const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\
 /** Potrivește calea completă a unui fișier din listă (separator `/` sau `\`), nu și sufixe ca `.bak`. */
 export const globalStateSpecPattern = new RegExp(
   `[\\\\/](?:${GLOBAL_STATE_SPEC_FILES.map(escape).join("|")})$`,
+);
+
+/**
+ * Fluxurile de comenzi și de oferte din admin (Faza 11): lucrează cu LISTELE comune de comenzi și de oferte și cu curățarea globală
+ * a comenzilor E2E (`removeE2eOrders`), deci rulează într-un proiect propriu, după toate celelalte, într-un singur fișier (serial):
+ * în paralel cu alte specuri, o comandă în lucru ar putea fi ștearsă de curățarea altui fișier, iar specurile cu plan pe tot
+ * catalogul mută stocul tuturor variantelor.
+ */
+export const ORDER_FLOW_SPEC_FILES: readonly string[] = ["orders-offers.spec.ts"];
+
+export const orderFlowSpecPattern = new RegExp(
+  `[\\\\/](?:${ORDER_FLOW_SPEC_FILES.map(escape).join("|")})$`,
 );
