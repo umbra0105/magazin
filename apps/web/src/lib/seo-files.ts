@@ -50,6 +50,7 @@ export const ROBOTS_DISALLOWED = [
   "/cos",
   "/checkout",
   "/comanda",
+  "/oferta",
   "/autentificare",
   "/inregistrare",
   "/recuperare-parola",

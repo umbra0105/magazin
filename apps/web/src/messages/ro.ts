@@ -3819,6 +3819,53 @@ export const ro = {
         VALIDATION_ERROR: "Verifică datele introduse.",
       },
     },
+    /** Oferta de plată (Faza 11): pagina de la linkul primit de la magazin. */
+    offer: {
+      pageTitle: "Ofertă de plată",
+      title: (number: string) => `Oferta ${number}`,
+      lede: "Ți-am pregătit această ofertă. Verifică produsele, livrarea și totalul, apoi plătește cu cardul.",
+      validUntil: (when: string) => `Valabilă până la ${when}`,
+      productsHeading: "Produse",
+      quantity: "Cantitate",
+      unitPrice: "Preț unitar",
+      lineTotal: "Total",
+      onOrder: (days: number) => `La comandă, aproximativ ${days} zile`,
+      limited: "Stoc limitat",
+      totalsHeading: "Totaluri",
+      products: "Produse",
+      shipping: "Livrare",
+      shippingFree: "Gratuit",
+      vat: "din care TVA",
+      total: "Total de plată (TVA inclus)",
+      deliveryHeading: "Livrare",
+      deliveryCourier: (name: string, line: string) => `${name}, ${line}`,
+      deliveryPickup: "Ridicare personală de la sediul magazinului",
+      consentError: "Bifează acordul ca să poți plăti.",
+      pay: "Plătește cu cardul",
+      paying: "Se pornește plata…",
+      paymentNote:
+        "Plata se face pe pagina securizată a procesatorului de plăți. Comanda se creează abia când plătești.",
+      draftNotice: "Textele juridice sunt în curs de redactare.",
+      converted: {
+        title: "Oferta a fost deja folosită",
+        body: "Pentru această ofertă s-a pornit deja o comandă. Poți continua către plată sau poți verifica comanda în urmărire.",
+        continue: "Continuă către plată",
+      },
+      unavailable: {
+        title: "Oferta nu mai este disponibilă",
+        body: "Linkul nu mai este valabil. Contactează magazinul și îți pregătim o ofertă nouă.",
+        home: "Înapoi în magazin",
+      },
+      errors: {
+        consent: "Bifează acordul ca să poți plăti.",
+        unavailable:
+          "Oferta nu mai este disponibilă. Contactează magazinul și îți pregătim una nouă.",
+        cardUnavailable:
+          "Plata cu cardul nu este disponibilă acum. Încearcă mai târziu sau contactează magazinul.",
+        rateLimited: "Prea multe încercări. Așteaptă un minut și încearcă din nou.",
+        failed: "Nu am putut porni plata. Încearcă din nou.",
+      },
+    },
     /** Confirmarea comenzii și urmărirea ei (fără cont). */
     /** Plata cu cardul pe vitrină (Faza 10): pagina de retur și de așteptare, reîncercarea și pagina DEMO. */
     cardPayment: {
