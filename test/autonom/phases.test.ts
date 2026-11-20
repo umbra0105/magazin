@@ -22,6 +22,7 @@ const MODE_A = [
   "20",
   "poarta-draft",
   "ci-joburi",
+  "ci-e2e-paralel",
 ];
 const MODE_B = ["8", "9", "10", "13", "14b", "15", "15b"];
 const MODE_C = ["6", "7", "18", "22"];
@@ -125,6 +126,31 @@ describe("faza ci-joburi (mini-fază, modul A)", () => {
 
   it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
     const branch = branchOf("ci-joburi");
+    expect(isPhaseBranch(branch)).toBe(true);
+    const problems = approvalsGuardProblems({
+      branch,
+      baseAvailable: true,
+      ci: false,
+      touchingCommits: ["abc1234"],
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("abc1234");
+  });
+});
+
+describe("faza ci-e2e-paralel (mini-fază, modul A)", () => {
+  it("modul A; ramura faza-ci-e2e-paralel, etichetele pre-faza-ci-e2e-paralel și faza-ci-e2e-paralel-completa", () => {
+    expect(modeOf("ci-e2e-paralel")).toBe("A");
+    expect(branchOf("ci-e2e-paralel")).toBe("faza-ci-e2e-paralel");
+    expect(tagsOf("ci-e2e-paralel")).toEqual({
+      pre: "pre-faza-ci-e2e-paralel",
+      done: "faza-ci-e2e-paralel-completa",
+    });
+    expect(isValidPhaseId("ci-e2e-paralel")).toBe(true);
+  });
+
+  it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
+    const branch = branchOf("ci-e2e-paralel");
     expect(isPhaseBranch(branch)).toBe(true);
     const problems = approvalsGuardProblems({
       branch,

@@ -263,7 +263,8 @@ test.describe("clopoțelul", () => {
   test("clopoțelul se deschide și arată lista (goală sau cu notificări)", async ({ page }) => {
     await login(page, manager, "/admin/comenzi");
     await page.locator("[data-notifications-bell]").click();
-    await expect(page.locator("[data-notifications-list]")).toBeVisible();
+    // panoul (`<dialog>` nativ) devine vizibil DOAR după click, cu listă sau cu «Nicio notificare.»; marcajul listei există doar când sunt notificări
+    await expect(page.getByRole("dialog", { name: "Notificări" })).toBeVisible();
   });
 });
 

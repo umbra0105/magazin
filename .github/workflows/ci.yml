@@ -33,7 +33,7 @@ env:
   S3_FORCE_PATH_STYLE: "true"
   TEST_S3_BUCKET: ecom-test
 
-# Trei joburi paralele (fiecare cu serviciile lui) și un job final, `check`, care le agregă. Numele `check` e verificarea de stare
+# Cinci joburi paralele (fiecare cu serviciile lui; E2E e împărțit în shard-uri ale proiectului principal, proiectele izolate și S3) și un job final, `check`, care le agregă. Numele `check` e verificarea de stare
 # cerută de rulesetul de pe main și de poarta de îmbinare: nu se redenumește. Niciun job nu are `if`/`paths` care să-l sară
 # (un job sărit nu e «verde» pentru poartă); structura e păzită de test/architecture/ci-workflow.architecture.test.ts.
 jobs:
@@ -133,8 +133,113 @@ jobs:
       - name: Teste de integrare (Postgres + Redis + MinIO)
         run: pnpm test:integration
 
-  # Postgres + Redis + Mailpit + MinIO. Jobul cel mai lung (build + E2E + E2E pe S3); își pregătește singur baza de test (`ecom_test`).
-  e2e:
+  # E2E, proiectul principal `chromium`, împărțit în 3 shard-uri (`--shard`), cu `fail-fast: false` ca toate să raporteze. Fiecare shard
+  # are propriile servicii și propria bază de test, deci nu interferează cu celelalte.
+  e2e-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
+    services:
+      postgres:
+        image: postgres:16.15
+        env:
+          POSTGRES_USER: ecom
+          POSTGRES_PASSWORD: ecom_ci
+          POSTGRES_DB: ecom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ecom -d ecom"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4.11
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      # SMTP de test (1025) + API HTTP (8025): testele E2E cu email citesc mesajele de aici.
+      mailpit:
+        image: axllent/mailpit:v1.31.4
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Versiunea pnpm vine din câmpul `packageManager` din package.json
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          # cel puțin 24.7.0 (crypto.argon2 pentru parole); `engine-strict` din .npmrc oprește instalarea pe un Node mai vechi
+          node-version: ">=24.7.0 <25"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Migrații DB (baza aplicației, pentru build și E2E)
+        run: pnpm --filter @ecom/db db:deploy
+
+      # Serverul E2E (`webServer` din Playwright) pre-randează aplicația pe `ecom_test` ÎNAINTE de `globalSetup`: fiecare job E2E are
+      # propria bază (propriul Postgres) și o creează singur, cu aceeași funcție ca `globalSetup` (refuză orice bază fără "test"
+      # în nume; idempotentă).
+      - name: Pregătește baza de test E2E (ecom_test, creată și migrată)
+        run: >-
+          node --import tsx -e "import('./packages/db/test/prepare-test-database.ts').then((m) =>
+          m.prepareTestDatabase(process.env.TEST_DATABASE_URL, process.env.TEST_REDIS_URL, process.cwd() + '/packages/db'))"
+
+      # MinIO nu poate fi în `services:` (acolo nu se poate da comanda `server /data`).
+      # Aceeași imagine, fixată prin digest, ca în docker/docker-compose.dev.yml.
+      - name: Pornește MinIO (storage S3 de test)
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=ecom_minio \
+            -e MINIO_ROOT_PASSWORD=ecom_minio_ci \
+            cgr.dev/chainguard/minio@sha256:59667194421209c2c1eacbe761e24787e047985c5dfa96b15da9b59fe9b55cd0 \
+            server /data
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:9000/minio/health/ready; then exit 0; fi
+            sleep 2
+          done
+          docker logs minio
+          exit 1
+
+      - name: Instalează browserul Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Teste E2E (proiectul principal, shard)
+        run: pnpm test:e2e --project=chromium --shard=${{ matrix.shard }}/3
+
+      - name: Raport Playwright (la eșec)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-chromium-shard-${{ matrix.shard }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+  # E2E, proiectele izolate (specuri cu stare globală, apoi fluxurile de comenzi), în această ordine și serial, ca local: `--no-deps`
+  # nu mai pornește proiectul principal (rulează în `e2e-chromium`), iar ordinea dintre cele două proiecte selectate se păstrează.
+  e2e-isolated:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -191,9 +296,107 @@ jobs:
       - name: Migrații DB (baza aplicației, pentru build și E2E)
         run: pnpm --filter @ecom/db db:deploy
 
-      # Serverul E2E (`webServer` din Playwright) pre-randează aplicația pe `ecom_test` ÎNAINTE de `globalSetup`. În jobul unic de
-      # dinainte baza exista deja, creată de testele de integrare; acum jobul e independent și o creează singur, cu aceeași funcție
-      # ca `globalSetup` (refuză orice bază fără "test" în nume; idempotentă).
+      # Serverul E2E (`webServer` din Playwright) pre-randează aplicația pe `ecom_test` ÎNAINTE de `globalSetup`: fiecare job E2E are
+      # propria bază (propriul Postgres) și o creează singur, cu aceeași funcție ca `globalSetup` (refuză orice bază fără "test"
+      # în nume; idempotentă).
+      - name: Pregătește baza de test E2E (ecom_test, creată și migrată)
+        run: >-
+          node --import tsx -e "import('./packages/db/test/prepare-test-database.ts').then((m) =>
+          m.prepareTestDatabase(process.env.TEST_DATABASE_URL, process.env.TEST_REDIS_URL, process.cwd() + '/packages/db'))"
+
+      # MinIO nu poate fi în `services:` (acolo nu se poate da comanda `server /data`).
+      # Aceeași imagine, fixată prin digest, ca în docker/docker-compose.dev.yml.
+      - name: Pornește MinIO (storage S3 de test)
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=ecom_minio \
+            -e MINIO_ROOT_PASSWORD=ecom_minio_ci \
+            cgr.dev/chainguard/minio@sha256:59667194421209c2c1eacbe761e24787e047985c5dfa96b15da9b59fe9b55cd0 \
+            server /data
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:9000/minio/health/ready; then exit 0; fi
+            sleep 2
+          done
+          docker logs minio
+          exit 1
+
+      - name: Instalează browserul Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Teste E2E (proiecte izolate, stare globală și comenzi)
+        run: pnpm test:e2e --project=chromium-global-state --project=chromium-orders --no-deps
+
+      - name: Raport Playwright (la eșec)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-isolated
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+  # E2E pe S3 (MinIO), plus build-ul de producție obișnuit (fără harness), care nu mai încarcă jobul cel mai lung.
+  e2e-s3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16.15
+        env:
+          POSTGRES_USER: ecom
+          POSTGRES_PASSWORD: ecom_ci
+          POSTGRES_DB: ecom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ecom -d ecom"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4.11
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      # SMTP de test (1025) + API HTTP (8025): testele E2E cu email citesc mesajele de aici.
+      mailpit:
+        image: axllent/mailpit:v1.31.4
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Versiunea pnpm vine din câmpul `packageManager` din package.json
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          # cel puțin 24.7.0 (crypto.argon2 pentru parole); `engine-strict` din .npmrc oprește instalarea pe un Node mai vechi
+          node-version: ">=24.7.0 <25"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Migrații DB (baza aplicației, pentru build și E2E)
+        run: pnpm --filter @ecom/db db:deploy
+
+      # Serverul E2E (`webServer` din Playwright) pre-randează aplicația pe `ecom_test` ÎNAINTE de `globalSetup`: fiecare job E2E are
+      # propria bază (propriul Postgres) și o creează singur, cu aceeași funcție ca `globalSetup` (refuză orice bază fără "test"
+      # în nume; idempotentă).
       - name: Pregătește baza de test E2E (ecom_test, creată și migrată)
         run: >-
           node --import tsx -e "import('./packages/db/test/prepare-test-database.ts').then((m) =>
@@ -221,12 +424,8 @@ jobs:
       - name: Instalează browserul Playwright
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Teste E2E
-        run: pnpm test:e2e
-
       # Upload pe driverul S3 (MinIO de mai sus): server E2E cu STORAGE_DRIVER=s3, bucketul de test
-      # (TEST_S3_BUCKET, cu "test" în nume) creat de `storage:init`. Rulează după suita obișnuită, cu un
-      # singur server de test pe rând.
+      # (TEST_S3_BUCKET, cu "test" în nume) creat de `storage:init`.
       - name: Test E2E pe S3 (MinIO)
         run: pnpm test:e2e:s3
 
@@ -234,7 +433,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-s3
           path: |
             playwright-report
             test-results
@@ -245,21 +444,26 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [lint-unit, integration, e2e]
+    needs: [lint-unit, integration, e2e-chromium, e2e-isolated, e2e-s3]
     if: always()
 
     env:
       LINT_UNIT: ${{ needs.lint-unit.result }}
       INTEGRATION: ${{ needs.integration.result }}
-      E2E: ${{ needs.e2e.result }}
+      E2E_CHROMIUM: ${{ needs.e2e-chromium.result }}
+      E2E_ISOLATED: ${{ needs.e2e-isolated.result }}
+      E2E_S3: ${{ needs.e2e-s3.result }}
 
     steps:
       - name: Toate joburile au trecut
         run: |
           echo "lint-unit: $LINT_UNIT"
           echo "integration: $INTEGRATION"
-          echo "e2e: $E2E"
-          if [ "$LINT_UNIT" != "success" ] || [ "$INTEGRATION" != "success" ] || [ "$E2E" != "success" ]; then
+          echo "e2e-chromium: $E2E_CHROMIUM"
+          echo "e2e-isolated: $E2E_ISOLATED"
+          echo "e2e-s3: $E2E_S3"
+          if [ "$LINT_UNIT" != "success" ] || [ "$INTEGRATION" != "success" ] || [ "$E2E_CHROMIUM" != "success" ] ||
+             [ "$E2E_ISOLATED" != "success" ] || [ "$E2E_S3" != "success" ]; then
             echo "Cel puțin un job nu s-a terminat cu succes."
             exit 1
           fi

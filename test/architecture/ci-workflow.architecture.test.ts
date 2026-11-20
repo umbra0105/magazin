@@ -1,19 +1,25 @@
+import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
 /**
- * Structura CI-ului (`.github/workflows/ci.yml`, mini-faza `ci-joburi`): jobul unic `check` e împărțit în joburi paralele
- * (`lint-unit`, `integration`, `e2e`), iar `check` rămâne numele verificării de stare cerute de rulesetul de pe `main`
- * (job final de agregare). Testul citește fișierul TEXTUAL, fără o bibliotecă YAML (nu avem una ca dependență directă),
- * pe structura pe care o are fișierul: chei la 0, 2 și 4 spații, pași la 6.
+ * Structura CI-ului (`.github/workflows/ci.yml`, mini-fazele `ci-joburi` și `ci-e2e-paralel`): jobul unic `check` e împărțit în
+ * joburi paralele (`lint-unit`, `integration`, iar E2E în trei: `e2e-chromium` pe shard-uri, `e2e-isolated` cu proiectele de stare
+ * globală și `e2e-s3`), iar `check` rămâne numele verificării de stare cerute de rulesetul de pe `main` (job final de agregare).
+ * Testul citește fișierul TEXTUAL, fără o bibliotecă YAML (nu avem una ca dependență directă), pe structura pe care o are
+ * fișierul: chei la 0, 2 și 4 spații, pași la 6.
  *
  * Ce păzește:
- *  - fiecare pas de lucru din vechiul `check` apare exact o dată (MinIO: o dată în fiecare job care îl cere), fără pași în plus;
+ *  - fiecare pas de lucru din vechiul `check` apare în continuare, fără pași în plus (pașii de pregătire E2E, în fiecare job E2E);
  *  - jobul `check` agregă TOATE celelalte joburi (`needs` + `if: always()`) și pică dacă oricare nu e `success`;
  *  - niciun job și niciun pas nu poate fi SĂRIT (`if`, `paths`, `continue-on-error`): un job sărit nu e «verde» pentru poartă
- *    (docs/20 §5, condiția 4); singura excepție e raportul Playwright, `if: failure()`, în jobul e2e;
+ *    (docs/20 §5, condiția 4); singura excepție e raportul Playwright, `if: failure()`, în joburile E2E; matricea (`strategy`)
+ *    e permisă DOAR în `e2e-chromium`, cu `fail-fast: false`;
+ *  - ACOPERIREA E2E: shard-urile + proiectele izolate + S3 dau exact aceleași teste ca rularea locală (`playwright test --list`),
+ *    fără test pierdut sau dublat;
  *  - triggerele, concurența, versiunile fixate și valorile de mediu «doar CI» sunt neschimbate.
  */
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -172,6 +178,32 @@ const MINIO = "Pornește MinIO (storage S3 de test)";
  */
 const PREPARE_TEST_DB = "Pregătește baza de test E2E (ecom_test, creată și migrată)";
 
+/** Numărul de shard-uri ale proiectului principal `chromium` (matricea din `e2e-chromium` și numitorul din `--shard`). */
+const SHARDS = 3;
+const E2E_JOBS = ["e2e-chromium", "e2e-isolated", "e2e-s3"];
+const REPORT_STEP = "Raport Playwright (la eșec)";
+const CHROMIUM_RUN = "Teste E2E (proiectul principal, shard)";
+const ISOLATED_RUN = "Teste E2E (proiecte izolate, stare globală și comenzi)";
+const S3_RUN = "Test E2E pe S3 (MinIO)";
+const CHROMIUM_CMD = `pnpm test:e2e --project=chromium --shard=\${{ matrix.shard }}/${SHARDS}`;
+const ISOLATED_CMD =
+  "pnpm test:e2e --project=chromium-global-state --project=chromium-orders --no-deps";
+
+/**
+ * Pașii de pregătire comuni ai joburilor E2E: fiecare job are propriile servicii și PROPRIA bază de test (`prepareTestDatabase`:
+ * serverul E2E se construiește pe `ecom_test` înaintea `globalSetup`), baza aplicației migrată (ca înainte) și propriul MinIO
+ * (păstrat peste tot: specurile nu sunt dovedite fără el, iar costul e de câteva secunde).
+ */
+const E2E_PREPARE: ReadonlyArray<readonly [string, string]> = [
+  ["Migrații DB (baza aplicației, pentru build și E2E)", "pnpm --filter @ecom/db db:deploy"],
+  [PREPARE_TEST_DB, "prepareTestDatabase"],
+  [MINIO, "docker run"],
+];
+const PLAYWRIGHT_INSTALL: readonly [string, string] = [
+  "Instalează browserul Playwright",
+  "pnpm exec playwright install --with-deps chromium",
+];
+
 /** Pașii de lucru ai vechiului `check`, în ordine, pe jobul căruia îi aparțin acum: [nume, comandă sau `uses`]. */
 const WORK: Readonly<Record<string, ReadonlyArray<readonly [string, string]>>> = {
   "lint-unit": [
@@ -185,25 +217,33 @@ const WORK: Readonly<Record<string, ReadonlyArray<readonly [string, string]>>> =
     [MINIO, "docker run"],
     ["Teste de integrare (Postgres + Redis + MinIO)", "pnpm test:integration"],
   ],
-  e2e: [
-    ["Migrații DB (baza aplicației, pentru build și E2E)", "pnpm --filter @ecom/db db:deploy"],
-    [PREPARE_TEST_DB, "prepareTestDatabase"],
-    [MINIO, "docker run"],
+  "e2e-chromium": [
+    ...E2E_PREPARE,
+    PLAYWRIGHT_INSTALL,
+    [CHROMIUM_RUN, CHROMIUM_CMD],
+    [REPORT_STEP, "actions/upload-artifact@v7"],
+  ],
+  "e2e-isolated": [
+    ...E2E_PREPARE,
+    PLAYWRIGHT_INSTALL,
+    [ISOLATED_RUN, ISOLATED_CMD],
+    [REPORT_STEP, "actions/upload-artifact@v7"],
+  ],
+  // `pnpm build` (verificarea build-ului de producție, fără harness) rămâne într-un singur job, cel mai scurt.
+  "e2e-s3": [
+    ...E2E_PREPARE,
     ["Build", "pnpm build"],
-    ["Instalează browserul Playwright", "pnpm exec playwright install --with-deps chromium"],
-    ["Teste E2E", "pnpm test:e2e"],
-    ["Test E2E pe S3 (MinIO)", "pnpm test:e2e:s3"],
-    ["Raport Playwright (la eșec)", "actions/upload-artifact@v7"],
+    PLAYWRIGHT_INSTALL,
+    [S3_RUN, "pnpm test:e2e:s3"],
+    [REPORT_STEP, "actions/upload-artifact@v7"],
   ],
 };
 
-const WORKER_JOBS = ["lint-unit", "integration", "e2e"];
+const WORKER_JOBS = ["lint-unit", "integration", ...E2E_JOBS];
 
 describe("joburile din ci.yml", () => {
-  it("există exact lint-unit, integration, e2e și check", () => {
-    expect(jobs.map((candidate) => candidate.id).sort()).toEqual(
-      ["check", "e2e", "integration", "lint-unit"].sort(),
-    );
+  it("există exact lint-unit, integration, e2e-chromium, e2e-isolated, e2e-s3 și check", () => {
+    expect(jobs.map((candidate) => candidate.id).sort()).toEqual(["check", ...WORKER_JOBS].sort());
   });
 
   it("numele verificărilor de stare = id-ul jobului (fără `name:` care l-ar schimba); `check` rămâne exact `check`", () => {
@@ -248,14 +288,22 @@ describe("pașii vechiului `check`: fiecare apare exact o dată, nimic în plus"
     }
   });
 
-  it("fiecare pas de lucru apare exact o dată în tot fișierul (MinIO: o dată în integration și o dată în e2e)", () => {
+  it("pașii vechiului job `e2e` apar în continuare: pregătirea în fiecare job E2E, restul o singură dată", () => {
     const all = WORKER_JOBS.flatMap((id) => job(id).steps.map((step) => step.id));
-    for (const id of WORKER_JOBS) {
-      for (const [name] of WORK[id] ?? []) {
-        expect(all.filter((candidate) => candidate === name).length, name).toBe(
-          name === MINIO ? 2 : 1,
-        );
-      }
+    const times = (name: string) => all.filter((candidate) => candidate === name).length;
+    // MinIO: integration + cele trei joburi E2E; pregătirea E2E și instalarea browserului: în fiecare job E2E.
+    expect(times(MINIO)).toBe(1 + E2E_JOBS.length);
+    for (const [name] of [...E2E_PREPARE.slice(0, 2), PLAYWRIGHT_INSTALL, [REPORT_STEP]]) {
+      expect(times(name ?? ""), name).toBe(E2E_JOBS.length);
+    }
+    // Build-ul de producție, E2E-ul pe S3 și fiecare rulare Playwright: exact o dată.
+    for (const name of ["Build", S3_RUN, CHROMIUM_RUN, ISOLATED_RUN])
+      expect(times(name), name).toBe(1);
+    // Pașii vechiului «Teste E2E» nu mai există sub acel nume: rulările sunt cele trei de mai sus.
+    expect(times("Teste E2E")).toBe(0);
+    for (const id of ["lint-unit", "integration"]) {
+      for (const [name] of WORK[id] ?? [])
+        expect(times(name), name).toBe(name === MINIO ? 1 + E2E_JOBS.length : 1);
     }
   });
 
@@ -264,12 +312,12 @@ describe("pașii vechiului `check`: fiecare apare exact o dată, nimic în plus"
     for (const setup of SETUP) expect(ids).not.toContain(setup);
   });
 
-  it("MinIO: aceeași imagine fixată prin digest, o dată în integration și o dată în e2e, nu în lint-unit", () => {
+  it("MinIO: aceeași imagine fixată prin digest, în integration și în fiecare job E2E, nu în lint-unit", () => {
     const digest =
       "cgr.dev/chainguard/minio@sha256:59667194421209c2c1eacbe761e24787e047985c5dfa96b15da9b59fe9b55cd0";
-    expect(count(text, digest)).toBe(2);
+    expect(count(text, digest)).toBe(1 + E2E_JOBS.length);
     expect(job("integration").body).toContain(digest);
-    expect(job("e2e").body).toContain(digest);
+    for (const id of E2E_JOBS) expect(job(id).body, id).toContain(digest);
     expect(job("lint-unit").body).not.toContain("minio");
   });
 });
@@ -283,22 +331,25 @@ describe("serviciile", () => {
     expect(servicesOf(job("integration")).sort()).toEqual(["postgres", "redis"]);
   });
 
-  it("e2e: postgres, redis și mailpit (testele E2E cu email citesc mesajele de acolo)", () => {
-    expect(servicesOf(job("e2e")).sort()).toEqual(["mailpit", "postgres", "redis"]);
+  it("fiecare job E2E: propriile postgres, redis și mailpit (baze separate: shard-urile nu se văd între ele)", () => {
+    for (const id of E2E_JOBS) {
+      expect(servicesOf(job(id)).sort(), id).toEqual(["mailpit", "postgres", "redis"]);
+    }
   });
 
   it("imaginile rămân fixate la aceleași versiuni, cu aceleași verificări de sănătate", () => {
-    expect(count(text, "image: postgres:16.15")).toBe(2);
-    expect(count(text, "image: redis:7.4.11")).toBe(2);
-    expect(count(text, "image: axllent/mailpit:v1.31.4")).toBe(1);
-    expect(count(text, "POSTGRES_PASSWORD: ecom_ci")).toBe(2);
-    expect(count(text, '--health-cmd "pg_isready -U ecom -d ecom"')).toBe(2);
-    expect(count(text, '--health-cmd "redis-cli ping"')).toBe(2);
-    expect(count(text, '--health-cmd "/mailpit readyz"')).toBe(1);
-    expect(count(text, "- 5432:5432")).toBe(2);
-    expect(count(text, "- 6379:6379")).toBe(2);
-    expect(count(text, "- 1025:1025")).toBe(1);
-    expect(count(text, "- 8025:8025")).toBe(1);
+    const withPostgres = 1 + E2E_JOBS.length;
+    expect(count(text, "image: postgres:16.15")).toBe(withPostgres);
+    expect(count(text, "image: redis:7.4.11")).toBe(withPostgres);
+    expect(count(text, "image: axllent/mailpit:v1.31.4")).toBe(E2E_JOBS.length);
+    expect(count(text, "POSTGRES_PASSWORD: ecom_ci")).toBe(withPostgres);
+    expect(count(text, '--health-cmd "pg_isready -U ecom -d ecom"')).toBe(withPostgres);
+    expect(count(text, '--health-cmd "redis-cli ping"')).toBe(withPostgres);
+    expect(count(text, '--health-cmd "/mailpit readyz"')).toBe(E2E_JOBS.length);
+    expect(count(text, "- 5432:5432")).toBe(withPostgres);
+    expect(count(text, "- 6379:6379")).toBe(withPostgres);
+    expect(count(text, "- 1025:1025")).toBe(E2E_JOBS.length);
+    expect(count(text, "- 8025:8025")).toBe(E2E_JOBS.length);
   });
 });
 
@@ -352,22 +403,156 @@ describe("nimic nu poate fi sărit (docs/20 §5, condiția 4: un job sărit nu e
     for (const id of WORKER_JOBS) expect(jobField(job(id), "if"), id).toBeNull();
   });
 
-  it("niciun pas nu are `if`, în afară de raportul Playwright (`if: failure()`, în jobul e2e)", () => {
+  it("niciun pas nu are `if`, în afară de raportul Playwright (`if: failure()`, în joburile E2E)", () => {
     for (const candidate of jobs) {
       for (const step of candidate.steps) {
-        if (candidate.id === "e2e" && step.name === "Raport Playwright (la eșec)") {
+        if (E2E_JOBS.includes(candidate.id) && step.name === REPORT_STEP) {
           expect(step.condition).toBe("failure()");
         } else expect(step.condition, `${candidate.id}: ${step.id}`).toBeNull();
       }
     }
   });
 
-  it("fără `paths`, `paths-ignore`, `continue-on-error` sau `strategy` în tot fișierul", () => {
+  it("fără `paths`, `paths-ignore`, `continue-on-error` în tot fișierul; `strategy` doar în `e2e-chromium`", () => {
     expect(text).not.toMatch(/^\s*paths(-ignore)?:/m);
     expect(text).not.toMatch(/continue-on-error:/);
-    expect(text).not.toMatch(/^\s*strategy:/m);
     expect(text).not.toMatch(/^\s*branches-ignore:/m);
+    expect(count(text, "strategy:")).toBe(1);
+    for (const candidate of jobs) {
+      if (candidate.id === "e2e-chromium") continue;
+      expect(candidate.body, candidate.id).not.toMatch(/^\s*(strategy|matrix):/m);
+    }
   });
+});
+
+describe("matricea de shard-uri din `e2e-chromium`", () => {
+  const chromium = job("e2e-chromium");
+  const strategy = chromium.body.match(/^ {4}strategy:\n((?: {6,}.*\n?)+)/m)?.[1] ?? "";
+
+  it("`fail-fast: false` (toate shard-urile raportează) și shard-urile 1..N, cu N = numitorul din `--shard`", () => {
+    expect(strategy).toMatch(/^ {6}fail-fast: false$/m);
+    const list = /^ {8}shard: \[([^\]]*)\]$/m.exec(strategy)?.[1] ?? "";
+    expect(list.split(",").map((item) => item.trim())).toEqual(
+      Array.from({ length: SHARDS }, (_, index) => String(index + 1)),
+    );
+    expect(strategy).not.toMatch(/include:|exclude:|max-parallel:/);
+  });
+
+  it("rulează doar proiectul principal, cu `--shard=<k>/N`, fără `--no-deps` și fără alte proiecte", () => {
+    const run = chromium.steps.find((step) => step.name === CHROMIUM_RUN)?.run ?? "";
+    expect(run).toBe(CHROMIUM_CMD);
+    expect(run).not.toContain("--no-deps");
+  });
+});
+
+describe("artefactele Playwright: nume UNICE per job și per shard (upload-artifact v4+ refuză duplicatele)", () => {
+  it("fiecare job E2E încarcă un artefact cu nume propriu; cel din matrice poartă numărul shard-ului", () => {
+    const names: string[] = [];
+    for (const id of E2E_JOBS) {
+      const step = job(id).steps.find((candidate) => candidate.name === REPORT_STEP);
+      const name = /^\s+name:\s*(\S.*)$/m.exec(
+        step?.body.split("\n").slice(1).join("\n") ?? "",
+      )?.[1];
+      expect(name, id).toBeDefined();
+      names.push((name ?? "").trim());
+      if (id === "e2e-chromium") expect(name).toContain("${{ matrix.shard }}");
+      else expect(name).not.toContain("${{");
+    }
+    expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe("acoperirea E2E: nimic pierdut, nimic dublat față de rularea locală (`playwright test --list`)", () => {
+  const run = promisify(execFile);
+  const projectNames = [
+    ...readFileSync(join(root, "playwright.config.ts"), "utf8").matchAll(
+      /name: "(chromium[\w-]*)"/g,
+    ),
+  ].map((match) => match[1] ?? "");
+
+  /** Testele (linii `[proiect] › fișier › titlu`) pe care le-ar rula `playwright test <args>`, doar listate: fără server și fără bază. */
+  async function listed(args: string[], env: Record<string, string> = {}): Promise<string[]> {
+    const { stdout } = await run(
+      process.execPath,
+      [join(root, "node_modules/@playwright/test/cli.js"), "test", "--list", ...args],
+      {
+        cwd: root,
+        encoding: "utf8",
+        windowsHide: true,
+        maxBuffer: 64 * 1024 * 1024,
+        env: {
+          ...process.env,
+          // doar derivarea numelor bazelor de test (garda «test» din nume); `--list` nu se conectează nicăieri
+          DATABASE_URL: "postgresql://ecom:ecom@localhost:5432/ecom",
+          TEST_DATABASE_URL: "postgresql://ecom:ecom@localhost:5432/ecom_test",
+          REDIS_URL: "redis://localhost:6379",
+          TEST_REDIS_URL: "redis://localhost:6379/1",
+          TEST_S3_BUCKET: "ecom-test",
+          E2E_TARGET: "",
+          ...env,
+        },
+      },
+    );
+    return stdout
+      .split(/\r?\n/)
+      .filter((line) => /^\s+\[chromium[\w-]*\] › /.test(line))
+      .map((line) => line.trim());
+  }
+
+  /** Argumentele Playwright ale unui pas, luate din `ci.yml` (după `pnpm test:e2e`). */
+  function argsOf(id: string, stepName: string): string[] {
+    const run = job(id).steps.find((step) => step.name === stepName)?.run ?? "";
+    return run
+      .replace(/^pnpm test:e2e\s*/, "")
+      .replace(/\$\{\{\s*matrix\.shard\s*\}\}/g, "${{matrix.shard}}")
+      .split(/\s+/)
+      .filter((arg) => arg !== "");
+  }
+
+  it("proiectele din playwright.config.ts: principal, stare globală, comenzi și S3 (nimic nou necuprins în CI)", () => {
+    expect([...new Set(projectNames)].sort()).toEqual(
+      ["chromium", "chromium-global-state", "chromium-orders", "chromium-s3"].sort(),
+    );
+  });
+
+  it(
+    "shard-urile + proiectele izolate = TOT ce rulează local (`npm run test:e2e`), fără test pierdut sau dublat; S3 rămâne în jobul S3",
+    { timeout: 120_000 },
+    async () => {
+      const everything = await listed([]);
+      const shardMatches = await Promise.all(
+        Array.from({ length: SHARDS }, (_, index) =>
+          listed(
+            argsOf("e2e-chromium", CHROMIUM_RUN).map((arg) =>
+              arg.replace("${{matrix.shard}}", String(index + 1)),
+            ),
+          ),
+        ),
+      );
+      const isolated = await listed(argsOf("e2e-isolated", ISOLATED_RUN));
+      const fromCi = [...shardMatches.flat(), ...isolated];
+
+      expect(everything.length).toBeGreaterThan(0);
+      expect(new Set(fromCi).size, "un test apare de două ori în joburile din CI").toBe(
+        fromCi.length,
+      );
+      expect(fromCi.length).toBe(everything.length);
+      expect([...fromCi].sort()).toEqual([...everything].sort());
+      for (const shard of shardMatches) expect(shard.length).toBeGreaterThan(0);
+      expect(isolated.length).toBeGreaterThan(0);
+      expect(isolated.every((line) => /^\[chromium-(global-state|orders)\]/.test(line))).toBe(true);
+      expect(shardMatches.flat().every((line) => line.startsWith("[chromium]"))).toBe(true);
+
+      // S3: `pnpm test:e2e:s3` (E2E_TARGET=s3) rulează DOAR proiectul S3, care nu intră în rularea locală obișnuită.
+      expect(job("e2e-s3").steps.find((step) => step.name === S3_RUN)?.run).toBe(
+        "pnpm test:e2e:s3",
+      );
+      const s3 = await listed([], { E2E_TARGET: "s3" });
+      expect(s3.length).toBeGreaterThan(0);
+      expect(s3.every((line) => line.startsWith("[chromium-s3]"))).toBe(true);
+      expect(everything.some((line) => line.startsWith("[chromium-s3]"))).toBe(false);
+    },
+  );
 });
 
 describe("neschimbat: triggere, concurență, mediu «doar CI»", () => {
@@ -418,11 +603,12 @@ describe("neschimbat: triggere, concurență, mediu «doar CI»", () => {
   });
 
   it("versiunile acțiunilor sunt cele fixate", () => {
-    expect(count(text, "uses: actions/checkout@v7")).toBe(3);
-    expect(count(text, "uses: pnpm/action-setup@v6")).toBe(3);
-    expect(count(text, "uses: actions/setup-node@v7")).toBe(3);
-    expect(count(text, "uses: actions/upload-artifact@v7")).toBe(1);
-    expect(count(text, 'node-version: ">=24.7.0 <25"')).toBe(3);
-    expect(count(text, "cache: pnpm")).toBe(3);
+    const withCode = WORKER_JOBS.length;
+    expect(count(text, "uses: actions/checkout@v7")).toBe(withCode);
+    expect(count(text, "uses: pnpm/action-setup@v6")).toBe(withCode);
+    expect(count(text, "uses: actions/setup-node@v7")).toBe(withCode);
+    expect(count(text, "uses: actions/upload-artifact@v7")).toBe(E2E_JOBS.length);
+    expect(count(text, 'node-version: ">=24.7.0 <25"')).toBe(withCode);
+    expect(count(text, "cache: pnpm")).toBe(withCode);
   });
 });
