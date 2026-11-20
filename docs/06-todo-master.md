@@ -269,7 +269,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [ ] Badge și filtru pentru **cereri de instalare**, cu status de urmărire și notificare pe email
 - [ ] Detaliu comandă: linii, adrese, timeline, plăți, note, client
 - [ ] Acțiuni: confirmă, anulează, rambursează, editează, duplică, retrimite email
-- [!] **Oferta de plată** (înlocuiește «Draft order cu link de plată»; decizia utilizatorului 2026-11-20, varianta A din docs/PROGRESS.md): ofertă separată (`order_offer`), totaluri înghețate, recalculare la plată, conversie prin `CheckoutService`, link `/oferta/[jeton]` cu jeton de 256 de biți, valabilitate `orders.offerValidityHours`, permisiunea `orders.offers`, «Duplică» din comandă. **Reducerile manuale NU există** (cer o decizie separată); produsele digitale sunt refuzate până la Faza 14b. `Order.status = draft` rămâne nefolosit. Rămâne `[!]` până la verificarea utilizatorului
+- [x] **Oferta de plată** (înlocuiește «Draft order cu link de plată»; decizia utilizatorului 2026-11-20, varianta A din docs/PROGRESS.md): ofertă separată (`order_offer`), totaluri înghețate, recalculare la plată, conversie prin `CheckoutService`, link `/oferta/[jeton]` cu jeton de 256 de biți, valabilitate `orders.offerValidityHours`, permisiunea `orders.offers`, «Duplică» din comandă. **Reducerile manuale NU există** (cer o decizie separată); produsele digitale sunt refuzate până la Faza 14b. `Order.status = draft` rămâne nefolosit. Verificat de utilizator (2026-11-20)
 - [ ] React Email + provider **SMTP configurabil din admin** + queue cu retry
 - [ ] Toate template-urile din `02-complet-si-functional.md` §B8
 - [ ] Preview și trimitere de test din admin, suprascriere de template
