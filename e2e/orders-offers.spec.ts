@@ -125,6 +125,30 @@ test.describe("lista, detaliul și acțiunile", () => {
     await openOrder(page, number);
     await expect(page.locator("[data-order-detail]")).toContainText("224,00");
 
+    // «Duplică ca ofertă» stă în același rând cu celelalte acțiuni; liniile imuabile au O SINGURĂ notă (cea cu «Duplică»)
+    const actionsRow = page.locator("[data-order-actions]");
+    await expect(actionsRow.getByRole("link", { name: "Duplică ca ofertă" })).toBeVisible();
+    await expect(actionsRow.getByRole("button", { name: "Marchează plătit…" })).toBeVisible();
+    expect(
+      await actionsRow.getByRole("link", { name: "Duplică ca ofertă" }).evaluate((link) => {
+        const button = link.parentElement?.querySelector("button");
+        return button !== null && link.parentElement === button?.parentElement;
+      }),
+    ).toBe(true);
+    await expect(
+      page.locator("[data-order-detail]").getByText(/instantaneu al comenzii/),
+    ).toHaveCount(0);
+    await expect(
+      page.locator("[data-order-detail]").getByText(/Pentru o comandă nouă, folosește/),
+    ).toHaveCount(1);
+    // fără `orders.offers` (rolul Suport) butonul nu apare
+    const orderPath = new URL(page.url()).pathname;
+    const supportPage = await (await browser.newContext()).newPage();
+    await login(supportPage, support, orderPath);
+    await expect(supportPage.locator("[data-order-detail]")).toContainText(number);
+    await expect(supportPage.getByRole("link", { name: "Duplică ca ofertă" })).toHaveCount(0);
+    await supportPage.context().close();
+
     await page.getByRole("button", { name: "Marchează plătit…" }).first().click();
     const dialog = page.getByRole("dialog");
     // fără referință: mesaj în română, fără validare nativă

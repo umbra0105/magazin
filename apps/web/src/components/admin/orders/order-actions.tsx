@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
-import { Button, Dialog, Input, Label, Textarea } from "@ecom/ui";
+import { Button, buttonVariants, Dialog, Input, Label, Textarea } from "@ecom/ui";
 import {
   cancelOrderAction,
   clearSupplierAction,
@@ -42,6 +43,8 @@ export interface OrderActionsProps {
     limit: { limitMinor: number; remainingMinor: number } | null;
   } | null;
   supplier: { name: string | null; note: string | null } | null;
+  /** «Duplică ca ofertă» (doar cu `orders.offers`, verificat pe server în pagina ofertei): adresa ofertei pregătite din comandă. */
+  duplicateHref: string | null;
   /** Date pentru corectare (doar cu drept de date personale). */
   edit: {
     email: string;
@@ -151,6 +154,15 @@ export function OrderActions(props: OrderActionsProps) {
           <Button type="button" variant="outline" onClick={runClearSupplier} disabled={pending}>
             {t.actions.supplierClear}
           </Button>
+        )}
+        {props.duplicateHref && (
+          <Link
+            href={props.duplicateHref}
+            className={buttonVariants({ variant: "outline" })}
+            data-duplicate-offer
+          >
+            {t.offers.duplicate}
+          </Link>
         )}
         {canCancel && (
           <Button type="button" variant="outline" onClick={() => setOpen("cancel")}>

@@ -249,8 +249,6 @@ export const adminOrdersRo = {
       codFee: "Taxă de ramburs",
       tax: "din care TVA",
       grandTotal: "Total (TVA inclus)",
-      snapshotNote:
-        "Liniile și sumele sunt un instantaneu al comenzii; nu se modifică după plasare.",
       editNote:
         "Liniile, prețurile și sumele unei comenzi plasate nu se modifică (afectează banii, stocul și factura). Pentru o comandă nouă, folosește «Duplică».",
     },

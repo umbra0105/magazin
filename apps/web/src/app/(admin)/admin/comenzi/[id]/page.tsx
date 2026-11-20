@@ -5,18 +5,7 @@ import { can, getAdminOrderDetail, INSTALLATION_STATUSES } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { templateDefinition } from "@ecom/jobs";
 import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared";
-import {
-  Badge,
-  buttonVariants,
-  RowHeader,
-  Section,
-  TBody,
-  THead,
-  Table,
-  Td,
-  Th,
-  Tr,
-} from "@ecom/ui";
+import { Badge, RowHeader, Section, TBody, THead, Table, Td, Th, Tr } from "@ecom/ui";
 import {
   InstallationStatusForm,
   NoteForm,
@@ -190,6 +179,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         supplier={
           detail.supplier ? { name: detail.supplier.name, note: detail.supplier.note } : null
         }
+        duplicateHref={
+          can(subject, "orders.offers")
+            ? `/admin/comenzi/oferte/nou?dinComanda=${encodeURIComponent(detail.id)}`
+            : null
+        }
         edit={
           detail.contact && shippingAddress
             ? {
@@ -201,17 +195,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             : null
         }
       />
-      {can(subject, "orders.offers") && (
-        <p>
-          <Link
-            href={`/admin/comenzi/oferte/nou?dinComanda=${encodeURIComponent(detail.id)}`}
-            className={buttonVariants({ variant: "outline" })}
-            data-duplicate-offer
-          >
-            {t.offers.duplicate}
-          </Link>
-        </p>
-      )}
 
       <Section id="lines" title={t.detail.sections.lines}>
         <Table stacked aria-label={t.detail.sections.lines}>
@@ -292,7 +275,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             {money(detail.totals.totalMinor)}
           </dd>
         </dl>
-        <p className="text-label text-ink-secondary">{t.detail.lines.snapshotNote}</p>
         <p className="text-label text-ink-secondary">{t.detail.lines.editNote}</p>
       </Section>
 
