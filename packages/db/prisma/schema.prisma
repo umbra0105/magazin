@@ -1536,6 +1536,8 @@ model AdminNotification {
   id         String                  @id @default(cuid())
   kind       String
   title      String
+  /// Linie scurtă de context sub titlu (numărul comenzii sau al ofertei și un motiv), fără date personale; `NULL` la cele vechi.
+  context    String?
   href       String
   permission String
   dedupKey   String                  @unique

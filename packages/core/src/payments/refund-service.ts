@@ -2,7 +2,8 @@ import type { Prisma } from "@ecom/db";
 import type { PaymentProvider, RefundOutcome } from "@ecom/shared";
 import { inTx, type Db } from "../db-tx";
 import { addOrderEvent, lockOrder, transitionOrder } from "../orders/order-service";
-import { notifyAdmins } from "../notifications/admin-notifications";
+import { notifyAdmins, orderContext } from "../notifications/admin-notifications";
+import { ATTENTION_REASON_LABELS } from "./attention-labels";
 import { PaymentError } from "./payment-errors";
 import { flagAttention, lockPayment, resolveAttention } from "./payment-db";
 
@@ -304,9 +305,16 @@ async function finishRefund(
       data: { status: "manual_required", failureMessage: outcome.message.slice(0, 500) },
     });
     await flagAttention(tx, refund.paymentId, "refund_manual_required", now);
+    const refundOrder = await tx.order.findUnique({
+      where: { id: refund.orderId },
+      select: { number: true },
+    });
     await notifyAdmins(tx, {
       kind: "refund_manual",
       title: "O rambursare trebuie făcută manual",
+      context: refundOrder
+        ? orderContext(refundOrder.number, ATTENTION_REASON_LABELS.refund_manual_required)
+        : ATTENTION_REASON_LABELS.refund_manual_required,
       href: `/admin/comenzi/plati/${refund.paymentId}`,
       permission: "payments.refund",
       dedupKey: `refund-manual:${refundId}`,

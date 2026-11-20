@@ -11,7 +11,7 @@ import { z } from "zod";
 import type { CartOwner, CartService } from "../cart/cart-service";
 import { CartError } from "../cart/cart-service";
 import { inTx, type Db } from "../db-tx";
-import { notifyAdmins } from "../notifications/admin-notifications";
+import { notifyAdmins, offerContext } from "../notifications/admin-notifications";
 import { CHECKOUT_TERMS_CONSENT } from "../orders/consent";
 import {
   addressInputSchema,
@@ -940,7 +940,8 @@ export class OfferService {
       await this.event(tx, offerId, "offer.stale", STALE_MESSAGES[reason], null, { reason });
       await notifyAdmins(tx, {
         kind: "offer_stale",
-        title: `Oferta ${offer.number} nu mai poate fi plătită: ${STALE_MESSAGES[reason].toLowerCase()}`,
+        title: "O ofertă nu mai poate fi plătită",
+        context: offerContext(offer.number, STALE_MESSAGES[reason]),
         href: `/admin/comenzi/oferte/${offerId}`,
         permission: "orders.offers",
         dedupKey: `offer_stale:${offerId}`,

@@ -11,3 +11,4 @@ export * from "./card-payment-service";
 export * from "./reconcile";
 export * from "./system-audit";
 export * from "./payment-admin";
+export * from "./attention-labels";

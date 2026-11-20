@@ -1,6 +1,7 @@
 import type { Prisma } from "@ecom/db";
 import type { Db } from "../db-tx";
-import { notifyAdmins } from "../notifications/admin-notifications";
+import { notifyAdmins, orderContext } from "../notifications/admin-notifications";
+import { emailNoteLabel } from "./note-labels";
 
 /**
  * Emailurile tranzacționale în stil «outbox» (Faza 11). Rândul `EmailDispatch` se scrie în ACEEAȘI tranzacție cu evenimentul care
@@ -82,11 +83,21 @@ export async function failDispatch(db: Db, id: string, error: string): Promise<v
     data: { status: "failed", lastError: cleanError(error) },
   });
   if (failed.count === 1) {
+    const row = await db.emailDispatch.findUnique({
+      where: { id },
+      select: { template: true, order: { select: { id: true, number: true } } },
+    });
+    const label = emailNoteLabel(row?.template ?? "");
+    // email legat de o comandă: legătura duce la COMANDA (secțiunea ei de emailuri), iar notificarea o văd cei cu dreptul de a o
+    // deschide; fără comandă (emailuri interne): jurnalul de emailuri, pentru cei cu `email.read`
     await notifyAdmins(db, {
       kind: "email_failed",
       title: "Un email a rămas netrimis",
-      href: "/admin/comenzi/sabloane-email?vedere=jurnal&filtru=esuate",
-      permission: "email.read",
+      context: row?.order ? orderContext(row.order.number, label) : label,
+      href: row?.order
+        ? `/admin/comenzi/${row.order.id}`
+        : "/admin/comenzi/sabloane-email?vedere=jurnal&filtru=esuate",
+      permission: row?.order ? "orders.read" : "email.read",
       dedupKey: `email-failed:${id}`,
     });
   }

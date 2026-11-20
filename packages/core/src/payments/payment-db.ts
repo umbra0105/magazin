@@ -1,6 +1,7 @@
 import type { Prisma } from "@ecom/db";
 import type { Db } from "../db-tx";
-import { notifyAdmins } from "../notifications/admin-notifications";
+import { notifyAdmins, orderContext } from "../notifications/admin-notifications";
+import { ATTENTION_REASON_LABELS } from "./attention-labels";
 import type { AttentionReason } from "./payment-errors";
 
 /** Blochează rândul plății (`FOR UPDATE`). Ordinea blocărilor: ÎNTÂI comanda (`lockOrder`), apoi plata, apoi cererile de rambursare. */
@@ -27,11 +28,19 @@ export async function flagAttention(
     },
     data: { attentionReason: reason, attentionAt: now, attentionResolvedAt: null },
   });
-  // notificare internă o singură dată pe (plată, motiv): fără date personale în titlu, doar legătura spre plată
+  // notificare internă o singură dată pe (plată, motiv): fără date personale; contextul are numărul comenzii și motivul, iar
+  // legătura duce la plata în cauză
   if (flagged.count === 1) {
+    const payment = await tx.payment.findUnique({
+      where: { id: paymentId },
+      select: { order: { select: { number: true } } },
+    });
     await notifyAdmins(tx, {
       kind: "payment_attention",
       title: "O plată necesită atenție",
+      context: payment
+        ? orderContext(payment.order.number, ATTENTION_REASON_LABELS[reason])
+        : ATTENTION_REASON_LABELS[reason],
       href: `/admin/comenzi/plati/${paymentId}`,
       permission: "payments.read",
       dedupKey: `payment-attention:${paymentId}:${reason}:${now.getTime()}`,

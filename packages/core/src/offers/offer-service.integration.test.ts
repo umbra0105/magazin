@@ -359,9 +359,15 @@ describe("conversia: recalculare la plată", () => {
         where: { kind: "offer_stale", dedupKey: `offer_stale:${created.offerId}` },
       });
       expect(notes).toHaveLength(1);
-      expect(notes[0]).toMatchObject({ permission: "orders.offers" });
+      expect(notes[0]).toMatchObject({
+        permission: "orders.offers",
+        title: "O ofertă nu mai poate fi plătită",
+        context: `Oferta ${created.number} · Prețul unui produs s-a schimbat`,
+      });
       expect(notes[0]!.href).toBe(`/admin/comenzi/oferte/${created.offerId}`);
       expect(JSON.stringify(notes)).not.toContain("client@exemplu.ro");
+      expect(JSON.stringify(notes)).not.toContain("Ion Popescu");
+      expect(JSON.stringify(notes)).not.toContain("0722");
 
       // o ofertă «stale» nu se plătește nici la încercarea următoare, și nu mai notifică a doua oară
       expect(await codeOf(offers.convert(created.token, CONSENT))).toBe("OFFER_STALE");

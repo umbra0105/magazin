@@ -23,12 +23,25 @@ export interface NewNotification {
   kind: NotificationKind;
   /** Fără date personale: tipul situației, nu numele sau emailul cuiva. */
   title: string;
+  /**
+   * Linie scurtă sub titlu, tot fără date personale: numărul comenzii sau al ofertei și un motiv («Comanda WEB-000123 · Plată
+   * dublă»). Vezi `orderContext` și `offerContext`.
+   */
+  context?: string;
   /** Calea ecranului potrivit (începe cu `/admin/`). */
   href: string;
   permission: PermissionKey;
   /** Identifică situația: aceeași cheie nu produce a doua notificare. */
   dedupKey: string;
 }
+
+/** Linia de context a unei notificări despre o comandă: «Comanda WEB-000123 · motiv». Numărul comenzii nu e dată personală. */
+export const orderContext = (orderNumber: string, what: string): string =>
+  `Comanda ${orderNumber} · ${what}`;
+
+/** Linia de context a unei notificări despre o ofertă: «Oferta OF-0066 · motiv» (sau doar numărul). */
+export const offerContext = (offerNumber: string, what?: string): string =>
+  what ? `Oferta ${offerNumber} · ${what}` : `Oferta ${offerNumber}`;
 
 /** Scrie o notificare, în tranzacția apelantului; întoarce `true` dacă a fost creată (nu exista deja). */
 export async function notifyAdmins(tx: Db, input: NewNotification): Promise<boolean> {
@@ -37,6 +50,7 @@ export async function notifyAdmins(tx: Db, input: NewNotification): Promise<bool
       {
         kind: input.kind,
         title: input.title.slice(0, 200),
+        ...(input.context ? { context: input.context.slice(0, 200) } : {}),
         href: input.href,
         permission: input.permission,
         dedupKey: input.dedupKey,
@@ -51,6 +65,8 @@ export interface NotificationDto {
   id: string;
   kind: string;
   title: string;
+  /** Linia de context (număr de comandă sau ofertă și motiv), sau `null` la notificările fără ea. */
+  context: string | null;
   href: string;
   createdAt: Date;
   read: boolean;
@@ -72,6 +88,7 @@ export async function listNotifications(
     id: row.id,
     kind: row.kind,
     title: row.title,
+    context: row.context,
     href: row.href,
     createdAt: row.createdAt,
     read: row.reads.length > 0,

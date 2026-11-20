@@ -130,6 +130,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           items: notifications.map((n) => ({
             id: n.id,
             title: n.title,
+            context: n.context,
             href: n.href,
             read: n.read,
             whenText: formatDateTime(n.createdAt, regional.locale, regional.timezone),

@@ -13,7 +13,7 @@ import { inTx, type Db } from "../db-tx";
 import { ORDER_REF_TYPE } from "../inventory/constants";
 import { StockError } from "../inventory/stock-errors";
 import { StockService } from "../inventory/stock-service";
-import { notifyAdmins } from "../notifications/admin-notifications";
+import { notifyAdmins, orderContext } from "../notifications/admin-notifications";
 import { addOrderEvent, lockOrder, transitionOrder } from "../orders/order-service";
 import { flagAttention, lockPayment } from "./payment-db";
 import type { AttentionReason } from "./payment-errors";
@@ -573,10 +573,24 @@ export async function processPaymentEvent(
       .catch(() => null);
     // după toate încercările notificarea rămâne blocată (dead-letter): echipa e anunțată o singură dată
     if (failedRow && failedRow.attempts >= MAX_EVENT_ATTEMPTS) {
+      // dacă notificarea se leagă de o plată, legătura duce la ea, iar contextul are numărul comenzii; altfel, lista plăților
+      const stuckPayment = failedRow.paymentId
+        ? await deps.db.payment
+            .findUnique({
+              where: { id: failedRow.paymentId },
+              select: { order: { select: { number: true } } },
+            })
+            .catch(() => null)
+        : null;
       await notifyAdmins(deps.db, {
         kind: "webhook_stuck",
         title: "O notificare de plată a rămas blocată",
-        href: "/admin/comenzi/plati?vedere=atentie",
+        context: stuckPayment
+          ? orderContext(stuckPayment.order.number, `Notificare de la ${failedRow.provider}`)
+          : `Notificare de la ${failedRow.provider}`,
+        href: failedRow.paymentId
+          ? `/admin/comenzi/plati/${failedRow.paymentId}`
+          : "/admin/comenzi/plati?vedere=atentie",
         permission: "payments.read",
         dedupKey: `webhook-stuck:${eventId}`,
       }).catch(() => undefined);

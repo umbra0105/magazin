@@ -472,6 +472,27 @@ test.describe("oferta învechită", () => {
     await expect(page.locator("[data-offer-detail]")).toContainText("Învechită");
     await expect(page.locator("[data-offer-detail]")).toContainText("Stocul nu mai acoperă oferta");
     await expect(page.locator("[data-offer-actions]")).toHaveCount(0);
+
+    // clopoțelul: notificarea are context (numărul ofertei și motivul), fără date personale, și duce la oferta în cauză;
+    // deschiderea ei o marchează citită
+    const number = /OF-\d{4,}/.exec(await page.getByRole("heading", { level: 1 }).innerText())?.[0];
+    expect(number).toBeTruthy();
+    await page.goto("/admin/comenzi");
+    await page.locator("[data-notifications-bell]").click();
+    const item = page
+      .locator("[data-notifications-list] li")
+      .filter({ hasText: `Oferta ${number} · Stocul nu mai acoperă oferta` });
+    await expect(item).toHaveCount(1);
+    await expect(item).toContainText("O ofertă nu mai poate fi plătită");
+    await expect(item).toContainText("Necitită");
+    await expect(item).not.toContainText("Ion Popescu");
+    await expect(item).not.toContainText("@");
+    await item.getByRole("link").click();
+    await expect(page).toHaveURL(new RegExp(`${detail}$`));
+    await expect(page.locator("[data-offer-detail]")).toContainText("Învechită");
+    await page.locator("[data-notifications-bell]").click();
+    await expect(item).toHaveCount(1);
+    await expect(item).not.toContainText("Necitită");
   });
 });
 

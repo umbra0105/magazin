@@ -216,6 +216,8 @@ describe("livrarea linkului ofertei", () => {
         expect(notes[0]).toMatchObject({
           permission: "orders.offers",
           href: `/admin/comenzi/oferte/${offer.offerId}`,
+          title: "Emailul cu linkul unei oferte nu a putut fi trimis",
+          context: `Oferta ${offer.number}`,
         });
         const text = JSON.stringify([events, notes, logs]);
         expect(text).not.toContain(TO);

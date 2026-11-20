@@ -13,6 +13,8 @@ const t = getMessages().admin.notifications;
 export interface BellItem {
   id: string;
   title: string;
+  /** Linia de context (număr de comandă sau ofertă și motiv); fără date personale. */
+  context: string | null;
   href: string;
   whenText: string;
   read: boolean;
@@ -39,6 +41,8 @@ export function NotificationsBell({ items, unread }: { items: BellItem[]; unread
     if (!item.read) {
       start(async () => {
         await markNotificationsReadAction({ ids: [item.id] });
+        // contorul și lista din bara de sus se reîmprospătează (layout-ul nu se re-randează singur la navigare)
+        router.refresh();
       });
     }
   };
@@ -89,6 +93,11 @@ export function NotificationsBell({ items, unread }: { items: BellItem[]; unread
                     {!item.read && <span className="sr-only">{t.unread}: </span>}
                     {item.title}
                   </span>
+                  {item.context && (
+                    <span className="text-body text-ink" data-notification-context>
+                      {item.context}
+                    </span>
+                  )}
                   <span className="text-label text-ink-secondary">{item.whenText}</span>
                 </Link>
               </li>

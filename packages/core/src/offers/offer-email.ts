@@ -1,5 +1,5 @@
 import type { Db } from "../db-tx";
-import { notifyAdmins } from "../notifications/admin-notifications";
+import { notifyAdmins, offerContext } from "../notifications/admin-notifications";
 
 /**
  * Ce îi trebuie workerului ca să trimită linkul unei oferte (Faza 11): numărul, totalul, termenul și numele clientului se citesc
@@ -63,7 +63,8 @@ export async function recordOfferEmailFailure(
   });
   await notifyAdmins(db, {
     kind: "email_failed",
-    title: `Emailul cu linkul ofertei ${offer.number} nu a putut fi trimis`,
+    title: "Emailul cu linkul unei oferte nu a putut fi trimis",
+    context: offerContext(offer.number),
     href: `/admin/comenzi/oferte/${offerId}`,
     permission: "orders.offers",
     dedupKey: `offer_email_failed:${offerId}:${sendKey}`,
