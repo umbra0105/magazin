@@ -134,6 +134,12 @@ describe("permisiunile plăților (Faza 10)", () => {
 });
 
 describe("permisiunile comenzilor și emailurilor (Faza 11)", () => {
+  it("ofertele de plată (orders.offers): Owner, Admin, Manager; NU Suport, Depozit, Editor, Contabil", () => {
+    expect(
+      DEFAULT_ROLES.filter((r) => r.permissions.includes("orders.offers")).map((r) => r.key),
+    ).toEqual(["owner", "admin", "manager"]);
+  });
+
   const rolesWith = (permission: (typeof PERMISSION_KEYS)[number]) =>
     DEFAULT_ROLES.filter((r) => r.permissions.includes(permission)).map((r) => r.key);
 

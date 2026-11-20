@@ -640,6 +640,7 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `orders.cancel` — Anulează comenzi | ✓ | ✓ | ✓ |  | ✓ |  |  |
 | `orders.refund` — Rambursează din detaliul comenzii; fără payments.refund, doar până la limita din setări (rolul Suport) | ✓ | ✓ | ✓ |  | ✓ |  |  |
 | `orders.fulfill` — Pregătește și expediază comenzi (fulfillment, AWB) | ✓ | ✓ | ✓ |  |  | ✓ |  |
+| `orders.offers` — Creează și gestionează ofertele de plată (link de plată pentru client); doar Manager, Admin, Owner | ✓ | ✓ | ✓ |  |  |  |  |
 | `orders.mark_paid` — Marchează ca plătite comenzile cu transfer bancar (suma primită și referința din extras) | ✓ | ✓ | ✓ |  |  |  |  |
 | `products.read` — Vede produsele | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |
 | `products.write` — Creează și modifică produse (prețuri, stoc, variante, clasă de livrare, TVA) | ✓ | ✓ | ✓ |  |  |  |  |

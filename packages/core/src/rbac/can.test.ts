@@ -45,6 +45,14 @@ describe("can(): fiecare rol are acces exact la ce trebuie", () => {
     expect(allowed.sort()).toEqual(["admin", "manager", "owner", "support"]);
   });
 
+  it("Suport NU poate crea oferte de plată (orders.offers) și nu poate confirma plăți", () => {
+    const support = subjectFor(["support"]);
+    expect(can(support, "orders.offers")).toBe(false);
+    expect(can(support, "orders.mark_paid")).toBe(false);
+    expect(can(subjectFor(["manager"]), "orders.offers")).toBe(true);
+    expect(can(subjectFor(["warehouse"]), "orders.offers")).toBe(false);
+  });
+
   it("Suport NU are payments.refund: nu poate ocoli limita pe ecranul de plăți și nu confirmă rambursări manuale", () => {
     const support = subjectFor(["support"]);
     expect(can(support, "orders.refund")).toBe(true);

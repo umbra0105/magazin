@@ -164,6 +164,18 @@ export const settingGroups = {
      */
     supportRefundLimit: z.number().int().min(0).max(1_000_000_000).default(50_000),
   },
+  orders: {
+    /** Cât e valabilă o ofertă de plată (link pentru client), în ore; după aceea expiră (job). */
+    offerValidityHours: z.number().int().min(1).max(720).default(72),
+    /** Prefixul numărului ofertei (diferit de cel al comenzilor, ca să nu se confunde). */
+    offerNumberPrefix: z
+      .string()
+      .trim()
+      .min(1)
+      .max(10)
+      .regex(/^[A-Za-z0-9-]+$/, "Doar litere, cifre și cratimă")
+      .default("OF-"),
+  },
   shipping: {
     /** Ridicare personală de la sediu (adresa din `company.address`). */
     pickupEnabled: z.boolean().default(false),

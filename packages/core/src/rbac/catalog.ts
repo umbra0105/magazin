@@ -11,6 +11,8 @@ export const PERMISSIONS = {
   "orders.refund":
     "Rambursează din detaliul comenzii; fără payments.refund, doar până la limita din setări (rolul Suport)",
   "orders.fulfill": "Pregătește și expediază comenzi (fulfillment, AWB)",
+  "orders.offers":
+    "Creează și gestionează ofertele de plată (link de plată pentru client); doar Manager, Admin, Owner",
   "orders.mark_paid":
     "Marchează ca plătite comenzile cu transfer bancar (suma primită și referința din extras)",
   "products.read": "Vede produsele",
@@ -103,6 +105,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "orders.refund",
       "orders.fulfill",
       "orders.mark_paid",
+      "orders.offers",
       "email.read",
       "payments.read",
       "payments.refund",
