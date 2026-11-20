@@ -46,6 +46,7 @@ export type AdminNavItemId =
   | "paymentSettings"
   | "emailSettings"
   | "allOrders"
+  | "offers"
   | "emailTemplates"
   | "installRequests";
 
@@ -116,6 +117,7 @@ export const CATALOG_ITEMS: readonly AdminNavItem[] = [
 export const ORDERS_ITEMS: readonly AdminNavItem[] = [
   { id: "allOrders", href: "/admin/comenzi", permission: "orders.read" },
   { id: "payments", href: "/admin/comenzi/plati", permission: "payments.read" },
+  { id: "offers", href: "/admin/comenzi/oferte", permission: "orders.offers" },
   { id: "emailTemplates", href: "/admin/comenzi/sabloane-email", permission: "email.read" },
   {
     id: "installRequests",

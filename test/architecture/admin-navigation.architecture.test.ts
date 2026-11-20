@@ -152,6 +152,8 @@ describe("grupul «Comenzi» din meniu (același model ca «Catalog»)", () => {
     expect(activeItemId("/admin/comenzi/x", ORDERS_ITEMS)).toBe("allOrders");
     expect(activeItemId("/admin/comenzi/plati/x", ORDERS_ITEMS)).toBe("payments");
     expect(activeItemId("/admin/comenzi/sabloane-email/x", ORDERS_ITEMS)).toBe("emailTemplates");
+    expect(activeItemId("/admin/comenzi/oferte/nou", ORDERS_ITEMS)).toBe("offers");
+    expect(activeItemId("/admin/comenzi/oferte/x", ORDERS_ITEMS)).toBe("offers");
   });
 
   it("elementele cer permisiunea ecranului lor (meniul nu e securitate, dar nu arată ce nu poți deschide)", () => {
@@ -159,6 +161,7 @@ describe("grupul «Comenzi» din meniu (același model ca «Catalog»)", () => {
     expect(byId).toEqual({
       allOrders: "orders.read",
       payments: "payments.read",
+      offers: "orders.offers",
       emailTemplates: "email.read",
       installRequests: "orders.read",
     });

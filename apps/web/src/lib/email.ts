@@ -1,7 +1,7 @@
 import { EmailVerificationService, redactSecrets, type AuthEmailSender } from "@ecom/core";
 import { loadEnv } from "@ecom/config";
 import { getDb } from "@ecom/db";
-import { createEmailQueue, enqueueEmail, type EmailQueue } from "@ecom/jobs";
+import { createEmailQueue, enqueueEmail, enqueueOfferLink, type EmailQueue } from "@ecom/jobs";
 import { getLogger } from "@ecom/shared";
 import { getSettings } from "./services";
 
@@ -87,4 +87,29 @@ export function createAuthEmailSender(): AuthEmailSender {
       });
     },
   };
+}
+
+/**
+ * Pune în coadă linkul unei oferte de plată (Faza 11). Jetonul călătorește doar sigilat în payload; la eșec întoarce `false` (adminul
+ * vede mesajul și poate retrimite, ceea ce generează un link nou), fără să arunce și fără token în log.
+ */
+export async function queueOfferLink(input: {
+  offerId: string;
+  to: string;
+  token: string;
+}): Promise<boolean> {
+  try {
+    await withTimeout(
+      enqueueOfferLink(getEmailQueue(), loadEnv().APP_KEY, input),
+      ENQUEUE_TIMEOUT_MS,
+    );
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    getLogger().warn(
+      { reason: redactSecrets(message, [input.to, input.token]) },
+      "email: nu am putut pune în coadă linkul ofertei",
+    );
+    return false;
+  }
 }

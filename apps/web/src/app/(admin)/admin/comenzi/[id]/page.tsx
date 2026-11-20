@@ -188,6 +188,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             : null
         }
       />
+      {can(subject, "orders.offers") && (
+        <p>
+          <Link
+            href={`/admin/comenzi/oferte/nou?dinComanda=${encodeURIComponent(detail.id)}`}
+            className="inline-flex h-(--control-h) items-center rounded-md border border-line-input px-4"
+            data-duplicate-offer
+          >
+            {t.offers.duplicate}
+          </Link>
+        </p>
+      )}
 
       <Section id="lines" title={t.detail.sections.lines}>
         <Table stacked aria-label={t.detail.sections.lines}>

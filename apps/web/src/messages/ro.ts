@@ -223,6 +223,7 @@ export const ro = {
       allOrders: "Comenzi",
       emailTemplates: "Șabloane email",
       installRequests: "Cereri de instalare",
+      offers: "Oferte de plată",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {
