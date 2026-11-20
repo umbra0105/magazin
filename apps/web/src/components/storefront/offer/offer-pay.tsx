@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useId, useRef, useState, useTransition } from "react";
 import { storeButtonVariants } from "@ecom/ui";
-import { payOfferAction } from "@/app/(checkout)/oferta/[jeton]/actions";
+import { payOfferAction } from "@/app/(oferta)/oferta/[jeton]/actions";
 import { getMessages } from "@/messages";
 
 const m = getMessages().storefront.offer;

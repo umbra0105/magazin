@@ -12,9 +12,12 @@ const m = getMessages().storefront.checkout;
 export function CheckoutHeader({
   storeName,
   logoUrl,
+  backToCart = true,
 }: {
   storeName: string;
   logoUrl: string | null;
+  /** `false` la pagina ofertei: clientul vine dintr-un email și nu are coș; ieșirea rămâne logo-ul, către pagina de start. */
+  backToCart?: boolean;
 }) {
   return (
     <header className="border-b border-line-subtle bg-surface-page" data-checkout-header>
@@ -34,12 +37,14 @@ export function CheckoutHeader({
           <Lock aria-hidden="true" className="size-4" />
           {m.secure}
         </p>
-        <Link
-          href="/cos"
-          className="min-h-11 content-center text-sm font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          {m.backToCart}
-        </Link>
+        {backToCart ? (
+          <Link
+            href="/cos"
+            className="min-h-11 content-center text-sm font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            {m.backToCart}
+          </Link>
+        ) : null}
       </Container>
     </header>
   );
