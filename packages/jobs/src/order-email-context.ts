@@ -1,6 +1,8 @@
 import {
+  STOCK_SYNC_ALERT_TEMPLATE,
   formatCompanyAddress,
   getOrderSummary,
+  isStockAlertRecipient,
   issueRetryTokenFor,
   type DispatchRow,
   type Db,
@@ -190,6 +192,31 @@ export async function buildOrderEmailContext(
 
   // --- notificări interne fără comandă (nu se citește nicio comandă) ---
   if (!dispatch.orderId) {
+    // alerta de stoc: destinatarul se REVERIFICĂ la trimitere (rol retras, email schimbat în neverificat între timp)
+    if (dispatch.template === STOCK_SYNC_ALERT_TEMPLATE) {
+      if (!(await isStockAlertRecipient(env.db, dispatch.recipient))) {
+        return { kind: "skip", reason: "destinatarul nu mai are drept la alerta de stoc" };
+      }
+      const takenAt = typeof data["takenAt"] === "string" ? new Date(data["takenAt"]) : null;
+      return {
+        kind: "ready",
+        definition,
+        to: dispatch.recipient,
+        context: {
+          vars: {
+            magazin: store.storeName,
+            ultima:
+              takenAt && !Number.isNaN(takenAt.getTime())
+                ? formatDateTime(takenAt, store.locale, store.timeZone)
+                : "niciodată",
+            linkAdmin: `${base}/admin/produse/stoc`,
+          },
+          merchant,
+          legal,
+          order: null,
+        },
+      };
+    }
     return {
       kind: "ready",
       definition,

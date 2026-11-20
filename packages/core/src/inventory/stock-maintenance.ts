@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "@ecom/db";
 import type { AuditService } from "../audit/audit-service";
+import { enqueueStockSyncAlert } from "../email/stock-sync-alert";
 import { snapshotFreshness, type SnapshotFreshness } from "./reconcile";
 import { StockService } from "./stock-service";
 
@@ -224,6 +225,12 @@ export class StockMaintenance {
         const bad = view.status !== "fresh";
         if (bad && (!last || last.action === SNAPSHOT_RECOVERED_ACTION)) {
           await this.recordFreshness(SNAPSHOT_STALE_ACTION, view, options.staleHours, now, false);
+          // emailul alertei, o singură dată pe episod (la trecere, nu la memento), prin outbox în aceeași tranzacție
+          await enqueueStockSyncAlert(db, {
+            warehouseId: view.warehouseId,
+            alertedAt: now,
+            takenAt: view.takenAt,
+          });
           check.alerted = true;
           result.alerts++;
         } else if (

@@ -457,3 +457,75 @@ describe("suprascrierea și notificările interne", () => {
     });
   });
 });
+
+describe("alerta «sincronizarea SmartBill e neactualizată»: reverificarea la trimitere", () => {
+  const TEMPLATE = "internal.stock_sync_stale";
+  let seq = 0;
+
+  async function queueAlert(h: Harness, roles: string[], verified = true) {
+    const email = `alerta-trimitere-${++seq}-${Date.now()}@exemplu.test`;
+    const user = await h.tx.user.create({
+      data: {
+        id: `u-alerta-t-${seq}-${Date.now()}`,
+        name: "Alertă",
+        email,
+        emailVerified: verified,
+      },
+    });
+    for (const key of roles) {
+      const role = await h.tx.role.findUniqueOrThrow({ where: { key } });
+      await h.tx.userRole.create({ data: { userId: user.id, roleId: role.id } });
+    }
+    await enqueueDispatches(h.tx, [
+      {
+        template: TEMPLATE,
+        eventKey: `stock-sync:test:${seq}`,
+        recipient: email,
+        audience: "internal",
+        data: { takenAt: new Date(NOW.getTime() - 30 * 3_600_000).toISOString() },
+      },
+    ]);
+    const row = await h.tx.emailDispatch.findFirstOrThrow({
+      where: { template: TEMPLATE, recipient: email },
+    });
+    return { user, email, row };
+  }
+
+  it("destinatar încă eligibil: emailul pleacă, cu data ultimei sincronizări în text", async () => {
+    await harness(async (h) => {
+      const { email, row } = await queueAlert(h, ["manager"]);
+      const { sent, run } = setup(h);
+      await run(row.id);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.message.to).toBe(email);
+      expect(sent[0]?.message.subject).toContain("Sincronizarea stocului din SmartBill");
+      expect((await h.tx.emailDispatch.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
+        "sent",
+      );
+    });
+  });
+
+  it("rol retras după punerea în coadă: nu se trimite, rândul e «skipped» cu motiv", async () => {
+    await harness(async (h) => {
+      const { user, row } = await queueAlert(h, ["manager"]);
+      await h.tx.userRole.deleteMany({ where: { userId: user.id } });
+      const { sent, run } = setup(h);
+      await run(row.id);
+      expect(sent).toHaveLength(0);
+      expect(await h.tx.emailDispatch.findUniqueOrThrow({ where: { id: row.id } })).toMatchObject({
+        status: "skipped",
+      });
+    });
+  });
+
+  it("email neverificat sau fără inventory.write (Suport): nu se trimite", async () => {
+    await harness(async (h) => {
+      const unverified = await queueAlert(h, ["manager"], false);
+      const support = await queueAlert(h, ["support"]);
+      const { sent, run } = setup(h);
+      await run(unverified.row.id);
+      await run(support.row.id);
+      expect(sent).toHaveLength(0);
+    });
+  });
+});

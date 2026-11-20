@@ -7,3 +7,4 @@ export * from "./order-email-triggers";
 export * from "./sanitize";
 export * from "./smtp-config";
 export * from "./verification-tokens";
+export * from "./stock-sync-alert";
