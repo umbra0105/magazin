@@ -10,8 +10,8 @@ import {
   Label,
   Pagination,
   Select,
-  TAB_LIST_CLASS,
-  tabClass,
+  ScrollableTabNav,
+  scrollableTabClass,
   filterChipClass,
 } from "@ecom/ui";
 import { OrdersTable, type OrderRowDto } from "@/components/admin/orders/orders-table";
@@ -167,7 +167,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         </div>
       </div>
 
-      <nav aria-label={t.views.nav} className={`${TAB_LIST_CLASS} flex-wrap`}>
+      <ScrollableTabNav label={t.views.nav}>
         {defaultViews.map((item) => {
           const active =
             noExtraFilters(item.slug) && (item.view === "all" ? currentFilters === "" : true);
@@ -176,7 +176,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
               key={item.view}
               href={item.view === "all" ? "/admin/comenzi" : `/admin/comenzi?vedere=${item.slug}`}
               aria-current={active ? "page" : undefined}
-              className={tabClass(active)}
+              className={scrollableTabClass(active)}
             >
               {item.label}
             </Link>
@@ -189,14 +189,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
               key={view.id}
               href={view.query ? `/admin/comenzi?${view.query}` : "/admin/comenzi"}
               aria-current={active ? "page" : undefined}
-              className={tabClass(active)}
+              className={scrollableTabClass(active)}
               data-saved-view={view.name}
             >
               {view.name}
             </Link>
           );
         })}
-      </nav>
+      </ScrollableTabNav>
 
       <form
         method="get"

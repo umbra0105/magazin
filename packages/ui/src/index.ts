@@ -22,7 +22,8 @@ export { TabsFade, scrollEdges, type ScrollMetrics } from "./components/tabs-fad
 export { SaveBar, type SaveBarProps } from "./components/save-bar";
 export { Section, type SectionProps } from "./components/form-section";
 export { filterChipClass } from "./components/filter-chip";
-export { TAB_LIST_CLASS, tabClass } from "./components/tab-styles";
+export { TAB_LIST_CLASS, scrollableTabClass, tabClass } from "./components/tab-styles";
+export { ScrollableTabNav } from "./components/scrollable-tab-nav";
 export {
   Pagination,
   pageWindow,

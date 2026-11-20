@@ -47,6 +47,8 @@ let ultima: E2eCartProduct;
 let manager: Account;
 let owner: Account;
 let support: Account;
+/** Numărul comenzii plasate în primul test (refolosită de testele următoare, rulate în serie). */
+let firstOrderNumber = "";
 const SETTING_KEYS = [
   "company.legalName",
   "company.bankName",
@@ -123,6 +125,7 @@ test.describe("lista, detaliul și acțiunile", () => {
     await login(page, manager, "/admin/comenzi");
     await expect(page.getByRole("heading", { level: 1, name: /^Comenzi/ })).toBeVisible();
     await openOrder(page, number);
+    firstOrderNumber = number;
     await expect(page.locator("[data-order-detail]")).toContainText("224,00");
 
     // «Duplică ca ofertă» stă în același rând cu celelalte acțiuni; liniile imuabile au O SINGURĂ notă (cea cu «Duplică»)
@@ -168,6 +171,37 @@ test.describe("lista, detaliul și acțiunile", () => {
     await page.getByLabel("Nota internă").fill("Client sunat, vine după 10");
     await page.getByRole("button", { name: "Adaugă nota" }).click();
     await expect(page.locator("[data-order-detail]")).toContainText("Client sunat, vine după 10");
+  });
+
+  test("pe telefon (390 px): cardul comenzii arată clientul, iar filtrele stau pe un singur rând derulabil", async ({
+    browser,
+  }) => {
+    expect(firstOrderNumber).not.toBe("");
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const phone = await context.newPage();
+    await login(phone, manager, "/admin/comenzi");
+    const card = phone.locator("[data-order-row]").filter({ hasText: firstOrderNumber });
+    await expect(card).toBeVisible();
+    // numele clientului apare și în cardul de telefon (nu doar în tabelul de pe calculator)
+    await expect(card.getByText("Ion Popescu")).toBeVisible();
+
+    const views = phone.getByRole("navigation", { name: "Vederi ale listei de comenzi" });
+    const tabs = views.getByRole("link");
+    expect(await tabs.count()).toBeGreaterThan(3);
+    const tabBox = await tabs.first().boundingBox();
+    const navBox = await views.boundingBox();
+    expect(tabBox && navBox).toBeTruthy();
+    // un singur rând: lista nu e mai înaltă decât un tab (plus linia de jos), nu trei rânduri
+    expect(navBox!.height).toBeLessThanOrEqual(tabBox!.height + 4);
+    // derulează pe orizontală în propria regiune, iar pagina nu derulează pe orizontală
+    const overflowing = await views.evaluate((nav) => nav.scrollWidth > nav.clientWidth);
+    if (overflowing) {
+      await expect(phone.locator('[data-tabs-fade="end"]')).toBeVisible();
+    }
+    expect(
+      await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    ).toBeLessThanOrEqual(0);
+    await context.close();
   });
 
   test("anularea cere un motiv; comanda devine «Anulată», iar clientul primește emailul de anulare", async ({
@@ -331,7 +365,7 @@ test.describe("succes: de la creare la plată", () => {
       timeout: 30_000,
     });
 
-    // linkul folosit a doua oară: oferta e deja comandă, fără o a doua comandă
+    // linkul folosit a doua oară: oferta e deja comandă PLĂTITĂ, deci doar mesajul, fără «Continuă plata» și fără a doua comandă
     await client.goto(link);
     await expect(
       client.getByRole("heading", { name: "Oferta a fost deja folosită" }),

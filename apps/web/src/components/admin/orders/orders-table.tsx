@@ -167,7 +167,7 @@ export function OrdersTable(props: OrdersTableProps) {
               </Th>
             )}
             <Th priority="primary">{t.columns.order}</Th>
-            <Th priority="secondary">{t.columns.customer}</Th>
+            <Th priority="primary">{t.columns.customer}</Th>
             <Th priority="primary" numeric>
               {t.columns.total}
             </Th>
@@ -207,7 +207,8 @@ export function OrdersTable(props: OrdersTableProps) {
                   </span>
                 </RowHeader>
                 <Td
-                  priority="secondary"
+                  priority="primary"
+                  stack="title"
                   className="max-w-56 truncate"
                   title={row.customer ?? undefined}
                 >
