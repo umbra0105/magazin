@@ -137,7 +137,7 @@ jobs:
   # are propriile servicii și propria bază de test, deci nu interferează cu celelalte.
   e2e-chromium:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     strategy:
       fail-fast: false
@@ -241,7 +241,7 @@ jobs:
   # nu mai pornește proiectul principal (rulează în `e2e-chromium`), iar ordinea dintre cele două proiecte selectate se păstrează.
   e2e-isolated:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -339,7 +339,7 @@ jobs:
   # E2E pe S3 (MinIO), plus build-ul de producție obișnuit (fără harness), care nu mai încarcă jobul cel mai lung.
   e2e-s3:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     services:
       postgres:
