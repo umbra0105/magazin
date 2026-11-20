@@ -147,7 +147,9 @@ test.describe("meniul «Catalog», pe roluri", () => {
       await login(page, account, "/admin");
       await expect(sidebar(page).getByRole("link", { name: "Panou", exact: true })).toBeVisible();
       await expect(groupButton(page)).toHaveCount(0);
-      await expect(sidebar(page).locator("[data-nav-group]")).toHaveCount(0);
+      // Suport și Contabil au acces doar la grupul «Comenzi» (orders.read), nu și la «Catalog»
+      await expect(sidebar(page).locator("[data-nav-group]")).toHaveCount(1);
+      await expect(sidebar(page).locator('[data-nav-group="catalog"]')).toHaveCount(0);
       for (const url of ["/admin/produse", "/admin/produse/categorii", "/admin/produse/stoc"]) {
         await page.goto(url);
         await expect(page).toHaveURL(/\/admin\/acces-interzis/);

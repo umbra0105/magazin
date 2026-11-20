@@ -108,8 +108,16 @@ describe("permisiunile plăților (Faza 10)", () => {
     expect(rolesWith("payments.read")).toEqual(["owner", "admin", "manager", "accountant"]);
   });
 
-  it("rambursarea: doar Owner, Admin, Manager (Suport, Contabil, Depozit, Editor nu)", () => {
+  it("rambursarea fără limită (payments.refund): doar Owner, Admin, Manager (Suport, Contabil, Depozit, Editor nu)", () => {
     expect(rolesWith("payments.refund")).toEqual(["owner", "admin", "manager"]);
+  });
+
+  it("rambursarea din comandă (orders.refund): Owner, Admin, Manager și Suport; Suport o are CU LIMITĂ (fără payments.refund), decizia 2026-11-19", () => {
+    expect(rolesWith("orders.refund")).toEqual(["owner", "admin", "manager", "support"]);
+    const support = DEFAULT_ROLES.find((r) => r.key === "support");
+    expect(support?.permissions).toContain("orders.refund");
+    expect(support?.permissions).not.toContain("payments.refund");
+    expect(support?.description).toMatch(/limit/i);
   });
 
   it("configurarea (chei, mod test/live): DOAR Owner, ca la cheile de integrare; Adminul nu are acces la chei", () => {
@@ -121,6 +129,39 @@ describe("permisiunile plăților (Faza 10)", () => {
       if (role.permissions.includes("payments.refund")) {
         expect(role.permissions, role.key).toContain("payments.read");
       }
+    }
+  });
+});
+
+describe("permisiunile comenzilor și emailurilor (Faza 11)", () => {
+  it("ofertele de plată (orders.offers): Owner, Admin, Manager; NU Suport, Depozit, Editor, Contabil", () => {
+    expect(
+      DEFAULT_ROLES.filter((r) => r.permissions.includes("orders.offers")).map((r) => r.key),
+    ).toEqual(["owner", "admin", "manager"]);
+  });
+
+  const rolesWith = (permission: (typeof PERMISSION_KEYS)[number]) =>
+    DEFAULT_ROLES.filter((r) => r.permissions.includes(permission)).map((r) => r.key);
+
+  it("«marchează plătit» (transfer bancar): Owner, Admin, Manager; nu Suport, Depozit, Editor, Contabil", () => {
+    expect(rolesWith("orders.mark_paid")).toEqual(["owner", "admin", "manager"]);
+  });
+
+  it("emailurile: citirea (șabloane, jurnal) Owner, Admin, Manager; scrierea (suprascriere, test, retrimitere) Owner, Admin", () => {
+    expect(rolesWith("email.read")).toEqual(["owner", "admin", "manager"]);
+    expect(rolesWith("email.write")).toEqual(["owner", "admin"]);
+  });
+
+  it("serverul SMTP: DOAR Owner, ca la cheile de integrare (Adminul nu vede parola SMTP)", () => {
+    expect(rolesWith("email.configure")).toEqual(["owner"]);
+  });
+
+  it("scrierea cere citirea: nimeni nu suprascrie șabloane fără să le vadă", () => {
+    for (const role of DEFAULT_ROLES) {
+      if (role.permissions.includes("email.write"))
+        expect(role.permissions, role.key).toContain("email.read");
+      if (role.permissions.includes("email.configure"))
+        expect(role.permissions, role.key).toContain("email.read");
     }
   });
 });

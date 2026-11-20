@@ -10,7 +10,7 @@ import {
   deriveTestDatabaseUrl,
   deriveTestRedisUrl,
 } from "./test/support/test-env";
-import { globalStateSpecPattern } from "./test/support/e2e-projects";
+import { globalStateSpecPattern, orderFlowSpecPattern } from "./test/support/e2e-projects";
 
 const port = 3100;
 // Al doilea server E2E, cu driverul S3 (MinIO), pentru `e2e/media-s3.spec.ts` (proiectul `chromium-s3`).
@@ -140,7 +140,7 @@ export default defineConfig({
     : [
         {
           name: "chromium",
-          testIgnore: [s3SpecPattern, globalStateSpecPattern],
+          testIgnore: [s3SpecPattern, globalStateSpecPattern, orderFlowSpecPattern],
           use: { ...devices["Desktop Chrome"] },
         },
         {
@@ -150,6 +150,13 @@ export default defineConfig({
           name: "chromium-global-state",
           testMatch: globalStateSpecPattern,
           dependencies: ["chromium"],
+          use: { ...devices["Desktop Chrome"] },
+        },
+        {
+          // Comenzi și oferte din admin: după toate celelalte, într-un singur fișier (vezi test/support/e2e-projects.ts).
+          name: "chromium-orders",
+          testMatch: orderFlowSpecPattern,
+          dependencies: ["chromium-global-state"],
           use: { ...devices["Desktop Chrome"] },
         },
       ],

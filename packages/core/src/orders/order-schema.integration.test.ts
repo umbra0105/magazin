@@ -555,7 +555,7 @@ describe("adresa", () => {
     );
   });
 
-  it("o singură adresă de fiecare tip pe comandă; adresa nu se modifică", async () => {
+  it("o singură adresă de fiecare tip pe comandă; adresa rămâne snapshot: zona, țara și firma nu se modifică (strada se poate corecta, decizia 2026-11-19)", async () => {
     await rejects(
       async (tx) => {
         const b = await withOrder(tx);
@@ -570,8 +570,16 @@ describe("adresa", () => {
         const b = await withOrder(tx);
         return tx.address.create({ data: addressData(b.order.id, b.geo) });
       },
-      (tx, a) => tx.address.update({ where: { id: a.id }, data: { street: "Alta" } }),
+      (tx, a) => tx.address.update({ where: { id: a.id }, data: { localityName: "Alta" } }),
       "snapshot imuabil",
+    );
+    // greșelile de tastare (nume, telefon, stradă, cod poștal) se pot corecta; testul complet al corectării e în order-admin-edits
+    await accepts(
+      async (tx) => {
+        const b = await withOrder(tx);
+        return tx.address.create({ data: addressData(b.order.id, b.geo) });
+      },
+      (tx, a) => tx.address.update({ where: { id: a.id }, data: { street: "Alta" } }),
     );
   });
 });

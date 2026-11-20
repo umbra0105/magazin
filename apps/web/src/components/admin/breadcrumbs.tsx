@@ -3,20 +3,26 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { detailCrumbLabel } from "@/lib/admin-crumbs";
 import { breadcrumbsFor } from "@/lib/admin-nav";
 import { getMessages } from "@/messages";
+import { useCrumbLabels } from "./crumb-labels";
 
 const m = getMessages().admin;
 
 /** Calculată în browser din `usePathname()`: layout-ul nu se re-randează la navigarea între pagini. */
 export function Breadcrumbs() {
   const pathname = usePathname();
+  const labels = useCrumbLabels();
   const crumbs = breadcrumbsFor(
     pathname,
     (id) => m.nav[id],
     m.home,
     undefined,
-    (section, raw, previous) => {
+    (section, raw, previous, href) => {
+      // detaliile din «Comenzi»: numărul comenzii/ofertei sau numele șablonului (înregistrat de pagină), nu id-ul intern
+      const detail = detailCrumbLabel(section, raw, previous, href, labels, m.orders.crumbs);
+      if (detail !== null) return detail;
       // /admin/produse/stoc/<id variantă>: eticheta «Istoric», nu id-ul tehnic (secțiunea e id-ul elementului din grup)
       if (section === "inventory") return m.inventory.history.breadcrumb;
       if (section !== "allProducts") return null;

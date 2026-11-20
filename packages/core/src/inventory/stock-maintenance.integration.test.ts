@@ -12,6 +12,7 @@ import {
   type ProductSpec,
   type StockContext,
 } from "../test-utils/stock-fixtures";
+import { isStockAlertRecipient } from "../email/stock-sync-alert";
 import { StockMaintenance } from "./stock-maintenance";
 import { StockService } from "./stock-service";
 import { reservationExpiresAt } from "./workdays";
@@ -635,6 +636,137 @@ describe("curățarea cererilor «Anunță-mă când revine»", () => {
           String(bad),
         ).rejects.toThrow(RangeError);
       }
+    });
+  });
+});
+
+describe("emailul alertei «sincronizarea SmartBill e neactualizată» (Faza 11)", () => {
+  const TEMPLATE = "internal.stock_sync_stale";
+  let seq = 0;
+
+  /** Un utilizator de test cu rolurile date; `verified: false` = email neconfirmat. Doar utilizatorii creați aici contează în aserțiuni. */
+  async function user(h: Harness, roles: string[], over: { verified?: boolean } = {}) {
+    const email = `alerta-${++seq}-${T0.getTime()}@exemplu.test`;
+    const created = await h.tx.user.create({
+      data: {
+        id: `u-alerta-${seq}-${T0.getTime()}`,
+        name: "Utilizator alertă",
+        email,
+        emailVerified: over.verified ?? true,
+      },
+    });
+    for (const key of roles) {
+      const role = await h.tx.role.findUniqueOrThrow({ where: { key } });
+      await h.tx.userRole.create({ data: { userId: created.id, roleId: role.id } });
+    }
+    return created;
+  }
+
+  const rows = (h: Harness, emails: string[]) =>
+    h.tx.emailDispatch.findMany({
+      where: { template: TEMPLATE, recipient: { in: emails } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+
+  it("trimite doar utilizatorilor cu email verificat și inventory.write: Manager da; Suport, fără rol și cu email neverificat nu", async () => {
+    await withStock(async (h) => {
+      await h.product("5");
+      const manager = await user(h, ["manager"]);
+      const owner = await user(h, ["owner"]);
+      const support = await user(h, ["support"]);
+      const noRole = await user(h, []);
+      const unverified = await user(h, ["manager"], { verified: false });
+      const all = [manager, owner, support, noRole, unverified].map((u) => u.email);
+
+      await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      const sent = await rows(h, all);
+      expect(sent.map((r) => r.recipient).sort()).toEqual([manager.email, owner.email].sort());
+      for (const row of sent) {
+        expect(row).toMatchObject({ audience: "internal", status: "queued", orderId: null });
+        expect(row.eventKey).toMatch(/^stock-sync:/);
+      }
+    });
+  });
+
+  it("un rol personalizat cu inventory.write dar FĂRĂ acces în admin nu primește alerta", async () => {
+    await withStock(async (h) => {
+      await h.product("5");
+      const permission = await h.tx.permission.findUniqueOrThrow({
+        where: { key: "inventory.write" },
+      });
+      const role = await h.tx.role.create({
+        data: { key: "stoc-fara-admin-test", name: "Stoc fără admin" },
+      });
+      await h.tx.rolePermission.create({ data: { roleId: role.id, permissionId: permission.id } });
+      const person = await user(h, []);
+      await h.tx.userRole.create({ data: { userId: person.id, roleId: role.id } });
+      await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      expect(await rows(h, [person.email])).toHaveLength(0);
+      expect(await isStockAlertRecipient(h.tx, person.email)).toBe(false);
+    });
+  });
+
+  it("o singură dată pe episod: a doua rulare și memento-ul de 24 h nu trimit nimic nou", async () => {
+    await withStock(async (h) => {
+      await h.product("5");
+      const manager = await user(h, ["manager"]);
+      await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      expect(await rows(h, [manager.email])).toHaveLength(1);
+
+      await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      expect(await rows(h, [manager.email])).toHaveLength(1);
+
+      h.setClock(hours(T0, 25));
+      const reminder = await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      expect(reminder.reminders).toBe(1);
+      expect(await rows(h, [manager.email])).toHaveLength(1);
+    });
+  });
+
+  it("după recuperare, un episod nou trimite din nou (cheie de eveniment diferită)", async () => {
+    await withStock(async (h) => {
+      await h.product("5");
+      const manager = await user(h, ["manager"]);
+      await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      h.setClock(hours(T0, 1));
+      await h.snapshot(hours(T0, 1));
+      const recovered = await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      expect(recovered.recoveries).toBe(1);
+      expect(await rows(h, [manager.email])).toHaveLength(1);
+
+      h.setClock(hours(T0, 30));
+      const again = await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      expect(again.alerts).toBe(1);
+      const sent = await rows(h, [manager.email]);
+      expect(sent).toHaveLength(2);
+      expect(new Set(sent.map((r) => r.eventKey)).size).toBe(2);
+    });
+  });
+
+  it("recuperarea nu trimite email", async () => {
+    await withStock(async (h) => {
+      await h.product("5");
+      const manager = await user(h, ["manager"]);
+      await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      await h.snapshot(hours(T0, 1));
+      h.setClock(hours(T0, 2));
+      await h.maintenance.checkSnapshotFreshness({ staleHours: 24 });
+      expect(await rows(h, [manager.email])).toHaveLength(1);
+    });
+  });
+
+  it("reverificarea la trimitere: rol retras sau email schimbat în neverificat după punerea în coadă → nu mai e destinatar", async () => {
+    await withStock(async (h) => {
+      await h.product("5");
+      const manager = await user(h, ["manager"]);
+      const other = await user(h, ["admin"]);
+      expect(await isStockAlertRecipient(h.tx, manager.email)).toBe(true);
+      expect(await isStockAlertRecipient(h.tx, manager.email.toUpperCase())).toBe(true);
+      await h.tx.userRole.deleteMany({ where: { userId: manager.id } });
+      expect(await isStockAlertRecipient(h.tx, manager.email)).toBe(false);
+      await h.tx.user.update({ where: { id: other.id }, data: { emailVerified: false } });
+      expect(await isStockAlertRecipient(h.tx, other.email)).toBe(false);
+      expect(await isStockAlertRecipient(h.tx, "nu-exista@exemplu.test")).toBe(false);
     });
   });
 });

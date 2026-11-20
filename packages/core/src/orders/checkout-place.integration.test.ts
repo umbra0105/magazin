@@ -143,7 +143,7 @@ describe("comandă cu ramburs", () => {
 });
 
 describe("ridicare personală: adresa magazinului, nu a clientului", () => {
-  const STORE_TEXT = "Strada Magazinului 7, Alba Iulia, Alba, 510000, RO";
+  const STORE_TEXT = "Strada Magazinului 7, 510000 Alba Iulia, Alba";
   const place = async (h: Harness) => {
     const a = await h.product();
     const owner = await h.fill([{ variantId: a.variantId }]);

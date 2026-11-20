@@ -114,7 +114,7 @@ if (captureDir) {
       colorScheme: scheme as "light" | "dark",
     });
     const page = await context.newPage();
-    await login(page, owner, "/admin/plati");
+    await login(page, owner, "/admin/comenzi/plati");
     return { page, close: () => context.close() };
   }
 
@@ -173,7 +173,7 @@ if (captureDir) {
     // 5. rambursare manuală necesară pe prima comandă
     await seedE2eDemoPayments("manual_required");
     const admin = await adminPage(browser, "light", 1440);
-    await admin.page.goto(`/admin/plati/${states[0]!.paymentId}`);
+    await admin.page.goto(`/admin/comenzi/plati/${states[0]!.paymentId}`);
     await admin.page.getByLabel("Suma de rambursat (lei)").fill("100,00");
     await admin.page.getByLabel("Motivul rambursării").fill("Produs deteriorat la livrare");
     await admin.page.getByRole("button", { name: "Rambursează…" }).click();
@@ -193,16 +193,16 @@ if (captureDir) {
         await page.goto("/admin/setari/plati");
         await expect(page.getByRole("heading", { level: 1, name: "Plăți cu card" })).toBeVisible();
         await shot(page, "admin-setari-plati", scheme, width);
-        await page.goto("/admin/plati");
+        await page.goto("/admin/comenzi/plati");
         await expect(page.getByRole("heading", { level: 1 })).toContainText("Plăți cu cardul");
         await shot(page, "admin-plati-lista", scheme, width);
-        await page.goto("/admin/plati?vedere=atentie");
+        await page.goto("/admin/comenzi/plati?vedere=atentie");
         await expect(page.getByRole("link", { name: states[1]!.number })).toBeVisible();
         await shot(page, "admin-plati-atentie", scheme, width);
-        await page.goto(`/admin/plati/${states[0]!.paymentId}`);
+        await page.goto(`/admin/comenzi/plati/${states[0]!.paymentId}`);
         await expect(page.getByRole("heading", { level: 1 })).toContainText(states[0]!.number);
         await shot(page, "admin-plata-detaliu-rambursare-manuala", scheme, width);
-        await page.goto(`/admin/plati/${states[1]!.paymentId}`);
+        await page.goto(`/admin/comenzi/plati/${states[1]!.paymentId}`);
         await expect(page.getByRole("heading", { name: /Necesită atenție/ })).toBeVisible();
         await shot(page, "admin-plata-detaliu-atentie", scheme, width);
         await close();

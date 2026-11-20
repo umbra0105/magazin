@@ -8,6 +8,10 @@ export const PAYMENT_ERROR_CODES = [
   "REFUND_NOT_FOUND",
   "REFUND_NOT_MANUAL",
   "REFUND_INVALID",
+  /** Rolul Suport: suma cerută plus ce s-a rambursat deja cu limită pe comandă depășește `payment.supportRefundLimit`. */
+  "REFUND_OVER_LIMIT",
+  /** Actor cu limită, dar limita din setare lipsește sau nu se poate citi: refuz (niciodată «fără limită»). */
+  "REFUND_LIMIT_UNAVAILABLE",
   "PAYMENT_RETRY_UNAVAILABLE",
   "PAYMENT_RETRY_EXPIRED",
   "PAYMENT_RETRY_NO_STOCK",
@@ -45,5 +49,7 @@ export const ATTENTION_REASONS = [
   "reconciliation_mismatch",
   /** Notificare de credit (rambursare) fără rambursare corespunzătoare la noi. */
   "credit_unmatched",
+  /** Comanda a fost anulată de admin cu plata încasată: banii rămân la noi până la rambursarea INTEGRALĂ (Faza 11). */
+  "order_cancelled_paid",
 ] as const;
 export type AttentionReason = (typeof ATTENTION_REASONS)[number];

@@ -16,3 +16,8 @@ export function tabClass(selected: boolean): string {
       : "border-transparent text-ink-secondary hover:text-ink",
   );
 }
+
+/** Același tab pe lista derulabilă (`ScrollableTabNav`, `Tabs scrollable`): nu se strânge și nu se rupe, fără marginea negativă a listei care rupe. */
+export function scrollableTabClass(selected: boolean): string {
+  return cn(tabClass(selected), "mb-0 shrink-0 whitespace-nowrap");
+}

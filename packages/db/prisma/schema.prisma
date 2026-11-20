@@ -8,19 +8,21 @@ datasource db {
 }
 
 model User {
-  id             String          @id
-  name           String
-  email          String
-  emailVerified  Boolean         @default(false)
-  image          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  sessions       Session[]
-  accounts       Account[]
-  roles          UserRole[]
-  mediaUploads   Media[]
-  productImports ProductImport[]
-  cart           Cart?
+  id                String                  @id
+  name              String
+  email             String
+  emailVerified     Boolean                 @default(false)
+  image             String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  sessions          Session[]
+  accounts          Account[]
+  roles             UserRole[]
+  mediaUploads      Media[]
+  productImports    ProductImport[]
+  cart              Cart?
+  savedOrderViews   OrderSavedView[]
+  notificationReads AdminNotificationRead[]
 
   @@unique([email])
   @@map("user")
@@ -488,6 +490,7 @@ model ProductVariant {
   orderLines             OrderLine[]
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
+  offerLines             OrderOfferLine[]
 
   @@unique([id, productId])
   @@index([productId])
@@ -1321,6 +1324,10 @@ model Order {
   adminNote              String?
   installationRequested  Boolean             @default(false)
   installationNote       String?
+  /// Starea de urmărire a cererii de instalare (docs/15 §4): requested | contacted | scheduled | done | declined; nulă dacă nu s-a
+  /// cerut instalare (CHECK în migrație). Schimbările scriu OrderEvent și audit.
+  installationStatus     String?
+  installationStatusAt   DateTime?
   /// Consimțământul pentru Termeni: textul exact, versiunea și momentul. Fără IP și fără user-agent (decizie Faza 9).
   termsAcceptedAt        DateTime
   termsConsentText       String
@@ -1337,6 +1344,12 @@ model Order {
   placedAt               DateTime            @default(now())
   confirmedAt            DateTime?
   cancelledAt            DateTime?
+  /// Marcajul «La furnizor» (Faza 11, decizia 2026-11-19): NU e stare și nu atinge stocul, banii sau statusurile. Toate nule
+  /// (nemarcată) sau `supplierMarkedAt` + `supplierMarkedBy` setate (CHECK în migrație); furnizorul și nota sunt text liber.
+  supplierMarkedAt       DateTime?
+  supplierMarkedBy       String?
+  supplierName           String?
+  supplierNote           String?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   lines                  OrderLine[]
@@ -1347,12 +1360,17 @@ model Order {
   stockCommitments       StockCommitment[]
   refunds                Refund[]
   paymentRetryTokens     PaymentRetryToken[]
+  emailDispatches        EmailDispatch[]
+  notes                  OrderNote[]
+  offer                  OrderOffer?
 
   @@index([status, paymentStatus])
   @@index([email])
   @@index([reservationExpiresAt])
   @@index([channelId])
   @@index([placedAt])
+  @@index([supplierMarkedAt])
+  @@index([installationStatus])
   @@map("customer_order")
 }
 
@@ -1472,6 +1490,9 @@ model Refund {
   /// «Am rambursat manual»: referința din contul procesatorului.
   manualReference  String?
   resolvedManually Boolean   @default(false)
+  /// Faza 11 (decizia 2026-11-19): rambursarea a fost cerută de un actor CU LIMITĂ (rolul Suport: `orders.refund` fără
+  /// `payments.refund`). Limita se aplică pe suma acestor rambursări pe comandă, sub blocare.
+  limitedActor     Boolean   @default(false)
   /// Momentul în care cererea a fost TRIMISĂ procesatorului. O cerere trimisă și rămasă fără rezultat nu se retrimite automat
   /// (risc de rambursare dublă): devine «manual_required».
   sentAt           DateTime?
@@ -1507,6 +1528,199 @@ model PaymentWebhookEvent {
   @@index([status, receivedAt])
   @@index([paymentId])
   @@map("payment_webhook_event")
+}
+
+/// Notificările interne ale adminului (Faza 11): persistente, fără date personale în titlu, vizibile după `permission`. `dedupKey`
+/// face ca aceeași situație să producă o singură notificare. Citit/necitit se ține per utilizator în `AdminNotificationRead`.
+model AdminNotification {
+  id         String                  @id @default(cuid())
+  kind       String
+  title      String
+  /// Linie scurtă de context sub titlu (numărul comenzii sau al ofertei și un motiv), fără date personale; `NULL` la cele vechi.
+  context    String?
+  href       String
+  permission String
+  dedupKey   String                  @unique
+  createdAt  DateTime                @default(now())
+  reads      AdminNotificationRead[]
+
+  @@index([createdAt])
+  @@map("admin_notification")
+}
+
+model AdminNotificationRead {
+  notificationId String
+  notification   AdminNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt         DateTime          @default(now())
+
+  @@id([notificationId, userId])
+  @@index([userId])
+  @@map("admin_notification_read")
+}
+
+/// Vederile salvate ale listei de comenzi (Faza 11), proprii fiecărui utilizator: numele și șirul de interogare al filtrelor.
+model OrderSavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  query     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId, createdAt])
+  @@map("order_saved_view")
+}
+
+/// Oferta de plată (Faza 11, decizia A din 2026-11-20): liniile și totalurile ÎNGHEȚATE la creare, calculate de motorul de prețuri
+/// printr-un coș al adminului. Clientul o plătește printr-un link cu jeton aleatoriu de 256 de biți (în bază stă doar amprenta SHA-256).
+/// La plată serverul recalculează: dacă prețul, transportul, TVA-ul sau stocul diferă, oferta devine `stale`; altfel devine comandă
+/// reală prin `CheckoutService` (`convertedOrderId` UNIC: o singură comandă). `status`: active | converted | expired | stale | cancelled.
+model OrderOffer {
+  id                String            @id @default(cuid())
+  number            String            @unique
+  status            String            @default("active")
+  tokenHash         String            @unique
+  expiresAt         DateTime
+  creatorId         String
+  creatorLabel      String
+  email             String
+  phone             String
+  /// Adresa clientului (cod județ/localitate SIRUTA, stradă etc.), validată cu aceeași schemă ca la checkout.
+  shipping          Json
+  billing           Json?
+  company           Json?
+  shippingOfferCode String
+  /// courier | pickup
+  shippingKind      String
+  subtotalMinor     Int
+  shippingMinor     Int
+  taxMinor          Int
+  totalMinor        Int
+  taxRateBps        Int
+  convertedOrderId  String?           @unique
+  convertedOrder    Order?            @relation(fields: [convertedOrderId], references: [id], onDelete: Restrict)
+  convertedAt       DateTime?
+  staleReason       String?
+  staleAt           DateTime?
+  cancelledAt       DateTime?
+  lastSentAt        DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  lines             OrderOfferLine[]
+  events            OrderOfferEvent[]
+
+  @@index([status, expiresAt])
+  @@index([createdAt])
+  @@map("order_offer")
+}
+
+model OrderOfferLine {
+  id             String          @id @default(cuid())
+  offerId        String
+  offer          OrderOffer      @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  variantId      String?
+  variant        ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  sku            String
+  title          String
+  variantTitle   String?
+  /// Zecimi de miime de unitate (`Quantity`), > 0.
+  quantity       BigInt
+  unitSymbol     String
+  unitPriceMinor Int
+  lineTotalMinor Int
+  vatMinor       Int
+  /// in_stock | limited | on_order
+  state          String
+  leadTimeDays   Int?
+  position       Int
+
+  @@unique([offerId, position])
+  @@index([variantId])
+  @@map("order_offer_line")
+}
+
+model OrderOfferEvent {
+  id         String     @id @default(cuid())
+  offerId    String
+  offer      OrderOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  type       String
+  message    String
+  data       Json?
+  actorLabel String?
+  createdAt  DateTime   @default(now())
+
+  @@index([offerId, createdAt])
+  @@map("order_offer_event")
+}
+
+model OrderOfferCounter {
+  id        String   @id
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("order_offer_counter")
+}
+
+/// Notele interne ale comenzii (Faza 11): text liber al echipei, cu autor și moment. Doar se adaugă. Textul poate conține date
+/// personale: nu intră în `OrderEvent` (evenimentul spune doar că s-a adăugat o notă) și nu se loghează.
+model OrderNote {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  authorLabel String
+  body        String
+  createdAt   DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@map("order_note")
+}
+
+/// Un email tranzacțional de trimis (Faza 11), în stil «outbox»: rândul se scrie ÎN ACEEAȘI tranzacție cu evenimentul care îl
+/// declanșează (OrderEvent), iar trimiterea o face workerul, prin coada «emails». Unicitatea `(eventKey, template, recipient)` e
+/// garanția «o singură dată per eveniment», în bază, nu în memorie: același eveniment procesat de două ori (retry, webhook
+/// repetat, două workere) dă UN singur rând. «Retrimite» e o acțiune separată, cu `eventKey` propriu (`resend:…`).
+/// `status`: queued | sending | sent | failed (dead-letter, vizibil în admin) | skipped. O trimitere rămasă «sending» fără
+/// rezultat NU se retrimite automat (risc de email dublu): devine «failed» și se retrimite doar din admin.
+/// `data` poartă doar câmpuri mici și ne-sensibile (motiv, sumă), niciodată tokenuri sau corpul emailului.
+model EmailDispatch {
+  id        String    @id @default(cuid())
+  template  String
+  eventKey  String
+  recipient String
+  /// customer | internal
+  audience  String    @default("customer")
+  orderId   String?
+  order     Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    String    @default("queued")
+  attempts  Int       @default(0)
+  /// Eroarea curățată (fără adrese, tokenuri sau corp), doar pentru diagnostic.
+  lastError String?
+  data      Json?
+  claimedAt DateTime?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([eventKey, template, recipient])
+  @@index([status, createdAt])
+  @@index([orderId])
+  @@map("email_dispatch")
+}
+
+/// Suprascrierea unui șablon de email (Faza 11): doar subiectul și textul de început; informațiile obligatorii legal ale
+/// confirmării nu se pot scoate. Variabilele permise sunt ale șablonului (validate la salvare). Ștergerea rândului = revenire la implicit.
+model EmailTemplateOverride {
+  template  String   @id
+  subject   String
+  intro     String
+  updatedBy String
+  updatedAt DateTime @updatedAt
+
+  @@map("email_template_override")
 }
 
 /// Linkul «reîncearcă plata»: jetonul în clar nu se stochează, doar amprenta SHA-256. Valabil până la `expiresAt`

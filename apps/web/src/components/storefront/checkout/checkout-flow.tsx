@@ -794,9 +794,12 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
             {preview?.leadTimeText ? (
               <p className="text-sm font-medium">{preview.leadTimeText}</p>
             ) : null}
-            <p className="text-sm text-ink-secondary" data-ground-notice>
-              {props.groundNotice}
-            </p>
+            {isPickup ? null : (
+              // «la nivelul solului» e un mesaj despre livrare: nu se arată la ridicarea personală
+              <p className="text-sm text-ink-secondary" data-ground-notice>
+                {props.groundNotice}
+              </p>
+            )}
             {continueButton("shipping")}
           </>,
         )}

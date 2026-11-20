@@ -10,7 +10,7 @@ import { getPaymentConfig } from "@/lib/payments";
 import { withPermission } from "@/lib/session";
 
 /**
- * Rambursările din admin: `/admin/plati`. Cer `payments.refund`. Suma, plafonul (≤ încasat − deja angajat, sub blocare) și
+ * Rambursările din admin: `/admin/comenzi/plati`. Cer `payments.refund`. Suma, plafonul (≤ încasat − deja angajat, sub blocare) și
  * idempotența (cheia vine din formular: dublu-click = o singură rambursare) sunt verificate pe server, în `requestRefund`.
  * Rambursarea face DOAR banii: nu atinge stocul și nu înregistrează un retur. Fiecare acțiune intră în jurnalul de audit, cu
  * actorul, suma și motivul; niciodată date de card sau chei.

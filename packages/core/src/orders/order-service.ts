@@ -1,5 +1,6 @@
 import type { Prisma } from "@ecom/db";
 import type { Db } from "../db-tx";
+import { scheduleOrderEmails } from "../email/order-email-triggers";
 import { OrderError } from "./order-errors";
 import {
   assertTransition,
@@ -86,13 +87,39 @@ export async function setReservationExpiry(
   await tx.order.update({ where: { id: orderId }, data: { reservationExpiresAt } });
 }
 
+/**
+ * Câmpurile comenzii care NU sunt stări și NU sunt bani, stoc sau linii: marcajul «La furnizor», contactul clientului și nota
+ * internă. Singura cale de scriere a lor (alături de `transitionOrder` pentru stări), ca regula «un singur loc care scrie pe
+ * comandă» din `orders.architecture` să rămână adevărată. Tipul nu permite statusuri, sume, linii sau rezervări.
+ */
+export interface OrderAnnotationFields {
+  supplierMarkedAt?: Date | null;
+  supplierMarkedBy?: string | null;
+  supplierName?: string | null;
+  supplierNote?: string | null;
+  adminNote?: string | null;
+  installationStatus?: string;
+  installationStatusAt?: Date;
+  email?: string;
+  phone?: string;
+}
+
+/** Apelantul ține comanda blocată (`lockOrder`) și scrie `OrderEvent` separat. */
+export async function updateOrderAnnotations(
+  tx: Db,
+  orderId: string,
+  fields: OrderAnnotationFields,
+): Promise<void> {
+  await tx.order.update({ where: { id: orderId }, data: fields });
+}
+
 /** Adaugă o intrare în jurnalul comenzii (timeline); intrările nu se modifică și nu se șterg. */
 export async function addOrderEvent(
   tx: Db,
   orderId: string,
   event: OrderEventInput,
 ): Promise<void> {
-  await tx.orderEvent.create({
+  const created = await tx.orderEvent.create({
     data: {
       orderId,
       type: event.type,
@@ -101,4 +128,6 @@ export async function addOrderEvent(
       ...(event.actorLabel !== undefined && { actorLabel: event.actorLabel }),
     },
   });
+  // emailurile declanșate de eveniment se scriu în aceeași tranzacție (outbox); trimiterea o face workerul, prin coadă
+  await scheduleOrderEmails(tx, orderId, { id: created.id, type: event.type, data: event.data });
 }

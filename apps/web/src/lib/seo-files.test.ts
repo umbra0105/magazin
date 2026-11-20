@@ -52,6 +52,8 @@ describe("renderRobots", () => {
     }
     expect(text).toContain("Sitemap: https://m.test/sitemap.xml");
     expect(ROBOTS_DISALLOWED).toContain("/comanda");
+    // linkul ofertei de plată e personal: nu se indexează
+    expect(text).toContain("Disallow: /oferta");
     // catalogul nu e blocat
     expect(text).not.toMatch(/Disallow: \/(produs|categorie|magazin|brand)/);
   });

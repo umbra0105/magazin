@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_NAV,
   CATALOG_ITEMS,
+  ORDERS_ITEMS,
   SETTINGS_ITEMS,
   activeItemId,
   pathInGroup,
@@ -103,7 +104,11 @@ describe("grupul «Catalog» din meniu", () => {
   });
 
   it("meniul are un singur grup pentru tot catalogul, iar niciun element nu e și intrare separată", () => {
-    expect(ADMIN_NAV.filter((e) => e.children).map((e) => e.id)).toEqual(["catalog", "settings"]);
+    expect(ADMIN_NAV.filter((e) => e.children).map((e) => e.id)).toEqual([
+      "orders",
+      "catalog",
+      "settings",
+    ]);
     const hrefs = ADMIN_NAV.map((e) => e.href);
     for (const item of CATALOG_ITEMS.filter((i) => i.href !== group?.href)) {
       expect(hrefs, item.href).not.toContain(item.href);
@@ -112,6 +117,57 @@ describe("grupul «Catalog» din meniu", () => {
     for (const item of CATALOG_ITEMS) {
       expect(pathInGroup(item.href, group?.href ?? ""), item.href).toBe(true);
     }
+  });
+});
+
+describe("grupul «Comenzi» din meniu (același model ca «Catalog»)", () => {
+  const group = ADMIN_NAV.find((entry) => entry.id === "orders");
+  const pages = adminPages();
+
+  it("fiecare element are o pagină care există, sub adresa grupului; niciun element nu e și intrare separată", () => {
+    const urls = new Set(pages.map((p) => p.url));
+    expect(urls.has(group?.href ?? "/nu-exista")).toBe(true);
+    for (const item of ORDERS_ITEMS) {
+      expect(urls.has(item.href), item.href).toBe(true);
+      expect(pathInGroup(item.href, group?.href ?? ""), item.href).toBe(true);
+    }
+    // ca la «Catalog»: primul element are adresa grupului; celelalte nu sunt și intrări separate de meniu
+    for (const item of ORDERS_ITEMS.filter((i) => i.href !== group?.href)) {
+      expect(
+        ADMIN_NAV.map((e) => e.href),
+        item.href,
+      ).not.toContain(item.href);
+    }
+  });
+
+  it("fiecare pagină de sub adresa grupului are un element evidențiat; detaliul comenzii ține «Comenzi», detaliul plății ține «Plăți»", () => {
+    const underGroup = pages.filter((p) => pathInGroup(p.url, group?.href ?? "/nu-exista"));
+    expect(underGroup.length).toBeGreaterThanOrEqual(ORDERS_ITEMS.length);
+    for (const page of underGroup) {
+      expect(
+        activeItemId(page.url.replace(/[[^]]+]/g, "x"), ORDERS_ITEMS),
+        page.file,
+      ).toBeDefined();
+    }
+    expect(activeItemId("/admin/comenzi/x", ORDERS_ITEMS)).toBe("allOrders");
+    expect(activeItemId("/admin/comenzi/plati/x", ORDERS_ITEMS)).toBe("payments");
+    expect(activeItemId("/admin/comenzi/sabloane-email/x", ORDERS_ITEMS)).toBe("emailTemplates");
+    expect(activeItemId("/admin/comenzi/oferte/nou", ORDERS_ITEMS)).toBe("offers");
+    expect(activeItemId("/admin/comenzi/oferte/x", ORDERS_ITEMS)).toBe("offers");
+  });
+
+  it("elementele cer permisiunea ecranului lor (meniul nu e securitate, dar nu arată ce nu poți deschide)", () => {
+    const byId = Object.fromEntries(ORDERS_ITEMS.map((item) => [item.id, item.permission]));
+    expect(byId).toEqual({
+      allOrders: "orders.read",
+      payments: "payments.read",
+      offers: "orders.offers",
+      emailTemplates: "email.read",
+      installRequests: "orders.read",
+    });
+    expect(ORDERS_ITEMS.find((item) => item.id === "installRequests")?.feature).toBe(
+      "installationRequests",
+    );
   });
 });
 
@@ -188,7 +244,7 @@ describe("bara de taburi a dispărut; grupurile sunt generice", () => {
 describe("adresele vechi există doar în tabelul de redirecturi", () => {
   // și în regex-uri (`/\/admin\/stoc$/`), nu doar în șiruri
   const OLD =
-    /(?:["'`]|\/\\)?\/admin(?:\/|\\\/)(?:categorii|branduri|atribute|unitati-de-masura|fise-explodate|stoc)(?=[/?"'`$\\\s)]|$)/;
+    /(?:["'`]|\/\\)?\/admin(?:\/|\\\/)(?:categorii|branduri|atribute|unitati-de-masura|fise-explodate|stoc|plati)(?=[/?"'`$\\\s)]|$)/;
   const ALLOWED = new Set([
     "apps/web/src/lib/admin-redirects.ts",
     "apps/web/src/lib/admin-redirects.test.ts",
@@ -237,6 +293,7 @@ describe("adresele vechi există doar în tabelul de redirecturi", () => {
         "/admin/branduri",
         "/admin/categorii",
         "/admin/fise-explodate",
+        "/admin/plati",
         "/admin/stoc",
         "/admin/unitati-de-masura",
       ].sort(),

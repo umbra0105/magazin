@@ -29,6 +29,20 @@ export const emailPayloadSchema = z.discriminatedUnion("kind", [
     kind: z.literal("back-in-stock"),
     alertId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
   }),
+  // Emailurile comenzilor (Faza 11): doar identificatorul rândului `EmailDispatch`; adresa, comanda și corpul se citesc din baza de
+  // date în momentul trimiterii, deci nu ajung niciodată în Redis.
+  z.object({
+    kind: z.literal("order-email"),
+    dispatchId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  }),
+  // Linkul ofertei de plată (Faza 11): jetonul din link nu stă în baza de date (doar amprenta lui), deci trebuie să călătorească în
+  // joburi, criptat ca cel de verificare sau de resetare; numărul, totalul și numele clientului se citesc din baza de date la trimitere.
+  z.object({
+    kind: z.literal("offer-link"),
+    offerId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+    to: z.string().min(3),
+    token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  }),
 ]);
 
 export type EmailPayload = z.infer<typeof emailPayloadSchema>;

@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
-import { adminBrandStyle, can, resolveAdminBrand } from "@ecom/core";
+import {
+  adminBrandStyle,
+  can,
+  listNotifications,
+  resolveAdminBrand,
+  unreadNotificationCount,
+} from "@ecom/core";
+import { getDb } from "@ecom/db";
 import {
   Card,
   CardContent,
@@ -16,6 +23,8 @@ import { AdminSurface } from "@/components/admin/admin-surface";
 import type { SidebarNavItem } from "@/components/admin/sidebar-nav";
 import { ADMIN_NAV, visibleNav } from "@/lib/admin-nav";
 import { getAdminAccess } from "@/lib/admin-page";
+import { getAdminCounters } from "@/lib/admin-counters";
+import { formatDateTime } from "@/lib/format-date";
 import { getBranding, getFeatureFlags, getSettings } from "@/lib/services";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-choice";
 import { getMessages } from "@/messages";
@@ -71,10 +80,21 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   const { subject } = decision;
-  const [flags, storeName] = await Promise.all([
+  const user = { userId: subject.userId, permissions: subject.permissions };
+  const [flags, storeName, counters, regional, notifications, unread] = await Promise.all([
     getFeatureFlags().list(),
     getSettings().get("general.storeName"),
+    getAdminCounters(),
+    getSettings().getGroup("regional"),
+    listNotifications(getDb(), user, 20),
+    unreadNotificationCount(getDb(), user),
   ]);
+  // contoarele se arată doar când există ceva de rezolvat și doar la elementele pe care utilizatorul le poate deschide
+  const countFor: Partial<Record<string, number>> = {
+    allOrders: counters.ordersToProcess,
+    payments: counters.paymentsAttention + counters.stuckEvents,
+    emailTemplates: counters.emailsFailed,
+  };
   const enabled = new Set(flags.filter((f) => f.enabled).map((f) => f.key));
   const navItems: SidebarNavItem[] = visibleNav(ADMIN_NAV, {
     can: (permission) => can(subject, permission),
@@ -90,6 +110,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         id: child.id,
         href: child.href,
         label: m.nav[child.id],
+        ...((countFor[child.id] ?? 0) > 0 && { count: countFor[child.id] as number }),
         ...(child.keepParams && { keepParams: child.keepParams }),
       })),
     }),
@@ -104,6 +125,17 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         logoUrl={branding.logoUrl}
         email={subject.email}
         navItems={navItems}
+        bell={{
+          unread,
+          items: notifications.map((n) => ({
+            id: n.id,
+            title: n.title,
+            context: n.context,
+            href: n.href,
+            read: n.read,
+            whenText: formatDateTime(n.createdAt, regional.locale, regional.timezone),
+          })),
+        }}
       >
         {children}
       </AdminShell>

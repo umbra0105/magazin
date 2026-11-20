@@ -8,6 +8,7 @@ import {
   STOREFRONT_CHROME_TAG,
   createPrismaMenuStore,
   footerVariantOf,
+  formatCompanyAddress,
   headerVariantOf,
   settingGroups,
   type AnnouncementTone,
@@ -99,7 +100,6 @@ async function readStorefrontChrome(): Promise<StorefrontChrome> {
         getFeatureFlags().isEnabled("wishlist"),
         createPrismaMenuStore(getDb(), { storage: getStorage() }).listCategories(),
       ]);
-    const { street, city, county, postalCode } = company.address;
     return {
       storeName: general.storeName,
       tagline: general.storeTagline,
@@ -122,9 +122,7 @@ async function readStorefrontChrome(): Promise<StorefrontChrome> {
         legalName: company.legalName,
         vatId: company.vatId,
         tradeRegisterNo: company.tradeRegisterNo,
-        address: [street, [postalCode, city].filter(Boolean).join(" "), county]
-          .filter(Boolean)
-          .join(", "),
+        address: formatCompanyAddress(company.address),
         phone: company.phone,
         email: company.email,
       },

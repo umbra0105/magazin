@@ -58,7 +58,7 @@ test("Faza 2 cap-coadă: înregistrare → email → login → fără admin → 
   await page.goto("/admin");
   const sidebar = page.getByRole("navigation", { name: "Navigare principală" });
   await expect(page.getByRole("heading", { level: 1, name: "Panou de control" })).toBeVisible();
-  await expect(sidebar.getByRole("link", { name: "Comenzi" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Comenzi", exact: true })).toBeVisible();
   await expect(sidebar.getByRole("link", { name: "Setări" })).toHaveCount(0);
   await page.goto("/admin/setari");
   await expect(page).toHaveURL(/\/admin\/acces-interzis$/);

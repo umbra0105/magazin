@@ -2,6 +2,8 @@ import type { Prisma } from "@ecom/db";
 import type { PaymentProvider, RefundOutcome } from "@ecom/shared";
 import { inTx, type Db } from "../db-tx";
 import { addOrderEvent, lockOrder, transitionOrder } from "../orders/order-service";
+import { notifyAdmins, orderContext } from "../notifications/admin-notifications";
+import { ATTENTION_REASON_LABELS } from "./attention-labels";
 import { PaymentError } from "./payment-errors";
 import { flagAttention, lockPayment, resolveAttention } from "./payment-db";
 
@@ -28,6 +30,8 @@ export interface CreateRefundInput {
   kind: "admin" | "auto_stock_lost" | "auto_late_payment";
   idempotencyKey: string;
   actorLabel?: string;
+  /** Rambursare cerută de un actor CU LIMITĂ (Suport): se numără în limita de pe comandă (`order-refund.ts`). */
+  limitedActor?: boolean;
 }
 
 export type RefundRow = Prisma.RefundGetPayload<object>;
@@ -72,6 +76,7 @@ export async function createRefundInTx(
       kind: input.kind,
       idempotencyKey: input.idempotencyKey,
       ...(input.actorLabel ? { actorLabel: input.actorLabel } : {}),
+      ...(input.limitedActor ? { limitedActor: true } : {}),
     },
   });
   await tx.payment.update({
@@ -179,7 +184,9 @@ async function applyRefundConfirmed(tx: Db, refund: RefundRow, now: Date): Promi
       status: { in: ["requested", "manual_required", "failed"] },
     },
   });
-  if (open === 0) await resolveAttention(tx, refund.paymentId, now);
+  // «comandă anulată cu plata încasată»: alerta se închide doar când banii s-au întors integral (o rambursare parțială nu o rezolvă)
+  const keepsAlert = payment.attentionReason === "order_cancelled_paid" && !full;
+  if (open === 0 && !keepsAlert) await resolveAttention(tx, refund.paymentId, now);
 }
 
 /** Confirmarea unei cereri de către procesator (notificare de credit), în tranzacția apelantului, cu comanda și plata blocate. */
@@ -298,6 +305,20 @@ async function finishRefund(
       data: { status: "manual_required", failureMessage: outcome.message.slice(0, 500) },
     });
     await flagAttention(tx, refund.paymentId, "refund_manual_required", now);
+    const refundOrder = await tx.order.findUnique({
+      where: { id: refund.orderId },
+      select: { number: true },
+    });
+    await notifyAdmins(tx, {
+      kind: "refund_manual",
+      title: "O rambursare trebuie făcută manual",
+      context: refundOrder
+        ? orderContext(refundOrder.number, ATTENTION_REASON_LABELS.refund_manual_required)
+        : ATTENTION_REASON_LABELS.refund_manual_required,
+      href: `/admin/comenzi/plati/${refund.paymentId}`,
+      permission: "payments.refund",
+      dedupKey: `refund-manual:${refundId}`,
+    });
     await addOrderEvent(tx, refund.orderId, {
       type: "refund.manual_required",
       message: "Rambursarea trebuie făcută manual din contul procesatorului",

@@ -5,6 +5,7 @@ import { can, paymentDetail } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { Badge, Section } from "@ecom/ui";
 import { ManualRefundForm, RefundForm } from "@/components/admin/payments/refund-panel";
+import { CrumbLabel } from "@/components/admin/crumb-labels";
 import { requireAdmin } from "@/lib/admin-page";
 import { formatDateTime } from "@/lib/format-date";
 import { formatMoney } from "@/lib/money-input";
@@ -91,9 +92,10 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
+      <CrumbLabel label={payment.orderNumber} />
       <div className="flex flex-col gap-2">
         <Link
-          href="/admin/plati"
+          href="/admin/comenzi/plati"
           className="text-body text-link underline-offset-2 hover:underline"
         >
           {m.detail.back}
@@ -203,7 +205,7 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
             <li key={attempt.id}>
               <Link
                 className="text-link underline-offset-2 hover:underline"
-                href={`/admin/plati/${attempt.id}`}
+                href={`/admin/comenzi/plati/${attempt.id}`}
               >
                 {m.attempt(attempt.attemptNo)}
               </Link>{" "}

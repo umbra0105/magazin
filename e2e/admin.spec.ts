@@ -55,7 +55,7 @@ test.describe("zona de admin", () => {
     await login(page, owner);
 
     await expect(page.getByRole("heading", { level: 1, name: "Panou de control" })).toBeVisible();
-    await expect(sidebar(page).getByRole("link", { name: "Comenzi" })).toBeVisible();
+    await expect(sidebar(page).getByRole("button", { name: "Comenzi", exact: true })).toBeVisible();
     await expect(sidebar(page).getByRole("link", { name: "Utilizatori și roluri" })).toBeVisible();
     // Implicit toate funcțiile opționale sunt oprite și nu apar în meniu.
     for (const hidden of ["Recenzii", "Loialitate", "Vouchere"]) {
@@ -98,7 +98,7 @@ test.describe("zona de admin", () => {
   }) => {
     const support = await createAccount(request, baseURL as string, "support");
     await login(page, support);
-    await expect(sidebar(page).getByRole("link", { name: "Comenzi" })).toBeVisible();
+    await expect(sidebar(page).getByRole("button", { name: "Comenzi", exact: true })).toBeVisible();
     for (const hidden of ["Produse", "Setări", "Utilizatori și roluri", "Jurnal de audit"]) {
       await expect(sidebar(page).getByRole("link", { name: hidden })).toHaveCount(0);
     }
@@ -298,7 +298,7 @@ test.describe("zona de admin", () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto("/admin");
 
-    await expect(sidebar(page).getByRole("link", { name: "Comenzi" })).toBeHidden();
+    await expect(sidebar(page).getByRole("button", { name: "Comenzi", exact: true })).toBeHidden();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );
@@ -307,11 +307,13 @@ test.describe("zona de admin", () => {
     // Un clic dat înainte de hidratare se pierde: repetăm clicul până apare meniul.
     await expect(async () => {
       await page.getByRole("button", { name: "Deschide meniul" }).click();
-      await expect(sidebar(page).getByRole("link", { name: "Comenzi" })).toBeVisible({
-        timeout: 2_000,
-      });
+      await expect(sidebar(page).getByRole("button", { name: "Comenzi", exact: true })).toBeVisible(
+        {
+          timeout: 2_000,
+        },
+      );
     }).toPass({ timeout: 15_000 });
     await page.keyboard.press("Escape");
-    await expect(sidebar(page).getByRole("link", { name: "Comenzi" })).toBeHidden();
+    await expect(sidebar(page).getByRole("button", { name: "Comenzi", exact: true })).toBeHidden();
   });
 });

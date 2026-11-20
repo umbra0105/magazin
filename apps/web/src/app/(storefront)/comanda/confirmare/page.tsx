@@ -81,7 +81,7 @@ export default async function OrderConfirmationPage() {
           {m.whatNext}
         </h2>
         {summary.paymentMethod === "cod" ? (
-          <p>{m.nextCod}</p>
+          <p>{summary.shipping.kind === "pickup" ? m.nextCodPickup : m.nextCod}</p>
         ) : summary.paymentMethod === "card" ? (
           <p>{summary.paymentNotice === "stock_lost" ? m.stockLostNotice : m.nextCardPaid}</p>
         ) : (

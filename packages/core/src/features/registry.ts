@@ -10,6 +10,7 @@ export const FEATURE_FLAGS = {
   loyalty: "Puncte de loialitate",
   vouchers: "Vouchere cadou",
   partsDiagrams: "Fișe explodate (piese de schimb)",
+  installationRequests: "Cereri de instalare (ofertă pentru instalare la comandă)",
 } as const;
 
 export type FeatureKey = keyof typeof FEATURE_FLAGS;

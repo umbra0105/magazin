@@ -25,12 +25,30 @@ export function isPickupAddressComplete(address: PickupAddress | null): address 
   return address !== null && trimmed(address.street) !== "" && trimmed(address.city) !== "";
 }
 
-/** «Stradă, oraș, județ, cod poștal, țară», fără părțile goale. */
-export function formatPickupAddress(address: PickupAddress): string {
-  return [address.street, address.city, address.county, address.postalCode, address.country]
+/**
+ * UN SINGUR format al adresei magazinului (decizia din 2026-11-19), folosit de subsolul vitrinei, de ridicarea personală
+ * (checkout, confirmare, urmărire, snapshot-ul comenzii) și de emailuri: «stradă, cod poștal oraș, județ»; țara se adaugă doar
+ * când nu e România. Părțile goale se sar, fără virgule duble. Ecranul pentru datele firmei rămâne în Faza 13.
+ */
+export function formatCompanyAddress(address: PickupAddress): string {
+  const country = trimmed(address.country);
+  const postalAndCity = [address.postalCode, address.city]
     .map(trimmed)
     .filter((part) => part !== "")
+    .join(" ");
+  return [
+    trimmed(address.street),
+    postalAndCity,
+    trimmed(address.county),
+    country.toUpperCase() === "RO" ? "" : country,
+  ]
+    .filter((part) => part !== "")
     .join(", ");
+}
+
+/** Adresa de ridicare = adresa magazinului, în același format. */
+export function formatPickupAddress(address: PickupAddress): string {
+  return formatCompanyAddress(address);
 }
 
 /** Adresa gata de pus pe ofertă și în snapshot, sau `null` dacă lipsește ori e incompletă. */

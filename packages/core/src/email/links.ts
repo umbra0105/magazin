@@ -18,6 +18,11 @@ export function buildResetPasswordLink(appUrl: string, token: string): string {
   return `${origin(appUrl)}/resetare-parola#token=${encodeURIComponent(token)}`;
 }
 
+/** Linkul ofertei de plată: `/oferta/{jeton}` (pagina e noindex și fără referrer; jetonul de 256 de biți e singura autorizare). */
+export function buildOfferLink(appUrl: string, token: string): string {
+  return `${origin(appUrl)}/oferta/${encodeURIComponent(token)}`;
+}
+
 /** Pagina produsului (`/produs/{slug}`), pentru emailul «Anunță-mă când revine»: fără token, fără query, slugul codificat. */
 export function buildProductLink(appUrl: string, slug: string): string {
   return `${origin(appUrl)}/produs/${encodeURIComponent(slug)}`;

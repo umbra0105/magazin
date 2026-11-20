@@ -19,7 +19,13 @@ export function startEmailWorker(options: {
   const processor = createEmailProcessor(options.deps);
   const worker = new Worker<SealedEmailJob>(
     options.queueName ?? EMAIL_QUEUE_NAME,
-    (job) => processor({ id: job.id, data: job.data, attemptsMade: job.attemptsMade }),
+    (job) =>
+      processor({
+        id: job.id,
+        data: job.data,
+        attemptsMade: job.attemptsMade,
+        maxAttempts: job.opts.attempts ?? EMAIL_JOB_OPTIONS.attempts ?? 1,
+      }),
     {
       connection: redisConnectionFromUrl(options.redisUrl),
       concurrency: options.concurrency ?? 5,

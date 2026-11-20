@@ -143,7 +143,8 @@ export async function readOrderAccess(): Promise<string | null> {
 
 // ---------------------------------------------------------------------------------------------------------------- limite
 
-export type CheckoutLimitScope = "cui" | "place" | "track" | "geo" | "pay" | "payRetry";
+export type CheckoutLimitScope =
+  "cui" | "place" | "track" | "geo" | "pay" | "payRetry" | "offerView" | "offerPay";
 
 const LIMITS: Record<CheckoutLimitScope, { perMinute: number }> = {
   /** ANAF acceptă o cerere pe secundă; 12 pe minut pe IP e mult peste uzul normal. */
@@ -155,6 +156,10 @@ const LIMITS: Record<CheckoutLimitScope, { perMinute: number }> = {
   pay: { perMinute: 60 },
   /** «Reîncearcă plata» și linkul de plată: fiecare cerere poate porni o tentativă și o rezervare. */
   payRetry: { perMinute: 6 },
+  /** Pagina ofertei de plată (jeton în adresă): limită pe IP, ca un jeton să nu se poată ghici prin încercări în masă. */
+  offerView: { perMinute: 30 },
+  /** «Plătește» din ofertă: fiecare cerere poate recalcula oferta și crea o comandă. */
+  offerPay: { perMinute: 6 },
 };
 
 /** Limita de cereri pe minut pe adresa IP, pe tipul de operație; `false` = depășită. */

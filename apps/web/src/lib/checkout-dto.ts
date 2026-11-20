@@ -131,7 +131,14 @@ function methodDto(
     method: "cod",
     available: entry.available,
     label: text.paymentCod,
-    helpText: fee > 0 ? text.paymentCodHelp(money(fee)) : text.paymentCodFree,
+    helpText:
+      offer?.kind === "pickup"
+        ? fee > 0
+          ? text.paymentCodHelpPickup(money(fee))
+          : text.paymentCodFreePickup
+        : fee > 0
+          ? text.paymentCodHelp(money(fee))
+          : text.paymentCodFree,
     reasonText: reason,
   };
 }

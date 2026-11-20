@@ -18,12 +18,15 @@ export function StorefrontShell({
   year,
   children,
   minimal = false,
+  backToCart = true,
 }: {
   chrome: StorefrontChrome;
   year: number;
   children: ReactNode;
   /** Checkout «curat»: fără anunț, meniu și subsol; doar logo, indicator de securitate și legătura la coș. */
   minimal?: boolean;
+  /** Doar cu `minimal`: legătura «Înapoi la coș» (pagina ofertei o scoate: clientul nu are coș). */
+  backToCart?: boolean;
 }) {
   return (
     <div
@@ -48,7 +51,11 @@ export function StorefrontShell({
         />
       ) : null}
       {minimal ? (
-        <CheckoutHeader storeName={chrome.storeName} logoUrl={chrome.logoUrl} />
+        <CheckoutHeader
+          storeName={chrome.storeName}
+          logoUrl={chrome.logoUrl}
+          backToCart={backToCart}
+        />
       ) : (
         <StoreHeader
           variant={chrome.headerVariant}

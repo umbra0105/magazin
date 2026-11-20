@@ -51,7 +51,11 @@ export function OrderSummaryView({
         <div>
           <dt className="text-sm text-ink-secondary">{m.payment}</dt>
           <dd className="mt-1 font-medium">
-            {m.paymentMethods[order.paymentMethod] ?? order.paymentMethod}
+            {(order.shipping.kind === "pickup"
+              ? m.paymentMethodsPickup[order.paymentMethod]
+              : undefined) ??
+              m.paymentMethods[order.paymentMethod] ??
+              order.paymentMethod}
           </dd>
         </div>
         <div>

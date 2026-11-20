@@ -51,6 +51,7 @@ export default async function CartSettingsPage() {
           groundNotice: shipping.groundLevelNotice,
           codIndividual: formatMoneyInput(payment.codMaxAmountIndividual),
           codCompany: formatMoneyInput(payment.codMaxAmountCompany),
+          supportRefundLimit: formatMoneyInput(payment.supportRefundLimit),
           orderPrefix: checkout.orderNumberPrefix,
           orderDigits: String(checkout.orderNumberDigits),
           nonWorkingDates: regional.nonWorkingDates.join("\n"),

@@ -22,7 +22,7 @@ import { addToCart, createAccount, login, step, type Account } from "./support/c
 const tag = randomBytes(3).toString("hex");
 const EMAIL = `ridicare-${tag}${E2E_ORDER_EMAIL_DOMAIN}`;
 const STORE_STREET = "Strada Magazinului 7";
-const STORE_TEXT = `${STORE_STREET}, Alba Iulia, Alba, 510000, RO`;
+const STORE_TEXT = `${STORE_STREET}, 510000 Alba Iulia, Alba`;
 const CUSTOMER_STREET = "Str. Exemplu 1, bl. A, ap. 2";
 
 test.describe.configure({ mode: "serial" });
@@ -109,7 +109,11 @@ test.describe("ridicare cu adresa magazinului setată", () => {
       `Adresa de ridicare: ${STORE_TEXT}`,
     );
     await expect(pickup).toContainText("Gratuit");
+    // cu curierul apare mesajul despre livrarea la nivelul solului; la ridicare dispare (decizia 2026-11-19)
+    await step(page, "shipping").locator('[data-offer="demo:courier"] input').check();
+    await expect(step(page, "shipping").locator("[data-ground-notice]")).toBeVisible();
     await pickup.locator("input").check();
+    await expect(step(page, "shipping").locator("[data-ground-notice]")).toHaveCount(0);
 
     // cât timp ridicarea e aleasă, adresa de la pasul 2 nu se mai numește «livrare»
     await expect(step(page, "delivery").locator("h2 button")).toContainText(
@@ -127,7 +131,11 @@ test.describe("ridicare cu adresa magazinului setată", () => {
     );
     await expect(step(page, "billing").getByLabel("Aceleași date ca la adresa ta")).toBeChecked();
     await next(page, "billing");
-    await step(page, "payment").locator('[data-method="cod"] input').check();
+    // rambursul rămâne oferit la ridicare, dar plata se face în magazin, nu «curierului»
+    const cod = step(page, "payment").locator('[data-method="cod"]');
+    await expect(cod).toContainText("Plătești în magazin la ridicare");
+    await expect(cod).not.toContainText("curier");
+    await cod.locator("input").check();
     await next(page, "payment");
     // recapitularea
     await expect(page.locator("[data-review-pickup]")).toHaveText(
@@ -146,8 +154,11 @@ test.describe("ridicare cu adresa magazinului setată", () => {
     await expect(page.locator("[data-order-confirmation]")).toBeVisible();
     const number = /E2E-\d{6}/.exec(await page.locator("[data-order-number]").innerText())![0];
 
-    // confirmare
+    // confirmare: «Ce urmează» și metoda de plată spun «în magazin», nu «curierului»
+    await expect(page.locator("main")).toContainText("Plătești în magazin la ridicare");
+    await expect(page.locator("main")).not.toContainText("curierului");
     const view = page.locator("[data-order-summary-view]");
+    await expect(view).toContainText("Ramburs (în magazin, la ridicare)");
     await expect(view.locator("[data-pickup-address]")).toHaveText(
       `Ridicare personală de la: ${STORE_TEXT}`,
     );
@@ -202,6 +213,7 @@ test.describe("ridicare fără adresa magazinului", () => {
     await toShipping(page, `fara-${tag}${E2E_ORDER_EMAIL_DOMAIN}`);
     await expect(step(page, "shipping").locator('[data-offer="demo:courier"]')).toBeVisible();
     await expect(step(page, "shipping").locator('[data-offer="pickup"]')).toHaveCount(0);
+    await expect(step(page, "shipping").locator("[data-ground-notice]")).toBeVisible();
     await setE2eSettings({ "company.address": storeAddress() });
   });
 

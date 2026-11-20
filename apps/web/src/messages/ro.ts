@@ -4,6 +4,7 @@
  * aceeași formă. Funcțiile primesc valorile dinamice (minute, lungimi), ca acordul să fie corect.
  */
 import { pluralRo } from "@ecom/shared/plural";
+import { adminEmailRo, adminOrdersRo } from "./admin-orders-ro";
 
 /** Acord cu numărul în română (1 = singular, 0 și 2–19 = plural, 20+ cu «de»); funcția comună și testată din `@ecom/shared`. */
 const countOf = pluralRo;
@@ -135,6 +136,21 @@ export const ro = {
     },
   },
   admin: {
+    /** Comenzile și emailurile lor (Faza 11): textele stau în `admin-orders-ro.ts`. */
+    orders: adminOrdersRo,
+    email: adminEmailRo,
+    notifications: {
+      title: "Notificări",
+      open: "Notificări",
+      openUnread: (n: number) => `Notificări: ${n} necitite`,
+      close: "Închide notificările",
+      markAll: "Marchează toate citite",
+      empty: "Nicio notificare.",
+      unread: "Necitită",
+    },
+    counters: {
+      pending: (n: number) => `${n} de rezolvat`,
+    },
     metaTitle: "Administrare",
     skipToContent: "Sari la conținut",
     sidebarLabel: "Navigare principală",
@@ -203,6 +219,11 @@ export const ro = {
       shippingZones: "Zone de livrare",
       paymentSettings: "Plăți cu card",
       payments: "Plăți",
+      emailSettings: "Email (SMTP)",
+      allOrders: "Comenzi",
+      emailTemplates: "Șabloane email",
+      installRequests: "Cereri de instalare",
+      offers: "Oferte de plată",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {
@@ -397,6 +418,11 @@ export const ro = {
         "Suma în lei, cu TVA. Peste limită, rambursul dispare din checkout, cu explicație. Rambursul nu se oferă niciodată la comenzile cu produse «La comandă» (regulă fixă).",
       codInvalid:
         "Introdu o sumă în lei, cu cel mult două zecimale (de exemplu 10000 sau 5000,50).",
+      supportRefundLimit: "Limita de rambursare a rolului Suport",
+      supportRefundLimitHelp:
+        "Suma maximă, cumulată pe comandă, pe care o poate rambursa un rol fără permisiunea «Rambursează plăți» (Suport clienți). Peste ea rambursează doar Manager, Admin sau Owner. 0 = Suportul nu poate rambursa. Se aplică pe server, imediat.",
+      supportRefundLimitInvalid:
+        "Introdu o sumă în lei, cu cel mult două zecimale (de exemplu 500 sau 0).",
       orderPrefix: "Prefixul numărului de comandă",
       orderPrefixHelp:
         "Cel mult 10 caractere: litere, cifre sau cratimă (de exemplu WEB-). Gol = doar cifre.",
@@ -487,7 +513,7 @@ export const ro = {
         } as Record<string, string>,
       },
     },
-    /** Plățile cu cardul și rambursările (Faza 10): `/admin/plati`. Se integrează în detaliul comenzii în Faza 11. */
+    /** Plățile cu cardul și rambursările (Faza 10): acum sub grupul «Comenzi». Se integrează în detaliul comenzii în Faza 11. */
     payments: {
       title: "Plăți cu cardul",
       description:
@@ -3719,6 +3745,10 @@ export const ro = {
       paymentCodHelp: (fee: string) =>
         `Plătești curierului la primirea coletului. Taxă de ramburs: ${fee}.`,
       paymentCodFree: "Plătești curierului la primirea coletului.",
+      // ridicare personală: nu există curier, plata se face în magazin (decizia 2026-11-19)
+      paymentCodHelpPickup: (fee: string) =>
+        `Plătești în magazin la ridicare. Taxă de ramburs: ${fee}.`,
+      paymentCodFreePickup: "Plătești în magazin la ridicare.",
       paymentCard: "Card online",
       paymentCardHelp:
         "Plătești acum, pe pagina securizată a procesatorului de plăți. Nu păstrăm datele cardului. Dacă plata nu reușește, comanda rămâne în așteptare și o poți reîncerca.",
@@ -3788,6 +3818,65 @@ export const ro = {
         STOCK_INSUFFICIENT:
           "Unul dintre produse nu mai este disponibil în cantitatea cerută. Revino în coș.",
         VALIDATION_ERROR: "Verifică datele introduse.",
+      },
+    },
+    /** Oferta de plată (Faza 11): pagina de la linkul primit de la magazin. */
+    offer: {
+      pageTitle: "Ofertă de plată",
+      title: (number: string) => `Oferta ${number}`,
+      lede: "Ți-am pregătit această ofertă. Verifică produsele, livrarea și totalul, apoi plătește cu cardul.",
+      validUntil: (when: string) => `Valabilă până la ${when}`,
+      productsHeading: "Produse",
+      quantity: "Cantitate",
+      unitPrice: "Preț unitar",
+      lineTotal: "Total",
+      onOrder: (days: number) => `La comandă, aproximativ ${days} zile`,
+      limited: "Stoc limitat",
+      totalsHeading: "Totaluri",
+      products: "Produse",
+      shipping: "Livrare",
+      shippingFree: "Gratuit",
+      vat: "din care TVA",
+      total: "Total de plată (TVA inclus)",
+      deliveryHeading: "Livrare",
+      deliveryCourier: (name: string, line: string) => `${name}, ${line}`,
+      deliveryPickup: "Ridicare personală de la sediul magazinului",
+      consentError: "Bifează acordul ca să poți plăti.",
+      pay: "Plătește cu cardul",
+      paying: "Se pornește plata…",
+      paymentNote:
+        "Plata se face pe pagina securizată a procesatorului de plăți. Comanda se creează abia când plătești.",
+      draftNotice: "Textele juridice sunt în curs de redactare.",
+      converted: {
+        /** Oferta a devenit comandă, plata a rămas neterminată și se mai poate continua. */
+        continueTitle: "Comanda ta a fost creată",
+        continueBody:
+          "Plata cu cardul nu s-a finalizat încă. Poți continua de unde ai rămas, fără să plasezi o comandă nouă.",
+        continue: "Continuă plata",
+        continuing: "Se pornește plata…",
+        errors: {
+          unavailable:
+            "Plata nu mai poate fi continuată din acest link. Contactează magazinul și te ajutăm.",
+          rateLimited: "Prea multe încercări. Așteaptă un minut și încearcă din nou.",
+          failed: "Nu am putut continua plata. Încearcă din nou.",
+        },
+        /** Oferta a devenit comandă, iar comanda e plătită, anulată sau fereastra plății a trecut. */
+        title: "Oferta a fost deja folosită",
+        body: "Pentru această ofertă există deja o comandă. Dacă ai întrebări despre ea, contactează magazinul.",
+      },
+      unavailable: {
+        title: "Oferta nu mai este disponibilă",
+        body: "Linkul nu mai este valabil. Contactează magazinul și îți pregătim o ofertă nouă.",
+        home: "Înapoi în magazin",
+      },
+      errors: {
+        consent: "Bifează acordul ca să poți plăti.",
+        unavailable:
+          "Oferta nu mai este disponibilă. Contactează magazinul și îți pregătim una nouă.",
+        cardUnavailable:
+          "Plata cu cardul nu este disponibilă acum. Încearcă mai târziu sau contactează magazinul.",
+        rateLimited: "Prea multe încercări. Așteaptă un minut și încearcă din nou.",
+        failed: "Nu am putut porni plata. Încearcă din nou.",
       },
     },
     /** Confirmarea comenzii și urmărirea ei (fără cont). */
@@ -3868,6 +3957,7 @@ export const ro = {
       trackLink: "Urmărește comanda",
       whatNext: "Ce urmează",
       nextCod: "Comanda este confirmată. Plătești curierului la primirea coletului.",
+      nextCodPickup: "Comanda este confirmată. Plătești în magazin la ridicare.",
       nextCardPaid: "Plata cu cardul a fost confirmată, iar comanda este confirmată.",
       stockLostNotice:
         "Plata a ajuns după expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.",
@@ -3889,6 +3979,10 @@ export const ro = {
         cod: "Ramburs (la livrare)",
         bank_transfer: "Transfer bancar",
         card: "Card online",
+      } as Record<string, string>,
+      // ridicare personală: același ramburs, plătit în magazin
+      paymentMethodsPickup: {
+        cod: "Ramburs (în magazin, la ridicare)",
       } as Record<string, string>,
       status: "Stare",
       statuses: {

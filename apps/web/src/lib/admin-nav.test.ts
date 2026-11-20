@@ -117,15 +117,15 @@ describe("breadcrumbsFor", () => {
     expect(breadcrumbsFor("/admin", label, "Panou")).toEqual([{ label: "Panou", href: null }]);
   });
   it("Panou › secțiune pentru o secțiune", () => {
-    expect(breadcrumbsFor("/admin/comenzi", label, "Panou")).toEqual([
+    expect(breadcrumbsFor("/admin/clienti", label, "Panou")).toEqual([
       { label: "Panou", href: "/admin" },
-      { label: "L:orders", href: null },
+      { label: "L:customers", href: null },
     ]);
   });
   it("Panou › secțiune › id, cu segmentul decodat și linkuri intermediare", () => {
-    expect(breadcrumbsFor("/admin/comenzi/ABC%20123?x=1", label, "Panou")).toEqual([
+    expect(breadcrumbsFor("/admin/clienti/ABC%20123?x=1", label, "Panou")).toEqual([
       { label: "Panou", href: "/admin" },
-      { label: "L:orders", href: "/admin/comenzi" },
+      { label: "L:customers", href: "/admin/clienti" },
       { label: "ABC 123", href: null },
     ]);
   });
@@ -166,7 +166,7 @@ describe("breadcrumbsFor", () => {
       href: null,
     });
     // alte secțiuni rămân neschimbate
-    expect(breadcrumbsFor("/admin/comenzi/ABC", label, "Panou", undefined, labeler)[2]).toEqual({
+    expect(breadcrumbsFor("/admin/clienti/ABC", label, "Panou", undefined, labeler)[2]).toEqual({
       label: "ABC",
       href: null,
     });

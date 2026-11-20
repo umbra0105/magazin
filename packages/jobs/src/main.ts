@@ -13,6 +13,8 @@ import { startStockJobsFromEnv } from "./stock-jobs";
 import { startCartJobsFromEnv } from "./cart-jobs";
 import { startOrderJobsFromEnv } from "./order-jobs";
 import { startPaymentJobsFromEnv } from "./payment-jobs";
+import { startOfferJobsFromEnv } from "./offer-jobs";
+import { startOrderEmailJobsFromEnv } from "./order-email-jobs";
 
 try {
   process.loadEnvFile(new URL("../../../.env", import.meta.url));
@@ -31,6 +33,8 @@ const priceJobs = startPriceJobsFromEnv();
 const cartJobs = startCartJobsFromEnv();
 const orderJobs = startOrderJobsFromEnv();
 const paymentJobs = startPaymentJobsFromEnv();
+const orderEmailJobs = startOrderEmailJobsFromEnv();
+const offerJobs = startOfferJobsFromEnv();
 logger.info(
   { queues: ["emails", "media", "product-import", "product-import-images", "payment-events"] },
   "worker pornit (Ctrl+C pentru oprire)",
@@ -47,7 +51,9 @@ async function shutdown(signal: string): Promise<void> {
     priceJobs.close();
     cartJobs.close();
     orderJobs.close();
+    offerJobs.close();
     await paymentJobs.close();
+    await orderEmailJobs.close();
     await Promise.all([email.close(), media.close(), imports.close(), importImages.close()]);
   } finally {
     process.exit(0);
