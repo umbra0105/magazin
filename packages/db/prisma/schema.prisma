@@ -8,20 +8,20 @@ datasource db {
 }
 
 model User {
-  id             String          @id
-  name           String
-  email          String
-  emailVerified  Boolean         @default(false)
-  image          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  sessions       Session[]
-  accounts       Account[]
-  roles          UserRole[]
-  mediaUploads   Media[]
-  productImports ProductImport[]
-  cart           Cart?
-  savedOrderViews OrderSavedView[]
+  id                String                  @id
+  name              String
+  email             String
+  emailVerified     Boolean                 @default(false)
+  image             String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  sessions          Session[]
+  accounts          Account[]
+  roles             UserRole[]
+  mediaUploads      Media[]
+  productImports    ProductImport[]
+  cart              Cart?
+  savedOrderViews   OrderSavedView[]
   notificationReads AdminNotificationRead[]
 
   @@unique([email])
@@ -490,6 +490,7 @@ model ProductVariant {
   orderLines             OrderLine[]
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
+  offerLines             OrderOfferLine[]
 
   @@unique([id, productId])
   @@index([productId])
@@ -1361,6 +1362,7 @@ model Order {
   paymentRetryTokens     PaymentRetryToken[]
   emailDispatches        EmailDispatch[]
   notes                  OrderNote[]
+  offer                  OrderOffer?
 
   @@index([status, paymentStatus])
   @@index([email])
@@ -1548,8 +1550,8 @@ model AdminNotificationRead {
   notificationId String
   notification   AdminNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
   userId         String
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  readAt         DateTime           @default(now())
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt         DateTime          @default(now())
 
   @@id([notificationId, userId])
   @@index([userId])
@@ -1569,6 +1571,96 @@ model OrderSavedView {
   @@unique([userId, name])
   @@index([userId, createdAt])
   @@map("order_saved_view")
+}
+
+/// Oferta de plată (Faza 11, decizia A din 2026-11-20): liniile și totalurile ÎNGHEȚATE la creare, calculate de motorul de prețuri
+/// printr-un coș al adminului. Clientul o plătește printr-un link cu jeton aleatoriu de 256 de biți (în bază stă doar amprenta SHA-256).
+/// La plată serverul recalculează: dacă prețul, transportul, TVA-ul sau stocul diferă, oferta devine `stale`; altfel devine comandă
+/// reală prin `CheckoutService` (`convertedOrderId` UNIC: o singură comandă). `status`: active | converted | expired | stale | cancelled.
+model OrderOffer {
+  id                String            @id @default(cuid())
+  number            String            @unique
+  status            String            @default("active")
+  tokenHash         String            @unique
+  expiresAt         DateTime
+  creatorId         String
+  creatorLabel      String
+  email             String
+  phone             String
+  /// Adresa clientului (cod județ/localitate SIRUTA, stradă etc.), validată cu aceeași schemă ca la checkout.
+  shipping          Json
+  billing           Json?
+  company           Json?
+  shippingOfferCode String
+  /// courier | pickup
+  shippingKind      String
+  subtotalMinor     Int
+  shippingMinor     Int
+  taxMinor          Int
+  totalMinor        Int
+  taxRateBps        Int
+  convertedOrderId  String?           @unique
+  convertedOrder    Order?            @relation(fields: [convertedOrderId], references: [id], onDelete: Restrict)
+  convertedAt       DateTime?
+  staleReason       String?
+  staleAt           DateTime?
+  cancelledAt       DateTime?
+  lastSentAt        DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  lines             OrderOfferLine[]
+  events            OrderOfferEvent[]
+
+  @@index([status, expiresAt])
+  @@index([createdAt])
+  @@map("order_offer")
+}
+
+model OrderOfferLine {
+  id             String          @id @default(cuid())
+  offerId        String
+  offer          OrderOffer      @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  variantId      String?
+  variant        ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  sku            String
+  title          String
+  variantTitle   String?
+  /// Zecimi de miime de unitate (`Quantity`), > 0.
+  quantity       BigInt
+  unitSymbol     String
+  unitPriceMinor Int
+  lineTotalMinor Int
+  vatMinor       Int
+  /// in_stock | limited | on_order
+  state          String
+  leadTimeDays   Int?
+  position       Int
+
+  @@unique([offerId, position])
+  @@index([variantId])
+  @@map("order_offer_line")
+}
+
+model OrderOfferEvent {
+  id         String     @id @default(cuid())
+  offerId    String
+  offer      OrderOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  type       String
+  message    String
+  data       Json?
+  actorLabel String?
+  createdAt  DateTime   @default(now())
+
+  @@index([offerId, createdAt])
+  @@map("order_offer_event")
+}
+
+model OrderOfferCounter {
+  id        String   @id
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("order_offer_counter")
 }
 
 /// Notele interne ale comenzii (Faza 11): text liber al echipei, cu autor și moment. Doar se adaugă. Textul poate conține date
@@ -1593,23 +1685,23 @@ model OrderNote {
 /// rezultat NU se retrimite automat (risc de email dublu): devine «failed» și se retrimite doar din admin.
 /// `data` poartă doar câmpuri mici și ne-sensibile (motiv, sumă), niciodată tokenuri sau corpul emailului.
 model EmailDispatch {
-  id         String    @id @default(cuid())
-  template   String
-  eventKey   String
-  recipient  String
+  id        String    @id @default(cuid())
+  template  String
+  eventKey  String
+  recipient String
   /// customer | internal
-  audience   String    @default("customer")
-  orderId    String?
-  order      Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  status     String    @default("queued")
-  attempts   Int       @default(0)
+  audience  String    @default("customer")
+  orderId   String?
+  order     Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    String    @default("queued")
+  attempts  Int       @default(0)
   /// Eroarea curățată (fără adrese, tokenuri sau corp), doar pentru diagnostic.
-  lastError  String?
-  data       Json?
-  claimedAt  DateTime?
-  sentAt     DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  lastError String?
+  data      Json?
+  claimedAt DateTime?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@unique([eventKey, template, recipient])
   @@index([status, createdAt])
