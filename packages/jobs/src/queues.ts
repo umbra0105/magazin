@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Queue, type JobsOptions } from "bullmq";
 import { sealEmailPayload, type EmailPayload, type SealedEmailJob } from "@ecom/core";
 import { redisConnectionFromUrl } from "./connection";
@@ -61,6 +62,21 @@ export async function enqueueOrderEmail(
 ): Promise<void> {
   await queue.add("send", sealEmailPayload(appKey, { kind: "order-email", dispatchId }), {
     jobId: `order-email-${dispatchId}`,
+  });
+}
+
+/**
+ * Pune în coadă linkul unei oferte (Faza 11). Jetonul e sigilat în payload (nu stă în baza de date, doar amprenta lui); `jobId`-ul
+ * e derivat din ofertă și din amprenta jetonului, deci aceeași trimitere nu se dublează, iar o retrimitere (jeton nou) e alt job.
+ */
+export async function enqueueOfferLink(
+  queue: EmailQueue,
+  appKey: string,
+  input: { offerId: string; to: string; token: string },
+): Promise<void> {
+  const fingerprint = createHash("sha256").update(input.token).digest("hex").slice(0, 16);
+  await queue.add("send", sealEmailPayload(appKey, { kind: "offer-link", ...input }), {
+    jobId: `offer-link-${input.offerId}-${fingerprint}`,
   });
 }
 

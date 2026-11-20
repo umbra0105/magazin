@@ -413,6 +413,46 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
     ],
   },
   {
+    key: "offer.payment_link",
+    label: "Oferta de plată: linkul către client",
+    description:
+      "Trimis clientului când adminul îi trimite o ofertă de plată (link personal către o pagină cu produsele, livrarea și plata cu cardul). Linkul nu e o comandă și nu confirmă nimic: comanda se creează abia la plată. Emailul nu se retrimite singur: o retrimitere generează un link nou, iar cel vechi nu mai merge.",
+    audience: "customer",
+    wired: true,
+    phaseNote: null,
+    variables: [
+      COMMON.magazin,
+      COMMON.client,
+      v("numar", "Numărul ofertei", "OF-0012"),
+      v("total", "Totalul ofertei, cu TVA", "1.234,50 RON"),
+      v("expira", "Până când e valabilă oferta", "vineri, 20 noiembrie 2026, 18:00"),
+      v("link", "Linkul personal al ofertei", "https://magazin.exemplu/oferta/exemplu"),
+    ],
+    defaultSubject: "Oferta {{numar}} de la {{magazin}}: {{total}}",
+    heading: "Oferta ta de plată",
+    preview: "Oferta {{numar}}, {{total}}: verifică-o și plătește cu cardul.",
+    defaultIntro:
+      "Ți-am pregătit oferta {{numar}}, în valoare de {{total}}. Deschide pagina ofertei, verifică produsele și livrarea și plătește cu cardul.",
+    build: (context) => [
+      ...(context.vars["link"]
+        ? [
+            {
+              type: "button",
+              label: "Vezi oferta și plătește",
+              link: context.vars["link"],
+            } satisfies EmailBlock,
+          ]
+        : []),
+      para(
+        "Oferta este valabilă până la {{expira}}. Linkul este personal: nu îl da mai departe. Comanda se creează abia când plătești.".replace(
+          "{{expira}}",
+          context.vars["expira"] ?? "",
+        ),
+        "muted",
+      ),
+    ],
+  },
+  {
     key: "internal.order_new",
     label: "Notificare internă: comandă nouă",
     description: "Trimis echipei (setarea `email.internalRecipients`) la fiecare comandă nouă.",

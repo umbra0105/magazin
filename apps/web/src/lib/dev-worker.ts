@@ -4,6 +4,7 @@ import {
   startImportWorkerFromEnv,
   startMediaWorkerFromEnv,
   startCartJobsFromEnv,
+  startOfferJobsFromEnv,
   startOrderEmailJobsFromEnv,
   startOrderJobsFromEnv,
   startPaymentJobsFromEnv,
@@ -31,6 +32,7 @@ export function startDevEmailWorker(): void {
     startOrderJobsFromEnv();
     startPaymentJobsFromEnv();
     startOrderEmailJobsFromEnv();
+    startOfferJobsFromEnv();
     getLogger().info(
       {
         queues: ["emails", "media", "product-import", "product-import-images"],
@@ -46,6 +48,7 @@ export function startDevEmailWorker(): void {
           "payment-refunds-sweep",
           "order-expire-card",
           "order-email-sweep",
+          "offer-expire",
           "payment-reconcile",
         ],
       },

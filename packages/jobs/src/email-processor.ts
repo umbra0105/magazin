@@ -39,6 +39,14 @@ export interface OrderEmailDeliveryLike {
   (dispatchId: string, run: { jobId: string; attempt: number; maxAttempts: number }): Promise<void>;
 }
 
+/** Ce îi trebuie procesorului pentru linkul ofertelor de plată (`createOfferEmailDelivery`). */
+export interface OfferEmailDeliveryLike {
+  (
+    job: { offerId: string; to: string; token: string },
+    run: { jobId: string; attempt: number; maxAttempts: number },
+  ): Promise<void>;
+}
+
 export interface EmailProcessorDeps {
   appKey: string;
   /** URL-ul public al aplicației (`APP_URL`); linkurile se construiesc DOAR din el. */
@@ -51,6 +59,8 @@ export interface EmailProcessorDeps {
   backInStock?: BackInStockDelivery;
   /** Emailurile comenzilor (Faza 11); fără el, un astfel de job eșuează definitiv. */
   orderEmail?: OrderEmailDeliveryLike;
+  /** Linkul ofertelor de plată (Faza 11); fără el, un astfel de job eșuează definitiv. */
+  offerEmail?: OfferEmailDeliveryLike;
 }
 
 export interface EmailJobLike {
@@ -61,7 +71,7 @@ export interface EmailJobLike {
   maxAttempts?: number;
 }
 
-type TokenPayload = Exclude<EmailPayload, { kind: "back-in-stock" | "order-email" }>;
+type TokenPayload = Exclude<EmailPayload, { kind: "back-in-stock" | "order-email" | "offer-link" }>;
 
 const linkFor = (payload: TokenPayload, appUrl: string): string =>
   payload.kind === "verify-email"
@@ -184,6 +194,21 @@ export function createEmailProcessor(deps: EmailProcessorDeps) {
         attempt: job.attemptsMade + 1,
         maxAttempts: job.maxAttempts ?? 5,
       });
+      return;
+    }
+
+    if (payload.kind === "offer-link") {
+      if (!deps.offerEmail) {
+        deps.logger.error(
+          { jobId, kind },
+          "email: livrarea linkurilor de ofertă lipsește din worker, renunț",
+        );
+        throw new UnrecoverableError("EMAIL_NOT_CONFIGURED");
+      }
+      await deps.offerEmail(
+        { offerId: payload.offerId, to: payload.to, token: payload.token },
+        { jobId, attempt: job.attemptsMade + 1, maxAttempts: job.maxAttempts ?? 5 },
+      );
       return;
     }
 

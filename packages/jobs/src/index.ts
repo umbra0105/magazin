@@ -22,7 +22,9 @@ export * from "./payment-queue";
 export * from "./payment-jobs";
 export * from "./order-email-context";
 export * from "./order-email-delivery";
+export * from "./offer-email-delivery";
 export * from "./order-email-jobs";
+export * from "./offer-jobs";
 export { buildEmailTheme, loadStoreEmailSettings } from "./runtime";
 // catalogul de șabloane și randarea, pentru administrare (previzualizare, trimitere de test): web nu depinde direct de pachetul de emailuri
 export {

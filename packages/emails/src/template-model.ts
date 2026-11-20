@@ -93,6 +93,7 @@ export const TEMPLATE_KEYS = [
   "order.cancelled",
   "order.refunded",
   "order.stock_lost",
+  "offer.payment_link",
   "internal.order_new",
   "internal.stock_out",
   "internal.installation_request",

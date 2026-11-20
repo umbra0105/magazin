@@ -16,6 +16,7 @@ import type { EmailTheme } from "@ecom/emails";
 import type { BrandingConfig } from "@ecom/core";
 import { getLogger } from "@ecom/shared";
 import { createBackInStockService } from "./back-in-stock-runtime";
+import { createOfferEmailDelivery } from "./offer-email-delivery";
 import { createOrderEmailDelivery } from "./order-email-delivery";
 import type { StoreEmailSettings } from "./order-email-context";
 import type { EmailProcessorDeps } from "./email-processor";
@@ -120,6 +121,26 @@ export function createEmailRuntime(): {
     logger: getLogger(),
     backInStock: createBackInStockService(db, settings),
     orderEmail: createOrderEmailDelivery({
+      db,
+      appUrl: env.APP_URL,
+      now: () => new Date(),
+      loadMailer: () => loadMailerConfig({ integrations, settings }),
+      loadTheme: async () => {
+        const [config, storeName] = await Promise.all([
+          branding.getConfig(),
+          settings.get("general.storeName"),
+        ]);
+        return buildEmailTheme(config, storeName, env.APP_URL);
+      },
+      loadStore: () => loadStoreEmailSettings(settings),
+      loadOverride: async (template) => {
+        const row = await db.emailTemplateOverride.findUnique({ where: { template } });
+        return row ? { subject: row.subject, intro: row.intro } : null;
+      },
+      sendMail: sendViaSmtp,
+      logger: getLogger(),
+    }),
+    offerEmail: createOfferEmailDelivery({
       db,
       appUrl: env.APP_URL,
       now: () => new Date(),

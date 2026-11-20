@@ -73,7 +73,7 @@ export function formatMoney(minor: number, currency: string, locale: string): st
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(minor / 100);
 }
 
-function formatDateTime(date: Date, locale: string, timeZone: string): string {
+export function formatDateTime(date: Date, locale: string, timeZone: string): string {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "full",
     timeStyle: "short",
@@ -85,7 +85,7 @@ function daysText(days: number): string {
   return days === 1 ? "1 zi" : days < 20 ? `${days} zile` : `${days} de zile`;
 }
 
-function merchantOf(store: StoreEmailSettings): MerchantModel {
+export function merchantOf(store: StoreEmailSettings): MerchantModel {
   return {
     name: store.storeName,
     legalName: store.company.legalName,
