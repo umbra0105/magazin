@@ -112,50 +112,61 @@ export default async function OfferPage({ params }: { params: Promise<{ jeton: s
   }).format(offer.expiresAt);
 
   return (
-    <Container className="flex max-w-3xl flex-col gap-8 py-12">
+    <Container className="flex flex-col gap-8 py-10 lg:py-12">
       <header className="flex flex-col gap-2">
         <h1 className="heading-display text-3xl sm:text-4xl">{m.title(offer.number)}</h1>
         <p className="max-w-prose text-ink-secondary">{m.lede}</p>
         <p className="text-sm text-ink-secondary">{m.validUntil(until)}</p>
       </header>
-      <Lines offer={offer} money={money} />
-      <section aria-labelledby="oferta-livrare" className="flex flex-col gap-1">
-        <h2 id="oferta-livrare" className="text-xl font-semibold">
-          {m.deliveryHeading}
-        </h2>
-        <p>
-          {offer.delivery
-            ? m.deliveryCourier(
-                offer.delivery.fullName,
-                `${offer.delivery.street}, ${offer.delivery.localityName}, ${offer.delivery.countyName}, ${offer.delivery.postalCode}`,
-              )
-            : m.deliveryPickup}
-        </p>
-      </section>
-      <section aria-labelledby="oferta-totaluri" className="flex flex-col gap-2">
-        <h2 id="oferta-totaluri" className="text-xl font-semibold">
-          {m.totalsHeading}
-        </h2>
-        <dl className="flex flex-col gap-1">
-          <div className="flex justify-between">
-            <dt>{m.products}</dt>
-            <dd>{money(offer.subtotalMinor)}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt>{m.shipping}</dt>
-            <dd>{offer.shippingMinor === 0 ? m.shippingFree : money(offer.shippingMinor)}</dd>
-          </div>
-          <div className="flex justify-between text-sm text-ink-secondary">
-            <dt>{m.vat}</dt>
-            <dd>{money(offer.taxMinor)}</dd>
-          </div>
-          <div className="flex justify-between border-t border-line-subtle pt-2 text-lg font-semibold">
-            <dt>{m.total}</dt>
-            <dd data-offer-total>{money(offer.totalMinor)}</dd>
-          </div>
-        </dl>
-      </section>
-      <OfferPay token={jeton} consent={consent} />
+      {/* pe calculator: produsele și livrarea în stânga, rezumatul și plata în dreapta (fixat), deci bifa și butonul se văd de la
+          prima vedere, deasupra bannerului de cookie-uri; pe telefon rămân una sub alta, în ordinea citirii */}
+      <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
+        <div className="flex min-w-0 flex-col gap-8 lg:col-span-7 xl:col-span-8">
+          <Lines offer={offer} money={money} />
+          <section aria-labelledby="oferta-livrare" className="flex flex-col gap-1">
+            <h2 id="oferta-livrare" className="text-xl font-semibold">
+              {m.deliveryHeading}
+            </h2>
+            <p>
+              {offer.delivery
+                ? m.deliveryCourier(
+                    offer.delivery.fullName,
+                    `${offer.delivery.street}, ${offer.delivery.localityName}, ${offer.delivery.countyName}, ${offer.delivery.postalCode}`,
+                  )
+                : m.deliveryPickup}
+            </p>
+          </section>
+        </div>
+        <div
+          className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-6 lg:col-span-5 lg:rounded-card lg:bg-card lg:p-6 xl:col-span-4"
+          data-offer-summary
+        >
+          <section aria-labelledby="oferta-totaluri" className="flex flex-col gap-2">
+            <h2 id="oferta-totaluri" className="text-xl font-semibold">
+              {m.totalsHeading}
+            </h2>
+            <dl className="flex flex-col gap-1">
+              <div className="flex justify-between">
+                <dt>{m.products}</dt>
+                <dd>{money(offer.subtotalMinor)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>{m.shipping}</dt>
+                <dd>{offer.shippingMinor === 0 ? m.shippingFree : money(offer.shippingMinor)}</dd>
+              </div>
+              <div className="flex justify-between text-sm text-ink-secondary">
+                <dt>{m.vat}</dt>
+                <dd>{money(offer.taxMinor)}</dd>
+              </div>
+              <div className="flex justify-between border-t border-line-subtle pt-2 text-lg font-semibold">
+                <dt>{m.total}</dt>
+                <dd data-offer-total>{money(offer.totalMinor)}</dd>
+              </div>
+            </dl>
+          </section>
+          <OfferPay token={jeton} consent={consent} />
+        </div>
+      </div>
     </Container>
   );
 }

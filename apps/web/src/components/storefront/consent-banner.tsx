@@ -36,12 +36,15 @@ export function ConsentBanner() {
   const visible = saved === null;
 
   // Bannerul e fix, jos: cât e vizibil, pagina primește jos un spațiu cât el, ca să nu acopere ultimele elemente (de exemplu
-  // butonul «Plasează comanda» pe telefon). Spațiul dispare odată cu bannerul.
+  // butonul «Plasează comanda» pe telefon), iar marginea de derulare de jos (`scroll-padding-bottom`) e tot cât bannerul: un câmp
+  // care primește focus (de la tastatură sau după o validare) e adus deasupra lui, nu rămâne dedesubt (WCAG 2.4.11, focus
+  // neascuns). Spațiul și marginea dispar odată cu bannerul.
   useEffect(() => {
     const banner = bannerRef.current;
     if (!visible || !banner) return;
     const reserve = () => {
       document.body.style.paddingBottom = `${banner.offsetHeight}px`;
+      document.documentElement.style.scrollPaddingBottom = `${banner.offsetHeight}px`;
     };
     reserve();
     const observer = new ResizeObserver(reserve);
@@ -49,6 +52,7 @@ export function ConsentBanner() {
     return () => {
       observer.disconnect();
       document.body.style.paddingBottom = "";
+      document.documentElement.style.scrollPaddingBottom = "";
     };
   }, [visible]);
 

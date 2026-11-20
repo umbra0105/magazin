@@ -361,6 +361,94 @@ test.describe("plata ofertei întreruptă", () => {
   });
 });
 
+test.describe("pagina ofertei: fără «Înapoi la coș», bannerul de cookie-uri nu acoperă acțiunea", () => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1440, height: 900 },
+  ]) {
+    test(`la prima vizită (${viewport.width} px) bifa și butonul se văd și se pot apăsa fără să răspunzi bannerului`, async ({
+      page,
+      browser,
+    }) => {
+      await login(page, manager, "/admin/comenzi/oferte/nou");
+      const { link } = await createOffer(page, produs, emailOf(`cookie${viewport.width}`));
+
+      // context nou = prima vizită: fără cookie-ul de consimțământ, deci cu banner
+      const context = await browser.newContext({ viewport });
+      const client = await context.newPage();
+      await client.goto(link);
+      const banner = client.locator("[data-consent-banner]");
+      await expect(banner).toBeVisible();
+      // clientul vine din email: nu are coș, deci nu există «Înapoi la coș»; ieșirea spre pagina de start e logo-ul
+      await expect(client.getByRole("link", { name: "Înapoi la coș" })).toHaveCount(0);
+      await expect(
+        client.locator("[data-checkout-header]").getByRole("link").first(),
+      ).toHaveAttribute("href", "/");
+
+      const consent = client.getByRole("checkbox", { name: /Am citit și sunt de acord/ });
+      const pay = client.locator("[data-offer-pay-button]");
+      // la capătul paginii (cât poate derula clientul) bifa și butonul stau deasupra bannerului
+      await client.mouse.move(viewport.width / 2, 300);
+      await client.mouse.wheel(0, 8000);
+      await expect
+        .poll(() =>
+          client.evaluate(
+            () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1,
+          ),
+        )
+        .toBe(true);
+      const bannerBox = await banner.boundingBox();
+      for (const target of [consent, pay]) {
+        const box = await target.boundingBox();
+        expect(box && bannerBox).toBeTruthy();
+        expect(box!.y + box!.height).toBeLessThanOrEqual(bannerBox!.y + 1);
+        // în punctul din mijloc ajunge elementul însuși (nu bannerul)
+        const covered = await target.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          return hit !== null && !element.contains(hit) && !hit.contains(element);
+        });
+        expect(covered).toBe(false);
+      }
+      // pe calculator, la prima vedere (fără derulare), bifa și butonul stau deja deasupra bannerului (rezumatul de plată e în coloana
+      // din dreapta, sus), nu abia după ce derulezi
+      if (viewport.width >= 1024) {
+        await client.evaluate(() => window.scrollTo(0, 0));
+        for (const target of [consent, pay]) {
+          const box = await target.boundingBox();
+          expect(box).toBeTruthy();
+          expect(box!.y).toBeGreaterThanOrEqual(0);
+          expect(box!.y + box!.height).toBeLessThanOrEqual(bannerBox!.y + 1);
+        }
+      } else {
+        // pe telefon: bifa adusă sub banner (de exemplu după o derulare) revine deasupra lui când primește focusul (și de la
+        // tastatură, și după «Plătește» fără bifă): pagina rezervă marginea de derulare cât bannerul (`scroll-padding-bottom`)
+        await client.evaluate(() => {
+          const bannerEl = document.querySelector("[data-consent-banner]") as HTMLElement;
+          const checkbox = document.querySelector(
+            '[data-offer-pay] input[type="checkbox"]',
+          ) as HTMLElement;
+          const rect = checkbox.getBoundingClientRect();
+          window.scrollBy(0, rect.top - (bannerEl.getBoundingClientRect().top + 4));
+        });
+        await consent.focus();
+        const focusedBox = await consent.boundingBox();
+        const bannerNow = await banner.boundingBox();
+        expect(focusedBox && bannerNow).toBeTruthy();
+        expect(focusedBox!.y + focusedBox!.height).toBeLessThanOrEqual(bannerNow!.y + 1);
+        await client.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      }
+      // apăsabile cu bannerul încă la locul lui (nu s-a răspuns la el)
+      await consent.check();
+      await expect(consent).toBeChecked();
+      await expect(banner).toBeVisible();
+      await pay.click();
+      await expect(client).toHaveURL(/\/plata-demo\//);
+      await context.close();
+    });
+  }
+});
+
 test.describe("oferta învechită", () => {
   test("stocul a dispărut între timp: nu se creează comandă, oferta devine «Învechită»", async ({
     page,
