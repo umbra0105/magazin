@@ -241,7 +241,8 @@ test.describe("șabloanele de email", () => {
     const subject = page.getByLabel("Subiectul emailului");
     await subject.fill("Test {{variabila_necunoscuta}}");
     await page.getByRole("button", { name: "Salvează textul propriu" }).click();
-    await expect(page.getByRole("alert").first()).toBeVisible();
+    // mesajul apare DOAR după răspunsul serverului (anunțătorul de rute al Next, `alert` gol, e mereu în pagină)
+    await expect(page.getByText(/Variabile necunoscute/)).toBeVisible();
 
     await subject.fill("Comanda ta {{numar}} – {{magazin}}");
     await page.getByRole("button", { name: "Salvează textul propriu" }).click();
