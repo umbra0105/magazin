@@ -169,6 +169,11 @@ export interface PublicOffer {
     localityName: string;
     countyName: string;
   } | null;
+  /**
+   * Oferta e deja comandă, iar plata ei cu cardul e încă în așteptare, în fereastra de reîncercare: pagina poate oferi
+   * «Continuă plata». Doar un indicator: comanda și plata nu se expun.
+   */
+  canContinuePayment: boolean;
 }
 
 export interface ConvertResult {
@@ -571,7 +576,9 @@ export class OfferService {
       (offer.status === "active" && offer.expiresAt.getTime() > this.now().getTime());
     if (!usable) return null;
     const address = offer.shipping as unknown as StoredAddress;
+    const canContinuePayment = (await this.continuableOrderId(offer)) !== null;
     return {
+      canContinuePayment,
       number: offer.number,
       status: offer.status === "converted" ? "converted" : "active",
       expiresAt: offer.expiresAt,
@@ -592,6 +599,60 @@ export class OfferService {
               countyName: address.countyName,
             },
     };
+  }
+
+  /**
+   * Comanda în care oferta s-a transformat, DOAR dacă plata ei cu cardul se mai poate continua: oferta `converted`, comanda cu card
+   * în așteptare (nici plătită, nici anulată), în fereastra de reîncercare fixată la plasare din `payment.cardRetryHours`
+   * (`paymentRetryDeadlineAt`, aceeași regulă ca în `CardPaymentService`), fără plată confirmată și fără o plată care cere atenție.
+   */
+  private async continuableOrderId(offer: {
+    status: string;
+    convertedOrderId: string | null;
+  }): Promise<string | null> {
+    if (offer.status !== "converted" || !offer.convertedOrderId) return null;
+    const order = await this.deps.db.order.findUnique({
+      where: { id: offer.convertedOrderId },
+      select: {
+        id: true,
+        status: true,
+        paymentStatus: true,
+        paymentMethod: true,
+        paymentRetryDeadlineAt: true,
+        payments: {
+          select: { status: true, attentionReason: true, attentionResolvedAt: true },
+        },
+      },
+    });
+    if (
+      !order ||
+      order.paymentMethod !== "card" ||
+      order.status !== "pending" ||
+      order.paymentStatus !== "pending" ||
+      !order.paymentRetryDeadlineAt ||
+      order.paymentRetryDeadlineAt.getTime() <= this.now().getTime()
+    ) {
+      return null;
+    }
+    const blocked = order.payments.some(
+      (payment) =>
+        payment.status === "paid" ||
+        payment.status === "refunded" ||
+        (payment.attentionReason !== null && payment.attentionResolvedAt === null),
+    );
+    return blocked ? null : order.id;
+  }
+
+  /**
+   * Continuarea plății dintr-un link de ofertă deja convertită: întoarce comanda ei doar dacă plata se mai poate continua
+   * (vezi `continuableOrderId`); pentru orice altceva (jeton necunoscut, ofertă activă, plătită, anulată, fereastră trecută)
+   * întoarce `null`, fără a spune de ce. Apelantul emite jetonul «reîncearcă plata» din Faza 10; aici nu se creează nimic.
+   */
+  async paymentContinuation(token: string): Promise<{ orderId: string } | null> {
+    const offer = await this.findByToken(token);
+    if (!offer) return null;
+    const orderId = await this.continuableOrderId(offer);
+    return orderId ? { orderId } : null;
   }
 
   private lineView(line: {

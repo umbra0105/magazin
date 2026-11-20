@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   E2E_ORDER_EMAIL_DOMAIN,
   clearE2eSettings,
+  countE2eOrdersByEmail,
   readE2eOrder,
   removeE2eCartStock,
   removeE2eCarts,
@@ -303,6 +304,8 @@ test.describe("succes: de la creare la plată", () => {
     await expect(
       client.getByRole("heading", { name: "Oferta a fost deja folosită" }),
     ).toBeVisible();
+    await expect(client.locator("[data-offer-continue]")).toHaveCount(0);
+    await expect(client.locator("[data-offer-pay]")).toHaveCount(0);
     await client.context().close();
 
     await page.goto(detail);
@@ -312,6 +315,49 @@ test.describe("succes: de la creare la plată", () => {
     await expect(
       page.locator("[data-offer-row]").filter({ hasText: "Convertită în comandă" }).first(),
     ).toBeVisible();
+  });
+});
+
+test.describe("plata ofertei întreruptă", () => {
+  test("după conversie, din link se continuă plata ACEEAȘI comenzi (fără a doua comandă); după plată, linkul nu mai oferă nimic", async ({
+    page,
+    browser,
+  }) => {
+    const email = emailOf("continua");
+    await login(page, manager, "/admin/comenzi/oferte/nou");
+    const { link } = await createOffer(page, produs, email);
+
+    const client = await (await browser.newContext()).newPage();
+    await client.goto(link);
+    await client.getByRole("checkbox", { name: /Am citit și sunt de acord/ }).check();
+    await client.locator("[data-offer-pay-button]").click();
+    await expect(client).toHaveURL(/\/plata-demo\//);
+    expect(await countE2eOrdersByEmail(email)).toBe(1);
+
+    // clientul închide fila înainte să plătească și revine pe linkul din email
+    await client.goto(link);
+    await expect(client.getByRole("heading", { name: "Comanda ta a fost creată" })).toBeVisible();
+    // consimțământul s-a dat la prima plată: nu se cere din nou
+    await expect(client.getByRole("checkbox")).toHaveCount(0);
+    await expect(client.locator("main")).not.toContainText("E2E-");
+    await client.getByRole("button", { name: "Continuă plata" }).click();
+    // pagina de reîncercare din Faza 10, apoi procesatorul (DEMO)
+    await expect(client).toHaveURL(/\/comanda\/plateste\//);
+    await client.locator("[data-pay-by-link]").click();
+    await expect(client).toHaveURL(/\/plata-demo\//);
+    await demoScenario(client, "paid");
+    await expect(paymentState(client)).toHaveAttribute("data-card-payment-state", "paid", {
+      timeout: 30_000,
+    });
+    expect(await countE2eOrdersByEmail(email)).toBe(1);
+
+    // plătită: linkul spune doar că oferta e folosită, fără acțiune
+    await client.goto(link);
+    await expect(
+      client.getByRole("heading", { name: "Oferta a fost deja folosită" }),
+    ).toBeVisible();
+    await expect(client.getByRole("button", { name: "Continuă plata" })).toHaveCount(0);
+    await client.context().close();
   });
 });
 

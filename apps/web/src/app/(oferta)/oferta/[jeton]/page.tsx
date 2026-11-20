@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CHECKOUT_TERMS_CONSENT, type PublicOffer } from "@ecom/core";
 import { Container, storeButtonVariants } from "@ecom/ui";
+import { OfferContinue } from "@/components/storefront/offer/offer-continue";
 import { OfferPay } from "@/components/storefront/offer/offer-pay";
 import { allowCheckoutRequest } from "@/lib/checkout";
 import { formatMoney } from "@/lib/money-input";
@@ -77,11 +78,24 @@ export default async function OfferPage({ params }: { params: Promise<{ jeton: s
     version: CHECKOUT_TERMS_CONSENT.version,
   };
   if (offer.status === "converted") {
+    // plata cu cardul s-a oprit, dar comanda mai poate fi plătită: «Continuă plata» (mecanismul de reîncercare din Faza 10);
+    // plătită, anulată sau cu fereastra trecută: doar mesajul că oferta e folosită, fără nicio acțiune
+    if (offer.canContinuePayment) {
+      return (
+        <Container className="flex max-w-3xl flex-col items-start gap-4 py-12">
+          <h1 className="heading-display text-3xl sm:text-4xl">{m.converted.continueTitle}</h1>
+          <p className="max-w-prose text-ink-secondary">{m.converted.continueBody}</p>
+          <OfferContinue token={jeton} />
+        </Container>
+      );
+    }
     return (
       <Container className="flex max-w-3xl flex-col items-start gap-4 py-12">
         <h1 className="heading-display text-3xl sm:text-4xl">{m.converted.title}</h1>
         <p className="max-w-prose text-ink-secondary">{m.converted.body}</p>
-        <OfferPay token={jeton} consent={consent} continueLabel={m.converted.continue} />
+        <Link href="/" className={storeButtonVariants({ variant: "primary" })}>
+          {m.unavailable.home}
+        </Link>
       </Container>
     );
   }

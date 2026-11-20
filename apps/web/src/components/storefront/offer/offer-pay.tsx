@@ -16,12 +16,9 @@ const checkout = getMessages().storefront.checkout;
 export function OfferPay({
   token,
   consent,
-  continueLabel,
 }: {
   token: string;
   consent: { text: string; version: string };
-  /** Oferta e deja comandă: butonul duce la plata comenzii (în loc de «Plătește cu cardul»). */
-  continueLabel?: string;
 }) {
   const base = useId();
   const box = useRef<HTMLInputElement>(null);
@@ -110,7 +107,7 @@ export function OfferPay({
           disabled={pending}
           data-offer-pay-button
         >
-          {pending ? m.paying : (continueLabel ?? m.pay)}
+          {pending ? m.paying : m.pay}
         </button>
         <p className="max-w-prose text-sm text-ink-secondary">{m.paymentNote}</p>
       </div>

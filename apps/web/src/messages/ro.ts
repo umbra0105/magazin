@@ -3848,9 +3848,21 @@ export const ro = {
         "Plata se face pe pagina securizată a procesatorului de plăți. Comanda se creează abia când plătești.",
       draftNotice: "Textele juridice sunt în curs de redactare.",
       converted: {
+        /** Oferta a devenit comandă, plata a rămas neterminată și se mai poate continua. */
+        continueTitle: "Comanda ta a fost creată",
+        continueBody:
+          "Plata cu cardul nu s-a finalizat încă. Poți continua de unde ai rămas, fără să plasezi o comandă nouă.",
+        continue: "Continuă plata",
+        continuing: "Se pornește plata…",
+        errors: {
+          unavailable:
+            "Plata nu mai poate fi continuată din acest link. Contactează magazinul și te ajutăm.",
+          rateLimited: "Prea multe încercări. Așteaptă un minut și încearcă din nou.",
+          failed: "Nu am putut continua plata. Încearcă din nou.",
+        },
+        /** Oferta a devenit comandă, iar comanda e plătită, anulată sau fereastra plății a trecut. */
         title: "Oferta a fost deja folosită",
-        body: "Pentru această ofertă s-a pornit deja o comandă. Poți continua către plată sau poți verifica comanda în urmărire.",
-        continue: "Continuă către plată",
+        body: "Pentru această ofertă există deja o comandă. Dacă ai întrebări despre ea, contactează magazinul.",
       },
       unavailable: {
         title: "Oferta nu mai este disponibilă",

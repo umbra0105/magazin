@@ -45,3 +45,31 @@ export async function payOfferAction(raw: unknown): Promise<PayOfferResult> {
     return { ok: false, code: "failed" };
   }
 }
+
+/**
+ * «Continuă plata» pe linkul unei oferte DEJA transformate în comandă, cu plata cu cardul în așteptare (Faza 11, C8). Nu există logică
+ * de bani aici și nu se creează nicio comandă: serverul verifică (după jeton) că plata mai poate fi continuată, emite jetonul
+ * «reîncearcă plata» din Faza 10 (`CardPaymentService.issueRetryToken`) și trimite clientul pe pagina de reîncercare existentă, care
+ * re-validează stocul și pornește o tentativă nouă. Orice altceva (jeton necunoscut, ofertă neplătibilă, comandă plătită sau anulată,
+ * fereastră trecută) dă același cod «unavailable».
+ */
+export type ContinueOfferResult =
+  { ok: true; redirect: string } | { ok: false; code: "unavailable" | "rateLimited" | "failed" };
+
+const continueInput = z.object({ token: z.string().min(1).max(100) });
+
+export async function continueOfferPaymentAction(raw: unknown): Promise<ContinueOfferResult> {
+  const parsed = continueInput.safeParse(raw);
+  if (!parsed.success) return { ok: false, code: "unavailable" };
+  if (!(await allowCheckoutRequest("offerPay"))) return { ok: false, code: "rateLimited" };
+  try {
+    const continuation = await getOfferService().paymentContinuation(parsed.data.token);
+    if (!continuation) return { ok: false, code: "unavailable" };
+    const retry = await getCardPayments().issueRetryToken(continuation.orderId);
+    return { ok: true, redirect: `/comanda/plateste/${encodeURIComponent(retry.token)}` };
+  } catch (error) {
+    if (error instanceof DomainError) return { ok: false, code: "unavailable" };
+    getLogger().error({ err: error }, "continuarea plății ofertei a eșuat");
+    return { ok: false, code: "failed" };
+  }
+}
