@@ -23,6 +23,7 @@ const MODE_A = [
   "poarta-draft",
   "ci-joburi",
   "ci-e2e-paralel",
+  "e2e-curatare-comenzi",
 ];
 const MODE_B = ["8", "9", "10", "13", "14b", "15", "15b"];
 const MODE_C = ["6", "7", "18", "22"];
@@ -151,6 +152,31 @@ describe("faza ci-e2e-paralel (mini-fază, modul A)", () => {
 
   it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
     const branch = branchOf("ci-e2e-paralel");
+    expect(isPhaseBranch(branch)).toBe(true);
+    const problems = approvalsGuardProblems({
+      branch,
+      baseAvailable: true,
+      ci: false,
+      touchingCommits: ["abc1234"],
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("abc1234");
+  });
+});
+
+describe("faza e2e-curatare-comenzi (mini-fază, modul A)", () => {
+  it("modul A; ramura faza-e2e-curatare-comenzi, etichetele pre-faza-e2e-curatare-comenzi și faza-e2e-curatare-comenzi-completa", () => {
+    expect(modeOf("e2e-curatare-comenzi")).toBe("A");
+    expect(branchOf("e2e-curatare-comenzi")).toBe("faza-e2e-curatare-comenzi");
+    expect(tagsOf("e2e-curatare-comenzi")).toEqual({
+      pre: "pre-faza-e2e-curatare-comenzi",
+      done: "faza-e2e-curatare-comenzi-completa",
+    });
+    expect(isValidPhaseId("e2e-curatare-comenzi")).toBe(true);
+  });
+
+  it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
+    const branch = branchOf("e2e-curatare-comenzi");
     expect(isPhaseBranch(branch)).toBe(true);
     const problems = approvalsGuardProblems({
       branch,

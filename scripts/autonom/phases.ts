@@ -20,6 +20,7 @@ export const PHASE_MODES: Readonly<Record<string, Mode>> = {
   "poarta-draft": "A",
   "ci-joburi": "A",
   "ci-e2e-paralel": "A",
+  "e2e-curatare-comenzi": "A",
   "8": "B",
   "9": "B",
   "10": "B",
