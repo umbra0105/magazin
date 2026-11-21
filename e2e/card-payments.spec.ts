@@ -65,8 +65,8 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await removeE2eDemoPayments();
-  await removeE2eOrders();
+  await removeE2eDemoPayments({ tag });
+  await removeE2eOrders({ tag });
   await removeE2eCarts();
   await removeE2eCartStock([gestionat.variantId, ultima.variantId]);
   await removeE2eProducts();

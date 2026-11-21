@@ -2603,10 +2603,44 @@ export async function seedE2eCheckoutSettings(): Promise<void> {
   });
 }
 
-/** Comenzile create de E2E (email din `E2E_ORDER_EMAIL_DOMAIN`) și tot ce atârnă de ele (linii, adrese, plăți, evenimente). */
-export async function removeE2eOrders(): Promise<number> {
+/**
+ * Tag-ul unui fișier de teste E2E (`randomBytes(3).toString("hex")`), obligatoriu la curățarea pe fișier: hexazecimal, 3–12
+ * caractere, ca în `removeE2eStock`. Validarea rulează ÎNAINTE de orice interogare și exclude `%`, `_` și orice alt tipar de `like`.
+ */
+function assertE2eTag(tag: unknown): asserts tag is string {
+  if (typeof tag !== "string" || !/^[0-9a-f]{3,12}$/.test(tag)) {
+    throw new Error("Tag-ul curățării trebuie să fie hexazecimal (3–12 caractere), nu un tipar");
+  }
+}
+
+/**
+ * Emailurile comenzilor unui fișier au forma `<prefix>-<tag>@e2e-comanda.invalid`: partea locală se termină cu `-<tag>`. Tag-ul nu
+ * conține «-», deci un alt tag nu poate potrivi (nici ca sufix, nici ca prefix, nici ca parte a prefixului altui email).
+ */
+function orderEmailLike(tag: string): string {
+  assertE2eTag(tag);
+  return `%-${tag}${E2E_ORDER_EMAIL_DOMAIN}`;
+}
+
+/**
+ * Comenzile create de un fișier de teste E2E (emailul se termină cu `-<tag>@e2e-comanda.invalid`) și tot ce atârnă de ele (linii,
+ * adrese, plăți, rezervări, oferte). Fișierele rulează în paralel: un fișier șterge DOAR ce e al lui, nu comanda în lucru a altuia.
+ * Rambursările și evenimentele plăților lor se șterg înainte, cu `removeE2eDemoPayments({ tag })`.
+ */
+export async function removeE2eOrders(options: { tag: string }): Promise<number> {
+  return deleteE2eOrders(orderEmailLike(options?.tag));
+}
+
+/**
+ * Curățarea GLOBALĂ: comenzile E2E ale TUTUROR tag-urilor. Doar pentru `e2e/global-setup.ts` (rânduri rămase dintr-o rulare
+ * întreruptă) și `e2e/global-teardown.ts`, unde nu rulează teste; niciun spec nu o apelează (garda `e2e-orders-cleanup`).
+ */
+export async function removeAllE2eOrders(): Promise<number> {
+  return deleteE2eOrders(`%${E2E_ORDER_EMAIL_DOMAIN}`);
+}
+
+async function deleteE2eOrders(pattern: string): Promise<number> {
   return withClient(async (db) => {
-    const pattern = `%${E2E_ORDER_EMAIL_DOMAIN}`;
     // ofertele de plată referă comanda rezultată (RESTRICT): se șterg întâi, odată cu notificările lor (liniile și jurnalul pleacă în cascadă)
     await db.query(
       `delete from admin_notification n where exists (select 1 from order_offer o where o.email like $1 and n."dedupKey" like concat('offer_%:', o.id, '%'))`,
@@ -2772,15 +2806,42 @@ export async function seedE2eDemoPayments(
   await setE2eSettings({ "payment.cardProvider": "demo" });
 }
 
-/** Șterge tot ce a creat fluxul cu card al testelor: rambursările, evenimentele DEMO, integrarea DEMO și alegerea furnizorului. */
-export async function removeE2eDemoPayments(): Promise<void> {
+/**
+ * Partea PE TAG a plăților DEMO: rambursările comenzilor fișierului și evenimentele webhook legate de plățile lor (rambursările
+ * blochează ștergerea comenzii, deci se apelează ÎNAINTE de `removeE2eOrders({ tag })`). Nu atinge starea comună: rândul
+ * `integration`, setarea `payment.cardProvider` și evenimentele care nu se leagă de o comandă sunt ale lui `removeAllE2eDemoPayments`.
+ */
+export async function removeE2eDemoPayments(options: { tag: string }): Promise<void> {
+  const pattern = orderEmailLike(options?.tag);
   await withClient(async (db) => {
     await db.query(
       `delete from refund where "orderId" in (select id from customer_order where email like $1)`,
-      [`%${E2E_ORDER_EMAIL_DOMAIN}`],
+      [pattern],
     );
     await db.query(
-      `delete from payment_webhook_event where provider = 'demo' or status = 'rejected'`,
+      `delete from payment_webhook_event where "paymentId" in (
+         select p.id from payment p join customer_order o on o.id = p."orderId" where o.email like $1)`,
+      [pattern],
+    );
+  });
+}
+
+/**
+ * Partea GLOBALĂ a plăților DEMO: rambursările și evenimentele tuturor comenzilor E2E, evenimentele DEMO sau respinse care nu se leagă de
+ * o comandă, integrarea de plată și alegerea furnizorului (un singur rând pentru toată baza). Doar pentru `global-setup` și
+ * `global-teardown`; niciun spec nu o apelează (garda `e2e-orders-cleanup`). Se apelează ÎNAINTE de `removeAllE2eOrders`.
+ */
+export async function removeAllE2eDemoPayments(): Promise<void> {
+  await withClient(async (db) => {
+    const pattern = `%${E2E_ORDER_EMAIL_DOMAIN}`;
+    await db.query(
+      `delete from refund where "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
+    await db.query(
+      `delete from payment_webhook_event where provider = 'demo' or status = 'rejected' or "paymentId" in (
+         select p.id from payment p join customer_order o on o.id = p."orderId" where o.email like $1)`,
+      [pattern],
     );
     await db.query(`delete from integration where type = 'payment'`);
   });

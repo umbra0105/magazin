@@ -68,8 +68,8 @@ if (captureDir) {
     owner = await createAccount(request, baseURL as string, "owner");
   });
   test.afterAll(async () => {
-    await removeE2eDemoPayments();
-    await removeE2eOrders();
+    await removeE2eDemoPayments({ tag });
+    await removeE2eOrders({ tag });
     await removeE2eCarts();
     await removeE2eCartStock([produs.variantId, ultima.variantId]);
     await removeE2eProducts();

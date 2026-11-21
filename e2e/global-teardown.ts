@@ -1,5 +1,9 @@
 import { rm } from "node:fs/promises";
-import { removeE2eStock } from "../packages/core/test/e2e-support";
+import {
+  removeAllE2eDemoPayments,
+  removeAllE2eOrders,
+  removeE2eStock,
+} from "../packages/core/test/e2e-support";
 import { cleanupE2eUsers } from "../packages/db/test/cleanup-e2e-users";
 
 /**
@@ -12,6 +16,11 @@ export default async function globalTeardown(): Promise<void> {
   // produsele de stoc de test: fiecare fișier își șterge ale lui (pe tag); aici, la final, orice rest (un fișier întrerupt)
   const stock = await removeE2eStock();
   if (stock > 0) console.log(`[e2e] șterse ${stock} produse de stoc de test rămase`);
+  // comenzile și plățile E2E: fiecare spec își șterge comenzile pe tag; starea comună a plăților (integrarea DEMO, furnizorul de card,
+  // evenimentele care nu se leagă de o comandă) și orice rest (un fișier întrerupt) se șterg aici, când nu mai rulează teste
+  await removeAllE2eDemoPayments();
+  const orders = await removeAllE2eOrders();
+  if (orders > 0) console.log(`[e2e] șterse ${orders} comenzi E2E rămase`);
   const storage = process.env["E2E_STORAGE_DIR"];
   if (storage && /ecom-e2e-storage$/.test(storage)) {
     await rm(storage, { recursive: true, force: true });
