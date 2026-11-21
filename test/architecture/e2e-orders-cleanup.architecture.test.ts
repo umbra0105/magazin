@@ -15,7 +15,10 @@ import { describe, expect, it } from "vitest";
  *     (`removeAllE2eOrders`, `removeAllE2eDemoPayments`: comenzile tuturor tag-urilor, integrarea DEMO, furnizorul de card);
  *  2. orice apel `removeE2eOrders(...)` / `removeE2eDemoPayments(...)` primește `{ tag }`, iar `tag` e declarat în același fișier ca
  *     `const tag = randomBytes(N).toString("hex")` (aleator: două fișiere nu pot împărți un tag; un tag fix, literal, e refuzat);
- *  3. `global-setup.ts` și `global-teardown.ts` fac curățarea globală (plățile ÎNTÂI, rambursările blochează ștergerea comenzilor).
+ *  3. `global-setup.ts` și `global-teardown.ts` fac curățarea globală (plățile ÎNTÂI, rambursările blochează ștergerea comenzilor);
+ *  4. orice spec care apelează `seedE2eDemoPayments` apelează `removeE2eDemoProvider()` (doar starea: rândul `integration` și
+ *     `payment.cardProvider`, nu comenzi) într-un `afterAll`, ca «Card online» să nu rămână activ pentru specurile care rulează după
+ *     el (`checkout.spec.ts:165` afirmă că cardul NU există; `verify:full` din 2026-11-21 a picat când starea a rămas până la teardown).
  *
  * Citește sursa ca text; `findOrdersCleanupViolations` e pură și testată pe fișiere sintetice, iar mutanții (câte o stricare a
  * fiecărei reguli) se aplică atât pe fișiere sintetice, cât și pe specurile reale: toți trebuie prinși.
@@ -78,6 +81,11 @@ function firstCall(content: string, name: string): number {
   return content.search(new RegExp(`\\b${name}\\(`));
 }
 
+/** Un apel `afterAll(...)` al cărui corp apelează `name(...)` (fără comentarii: `code` e deja curățat). */
+export function afterAllCalls(code: string, name: string): boolean {
+  return calls(code, "afterAll").some((call) => call.args.includes(`${name}(`));
+}
+
 export function findOrdersCleanupViolations(files: readonly SourceFile[]): string[] {
   const problems: string[] = [];
   const fixedTags = new Map<string, string>();
@@ -122,6 +130,15 @@ export function findOrdersCleanupViolations(files: readonly SourceFile[]): strin
       if (owner !== undefined && owner !== file.path) {
         problems.push(`${file.path}: tag-ul fix «${value}» e folosit și de ${owner}`);
       } else fixedTags.set(value, file.path);
+    }
+    // (2b) cine seedează integrarea DEMO îi șterge starea (rândul `integration` și `payment.cardProvider`) într-un afterAll
+    if (
+      calls(code, "seedE2eDemoPayments").length > 0 &&
+      !afterAllCalls(code, "removeE2eDemoProvider")
+    ) {
+      problems.push(
+        `${file.path}: seedează integrarea DEMO (\`seedE2eDemoPayments\`), deci trebuie să apeleze \`removeE2eDemoProvider()\` în \`afterAll\` (starea comună a plăților nu rămâne activă pentru specurile următoare)`,
+      );
     }
     if (tagged.length === 0) continue;
     for (const call of tagged) {
@@ -182,6 +199,26 @@ const SETUP = [
 const TEARDOWN = SETUP.replace("globalSetup", "globalTeardown");
 
 const GLOBALS = [file("e2e/global-setup.ts", SETUP), file("e2e/global-teardown.ts", TEARDOWN)];
+
+/** Un spec care seedează integrarea DEMO: trebuie să-i șteargă starea în `afterAll` (`removeE2eDemoProvider`). */
+const SEED_SPEC = [
+  'import { randomBytes } from "node:crypto";',
+  "import {",
+  "  removeE2eDemoPayments,",
+  "  removeE2eDemoProvider,",
+  "  removeE2eOrders,",
+  "  seedE2eDemoPayments,",
+  '} from "../packages/core/test/e2e-support";',
+  'const tag = randomBytes(3).toString("hex");',
+  "test.beforeAll(async () => {",
+  "  await seedE2eDemoPayments();",
+  "});",
+  "test.afterAll(async () => {",
+  "  await removeE2eDemoProvider();",
+  "  await removeE2eDemoPayments({ tag });",
+  "  await removeE2eOrders({ tag });",
+  "});",
+].join("\n");
 
 /** O stricare a unei reguli: ce se schimbă în text și ce trebuie să spună mesajul. */
 interface Mutant {
@@ -247,6 +284,36 @@ const SPEC_MUTANTS: readonly Mutant[] = [
     name: "tag prea scurt (un singur octet)",
     mutate: (c) => c.replace("randomBytes(3)", "randomBytes(1)"),
     expects: "găsite 0",
+  },
+];
+
+const PROVIDER_CALL = /^[ \t]*await removeE2eDemoProvider\(\);\r?\n/m;
+const PROVIDER_MISSING = "seedează integrarea DEMO";
+
+/** Mutanți ai regulii «cine seedează DEMO îi șterge starea în afterAll»: aplicați specurilor care seedează. */
+const PROVIDER_MUTANTS: readonly Mutant[] = [
+  {
+    name: "fără ștergerea stării DEMO",
+    mutate: (c) => c.replace(PROVIDER_CALL, ""),
+    expects: PROVIDER_MISSING,
+  },
+  {
+    name: "ștergerea stării DEMO mutată din afterAll în beforeAll",
+    mutate: (c) =>
+      c
+        .replace(PROVIDER_CALL, "")
+        .replace(/(test\.beforeAll\([^\n]*\{\r?\n)/, "$1  await removeE2eDemoProvider();\n"),
+    expects: PROVIDER_MISSING,
+  },
+  {
+    name: "ștergerea stării DEMO doar într-un comentariu",
+    mutate: (c) => c.replace(PROVIDER_CALL, "  // await removeE2eDemoProvider();\n"),
+    expects: PROVIDER_MISSING,
+  },
+  {
+    name: "ștergerea stării DEMO înlocuită cu cea globală",
+    mutate: (c) => c.replace("removeE2eDemoProvider();", "removeAllE2eDemoPayments();"),
+    expects: "`removeAllE2eDemoPayments` e curățare GLOBALĂ",
   },
 ];
 
@@ -326,6 +393,26 @@ describe("curățarea comenzilor în specurile E2E (cazuri sintetice)", () => {
     );
   });
 
+  it("un spec care seedează DEMO și îi șterge starea în afterAll e corect; fără seed nu se cere ștergerea", () => {
+    expect(findOrdersCleanupViolations([file("e2e/a.spec.ts", SEED_SPEC), ...GLOBALS])).toEqual([]);
+    expect(findOrdersCleanupViolations([file("e2e/a.spec.ts", SPEC), ...GLOBALS])).toEqual([]);
+  });
+
+  it("starea DEMO e ștearsă DOAR printr-un apel real, în afterAll (nu în comentariu, nu în beforeAll)", () => {
+    const withBoth = SEED_SPEC.replace(
+      "  await seedE2eDemoPayments();",
+      "  await seedE2eDemoPayments('manual_required');",
+    );
+    expect(findOrdersCleanupViolations([file("e2e/a.spec.ts", withBoth), ...GLOBALS])).toEqual([]);
+  });
+
+  it.each(PROVIDER_MUTANTS)("mutant (spec sintetic cu seed): $name", ({ mutate, expects }) => {
+    const mutated = mutate(SEED_SPEC);
+    expect(mutated).not.toBe(SEED_SPEC);
+    const problems = findOrdersCleanupViolations([file("e2e/a.spec.ts", mutated), ...GLOBALS]);
+    expect(problems.join("\n")).toContain(expects);
+  });
+
   it.each(SPEC_MUTANTS)("mutant: $name", ({ mutate, expects }) => {
     const mutated = mutate(SPEC);
     expect(mutated).not.toBe(SPEC);
@@ -390,6 +477,41 @@ describe("specurile E2E reale", () => {
       const mutated = mutant.mutate(content);
       if (mutated === content) continue;
       it(`mutant pe ${spec}: ${mutant.name}`, () => {
+        const others = files.filter((entry) => entry.path !== `e2e/${spec}`);
+        const problems = findOrdersCleanupViolations([file(`e2e/${spec}`, mutated), ...others]);
+        expect(problems.join("\n")).toContain(mutant.expects);
+      });
+    }
+  }
+
+  const SEEDING_SPECS = [
+    "card-payments.spec.ts",
+    "faza10-capturi.spec.ts",
+    "faza11-capturi.spec.ts",
+    "orders-offers.spec.ts",
+    "payments-admin.spec.ts",
+  ];
+
+  it("exact specurile cunoscute seedează DEMO, iar fiecare apelează removeE2eDemoProvider() în afterAll (garda nu trece pe gol)", () => {
+    const seeding = files.filter((entry) =>
+      /\bseedE2eDemoPayments\(/.test(stripComments(entry.content)),
+    );
+    expect(seeding.map((entry) => entry.path).sort()).toEqual(
+      SEEDING_SPECS.map((name) => `e2e/${name}`).sort(),
+    );
+    for (const entry of seeding) {
+      expect(afterAllCalls(stripComments(entry.content), "removeE2eDemoProvider"), entry.path).toBe(
+        true,
+      );
+    }
+  });
+
+  for (const spec of SEEDING_SPECS) {
+    for (const mutant of PROVIDER_MUTANTS) {
+      it(`mutant pe ${spec} real: ${mutant.name}`, () => {
+        const original = real(spec).content;
+        const mutated = mutant.mutate(original);
+        expect(mutated).not.toBe(original);
         const others = files.filter((entry) => entry.path !== `e2e/${spec}`);
         const problems = findOrdersCleanupViolations([file(`e2e/${spec}`, mutated), ...others]);
         expect(problems.join("\n")).toContain(mutant.expects);

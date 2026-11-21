@@ -2827,6 +2827,19 @@ export async function removeE2eDemoPayments(options: { tag: string }): Promise<v
 }
 
 /**
+ * Starea comună a furnizorului DEMO, DOAR starea (nu comenzi, nu rambursări): rândul `integration` de tip plată și alegerea
+ * `payment.cardProvider`. Un singur rând și o singură setare pentru toată baza, deci nu se pot filtra pe tag. Orice spec care
+ * apelează `seedE2eDemoPayments` o apelează în `afterAll` (garda `e2e-orders-cleanup`), ca «Card online» să nu rămână activ pentru
+ * specurile care rulează după el (`checkout.spec.ts` afirmă că cardul NU există).
+ */
+export async function removeE2eDemoProvider(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`delete from integration where type = 'payment'`);
+  });
+  await clearE2eSettings(["payment.cardProvider"]);
+}
+
+/**
  * Partea GLOBALĂ a plăților DEMO: rambursările și evenimentele tuturor comenzilor E2E, evenimentele DEMO sau respinse care nu se leagă de
  * o comandă, integrarea de plată și alegerea furnizorului (un singur rând pentru toată baza). Doar pentru `global-setup` și
  * `global-teardown`; niciun spec nu o apelează (garda `e2e-orders-cleanup`). Se apelează ÎNAINTE de `removeAllE2eOrders`.
@@ -2843,9 +2856,8 @@ export async function removeAllE2eDemoPayments(): Promise<void> {
          select p.id from payment p join customer_order o on o.id = p."orderId" where o.email like $1)`,
       [pattern],
     );
-    await db.query(`delete from integration where type = 'payment'`);
   });
-  await clearE2eSettings(["payment.cardProvider"]);
+  await removeE2eDemoProvider();
 }
 
 /** Stare reală a plăților unei comenzi: tentative, rambursări, evenimente webhook înregistrate pentru ele. */

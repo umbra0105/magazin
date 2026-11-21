@@ -7,6 +7,7 @@ import {
   removeAllE2eOrders,
   removeE2eCartStock,
   removeE2eDemoPayments,
+  removeE2eDemoProvider,
   removeE2eOrders,
   removeE2eProducts,
   seedE2eCartProduct,
@@ -349,6 +350,26 @@ describe("plățile DEMO: partea pe tag și partea globală", () => {
     expect(await db.integration.count({ where: { type: "payment" } })).toBe(0);
     expect(await db.setting.count({ where: { key: "payment.cardProvider" } })).toBe(0);
     expect(await db.paymentWebhookEvent.count({ where: { id: orphan.id } })).toBe(0);
+    await removeAllE2eDemoPayments();
+    await removeAllE2eOrders();
+  });
+});
+
+describe("starea comună DEMO: removeE2eDemoProvider", () => {
+  it("șterge DOAR rândul de integrare de plată și alegerea furnizorului; comenzile, rambursările și evenimentele rămân", async () => {
+    await seedE2eDemoPayments();
+    const seeded = await seedOrder(`card-${hex()}${E2E_ORDER_EMAIL_DOMAIN}`);
+    expect(await db.integration.count({ where: { type: "payment" } })).toBeGreaterThan(0);
+    expect(await db.setting.count({ where: { key: "payment.cardProvider" } })).toBe(1);
+
+    await removeE2eDemoProvider();
+
+    expect(await db.integration.count({ where: { type: "payment" } })).toBe(0);
+    expect(await db.setting.count({ where: { key: "payment.cardProvider" } })).toBe(0);
+    expect(await presence(seeded)).toEqual(ALL);
+
+    // idempotentă: a doua oară nu mai are ce șterge și nu dă eroare
+    await expect(removeE2eDemoProvider()).resolves.toBeUndefined();
     await removeAllE2eDemoPayments();
     await removeAllE2eOrders();
   });

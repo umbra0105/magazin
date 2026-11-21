@@ -8,6 +8,7 @@ import {
   removeE2eCartStock,
   removeE2eCarts,
   removeE2eDemoPayments,
+  removeE2eDemoProvider,
   removeE2eOrders,
   removeE2eProducts,
   seedE2eCartProduct,
@@ -73,6 +74,7 @@ test.beforeAll(async ({ request, baseURL }) => {
 });
 
 test.afterAll(async () => {
+  await removeE2eDemoProvider();
   await removeE2eDemoPayments({ tag });
   await removeE2eOrders({ tag });
   await removeE2eCarts();
