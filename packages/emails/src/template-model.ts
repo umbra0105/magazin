@@ -98,6 +98,7 @@ export const TEMPLATE_KEYS = [
   "internal.stock_out",
   "internal.installation_request",
   "internal.stock_sync_stale",
+  "internal.invoice_failed",
   "return.received",
   "return.approved",
   "return.rejected",

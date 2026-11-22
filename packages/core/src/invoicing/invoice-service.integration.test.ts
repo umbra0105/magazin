@@ -635,3 +635,55 @@ describe("e-Factura și PDF", () => {
     });
   });
 });
+
+describe("alerta pe email «factura nu s-a putut emite»", () => {
+  const TEMPLATE = "internal.invoice_failed";
+  let seq = 0;
+  async function user(h: Harness, roles: string[], verified = true) {
+    seq += 1;
+    const created = await h.tx.user.create({
+      data: {
+        id: `u-fact-${seq}-${NOW.getTime()}`,
+        name: "Utilizator facturare",
+        email: `fact-${seq}-${NOW.getTime()}@exemplu.test`,
+        emailVerified: verified,
+      },
+    });
+    for (const key of roles) {
+      const role = await h.tx.role.findUniqueOrThrow({ where: { key } });
+      await h.tx.userRole.create({ data: { userId: created.id, roleId: role.id } });
+    }
+    return created;
+  }
+
+  it("pleacă doar către utilizatori verificați cu invoices.write, o singură dată pe document, fără date ale clientului", async () => {
+    await withInvoicing(async ({ h, spy, service, clock }) => {
+      const manager = await user(h, ["manager"]);
+      const owner = await user(h, ["owner"]);
+      const unverified = await user(h, ["manager"], false);
+      const accountant = await user(h, ["accountant"]); // invoices.read, fără invoices.write
+      const support = await user(h, ["support"]);
+      const { orderId } = await place(h);
+      spy.failures = [
+        { code: "INVOICE_PROVIDER_TIMEOUT", message: "Furnizorul nu a răspuns la timp" },
+      ];
+      await service.processDue();
+      const mails = await h.tx.emailDispatch.findMany({ where: { template: TEMPLATE, orderId } });
+      const to = mails.map((m) => m.recipient);
+      expect(to).toContain(manager.email.toLowerCase());
+      expect(to).toContain(owner.email.toLowerCase());
+      for (const other of [unverified, accountant, support]) {
+        expect(to).not.toContain(other.email.toLowerCase());
+      }
+      expect(JSON.stringify(mails.map((m) => m.data))).not.toContain("Ion Popescu");
+      // al doilea eșec pe același document (după «Reîncearcă») nu mai trimite a doua oară
+      const [doc] = await docs(h, orderId);
+      await service.retry(doc!.id, "admin", true);
+      spy.failures = [{ code: "INVOICE_PROVIDER_TIMEOUT", message: "x" }];
+      clock.now = new Date(clock.now.getTime() + 1000);
+      await service.processDue();
+      const again = await h.tx.emailDispatch.count({ where: { template: TEMPLATE, orderId } });
+      expect(again).toBe(mails.length);
+    });
+  });
+});

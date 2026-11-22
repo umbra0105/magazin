@@ -28,6 +28,7 @@ import {
   type StornoReturned,
   type StornoSourceLine,
 } from "./invoice-draft";
+import { enqueueInvoiceAlertEmail } from "./invoice-alert";
 import { invoicePaymentType } from "./invoice-rules";
 import { readInvoicingSettings, type InvoicingSettings } from "./invoice-settings";
 import {
@@ -156,6 +157,33 @@ export class InvoiceService {
         LIMIT ${limit})
       RETURNING id`);
     return rows.map((r) => r.id);
+  }
+
+  /** Id-urile documentelor scadente (în coadă), fără să le preia: pentru măturător, care le pune în coada BullMQ. */
+  async listDueIds(limit = 50): Promise<string[]> {
+    const now = this.now();
+    const rows = await this.db.invoice.findMany({
+      where: { status: "queued", OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      take: limit,
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
+  }
+
+  /** Preia atomic UN document (queued → issuing) și îl procesează. Dacă altcineva l-a preluat deja, nu face nimic. */
+  async processById(id: string): Promise<"issued" | "failed" | "requeued" | "skipped" | "ignored"> {
+    const now = this.now();
+    const claimed = await this.db.invoice.updateMany({
+      where: {
+        id,
+        status: "queued",
+        OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+      },
+      data: { status: "issuing", lockedAt: now },
+    });
+    if (claimed.count !== 1) return "ignored";
+    return this.processOne(id);
   }
 
   /**
@@ -764,6 +792,7 @@ export class InvoiceService {
       await tx.invoiceEvent.create({
         data: { invoiceId: doc.id, type: "alert", message: "Alertă trimisă adminilor" },
       });
+      await enqueueInvoiceAlertEmail(tx, { invoiceId: doc.id, orderId: doc.orderId, reason });
     }
   }
 

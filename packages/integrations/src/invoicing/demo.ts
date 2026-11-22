@@ -166,7 +166,8 @@ export class DemoInvoiceProvider implements InvoiceProvider {
     };
   }
 
-  async cancelProforma(): Promise<void> {
+  async cancelProforma(proforma?: DocumentRef): Promise<void> {
+    void proforma;
     this.maybeFail();
   }
 
