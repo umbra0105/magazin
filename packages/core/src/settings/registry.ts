@@ -183,6 +183,12 @@ export const settingGroups = {
     easyboxEnabled: z.boolean().default(false),
     /** Cât așteptăm tarifele furnizorului (ms) înainte să cădem pe tarifele pe zonă. */
     quoteTimeoutMs: z.number().int().min(500).max(15_000).default(4000),
+    /**
+     * Curierul/agregatorul activ (Faza 12): wootpro | sameday | demo (doar dezvoltare). Gol = tarifele vin din furnizorul DEMO de
+     * tarife (marcat «DEMO») și din rezerva pe zone, iar AWB-ul se introduce manual. Un curier real se folosește doar dacă e activ,
+     * complet configurat și, în LIVE, verificat în sandbox.
+     */
+    carrier: z.enum(["", "wootpro", "sameday", "demo"]).default(""),
     /** Faza 12: cât timp se păstrează în cache tariful cerut aceluiași furnizor pentru aceleași colete și aceeași destinație. */
     rateCacheSeconds: z.number().int().min(0).max(3600).default(120),
     /**

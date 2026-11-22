@@ -65,12 +65,15 @@ export const PAYMENT_TRANSITIONS: Table<PaymentStatus> = {
   chargeback: [],
 };
 
-/** unfulfilled → partially_fulfilled → fulfilled → in_transit → delivered; returned după expediere; anulare doar din unfulfilled. */
+/**
+ * unfulfilled → partially_fulfilled → fulfilled → in_transit → delivered; returned după expediere; anulare doar din unfulfilled.
+ * Faza 12: un AWB anulat înainte de livrare readuce comanda la unfulfilled (fulfilled | in_transit → unfulfilled), ca să se poată expedia din nou.
+ */
 export const FULFILLMENT_TRANSITIONS: Table<FulfillmentStatus> = {
   unfulfilled: ["partially_fulfilled", "fulfilled", "cancelled"],
   partially_fulfilled: ["fulfilled"],
-  fulfilled: ["in_transit", "returned"],
-  in_transit: ["delivered", "returned"],
+  fulfilled: ["in_transit", "returned", "unfulfilled"],
+  in_transit: ["delivered", "returned", "unfulfilled"],
   delivered: ["returned"],
   returned: [],
   cancelled: [],

@@ -17,3 +17,5 @@ export type {
 export { RateRefusedError } from "./types";
 export * from "./zone-service";
 export * from "./exclusion-service";
+export * from "./carrier-config";
+export * from "./carrier-guard";
