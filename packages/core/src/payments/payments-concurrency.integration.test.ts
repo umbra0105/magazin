@@ -13,6 +13,7 @@ import { CartService, type CartOwner, type CartRuntimeSettings } from "../cart/c
 import { CheckoutService } from "../orders/checkout-service";
 import { CHECKOUT_TERMS_CONSENT } from "../orders/consent";
 import { DemoShippingRateProvider } from "../shipping/demo-rates";
+import { DEFAULT_PALLET_SETTINGS } from "../shipping/pallet";
 import { ShippingService, createPrismaShippingStore } from "../shipping/shipping-service";
 import { StockService } from "../inventory/stock-service";
 import { CHECKOUT_SETTINGS } from "../test-utils/checkout-fixtures";
@@ -142,6 +143,7 @@ async function withEnv<T>(fn: (env: Env) => Promise<T>): Promise<T> {
           pickupAddress: null,
           easyboxEnabled: false,
           quoteTimeoutMs: 2000,
+          pallet: DEFAULT_PALLET_SETTINGS,
         }),
       }),
       cui: { lookup: async () => ({ status: "unavailable", reason: "network" }) },

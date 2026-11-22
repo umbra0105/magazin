@@ -4,6 +4,7 @@ import { claimDispatch, enqueueDispatches, type MailerConfig } from "@ecom/core"
 import { getDb } from "@ecom/db";
 import type { EmailTheme } from "@ecom/emails";
 import { harness, q, type Harness } from "../../core/src/test-utils/checkout-fixtures";
+import { createManualShipment } from "../../core/src/shipping/shipment-service";
 import {
   cardHarness,
   deliver as deliverPaymentEvent,
@@ -111,8 +112,9 @@ function setup(
 async function placed(
   h: Harness,
   over: { paymentMethod?: string; shippingOfferCode?: string; quantity?: string } = {},
+  productOver: { shippingClass?: "standard" | "oversized" | "pallet" } = {},
 ) {
-  const product = await h.product({ physical: "100" });
+  const product = await h.product({ physical: "100", ...productOver });
   const owner = await h.fill([{ variantId: product.variantId, quantity: q(over.quantity ?? "1") }]);
   const input = await h.input(owner, {
     ...(over.paymentMethod ? { paymentMethod: over.paymentMethod } : {}),
@@ -216,6 +218,50 @@ describe("ridicare personală: adresa magazinului, nu a clientului (decizia 2026
       expect(text).toContain("Ridicare personală de la");
       expect(text).toContain("Plătești în magazin la ridicare");
       expect(text).not.toMatch(/curierului/i);
+    });
+  });
+});
+
+describe("transport paletizat și expediere (Faza 12)", () => {
+  it("rambursul la transport paletizat: «doar cu cardul», nu «Plătești curierului»", async () => {
+    await harness(async (h) => {
+      const { orderId } = await placed(
+        h,
+        { shippingOfferCode: "pallet" },
+        { shippingClass: "pallet" },
+      );
+      expect(
+        (await h.tx.order.findUniqueOrThrow({ where: { id: orderId } })).shippingMethodCode,
+      ).toBe("pallet");
+      const { sent, run } = setup(h);
+      await run((await rowOf(h, orderId, "order.confirmation")).id);
+      const { text, html } = (sent[0] as Sent).message;
+      for (const part of [text, html]) {
+        expect(part).toContain("Plata la livrare doar cu cardul; curierul nu acceptă numerar");
+        expect(part).not.toMatch(/Plătești curierului/);
+      }
+    });
+  });
+
+  it("emailul «expediată» poartă AWB-ul și transportatorul, și pleacă o singură dată", async () => {
+    await harness(async (h) => {
+      const { orderId } = await placed(h);
+      await createManualShipment(h.tx, orderId, {
+        actorLabel: "admin@test.ro",
+        now: NOW,
+        carrier: "Transport Palet SRL",
+        awb: "PAL-777",
+      });
+      const row = await rowOf(h, orderId, "order.shipped");
+      const { sent, run } = setup(h);
+      await run(row.id);
+      await run(row.id);
+      expect(sent).toHaveLength(1);
+      const { text, html } = (sent[0] as Sent).message;
+      for (const part of [text, html]) {
+        expect(part).toContain("PAL-777");
+        expect(part).toContain("Transport Palet SRL");
+      }
     });
   });
 });

@@ -28,6 +28,26 @@ export function volumetricGrams(
   return Number(ceilBigint(totalMm3, VOLUMETRIC_DIVISOR_MM3_PER_GRAM));
 }
 
+/** Volumul unei linii, în cm³, în sus; 0 dacă lipsește vreo dimensiune (mm³ ÷ 1000). */
+export function volumeCm3(
+  lengthMm: number | null,
+  widthMm: number | null,
+  heightMm: number | null,
+  quantity: Quantity,
+): number {
+  if (lengthMm === null || widthMm === null || heightMm === null) return 0;
+  const unitVolume = BigInt(lengthMm) * BigInt(widthMm) * BigInt(heightMm); // mm³ pe unitate
+  const { whole, remainderTicks } = scaleWholeByQuantity(unitVolume, quantity);
+  const totalMm3 = whole + (remainderTicks > 0n ? 1n : 0n);
+  return Number(ceilBigint(totalMm3, 1000n));
+}
+
+/** Cantitatea rotunjită în sus la bucăți întregi (zecimile de miime se rotunjesc în sus). */
+export function wholeUnitsOf(quantity: Quantity): number {
+  const { whole, remainderTicks } = scaleWholeByQuantity(1, quantity);
+  return Number(whole + (remainderTicks > 0n ? 1n : 0n));
+}
+
 export interface BuildParcelInput {
   variantId: string;
   sku: string;
@@ -54,6 +74,8 @@ export function buildParcel(input: BuildParcelInput): Parcel {
     realGrams,
     volumetricGrams: volumetric,
     chargeableGrams: Math.max(realGrams, volumetric),
+    volumeCm3: volumeCm3(input.lengthMm, input.widthMm, input.heightMm, input.quantity),
+    wholeUnits: wholeUnitsOf(input.quantity),
     lengthMm: input.lengthMm,
     widthMm: input.widthMm,
     heightMm: input.heightMm,

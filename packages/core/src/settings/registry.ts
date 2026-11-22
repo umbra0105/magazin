@@ -183,6 +183,30 @@ export const settingGroups = {
     easyboxEnabled: z.boolean().default(false),
     /** Cât așteptăm tarifele furnizorului (ms) înainte să cădem pe tarifele pe zonă. */
     quoteTimeoutMs: z.number().int().min(500).max(15_000).default(4000),
+    /**
+     * Curierul/agregatorul activ (Faza 12): wootpro | sameday | demo (doar dezvoltare). Gol = tarifele vin din furnizorul DEMO de
+     * tarife (marcat «DEMO») și din rezerva pe zone, iar AWB-ul se introduce manual. Un curier real se folosește doar dacă e activ,
+     * complet configurat și, în LIVE, verificat în sandbox.
+     */
+    carrier: z.enum(["", "wootpro", "sameday", "demo"]).default(""),
+    /** Faza 12: cât timp se păstrează în cache tariful cerut aceluiași furnizor pentru aceleași colete și aceeași destinație. */
+    rateCacheSeconds: z.number().int().min(0).max(3600).default(120),
+    /**
+     * Transportul paletizat (Faza 12): preț FIX per palet, în BANI, cu TVA inclus (35.000 = 350 lei); nu vine din API. TVA-ul se
+     * extrage din brut, cu cota din `tax.standardRate`.
+     */
+    palletPriceMinor: z.number().int().min(1).max(100_000_000).default(35_000),
+    /**
+     * Pragul de la care, dacă cel mai ieftin curier îl DEPĂȘEȘTE (comparație strictă, preț brut, cu TVA, înainte de transportul
+     * gratuit) și paletizatul costă mai puțin sau cât curierul, curierul și easybox-ul se ascund (40.000 = 400 lei).
+     */
+    palletSwitchThresholdMinor: z.number().int().min(0).max(100_000_000).default(40_000),
+    /** Capacitatea unui palet în greutate, în GRAME (600.000 = 600 kg). */
+    palletMaxWeightGrams: z.number().int().min(1).max(100_000_000).default(600_000),
+    /** Capacitatea unui palet în volum, în cm³ (1.200.000 = 1,2 m³). */
+    palletMaxVolumeCm3: z.number().int().min(1).max(100_000_000_000).default(1_200_000),
+    /** Transportatorii oferiți ca listă la expedierea manuală (AWB introdus de admin); gol = text liber. */
+    manualCarriers: z.array(z.string().trim().min(1).max(80)).max(30).default([]),
     /** Mesajul despre livrarea la nivelul solului, afișat la alegerea livrării. */
     groundLevelNotice: z
       .string()

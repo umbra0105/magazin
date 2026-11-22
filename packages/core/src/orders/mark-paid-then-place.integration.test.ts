@@ -5,6 +5,7 @@ import { LocalStorageDriver, deriveSigningKey } from "@ecom/integrations";
 import { parseQuantity } from "@ecom/shared";
 import { CartService, type CartRuntimeSettings } from "../cart/cart-service";
 import { DemoShippingRateProvider } from "../shipping/demo-rates";
+import { DEFAULT_PALLET_SETTINGS } from "../shipping/pallet";
 import { ShippingService, createPrismaShippingStore } from "../shipping/shipping-service";
 import { CHECKOUT_SETTINGS } from "../test-utils/checkout-fixtures";
 import {
@@ -117,6 +118,7 @@ describe("«Marchează plătit» nu strică tranzacțiile următoare", () => {
               pickupAddress: null,
               easyboxEnabled: false,
               quoteTimeoutMs: 2000,
+              pallet: DEFAULT_PALLET_SETTINGS,
             }),
           }),
           cui: { lookup: async () => ({ status: "unavailable", reason: "network" }) },

@@ -461,6 +461,7 @@ describe("specurile E2E reale", () => {
         "e2e/orders-offers.spec.ts",
         "e2e/payments-admin.spec.ts",
         "e2e/ridicare-capturi.spec.ts",
+        "e2e/shipping.spec.ts",
       ].sort(),
     );
     const withPayments = files.filter((entry) =>

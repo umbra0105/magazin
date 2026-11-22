@@ -118,7 +118,15 @@ export const adminOrdersRo = {
     bank_transfer: "Transfer bancar",
     card: "Card online",
   } as Record<string, string>,
-  deliveryKinds: { courier: "Curier", pickup: "Ridicare personală" } as Record<string, string>,
+  /** Transport paletizat: același ramburs, doar cu cardul la livrare (transportatorul nu acceptă numerar). */
+  methodsPallet: {
+    cod: "Ramburs (doar cu cardul la livrare)",
+  } as Record<string, string>,
+  deliveryKinds: {
+    courier: "Curier",
+    pickup: "Ridicare personală",
+    pallet: "Transport paletizat",
+  } as Record<string, string>,
   badges: {
     supplier: "La furnizor",
     needsRefund: "Plătită, de rambursat",

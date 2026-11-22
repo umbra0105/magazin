@@ -17,7 +17,7 @@ export interface CheckoutFormat {
 
 export interface CheckoutOfferDto {
   code: string;
-  kind: "courier" | "easybox" | "pickup";
+  kind: "courier" | "easybox" | "pickup" | "pallet";
   label: string;
   priceText: string;
   free: boolean;
@@ -72,15 +72,24 @@ function offerDto(offer: RateOffer, format: CheckoutFormat): CheckoutOfferDto {
     label:
       offer.kind === "pickup"
         ? text.pickup
-        : offer.service
-          ? `${offer.carrier} — ${offer.service}`
-          : offer.carrier,
+        : offer.kind === "pallet"
+          ? text.offerPallet
+          : offer.service
+            ? `${offer.carrier} — ${offer.service}`
+            : offer.carrier,
     priceText:
       offer.priceMinor === 0
         ? text.free
         : formatMoney(offer.priceMinor, format.currency, format.locale),
     free: offer.priceMinor === 0,
-    daysText: offer.kind === "pickup" ? text.pickupLede : days === null ? null : text.days(days),
+    daysText:
+      offer.kind === "pickup"
+        ? text.pickupLede
+        : offer.kind === "pallet" && offer.pallets
+          ? text.palletCount(offer.pallets)
+          : days === null
+            ? null
+            : text.days(days),
     addressLine:
       offer.kind === "pickup" && offer.pickupAddress
         ? text.pickupAddress(offer.pickupAddress.text)
@@ -132,13 +141,17 @@ function methodDto(
     available: entry.available,
     label: text.paymentCod,
     helpText:
-      offer?.kind === "pickup"
+      offer?.kind === "pallet"
         ? fee > 0
-          ? text.paymentCodHelpPickup(money(fee))
-          : text.paymentCodFreePickup
-        : fee > 0
-          ? text.paymentCodHelp(money(fee))
-          : text.paymentCodFree,
+          ? text.paymentCodHelpPallet(money(fee))
+          : text.paymentCodFreePallet
+        : offer?.kind === "pickup"
+          ? fee > 0
+            ? text.paymentCodHelpPickup(money(fee))
+            : text.paymentCodFreePickup
+          : fee > 0
+            ? text.paymentCodHelp(money(fee))
+            : text.paymentCodFree,
     reasonText: reason,
   };
 }

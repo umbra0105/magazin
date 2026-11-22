@@ -48,7 +48,11 @@ export type AdminNavItemId =
   | "allOrders"
   | "offers"
   | "emailTemplates"
-  | "installRequests";
+  | "installRequests"
+  | "shipments"
+  | "codReconciliation"
+  | "palletSettings"
+  | "carrierSettings";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -117,6 +121,8 @@ export const CATALOG_ITEMS: readonly AdminNavItem[] = [
 export const ORDERS_ITEMS: readonly AdminNavItem[] = [
   { id: "allOrders", href: "/admin/comenzi", permission: "orders.read" },
   { id: "payments", href: "/admin/comenzi/plati", permission: "payments.read" },
+  { id: "shipments", href: "/admin/comenzi/expedieri", permission: "orders.fulfill" },
+  { id: "codReconciliation", href: "/admin/comenzi/rambursuri", permission: "orders.read" },
   { id: "offers", href: "/admin/comenzi/oferte", permission: "orders.offers" },
   { id: "emailTemplates", href: "/admin/comenzi/sabloane-email", permission: "email.read" },
   {
@@ -149,6 +155,9 @@ export const SETTINGS_ITEMS: readonly AdminNavItem[] = [
   { id: "maintenance", href: "/admin/setari/mentenanta", permission: "settings.read" },
   { id: "cartSettings", href: "/admin/setari/cos", permission: "settings.read" },
   { id: "shippingZones", href: "/admin/setari/livrare", permission: "settings.read" },
+  { id: "palletSettings", href: "/admin/setari/paleti", permission: "settings.read" },
+  // cheile curierilor (criptate): doar cu `integrations.write` (Owner), ca la plăți
+  { id: "carrierSettings", href: "/admin/setari/curieri", permission: "integrations.write" },
   // cheile furnizorilor de plată: doar cu `payments.configure` (Owner), ca la integrări
   { id: "paymentSettings", href: "/admin/setari/plati", permission: "payments.configure" },
   // serverul SMTP (parola criptată): doar cu `email.configure` (Owner), ca la integrări

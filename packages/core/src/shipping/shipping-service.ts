@@ -8,8 +8,16 @@ import {
   type FreeShippingEligibility,
 } from "./free-shipping";
 import { chargeableGramsTotal } from "./parcels";
+import { decidePalletTransport, type PalletMode, type PalletSettings } from "./pallet";
 import { normalizePickupAddress, type PickupAddress } from "./pickup-address";
-import type { Parcel, RateOffer, RateRequest, ShippingClass, ShippingRateProvider } from "./types";
+import {
+  RateRefusedError,
+  type Parcel,
+  type RateOffer,
+  type RateRequest,
+  type ShippingClass,
+  type ShippingRateProvider,
+} from "./types";
 
 /**
  * Oferte de livrare pentru checkout. Ordinea: furnizorul de tarife (cu timp limită) → dacă eșuează, depășește timpul sau nu dă
@@ -34,6 +42,8 @@ export interface ShippingRuntimeSettings {
   easyboxEnabled: boolean;
   /** `shipping.quoteTimeoutMs`. */
   quoteTimeoutMs: number;
+  /** Transportul paletizat (Faza 12): `shipping.palletPriceMinor`, `palletSwitchThresholdMinor`, capacitățile. */
+  pallet: PalletSettings;
 }
 
 export interface ShippingStore {
@@ -65,6 +75,12 @@ export interface ShippingQuote {
   freeShipping: FreeShippingEligibility;
   /** Un colet nu are greutate sau dimensiuni: tariful poate fi subestimat. */
   incomplete: boolean;
+  /**
+   * Modul de transport al comenzii (Faza 12): `courier` (curier standard, eventual cu easybox), `pallet_only` (cel puțin un produs
+   * `pallet`), `switched` (curierul depășea pragul și paletizatul era mai ieftin sau egal), `refused` (furnizorul a refuzat
+   * tariful). `pallets` = numărul estimat de paleți când intervine paletizatul.
+   */
+  transport: { mode: PalletMode; pallets: number | null };
 }
 
 export interface ShippingServiceDeps {
@@ -108,6 +124,7 @@ export class ShippingService {
       ]);
       return { offers, problem: offers.length === 0 ? "empty" : null };
     } catch (error) {
+      if (error instanceof RateRefusedError) return { offers: [], problem: "refused" };
       return { offers: [], problem: error instanceof Error ? error.message : "unknown" };
     } finally {
       if (timer) clearTimeout(timer);
@@ -124,7 +141,12 @@ export class ShippingService {
       codAmountMinor: input.codAmountMinor ?? 0,
     };
 
-    const provided = await this.fromProvider(request, settings.quoteTimeoutMs);
+    // un produs `pallet` în coș = DOAR transport paletizat (preț fix, nu din API): furnizorul nu se mai întreabă
+    const palletClass = input.parcels.some((parcel) => parcel.shippingClass === "pallet");
+    const provided = palletClass
+      ? { offers: [] as RateOffer[], problem: null as string | null }
+      : await this.fromProvider(request, settings.quoteTimeoutMs);
+    const refused = provided.problem === "refused" || provided.problem === "empty";
     let offers = provided.offers;
     let fallbackUsed = false;
     if (offers.length === 0) {
@@ -135,8 +157,18 @@ export class ShippingService {
         chargeableGrams: chargeableGramsTotal(input.parcels),
         subtotalMinor: input.subtotalMinor,
       });
-      if (offers.length === 0) offers = [lastResortOffer()];
+      // furnizorul a refuzat sau coșul e doar paletizat: fără rezervă pe zone, paletizatul e răspunsul (nu oferta DEMO)
+      if (offers.length === 0 && !refused && !palletClass) offers = [lastResortOffer()];
     }
+
+    const pallet = decidePalletTransport({
+      parcels: input.parcels,
+      offers,
+      settings: settings.pallet,
+      providerRefused: refused,
+    });
+    offers = pallet.offers;
+    if (pallet.mode !== "courier") fallbackUsed = false;
 
     offers = filterOffersForParcels(offers, input.parcels, {
       easyboxEnabled: settings.easyboxEnabled,
@@ -163,6 +195,7 @@ export class ShippingService {
       providerProblem: provided.problem,
       freeShipping,
       incomplete: input.parcels.some((p) => p.incomplete),
+      transport: { mode: pallet.mode, pallets: pallet.pallets },
     };
   }
 }

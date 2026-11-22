@@ -19,6 +19,10 @@ export interface Parcel {
   volumetricGrams: number;
   /** Cea mai mare dintre cele două: pe ea se tarifează. */
   chargeableGrams: number;
+  /** Volumul liniei (L×l×h pe unitate × cantitate), în cm³, rotunjit în sus; 0 dacă lipsesc dimensiunile. */
+  volumeCm3: number;
+  /** Cantitatea liniei rotunjită în sus la bucăți întregi (pentru estimarea prudentă a paleților). */
+  wholeUnits: number;
   /** Dimensiunile unitare, în mm (informative pentru furnizor); nule dacă lipsesc. */
   lengthMm: number | null;
   widthMm: number | null;
@@ -36,8 +40,8 @@ export interface RateRequest {
   codAmountMinor: number;
 }
 
-export type OfferKind = "courier" | "easybox" | "pickup";
-export type OfferSource = "provider" | "fallback" | "last_resort" | "pickup";
+export type OfferKind = "courier" | "easybox" | "pickup" | "pallet";
+export type OfferSource = "provider" | "fallback" | "last_resort" | "pickup" | "pallet";
 
 export interface RateOffer {
   /** Cod stabil al ofertei (curier + serviciu), păstrat în snapshot-ul comenzii. */
@@ -55,6 +59,8 @@ export interface RateOffer {
   demo: boolean;
   /** Transportul e gratuit (prag atins): `priceMinor` e deja 0. */
   freeShipping: boolean;
+  /** Doar la transportul paletizat: numărul estimat de paleți (preț fix per palet, vezi `pallet.ts`). */
+  pallets?: number;
   /** Doar la ridicare personală: adresa MAGAZINULUI (nu a clientului), din `company.address`. */
   pickupAddress?: NormalizedPickupAddress;
 }
@@ -63,4 +69,12 @@ export interface RateOffer {
 export interface ShippingRateProvider {
   readonly name: string;
   quote(request: RateRequest, signal: AbortSignal): Promise<RateOffer[]>;
+}
+
+/** Furnizorul REFUZĂ tariful (greutate sau dimensiuni peste limita lui): spre deosebire de o cădere, cere paletizat sau rezervă. */
+export class RateRefusedError extends Error {
+  constructor(message = "Furnizorul a refuzat tariful") {
+    super(message);
+    this.name = "RateRefusedError";
+  }
 }

@@ -5,6 +5,7 @@ import { parseQuantity, type Quantity } from "@ecom/shared";
 import { CartService, type CartOwner, type CartRuntimeSettings } from "../cart/cart-service";
 import { runBaseSeed } from "../seed/base-seed";
 import { DemoShippingRateProvider } from "../shipping/demo-rates";
+import { DEFAULT_PALLET_SETTINGS } from "../shipping/pallet";
 import {
   ShippingService,
   createPrismaShippingStore,
@@ -78,6 +79,7 @@ const SHIPPING_SETTINGS: ShippingRuntimeSettings = {
   },
   easyboxEnabled: false,
   quoteTimeoutMs: 1000,
+  pallet: DEFAULT_PALLET_SETTINGS,
 };
 
 interface ProductOpts extends ProductSpec {

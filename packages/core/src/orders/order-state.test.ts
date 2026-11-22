@@ -89,6 +89,16 @@ describe("state machine: Order.fulfillmentStatus", () => {
   });
 });
 
+describe("state machine: anularea AWB-ului (Faza 12)", () => {
+  it("un AWB anulat înainte de livrare readuce comanda la «neexpediată»; o comandă livrată nu se «desexpediază»", () => {
+    expect(canTransition("fulfillmentStatus", "fulfilled", "unfulfilled")).toBe(true);
+    expect(canTransition("fulfillmentStatus", "in_transit", "unfulfilled")).toBe(true);
+    expect(canTransition("fulfillmentStatus", "delivered", "unfulfilled")).toBe(false);
+    expect(canTransition("fulfillmentStatus", "returned", "unfulfilled")).toBe(false);
+    expect(canTransition("fulfillmentStatus", "cancelled", "unfulfilled")).toBe(false);
+  });
+});
+
 describe("assertTransition", () => {
   it("aruncă ORDER_TRANSITION_INVALID cu starea veche, cea nouă și câmpul", () => {
     try {

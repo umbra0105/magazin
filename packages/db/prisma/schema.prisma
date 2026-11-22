@@ -1363,6 +1363,7 @@ model Order {
   emailDispatches        EmailDispatch[]
   notes                  OrderNote[]
   offer                  OrderOffer?
+  shipments              Shipment[]
 
   @@index([status, paymentStatus])
   @@index([email])
@@ -1423,6 +1424,61 @@ model OrderEvent {
 
   @@index([orderId, createdAt])
   @@map("order_event")
+}
+
+/// Expedierea unei comenzi (Faza 12): un AWB. `mode`: provider (creat prin API la un curier: wootPRO, Sameday, DEMO) | manual
+/// (transport paletizat: adminul introduce transportatorul și numărul). `kind`: outbound | return (AWB de retur, cu `parentId`).
+/// `status`: created | picked_up | in_transit | delivered | returned | cancelled. Comenzile cu ridicare personală NU au expedieri.
+/// Cel mult o expediere outbound neanulată pe comandă și cel mult un retur neanulat pe expediere (indecși parțiali în migrație).
+model Shipment {
+  id             String          @id @default(cuid())
+  orderId        String
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  kind           String          @default("outbound")
+  mode           String
+  provider       String?
+  carrier        String
+  awb            String
+  trackingUrl    String?
+  providerRef    String?
+  status         String          @default("created")
+  statusDetail   String?
+  /// Rambursul transmis curierului (bani); 0 dacă nu e ramburs.
+  codAmountMinor Int             @default(0)
+  parcelCount    Int             @default(1)
+  weightGrams    Int?
+  parentId       String?
+  parent         Shipment?       @relation("ShipmentReturn", fields: [parentId], references: [id], onDelete: Restrict)
+  returns        Shipment[]      @relation("ShipmentReturn")
+  creatorLabel   String?
+  lastSyncedAt   DateTime?
+  deliveredAt    DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  events         ShipmentEvent[]
+
+  @@unique([provider, awb])
+  @@index([orderId])
+  @@index([status, lastSyncedAt])
+  @@map("shipment")
+}
+
+/// Evenimentele de urmărire ale unei expedieri (de la curier). `eventKey` face sincronizarea idempotentă: același eveniment
+/// primit de două ori (job, webhook) se scrie o singură dată.
+model ShipmentEvent {
+  id         String   @id @default(cuid())
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  eventKey   String
+  code       String
+  label      String
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([shipmentId, eventKey])
+  @@index([shipmentId, occurredAt])
+  @@map("shipment_event")
 }
 
 /// Plata unei comenzi = O TENTATIVĂ de plată (la card, o comandă are mai multe, `attemptNo` 1, 2, …). `provider`: cod |

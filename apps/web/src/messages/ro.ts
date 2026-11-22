@@ -5,6 +5,7 @@
  */
 import { pluralRo } from "@ecom/shared/plural";
 import { adminEmailRo, adminOrdersRo } from "./admin-orders-ro";
+import { adminShippingRo } from "./admin-shipping-ro";
 
 /** Acord cu numărul în română (1 = singular, 0 și 2–19 = plural, 20+ cu «de»); funcția comună și testată din `@ecom/shared`. */
 const countOf = pluralRo;
@@ -138,6 +139,8 @@ export const ro = {
   admin: {
     /** Comenzile și emailurile lor (Faza 11): textele stau în `admin-orders-ro.ts`. */
     orders: adminOrdersRo,
+    /** Livrare și AWB (Faza 12): textele stau în `admin-shipping-ro.ts`. */
+    shipping: adminShippingRo,
     email: adminEmailRo,
     notifications: {
       title: "Notificări",
@@ -224,6 +227,10 @@ export const ro = {
       emailTemplates: "Șabloane email",
       installRequests: "Cereri de instalare",
       offers: "Oferte de plată",
+      shipments: "Expediere în masă",
+      codReconciliation: "Rambursuri",
+      palletSettings: "Transport paletizat",
+      carrierSettings: "Curieri",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {
@@ -3749,6 +3756,15 @@ export const ro = {
       paymentCodHelpPickup: (fee: string) =>
         `Plătești în magazin la ridicare. Taxă de ramburs: ${fee}.`,
       paymentCodFreePickup: "Plătești în magazin la ridicare.",
+      // transport paletizat (decizia 2026-11-22): rambursul rămâne, dar transportatorul nu acceptă numerar
+      paymentCodHelpPallet: (fee: string) =>
+        `Plata la livrare doar cu cardul; curierul nu acceptă numerar. Taxă de ramburs: ${fee}.`,
+      paymentCodFreePallet: "Plata la livrare doar cu cardul; curierul nu acceptă numerar.",
+      offerPallet: "Transport paletizat (marfă grea sau voluminoasă)",
+      palletNotice:
+        "Livrarea se face la adresă, la nivelul solului; descărcarea și manipularea sunt în sarcina clientului.",
+      palletCount: (count: number) =>
+        `Estimare: ${countOf(count, "palet", "paleți", "de paleți")}.`,
       paymentCard: "Card online",
       paymentCardHelp:
         "Plătești acum, pe pagina securizată a procesatorului de plăți. Nu păstrăm datele cardului. Dacă plata nu reușește, comanda rămâne în așteptare și o poți reîncerca.",
@@ -3958,6 +3974,8 @@ export const ro = {
       whatNext: "Ce urmează",
       nextCod: "Comanda este confirmată. Plătești curierului la primirea coletului.",
       nextCodPickup: "Comanda este confirmată. Plătești în magazin la ridicare.",
+      nextCodPallet:
+        "Comanda este confirmată. Plata la livrare doar cu cardul; curierul nu acceptă numerar.",
       nextCardPaid: "Plata cu cardul a fost confirmată, iar comanda este confirmată.",
       stockLostNotice:
         "Plata a ajuns după expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.",
@@ -3983,6 +4001,10 @@ export const ro = {
       // ridicare personală: același ramburs, plătit în magazin
       paymentMethodsPickup: {
         cod: "Ramburs (în magazin, la ridicare)",
+      } as Record<string, string>,
+      // transport paletizat: același ramburs, doar cu cardul la livrare
+      paymentMethodsPallet: {
+        cod: "Ramburs (la livrare, doar cu cardul; curierul nu acceptă numerar)",
       } as Record<string, string>,
       status: "Stare",
       statuses: {

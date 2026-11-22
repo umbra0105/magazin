@@ -2,6 +2,7 @@ import { rm } from "node:fs/promises";
 import {
   removeAllE2eDemoPayments,
   removeAllE2eOrders,
+  removeE2eDemoCarrier,
   removeE2eStock,
 } from "../packages/core/test/e2e-support";
 import { cleanupE2eUsers } from "../packages/db/test/cleanup-e2e-users";
@@ -19,6 +20,7 @@ export default async function globalTeardown(): Promise<void> {
   // comenzile și plățile E2E: fiecare spec își șterge comenzile pe tag; starea comună a plăților (integrarea DEMO, furnizorul de card,
   // evenimentele care nu se leagă de o comandă) și orice rest (un fișier întrerupt) se șterg aici, când nu mai rulează teste
   await removeAllE2eDemoPayments();
+  await removeE2eDemoCarrier();
   const orders = await removeAllE2eOrders();
   if (orders > 0) console.log(`[e2e] șterse ${orders} comenzi E2E rămase`);
   const storage = process.env["E2E_STORAGE_DIR"];
