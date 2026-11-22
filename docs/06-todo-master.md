@@ -289,19 +289,19 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - **D6 Easybox:** fără bibliotecă nouă; listă căutabilă pe județ/localitate, pe date simulate; harta propriu-zisă = S3 (cu propunerea de bibliotecă).
 - **D7 Ramburs și reconciliere:** rambursul se transmite curierului la crearea AWB-ului (adaptoare); ecran de reconciliere: comenzi cu ramburs expediate și nevirate, acțiunea «Marchează încasat» (sumă, referință, dată) care REFOLOSEȘTE mecanismul «Marchează plătit» din Faza 11; orice regulă nouă pe bani = 🛑.
 
-- [ ] **Din Faza 5 (punctul 14):** greutatea liniei = **greutate pe unitate × cantitate** (cantitățile sunt zecimale: 6,09 mp, 25 kg), calculată exact cu `Quantity`; greutatea volumetrică și cea reală se compară pe LINIE, nu pe produs
-- [ ] ⚠️ **Reguli de preț și de curier pe clase de transport** (`standard` / `oversized` / `pallet`, `shippingClass` din Faza 4): ce curier/serviciu primește `pallet`, dacă prețul vine tot din API, prag de transport gratuit per clasă, blocarea easybox-ului. De decis cu utilizatorul înainte de implementare
-- [ ] **Tarife cerute în timp real de la API-ul agregatorului** (mutat din Faza 9, 2026-11-18), cu cache scurt și fallback pe tarifele pe zonă din Faza 9 dacă API-ul e picat; implementează `ShippingRateProvider`; curierii reali (Sameday, Dragonstar, Fan Courier etc.) vin prin agregator, easybox cu hartă și wootPRO rămân aici
-- [ ] ⚠️ **Din corecția ridicării (faza-10):** o comandă cu `shippingSnapshot.kind = "pickup"` NU primește AWB și nu are destinație de livrare; adresa de ridicare e `shippingSnapshot.pickupAddress` (adresa magazinului la momentul comenzii). Rândul `Address` de tip `shipping` al unei comenzi cu ridicare este adresa CLIENTULUI (contact, zonă, factură), nu o destinație: AWB-ul și emailurile nu trebuie să o folosească pentru ridicare
-- [ ] Interfață `ShippingProvider`
-- [ ] **Adaptor wootPRO**: AWB, etichetă, tracking, anulare, puncte de ridicare, tarife în timp real
-- [ ] **Adaptor Sameday direct**: pentru clienții cu contract propriu + **easybox cu hartă în checkout**
+- [x] **Din Faza 5 (punctul 14):** greutatea liniei = **greutate pe unitate × cantitate** (cantitățile sunt zecimale: 6,09 mp, 25 kg), calculată exact cu `Quantity`; greutatea volumetrică și cea reală se compară pe LINIE, nu pe produs *(`shipping/parcels.ts`, exact cu `Quantity`; verificat de poarta Fazei 12)*
+- [x] ⚠️ **Reguli de preț și de curier pe clase de transport** (`standard` / `oversized` / `pallet`, `shippingClass` din Faza 4): ce curier/serviciu primește `pallet`, dacă prețul vine tot din API, prag de transport gratuit per clasă, blocarea easybox-ului. De decis cu utilizatorul înainte de implementare *(decis și implementat ca D2: paletizat 350 lei per palet, regulile (a)(b)(c))*
+- [x] **Tarife cerute în timp real de la API-ul agregatorului** (mutat din Faza 9, 2026-11-18), cu cache scurt și fallback pe tarifele pe zonă din Faza 9 dacă API-ul e picat; implementează `ShippingRateProvider`; curierii reali (Sameday, Dragonstar, Fan Courier etc.) vin prin agregator, easybox cu hartă și wootPRO rămân aici *(doar pe răspunsuri simulate; cache și rezervă pe zone)*
+- [x] ⚠️ **Din corecția ridicării (faza-10):** o comandă cu `shippingSnapshot.kind = "pickup"` NU primește AWB și nu are destinație de livrare; adresa de ridicare e `shippingSnapshot.pickupAddress` (adresa magazinului la momentul comenzii). Rândul `Address` de tip `shipping` al unei comenzi cu ridicare este adresa CLIENTULUI (contact, zonă, factură), nu o destinație: AWB-ul și emailurile nu trebuie să o folosească pentru ridicare *(`ready-to-ship.ts` exclude `pickup` și `pallet`)*
+- [x] Interfață `ShippingProvider` *(contractul în `packages/shared/src/shipping-provider.ts`)*
+- [x] **Adaptor wootPRO**: AWB, etichetă, tracking, anulare, puncte de ridicare, tarife în timp real *(doar pe răspunsuri simulate din specificația OpenAPI; fără AWB de retur și fără ZPL prin API; încă netestat cu cont real)*
+- [ ] **Adaptor Sameday direct**: pentru clienții cu contract propriu + **easybox cu hartă în checkout** *(adaptorul Sameday există, doar pe răspunsuri simulate; **easybox cu hartă în checkout: amânat până la cont Sameday real (decizia utilizatorului, 2026-11-22)**; rămâne nebifat)*
 - [ ] ⚠️ NU construi integrare Cargus separată — Sameday a achiziționat Cargus în august 2026, sistemele se unifică
-- [ ] Mapare județe/localități către nomenclatoarele curierilor
-- [ ] Admin: generare AWB individual și în masă, etichete PDF + ZPL, AWB de retur
-- [ ] Ramburs transmis către curier + reconciliere (plata se consideră încasată când curierul virează banii; ecran de reconciliere în admin, `10` Partea I)
-- [ ] Cron la 10 min de sincronizare status → email automat la expediere și livrare
-- [ ] Circuit breaker: curier picat ≠ comandă pierdută
+- [x] Mapare județe/localități către nomenclatoarele curierilor *(după nume normalizat, nu după SIRUTA: vezi FINISAJE)*
+- [ ] Admin: generare AWB individual și în masă, etichete PDF + ZPL, AWB de retur *(AWB individual și în masă și etichetele PDF/ZPL sunt făcute; **AWB de retur prin API nefăcut**; rămâne nebifat)*
+- [x] Ramburs transmis către curier + reconciliere (plata se consideră încasată când curierul virează banii; ecran de reconciliere în admin, `10` Partea I) *(reconcilierea `markCodCollected`)*
+- [x] Cron la 10 min de sincronizare status → email automat la expediere și livrare *(job periodic `shipment-status-sync`; emailurile la expediere și livrare)*
+- [x] Circuit breaker: curier picat ≠ comandă pierdută
 
 ## FAZA 13 — Facturare și e-Factura (SmartBill)
 - [ ] ⚠️ **Confirmă în sandbox-ul SmartBill rotunjirea** (decisă 2026-11-17, răspuns de la utilizator, nu de la contabil în scris): o comandă cu linii zecimale (de exemplu 3 cutii de mozaic = 6,09 mp × 123,45 = 751,81; liner 41,25 mp; bisulfat 2 saci × 120,00) trebuie să iasă pe factură cu EXACT suma încasată, pe fiecare linie și pe total, **iar TVA-ul facturii trebuie să fie suma pe linii din magazin** (decizia din `docs/09` §2: 1.819,15 pe coșul de exemplu, nu 1.819,16 extras din total). **O diferență de 1 ban = 🛑** (bani)
