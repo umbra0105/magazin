@@ -129,9 +129,14 @@ export function UninvoicedList({
   };
   if (rows.length === 0) {
     return (
-      <p className="text-body text-ink-secondary" data-uninvoiced-empty>
-        {m.uninvoiced.empty}
-      </p>
+      <div className="flex flex-col gap-2">
+        <p className="text-body text-ink-secondary" data-uninvoiced-empty>
+          {m.uninvoiced.empty}
+        </p>
+        <span role="status" aria-live="polite" className="text-body text-ink-secondary">
+          {status}
+        </span>
+      </div>
     );
   }
   return (

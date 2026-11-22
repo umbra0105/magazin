@@ -115,6 +115,13 @@ export const adminInvoicingRo = {
     testWarning:
       "SmartBill nu are mediu de test separat: în modul «test», documentele se emit în contul ale cărui chei le-ai introdus. Folosește un cont de test sau de probă.",
     notes: "Ce nu e confirmat",
+    quantity: {
+      title: "Pași de vânzare cu mai mult de 2 zecimale",
+      help: "SmartBill acceptă cel mult 2 zecimale la cantitate. O comandă cu o cantitate mai precisă NU se poate factura: documentul eșuează cu alertă. Corectează pasul produsului (sau al variantei) înainte să se vândă.",
+      none: "Niciun produs nu are un pas de vânzare cu mai mult de 2 zecimale.",
+      row: (sku: string, title: string, step: string) => `${title} (${sku}): pasul ${step}`,
+      more: (n: number) => `…și încă ${n}`,
+    },
     texts: {
       title: "Texte și unități pe factură",
       description:

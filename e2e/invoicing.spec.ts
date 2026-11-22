@@ -4,6 +4,7 @@ import {
   E2E_ORDER_EMAIL_DOMAIN,
   clearE2eSettings,
   readE2eInvoices,
+  readE2eOrder,
   readE2eSetting,
   removeE2eCarts,
   removeE2eDemoInvoicing,
@@ -203,10 +204,8 @@ test.describe("comandă cu ramburs și ridicare, cu facturare activă", () => {
   test("panoul «Facturare» al comenzii: în coadă, apoi emis (SIMULAT), cu PDF marcat", async ({
     page,
   }) => {
-    await login(page, owner, `/admin/comenzi?q=${orderNumber}`);
-    await page.getByRole("link", { name: orderNumber }).first().click();
-    await expect(page).toHaveURL(/\/admin\/comenzi\/[^/?]+$/);
-    orderId = new URL(page.url()).pathname.split("/").pop() as string;
+    orderId = (await readE2eOrder(orderNumber))!.id;
+    await login(page, owner, `/admin/comenzi/${orderId}`);
     await expect(page.locator("[data-pickup-hours]")).toContainText(HOURS); // și în pagina comenzii din admin
     const panel = page.locator("[data-invoice-panel]");
     await expect(panel.locator('[data-invoice-doc="invoice"]')).toHaveAttribute(

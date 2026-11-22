@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { INVOICING_PROVIDERS, can } from "@ecom/core";
+import { INVOICING_PROVIDERS, can, listInvoiceQuantityWarnings } from "@ecom/core";
+import { getDb } from "@ecom/db";
+import { formatQuantity, quantityFromTicks } from "@ecom/shared";
 import { Section } from "@ecom/ui";
 import { PageHeader } from "@/components/admin/page-header";
 import {
@@ -34,6 +36,7 @@ export default async function InvoicingSettingsPage() {
     getSettings().getGroup("regional"),
   ]);
   const canWrite = can(subject, "invoices.configure");
+  const warnings = await listInvoiceQuantityWarnings(getDb(), { limit: 30 });
 
   const cards: InvoicingCardDto[] = states.map((state) => ({
     code: state.code,
@@ -80,6 +83,29 @@ export default async function InvoicingSettingsPage() {
           <InvoicingCard key={card.code} carrier={card} canWrite={canWrite} />
         ))}
       </div>
+      <Section id="invoicing-quantity" title={m.quantity.title}>
+        <p className="text-body text-ink-secondary">{m.quantity.help}</p>
+        {warnings.rows.length === 0 ? (
+          <p className="text-body" data-quantity-ok>
+            {m.quantity.none}
+          </p>
+        ) : (
+          <ul className="list-disc pl-5 text-body" data-quantity-warnings>
+            {warnings.rows.map((row) => (
+              <li key={row.sku}>
+                {m.quantity.row(
+                  row.sku,
+                  row.productTitle,
+                  formatQuantity(quantityFromTicks(BigInt(row.stepTicks)), { maxDecimals: 4 }),
+                )}
+              </li>
+            ))}
+            {warnings.total > warnings.rows.length ? (
+              <li>{m.quantity.more(warnings.total - warnings.rows.length)}</li>
+            ) : null}
+          </ul>
+        )}
+      </Section>
       <Section id="invoicing-texts" title={m.texts.title}>
         <InvoicingTextsForm
           canWrite={canWrite}
