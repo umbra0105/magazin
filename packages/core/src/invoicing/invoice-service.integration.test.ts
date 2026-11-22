@@ -13,6 +13,11 @@ import {
 import { NOW, harness, orderOf, q, type Harness } from "../test-utils/checkout-fixtures";
 import { addOrderEvent, transitionOrder } from "../orders/order-service";
 import { InvoiceService, type InvoiceProviderSource } from "./invoice-service";
+import {
+  countInvoicesNeedingAttention,
+  listOrderInvoices,
+  listUninvoicedOrders,
+} from "./invoice-read";
 
 /**
  * Facturarea pe Postgres real (tranzacție anulată): outbox-ul din evenimentele comenzii, emiterea prin furnizorul DEMO,
@@ -684,6 +689,91 @@ describe("alerta pe email «factura nu s-a putut emite»", () => {
       await service.processDue();
       const again = await h.tx.emailDispatch.count({ where: { template: TEMPLATE, orderId } });
       expect(again).toBe(mails.length);
+    });
+  });
+});
+
+describe("lista «comenzi confirmate fără factură»", () => {
+  it("ramburs apare de la plasare; card doar după plată; dispare când factura e în coadă; anulatele nu apar", async () => {
+    await withInvoicing(
+      async ({ h, service }) => {
+        const cod = (await place(h)).orderId;
+        const card = (await place(h, { paymentMethod: "card" })).orderId;
+        const cancelled = (await place(h)).orderId;
+        await transitionOrder(
+          h.tx,
+          cancelled,
+          { status: "cancelled" },
+          { type: "order.cancelled", message: "Anulată" },
+          NOW,
+        );
+        const ids = async () =>
+          (await listUninvoicedOrders(h.tx, { limit: 500 })).rows.map((r) => r.orderId);
+
+        let found = await ids();
+        expect(found).toContain(cod);
+        expect(found).not.toContain(card); // neplătit
+        expect(found).not.toContain(cancelled);
+        const row = (await listUninvoicedOrders(h.tx, { limit: 500 })).rows.find(
+          (r) => r.orderId === cod,
+        );
+        expect(row?.openCommitments).toBeGreaterThan(0); // altfel rămân angajate la nesfârșit
+
+        await h.tx.order.update({ where: { id: card }, data: { paymentStatus: "paid" } });
+        found = await ids();
+        expect(found).toContain(card);
+
+        await h.tx.setting.update({
+          where: { key: "invoicing.provider" },
+          data: { value: "demo" },
+        });
+        await service.requestInvoice(cod, "admin@test.ro");
+        found = await ids();
+        expect(found).not.toContain(cod); // are factură în coadă
+        expect(found).toContain(card);
+      },
+      { "invoicing.provider": "" },
+    );
+  });
+
+  it("o factură eșuată rămâne în listă, cu legătura spre document", async () => {
+    await withInvoicing(async ({ h, spy, service }) => {
+      const { orderId } = await place(h);
+      spy.failures = [{ code: "INVOICE_PROVIDER_TIMEOUT", message: "x" }];
+      await service.processDue();
+      const found = (await listUninvoicedOrders(h.tx, { limit: 500 })).rows.find(
+        (r) => r.orderId === orderId,
+      );
+      const [doc] = await docs(h, orderId);
+      expect(found?.failedInvoiceId).toBe(doc?.id);
+    });
+  });
+
+  it("«emite acum» refuză fără furnizor ales și pe comenzi inexistente", async () => {
+    await withInvoicing(
+      async ({ h, service }) => {
+        const { orderId } = await place(h);
+        await expect(service.requestInvoice(orderId, "a")).rejects.toMatchObject({
+          code: "INVOICE_NO_PROVIDER",
+        });
+        await expect(service.requestInvoice("nu-exista", "a")).rejects.toMatchObject({
+          code: "INVOICE_ORDER_NOT_ELIGIBLE",
+        });
+      },
+      { "invoicing.provider": "" },
+    );
+  });
+
+  it("jurnalul și liniile unei comenzi se citesc în ordine; documentele care cer atenție se numără", async () => {
+    await withInvoicing(async ({ h, spy, service }) => {
+      const { orderId } = await place(h);
+      spy.failures = [{ code: "INVOICE_PROVIDER_TIMEOUT", message: "x" }];
+      await service.processDue();
+      const before = await countInvoicesNeedingAttention(h.tx);
+      expect(before).toBeGreaterThanOrEqual(1);
+      const [doc] = await listOrderInvoices(h.tx, orderId);
+      expect(doc?.status).toBe("failed");
+      expect(doc?.events.map((e) => e.type)).toEqual(["queued", "failed", "alert"]);
     });
   });
 });
