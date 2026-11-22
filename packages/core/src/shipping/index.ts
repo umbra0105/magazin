@@ -22,3 +22,4 @@ export * from "./carrier-guard";
 export * from "./shipment-service";
 export * from "./cod-reconciliation";
 export * from "./carrier-runtime";
+export * from "./ready-to-ship";

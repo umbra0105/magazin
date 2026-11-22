@@ -4,6 +4,7 @@ import { DemoCarrier } from "@ecom/integrations";
 import type { CarrierTracking, ShippingCarrier } from "@ecom/shared";
 import { cancelOrder } from "../orders/order-actions";
 import { NOW, codeOf, harness, orderOf, type Harness } from "../test-utils/checkout-fixtures";
+import { listOrdersReadyToShip } from "./ready-to-ship";
 import {
   applyTrackingUpdate,
   cancelShipment,
@@ -520,6 +521,47 @@ describe("anulare și retur", () => {
         awb: "RET-9",
       });
       expect(ret.awb).toBe("RET-9");
+    });
+  });
+});
+
+describe("comenzile de expediat în masă", () => {
+  it("doar confirmate, neexpediate, cu livrare la adresă prin curier; fără ridicare, paletizat, expediate sau neconfirmate", async () => {
+    await harness(async (h) => {
+      const ready = await place(h);
+      const pickup = await place(h, { shippingOfferCode: "pickup" });
+      const pallet = await place(h, { shippingOfferCode: "pallet" }, { shippingClass: "pallet" });
+      const bank = await place(h, { paymentMethod: "bank_transfer" });
+      const shippedAlready = await place(h);
+      await createManualShipment(h.tx, shippedAlready, {
+        ...ACTOR,
+        carrier: "Transp",
+        awb: "RTS-1",
+      });
+      const { rows } = await listOrdersReadyToShip(h.tx, { limit: 500 });
+      const ids = rows.map((r) => r.orderId);
+      expect(ids).toContain(ready);
+      for (const excluded of [pickup, pallet, bank, shippedAlready])
+        expect(ids).not.toContain(excluded);
+      const row = rows.find((r) => r.orderId === ready);
+      expect(row).toMatchObject({ paymentMethod: "cod", countyName: expect.any(String) });
+    });
+  });
+
+  it("după anularea AWB-ului comanda reapare în listă", async () => {
+    await harness(async (h) => {
+      const orderId = await place(h);
+      const { shipmentId } = await createCarrierShipment(h.tx, orderId, {
+        ...ACTOR,
+        carrier: demo(),
+      });
+      expect(
+        (await listOrdersReadyToShip(h.tx, { limit: 500 })).rows.map((r) => r.orderId),
+      ).not.toContain(orderId);
+      await cancelShipment(h.tx, shipmentId, { ...ACTOR, carrier: demo() });
+      expect(
+        (await listOrdersReadyToShip(h.tx, { limit: 500 })).rows.map((r) => r.orderId),
+      ).toContain(orderId);
     });
   });
 });

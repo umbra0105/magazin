@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { can, getAdminOrderDetail, INSTALLATION_STATUSES } from "@ecom/core";
+import { can, getAdminOrderDetail, INSTALLATION_STATUSES, listOrderShipments } from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { templateDefinition } from "@ecom/jobs";
 import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared";
@@ -12,6 +12,7 @@ import {
   ResendEmailButton,
 } from "@/components/admin/orders/order-panels";
 import { CrumbLabel } from "@/components/admin/crumb-labels";
+import { ShipmentPanel, type ShipmentDto } from "@/components/admin/shipping/shipment-panel";
 import { OrderActions } from "@/components/admin/orders/order-actions";
 import { requireAdmin } from "@/lib/admin-page";
 import { formatDateTime } from "@/lib/format-date";
@@ -22,6 +23,7 @@ import {
   ORDER_STATUS_TONE,
   PAYMENT_STATUS_TONE,
 } from "@/lib/order-tones";
+import { getCarrierRuntime } from "@/lib/shipping";
 import { getSettings } from "@/lib/services";
 import { getMessages } from "@/messages";
 
@@ -68,6 +70,27 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     limit = { limitMinor, remainingMinor: Math.max(0, limitMinor - (used._sum.amountMinor ?? 0)) };
   }
 
+  // expedierea (Faza 12): AWB-urile comenzii, curierul activ și transportatorii din setări
+  const shipmentRows = await listOrderShipments(db, id);
+  const activeCarrier = can(subject, "orders.fulfill")
+    ? await getCarrierRuntime().activeCarrier()
+    : null;
+  const manualCarriers = (await getSettings().getGroup("shipping")).manualCarriers;
+  const shipments: ShipmentDto[] = shipmentRows.map((s) => ({
+    id: s.id,
+    kind: s.kind,
+    mode: s.mode,
+    provider: s.provider,
+    carrier: s.carrier,
+    awb: s.awb,
+    trackingUrl: s.trackingUrl,
+    status: s.status,
+    codText: s.codAmountMinor > 0 ? money(s.codAmountMinor) : null,
+    createdText: when(s.createdAt),
+    deliveredText: s.deliveredAt ? when(s.deliveredAt) : null,
+    syncedText: s.lastSyncedAt ? when(s.lastSyncedAt) : null,
+    events: s.events.map((event) => ({ label: event.label, whenText: when(event.occurredAt) })),
+  }));
   const paymentLabel =
     (detail.shipping.kind === "pallet" ? t.methodsPallet[detail.paymentMethod] : undefined) ??
     t.methods[detail.paymentMethod] ??
@@ -373,6 +396,32 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           )}
         </Section>
       )}
+
+      <Section id="shipping" title={getMessages().admin.shipping.panel.title}>
+        <ShipmentPanel
+          orderId={detail.id}
+          shippingKind={detail.shipping.kind}
+          canShip={
+            ["confirmed", "processing"].includes(detail.status) &&
+            detail.fulfillmentStatus === "unfulfilled"
+          }
+          canFulfill={can(subject, "orders.fulfill")}
+          hasActiveOutbound={shipments.some(
+            (s) => s.kind === "outbound" && s.status !== "cancelled",
+          )}
+          shipments={shipments}
+          carrier={
+            activeCarrier
+              ? {
+                  label: activeCarrier.label,
+                  demo: activeCarrier.code === "demo",
+                  untested: activeCarrier.code !== "demo",
+                }
+              : null
+          }
+          manualCarriers={manualCarriers}
+        />
+      </Section>
 
       <Section id="delivery" title={t.detail.sections.delivery}>
         {pickup ? (

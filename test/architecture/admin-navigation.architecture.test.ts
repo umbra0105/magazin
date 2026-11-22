@@ -161,6 +161,8 @@ describe("grupul «Comenzi» din meniu (același model ca «Catalog»)", () => {
     expect(byId).toEqual({
       allOrders: "orders.read",
       payments: "payments.read",
+      shipments: "orders.fulfill",
+      codReconciliation: "orders.read",
       offers: "orders.offers",
       emailTemplates: "email.read",
       installRequests: "orders.read",
