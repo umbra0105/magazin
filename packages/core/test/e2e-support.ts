@@ -2655,6 +2655,15 @@ async function deleteE2eOrders(pattern: string): Promise<number> {
       `delete from stock_reservation where "orderId" in (select id from customer_order where email like $1)`,
       [pattern],
     );
+    // expedierile (Faza 12) refera comanda cu RESTRICT, iar returul refera expedierea: întâi retururile, apoi restul
+    await db.query(
+      `delete from shipment where kind = 'return' and "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
+    await db.query(
+      `delete from shipment where "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
     const removed = await db.query(`delete from customer_order where email like $1`, [pattern]);
     return removed.rowCount ?? 0;
   });
@@ -3032,4 +3041,71 @@ export async function issueE2eRetryToken(number: string): Promise<string> {
     );
   });
   return token;
+}
+
+// ------------------------------------------------------------------------------------------------- livrare și AWB (Faza 12)
+
+/**
+ * Activează curierul DEMO și îl alege pentru tarife și AWB (doar în baza de test; DEMO cere E2E_HARNESS=1 pe server). Ofertele lui au
+ * aceleași coduri și prețuri ca tarifele DEMO (`demo:courier`), deci alte specuri nu observă schimbarea. Orice spec care o apelează
+ * apelează `removeE2eDemoCarrier()` în `afterAll`.
+ */
+export async function seedE2eDemoCarrier(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `insert into integration (id, type, provider, config, "isActive", "updatedAt")
+       values (gen_random_uuid()::text, 'shipping', 'demo', '{"mode":"test"}'::jsonb, true, now())
+       on conflict (type, provider) do update set "isActive" = true, "updatedAt" = now()`,
+    );
+  });
+  await setE2eSettings({ "shipping.carrier": "demo" });
+}
+
+/** Starea comună a curierului DEMO (rândul `integration` de tip livrare și alegerea curierului); un singur rând pentru toată baza. */
+export async function removeE2eDemoCarrier(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`delete from integration where type = 'shipping'`);
+  });
+  await clearE2eSettings(["shipping.carrier"]);
+}
+
+/** Setările transportului paletizat modificate de un spec (aduse la valorile implicite din registru). */
+export async function clearE2ePalletSettings(): Promise<void> {
+  await clearE2eSettings([
+    "shipping.palletPriceMinor",
+    "shipping.palletSwitchThresholdMinor",
+    "shipping.palletMaxWeightGrams",
+    "shipping.palletMaxVolumeCm3",
+    "shipping.manualCarriers",
+  ]);
+}
+
+/** Expedierile unei comenzi (după număr), cu starea fiecăreia: pentru a verifica ce a scris interfața în baza de test. */
+export async function readE2eShipments(number: string): Promise<
+  Array<{
+    kind: string;
+    mode: string;
+    provider: string | null;
+    carrier: string;
+    awb: string;
+    status: string;
+    codAmountMinor: number;
+  }>
+> {
+  return withClient(async (db) => {
+    const rows = await db.query(
+      `select s.kind, s.mode, s.provider, s.carrier, s.awb, s.status, s."codAmountMinor"
+         from shipment s join customer_order o on o.id = s."orderId" where o.number = $1 order by s."createdAt", s.id`,
+      [number],
+    );
+    return rows.rows as Array<{
+      kind: string;
+      mode: string;
+      provider: string | null;
+      carrier: string;
+      awb: string;
+      status: string;
+      codAmountMinor: number;
+    }>;
+  });
 }

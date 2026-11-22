@@ -86,16 +86,31 @@ export class DemoCarrier implements ShippingCarrier {
     this.now = options.now ?? (() => new Date());
   }
 
+  /**
+   * Aceleași oferte (cod, preț, termen, taxă de ramburs) ca furnizorul DEMO de tarife din `@ecom/core` (`demo:courier`,
+   * `demo:easybox`), ca alegerea curierului DEMO să nu schimbe ce văd clienții și ce așteaptă testele. Fără marfă (`demo:freight`):
+   * contractul curierului nu poartă clasa de transport.
+   */
   quote(request: CarrierQuoteRequest): Promise<CarrierQuote[]> {
     const grams = request.parcels.reduce((sum, parcel) => sum + parcel.weightGrams, 0);
-    const extraKg = Math.ceil(Math.max(0, grams - 5000) / 1000);
+    const price = (base: number, perExtraKg: number): number =>
+      base + Math.ceil(Math.max(0, grams - 5000) / 1000) * perExtraKg;
     return Promise.resolve([
       {
-        serviceCode: "demo-standard",
+        serviceCode: "courier",
         courier: "Curier DEMO",
         service: "Standard (DEMO)",
         kind: "courier",
-        priceMinor: 2500 + extraKg * 400,
+        priceMinor: price(2500, 400),
+        estimatedDays: 2,
+        codFeeMinor: 500,
+      },
+      {
+        serviceCode: "easybox",
+        courier: "Easybox DEMO",
+        service: "Locker (DEMO)",
+        kind: "easybox",
+        priceMinor: price(1800, 300),
         estimatedDays: 2,
         codFeeMinor: 500,
       },

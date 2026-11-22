@@ -64,6 +64,19 @@ describe("curierul DEMO", () => {
     ]);
   });
 
+  it("ofertele au aceleași coduri și prețuri ca furnizorul DEMO de tarife (demo:courier, demo:easybox)", async () => {
+    const carrier = new DemoCarrier({ env });
+    const quotes = await carrier.quote({
+      parcels: [{ weightGrams: 7000, lengthMm: null, widthMm: null, heightMm: null }],
+      destination: { countyName: "Alba", localityName: "Alba Iulia", postalCode: "510005" },
+      codAmountMinor: 0,
+    });
+    expect(quotes.map((q) => [q.serviceCode, q.kind, q.priceMinor])).toEqual([
+      ["courier", "courier", 2500 + 2 * 400],
+      ["easybox", "easybox", 1800 + 2 * 300],
+    ]);
+  });
+
   it("etichetele: PDF valid ca început și ZPL", async () => {
     const carrier = new DemoCarrier({ env });
     const pdf = await carrier.getLabel({ awb: "DEMO0000000001001", providerRef: null }, "pdf");

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { Badge, Button, TBody, THead, Table, Td, Th, Tr } from "@ecom/ui";
 import { createBulkShipmentsAction } from "@/app/(admin)/admin/comenzi/expediere-actions";
@@ -41,7 +40,6 @@ export function BulkShipments({
   carrierLabel: string | null;
   canFulfill: boolean;
 }) {
-  const router = useRouter();
   const base = useId();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<Record<string, Outcome>>({});
@@ -77,8 +75,8 @@ export function BulkShipments({
       setResults(next);
       const ok = result.outcomes.filter((outcome) => outcome.ok).length;
       setSummary(m.done(ok, result.outcomes.length - ok));
+      // lista nu se reîncarcă: rândurile rămân pe ecran cu rezultatul lor (la următoarea deschidere dispar comenzile expediate)
       setSelected(new Set());
-      router.refresh();
     });
   };
 
