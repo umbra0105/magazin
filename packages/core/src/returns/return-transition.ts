@@ -1,6 +1,7 @@
 import type { Prisma } from "@ecom/db";
 import type { Db } from "../db-tx";
 import { ReturnError } from "./return-errors";
+import { scheduleReturnEmails } from "./return-emails";
 import { isCustomerVisibleReturnEvent, type ReturnStatus } from "./return-constants";
 import { assertReturnTransition } from "./return-state";
 
@@ -48,6 +49,8 @@ export async function addReturnEvent(
     },
     select: { id: true },
   });
+  // emailul tranziției se scrie în outbox în aceeași tranzacție (Faza 14)
+  await scheduleReturnEmails(tx, returnId, { id: created.id, type: event.type });
   return created.id;
 }
 

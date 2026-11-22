@@ -309,6 +309,45 @@ export async function buildOrderEmailContext(
       vars["awb"] = typeof data["awb"] === "string" ? data["awb"] : "";
       vars["curier"] = typeof data["carrier"] === "string" ? data["carrier"] : "";
       break;
+    case "return.received":
+    case "return.approved":
+    case "return.awb":
+    case "return.rejected":
+    case "return.parcel_received":
+    case "return.inspected":
+    case "return.refunded":
+    case "return.cancelled": {
+      // doar câmpurile destinate clientului: motivul respingerii, AWB-ul de retur, suma rambursată; NICIODATĂ nota internă
+      const returnId = typeof data["returnId"] === "string" ? data["returnId"] : "";
+      const ret = returnId
+        ? await env.db.returnRequest.findFirst({
+            where: { id: returnId, orderId: order.id },
+            select: {
+              id: true,
+              number: true,
+              rejectReason: true,
+              returnCarrier: true,
+              returnAwb: true,
+              returnTrackingUrl: true,
+              refundProductsMinor: true,
+              refundShippingMinor: true,
+            },
+          })
+        : null;
+      if (!ret) return { kind: "skip", reason: "returul nu mai există" };
+      vars["retur"] = `R-${ret.number}`;
+      vars["motiv"] = ret.rejectReason?.trim() ?? "";
+      vars["awb"] = ret.returnAwb ?? "";
+      vars["curier"] = ret.returnCarrier ?? "";
+      vars["linkUrmarire"] = ret.returnTrackingUrl ?? "";
+      vars["suma"] =
+        ret.refundProductsMinor === null
+          ? ""
+          : money(ret.refundProductsMinor + ret.refundShippingMinor);
+      vars["adresaRetur"] = merchant.address;
+      vars["link"] = `${base}/cont/retururi/${ret.id}`;
+      break;
+    }
     case "internal.invoice_failed":
       vars["motiv"] = typeof data["reason"] === "string" ? data["reason"] : "";
       break;
