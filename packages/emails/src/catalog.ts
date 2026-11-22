@@ -300,11 +300,11 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
     key: "order.shipped",
     label: "Comandă expediată",
     description:
-      "Trimis la evenimentul «comandă expediată», cu AWB-ul dacă există. Declanșatorul e legat de eveniment; AWB-ul și evenimentul vin din Faza 12.",
+      "Trimis la evenimentul «comandă expediată», cu AWB-ul dacă există. Declanșatorul e legat de eveniment; AWB-ul vine din expedierea comenzii (Faza 12).",
     audience: "customer",
     wired: true,
     phaseNote:
-      "Evenimentul `order.shipped` (cu `awb` și `carrier` în date) vine din Faza 12; șablonul și regula de declanșare există acum.",
+      "Evenimentul `order.shipped` (cu `awb` și `carrier` în date) se scrie la expedierea comenzii (Faza 12): la AWB manual și la preluarea coletului de către curier.",
     variables: customerVars(
       v("curier", "Numele curierului", "Curier Demo"),
       v("awb", "Numărul AWB", "1234567890"),
@@ -336,11 +336,11 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
     key: "order.delivered",
     label: "Comandă livrată",
     description:
-      "Trimis la evenimentul «comandă livrată». Evenimentul vine din Faza 12 (sincronizarea stării de la curier).",
+      "Trimis la evenimentul «comandă livrată». Evenimentul se scrie la livrare: din sincronizarea stării de la curier (la 10 minute) sau când adminul marchează comanda livrată.",
     audience: "customer",
     wired: true,
     phaseNote:
-      "Evenimentul `order.delivered` vine din Faza 12; șablonul și regula de declanșare există acum.",
+      "Evenimentul `order.delivered` se scrie la livrare (Faza 12); emailul pleacă o singură dată pe eveniment.",
     variables: customerVars(),
     defaultSubject: "Comanda {{numar}} a fost livrată – {{magazin}}",
     heading: "Comanda ta a fost livrată",
