@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Test de arhitectură pentru facturare (Faza 13). Reguli, pe codul de producție (testele, e2e și scripturile sunt scutite):
- *  1. Documentele fiscale (`invoice`, `invoice_line`, `invoice_event`) se scriu DOAR în `invoicing/invoice-service.ts` și
+ *  1. Documentele fiscale (`invoice`, `invoice_line`, `invoice_event`) se scriu DOAR în `invoicing/invoice-service.ts`, `invoicing/partial-storno.ts` (stornoul parțial, mutat din serviciu în Faza 14) și
  *     `invoicing/invoice-schedule.ts`: nicio altă cale nu face create, update, delete sau upsert pe ele.
  *  2. Furnizorul se apelează pentru EMITERE doar din `InvoiceService` (`issueInvoice`, `issueProforma`, `reverseInvoice`,
  *     `cancelProforma`): nicio altă cale din producție nu emite, nu stornează și nu anulează.
@@ -157,6 +157,7 @@ describe("facturarea respectă regulile (codul real)", () => {
       findInvoiceWrites(code, [
         `${INVOICING_CORE}invoice-service.ts`,
         `${INVOICING_CORE}invoice-schedule.ts`,
+        `${INVOICING_CORE}partial-storno.ts`,
       ]),
     ).toEqual([]);
   });
