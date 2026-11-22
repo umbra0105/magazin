@@ -1,6 +1,10 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
-import { clearE2eRateLimits } from "../packages/core/test/e2e-support";
+import {
+  clearE2eRateLimits,
+  removeAllE2eDemoPayments,
+  removeAllE2eOrders,
+} from "../packages/core/test/e2e-support";
 import { cleanupE2eUsers, setTestSetting } from "../packages/db/test/cleanup-e2e-users";
 import { prepareTestDatabase } from "../packages/db/test/prepare-test-database";
 
@@ -21,6 +25,12 @@ export default async function globalSetup(): Promise<void> {
   const leftover = await cleanupE2eUsers(process.env["TEST_DATABASE_URL"]);
   if (leftover > 0)
     console.log(`[e2e] șterse ${leftover} conturi e2e-* rămase din rulări anterioare`);
+
+  // Comenzile și plățile E2E rămase dintr-o rulare întreruptă (curățarea GLOBALĂ: aici nu rulează încă niciun test; specurile își
+  // șterg doar ce e al lor, pe tag). Întâi plățile (rambursările blochează ștergerea comenzilor).
+  await removeAllE2eDemoPayments();
+  const orders = await removeAllE2eOrders();
+  if (orders > 0) console.log(`[e2e] șterse ${orders} comenzi E2E rămase din rulări anterioare`);
 
   // Un proxy de încredere: Next adaugă singur `X-Forwarded-For` (IP-ul socketului) când lipsește, iar
   // testele trimit propriul antet ca să aibă IP-uri distincte (limitele pe IP nu se amestecă).

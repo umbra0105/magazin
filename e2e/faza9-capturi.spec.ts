@@ -44,7 +44,7 @@ if (captureDir) {
     });
   });
   test.afterAll(async () => {
-    await removeE2eOrders();
+    await removeE2eOrders({ tag });
     await removeE2eCarts();
     await removeE2eProducts();
     await removeE2eShippingZones();

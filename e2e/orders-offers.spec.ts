@@ -8,6 +8,7 @@ import {
   removeE2eCartStock,
   removeE2eCarts,
   removeE2eDemoPayments,
+  removeE2eDemoProvider,
   removeE2eOrders,
   removeE2eProducts,
   seedE2eCartProduct,
@@ -31,9 +32,9 @@ import { waitForEmail } from "./support/mailpit";
 
 /**
  * Fluxurile de comenzi și de oferte din admin (Faza 11), într-un singur fișier, în proiectul Playwright propriu `chromium-orders`
- * (după toate celelalte): lucrează cu listele comune de comenzi și de oferte și cu curățarea globală a comenzilor E2E
- * (`removeE2eOrders`), deci nu au voie să ruleze în paralel cu alte specuri (nici cu cele cu plan pe tot catalogul, care mută stocul
- * tuturor variantelor). Partea 1: comenzi (listă, detaliu, «Marchează plătit», anulare, șabloane de email, clopoțel). Partea 2:
+ * (după toate celelalte): lucrează cu listele comune de comenzi și de oferte, deci nu au voie să ruleze în paralel cu alte specuri
+ * (nici cu cele cu plan pe tot catalogul, care mută stocul tuturor variantelor). Fișierul își șterge doar comenzile lui, pe tag
+ * (`removeE2eOrders({ tag })`); curățarea globală stă în `global-setup` și `global-teardown`. Partea 1: comenzi (listă, detaliu, «Marchează plătit», anulare, șabloane de email, clopoțel). Partea 2:
  * oferta de plată (creare pas cu pas, plată prin DEMO, învechită, anulare, retrimitere, email). DEMO merge pentru că serverul E2E
  * rulează cu `E2E_HARNESS=1`.
  */
@@ -73,8 +74,9 @@ test.beforeAll(async ({ request, baseURL }) => {
 });
 
 test.afterAll(async () => {
-  await removeE2eDemoPayments();
-  await removeE2eOrders();
+  await removeE2eDemoProvider();
+  await removeE2eDemoPayments({ tag });
+  await removeE2eOrders({ tag });
   await removeE2eCarts();
   await removeE2eCartStock([produs.variantId, ultima.variantId]);
   await removeE2eProducts();

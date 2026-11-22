@@ -48,7 +48,7 @@ if (captureDir) {
     owner = await createAccount(request, baseURL as string, "owner");
   });
   test.afterAll(async () => {
-    await removeE2eOrders();
+    await removeE2eOrders({ tag });
     await removeE2eCarts();
     await removeE2eProducts();
     await clearE2eSettings(SETTING_KEYS);
@@ -124,7 +124,7 @@ if (captureDir) {
       test(`vitrină ${scheme} ${width}: ridicare cu adresă, recapitulare, confirmare, urmărire`, async ({
         browser,
       }) => {
-        const email = `ridcapt-${randomBytes(3).toString("hex")}${E2E_ORDER_EMAIL_DOMAIN}`;
+        const email = `ridcapt-${tag}${E2E_ORDER_EMAIL_DOMAIN}`;
         const { page, close } = await context(browser, scheme, width);
         await toShipping(page, email);
         const pickup = step(page, "shipping").locator('[data-offer="pickup"]');
@@ -159,7 +159,7 @@ if (captureDir) {
       }) => {
         await setE2eSettings({ "company.address": { ...STORE, street: "", city: "" } });
         try {
-          const email = `ridfara-${randomBytes(3).toString("hex")}${E2E_ORDER_EMAIL_DOMAIN}`;
+          const email = `ridfara-${tag}${E2E_ORDER_EMAIL_DOMAIN}`;
           const { page, close } = await context(browser, scheme, width);
           await toShipping(page, email);
           await expect(step(page, "shipping").locator('[data-offer="demo:courier"]')).toBeVisible();

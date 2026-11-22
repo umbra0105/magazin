@@ -8,6 +8,7 @@ import {
   removeE2eCartStock,
   removeE2eCarts,
   removeE2eDemoPayments,
+  removeE2eDemoProvider,
   removeE2eOrders,
   removeE2eProducts,
   seedE2eCartProduct,
@@ -69,8 +70,9 @@ if (captureDir) {
   });
   test.afterAll(async () => {
     await setE2eFeatureFlag("installationRequests", false);
-    await removeE2eDemoPayments();
-    await removeE2eOrders();
+    await removeE2eDemoProvider();
+    await removeE2eDemoPayments({ tag });
+    await removeE2eOrders({ tag });
     await removeE2eCarts();
     await removeE2eCartStock([produs.variantId]);
     await removeE2eProducts();
