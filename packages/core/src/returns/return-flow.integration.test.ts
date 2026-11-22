@@ -14,6 +14,7 @@ import {
   rejectReturn,
   setReturnAwb,
 } from "./return-admin";
+import { markOrderPickedUp } from "../orders/order-pickup";
 import { cancelReturnByCustomer, initiateReturn } from "./return-customer";
 import { refundReturn } from "./return-refund";
 import { restockReturn } from "./return-restock";
@@ -51,6 +52,7 @@ interface Placed {
 async function placed(
   h: Harness,
   opts: {
+    pickup?: boolean;
     deliveredDaysAgo?: number | null;
     verified?: boolean;
     managed?: boolean;
@@ -62,7 +64,10 @@ async function placed(
     ...(opts.physical ? { physical: opts.physical } : {}),
   });
   const owner = await h.fill([{ variantId: product.variantId, quantity: q("3") }]);
-  const { orderId } = await h.checkout.place(owner, await h.input(owner));
+  const { orderId } = await h.checkout.place(
+    owner,
+    await h.input(owner, opts.pickup ? { shippingOfferCode: "pickup" } : {}),
+  );
   const order = await h.tx.order.findUniqueOrThrow({
     where: { id: orderId },
     include: { lines: true },
@@ -717,6 +722,50 @@ describe("returul parțial nu mută comanda în «returned»", () => {
       expect(after.status).toBe(before.status);
       expect(after.fulfillmentStatus).toBe(before.fulfillmentStatus);
       expect(after.paymentStatus).toBe("partially_refunded");
+    });
+  });
+});
+
+describe("marcarea «ridicată» (ridicare personală)", () => {
+  async function pickupOrder(h: Harness) {
+    const p = await placed(h, { pickup: true, deliveredDaysAgo: null });
+    await h.tx.order.update({ where: { id: p.orderId }, data: { status: "confirmed" } });
+    return p;
+  }
+
+  it("duce comanda în «delivered» prin tranziții validate, pornește fereastra și e idempotentă", async () => {
+    await harness(async (h) => {
+      const p = await pickupOrder(h);
+      expect(await codeOf(init(h, p, "1"))).toBe("RETURN_ORDER_NOT_ELIGIBLE");
+      // evenimentul poartă ora bazei de date (reală), deci ceasul serviciului de retur e cel real, nu NOW-ul fix al fixture-ului
+      const now = new Date();
+      await markOrderPickedUp(h.tx, p.orderId, ADMIN.label, now);
+      await markOrderPickedUp(h.tx, p.orderId, ADMIN.label, now);
+      const order = await h.tx.order.findUniqueOrThrow({ where: { id: p.orderId } });
+      expect(order.fulfillmentStatus).toBe("delivered");
+      expect(
+        await h.tx.orderEvent.count({ where: { orderId: p.orderId, type: "order.picked_up" } }),
+      ).toBe(1);
+      const created = await initiateReturn(
+        h.tx,
+        p.user,
+        {
+          orderId: p.orderId,
+          clientKey: randomUUID(),
+          items: [{ orderLineId: p.lineId, quantity: "1", reasonCode: "changed_mind" }],
+        },
+        now,
+      );
+      expect(created.created).toBe(true);
+    });
+  });
+
+  it("refuză o comandă cu curier", async () => {
+    await harness(async (h) => {
+      const p = await placed(h, { deliveredDaysAgo: null });
+      expect(await codeOf(markOrderPickedUp(h.tx, p.orderId, ADMIN.label, NOW))).toBe(
+        "ORDER_PICKUP_INVALID",
+      );
     });
   });
 });
