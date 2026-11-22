@@ -159,6 +159,8 @@ function orderModelOf(summary: OrderSummary, store: StoreEmailSettings): OrderEm
           // adresa MAGAZINULUI din snapshot; fără ea, doar eticheta (niciodată adresa clientului)
           text: summary.shipping.pickupAddressText ?? "adresa magazinului",
           termText: null,
+          // programul de ridicare, doar când e completat în setări (se citește la trimitere, nu din snapshot)
+          pickupHoursText: summary.shipping.pickupHoursText,
         }
       : {
           kind: "courier",

@@ -13,6 +13,8 @@ const m = () => getMessages().storefront.checkout;
 export interface CheckoutFormat {
   currency: string;
   locale: string;
+  /** Programul de ridicare personală (`company.pickupHours`), dacă e completat; apare lângă adresa de ridicare. */
+  pickupHours?: string | null;
 }
 
 export interface CheckoutOfferDto {
@@ -26,6 +28,8 @@ export interface CheckoutOfferDto {
   addressLine: string | null;
   /** Doar ridicarea personală: adresa magazinului, fără prefix (pentru rezumate); altfel `null`. */
   addressText: string | null;
+  /** Doar ridicarea personală, doar când programul e completat în setări: «Program de ridicare: …»; altfel `null`. */
+  hoursLine: string | null;
   /** Tarif demonstrativ (furnizorul DEMO): se arată cu o etichetă, ca să nu fie luat drept tarif real. */
   demo: boolean;
 }
@@ -95,6 +99,8 @@ function offerDto(offer: RateOffer, format: CheckoutFormat): CheckoutOfferDto {
         ? text.pickupAddress(offer.pickupAddress.text)
         : null,
     addressText: offer.kind === "pickup" ? (offer.pickupAddress?.text ?? null) : null,
+    hoursLine:
+      offer.kind === "pickup" && format.pickupHours ? text.pickupHours(format.pickupHours) : null,
     demo: offer.demo,
   };
 }

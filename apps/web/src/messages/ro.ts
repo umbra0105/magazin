@@ -3726,6 +3726,7 @@ export const ro = {
       pickupLede: "De la sediul magazinului, fără cost de transport.",
       pickupAddress: (address: string) => `Adresa de ridicare: ${address}`,
       pickupFrom: (address: string) => `Ridicare personală de la: ${address}`,
+      pickupHours: (hours: string) => `Program de ridicare: ${hours}`,
       // cu ridicare personală, adresa cerută la pasul 2 nu e o adresă de livrare: e adresa clientului, pentru contact și facturare
       stepsPickup: { delivery: "Adresa ta (contact și facturare)" },
       billingSamePickup: "Aceleași date ca la adresa ta",
@@ -3987,6 +3988,7 @@ export const ro = {
       deliveryTo: "Livrare în",
       pickupLabel: "Ridicare",
       pickupFrom: "Ridicare personală de la:",
+      pickupHours: "Program de ridicare:",
       pickupNoAddress: "Ridicare personală",
       estimate: (days: number) => `Estimare: aproximativ ${countOf(days, "zi", "zile", "de zile")}`,
       leadTime: (days: number) =>

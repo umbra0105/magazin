@@ -313,6 +313,7 @@ export const adminOrdersRo = {
     delivery: {
       courier: "Livrare cu curier",
       pickup: "Ridicare personală de la",
+      pickupHours: "Program de ridicare:",
       noPickupAddress: "Ridicare personală (comanda nu are adresă de magazin salvată)",
       service: "Serviciu",
       estimate: (days: number) => `Estimare: ${pluralRo(days, "zi", "zile", "de zile")}`,

@@ -70,6 +70,14 @@ export function OrderSummaryView({
               order.shipping.pickupAddressText ? (
                 <span data-pickup-address>
                   {m.pickupFrom} {order.shipping.pickupAddressText}
+                  {order.shipping.pickupHoursText ? (
+                    <span
+                      className="mt-1 block text-sm font-normal text-ink-secondary"
+                      data-pickup-hours
+                    >
+                      {m.pickupHours} {order.shipping.pickupHoursText}
+                    </span>
+                  ) : null}
                 </span>
               ) : (
                 m.pickupNoAddress

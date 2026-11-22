@@ -425,11 +425,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
       <Section id="delivery" title={t.detail.sections.delivery}>
         {pickup ? (
-          <p data-pickup-address>
-            {detail.shipping.pickupAddressText
-              ? `${t.detail.delivery.pickup} ${detail.shipping.pickupAddressText}`
-              : t.detail.delivery.noPickupAddress}
-          </p>
+          <>
+            <p data-pickup-address>
+              {detail.shipping.pickupAddressText
+                ? `${t.detail.delivery.pickup} ${detail.shipping.pickupAddressText}`
+                : t.detail.delivery.noPickupAddress}
+            </p>
+            {detail.shipping.pickupHoursText ? (
+              <p data-pickup-hours>
+                {t.detail.delivery.pickupHours} {detail.shipping.pickupHoursText}
+              </p>
+            ) : null}
+          </>
         ) : (
           <p>
             {detail.shipping.carrier}

@@ -1,5 +1,6 @@
 import type { Db } from "../db-tx";
 import { pickupAddressTextFromSnapshot } from "../shipping/pickup-address";
+import { readPickupHours } from "../shipping/pickup-hours";
 
 /**
  * Citirea unei comenzi pentru client: pagina de confirmare și urmărirea (`/comanda/urmarire`). Conține doar ce are voie să vadă
@@ -38,6 +39,8 @@ export interface OrderSummary {
      * veche, fără adresă în snapshot: atunci nu se arată nicio adresă, niciodată cea a clientului).
      */
     pickupAddressText: string | null;
+    /** Ridicare personală: programul de ridicare din setări (`company.pickupHours`), doar când e completat; altfel `null`. */
+    pickupHoursText: string | null;
   };
   /** Destinația de livrare a clientului (localitatea); `null` la ridicare personală, unde nu există destinație de livrare. */
   destination: { countyName: string; localityName: string } | null;
@@ -125,6 +128,7 @@ function toSummary(row: Row): OrderSummary {
       freeShipping: snapshot["freeShipping"] === true,
       pickupAddressText:
         snapshot["kind"] === "pickup" ? pickupAddressTextFromSnapshot(snapshot) : null,
+      pickupHoursText: null,
     },
     destination:
       address && snapshot["kind"] !== "pickup"
@@ -156,9 +160,18 @@ function toSummary(row: Row): OrderSummary {
 }
 
 /** Rezumatul unei comenzi după id (pagina de confirmare: accesul e verificat de apelant, prin cookie semnat). */
+/** La ridicare personală, completează programul de ridicare din setări (citit la afișare, nu din snapshot). */
+async function withPickupHours(db: Db, summary: OrderSummary): Promise<OrderSummary> {
+  if (summary.shipping.kind !== "pickup") return summary;
+  return {
+    ...summary,
+    shipping: { ...summary.shipping, pickupHoursText: await readPickupHours(db) },
+  };
+}
+
 export async function getOrderSummary(db: Db, orderId: string): Promise<OrderSummary | null> {
   const row = await load(db, { id: orderId });
-  return row ? toSummary(row) : null;
+  return row ? withPickupHours(db, toSummary(row)) : null;
 }
 
 /** Numărul se scrie cu majuscule și fără spații; emailul cu litere mici (cum se salvează la plasare). */
@@ -180,5 +193,5 @@ export async function trackOrder(
   const key = normalizeTrackingKey(input.number, input.email);
   if (key.number === "" || key.email === "") return null;
   const row = await load(db, key);
-  return row ? toSummary(row) : null;
+  return row ? withPickupHours(db, toSummary(row)) : null;
 }

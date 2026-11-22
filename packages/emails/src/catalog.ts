@@ -70,6 +70,9 @@ function paymentDeliveryBlock(order: OrderEmailModel): EmailBlock {
           : order.payment.methodLabel,
       },
       { label: order.delivery.heading, value: order.delivery.text },
+      ...(order.delivery.pickupHoursText
+        ? [{ label: "Program de ridicare", value: order.delivery.pickupHoursText }]
+        : []),
       ...(order.delivery.termText
         ? [{ label: "Termen de executare", value: order.delivery.termText }]
         : []),

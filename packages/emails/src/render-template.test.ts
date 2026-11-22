@@ -210,6 +210,32 @@ describe("emailul de confirmare: informațiile precontractuale", () => {
   });
 });
 
+describe("programul de ridicare în email (Faza 13)", () => {
+  const d = def("order.confirmation");
+  const context = sampleContext(d);
+  const pickup = (pickupHoursText: string | null) => ({
+    ...context,
+    order: {
+      ...(context.order as NonNullable<typeof context.order>),
+      delivery: {
+        kind: "pickup" as const,
+        heading: "Ridicare personală de la",
+        text: "Strada Magazinului 7, 510000 Alba Iulia, Alba",
+        termText: null,
+        pickupHoursText,
+      },
+    },
+  });
+
+  it("apare lângă adresa de ridicare, doar când e completat", async () => {
+    const withHours = await renderTemplateEmail(theme, d.key, pickup("Luni–Vineri, 09:00–17:00"));
+    expect(withHours.text).toContain("Program de ridicare");
+    expect(withHours.text).toContain("Luni–Vineri, 09:00–17:00");
+    const without = await renderTemplateEmail(theme, d.key, pickup(null));
+    expect(without.text).not.toContain("Program de ridicare");
+  });
+});
+
 describe("emailurile de plată", () => {
   it("plata eșuată: butonul «Reîncearcă plata» cu linkul din variabilă, în HTML și în text", async () => {
     const d = def("order.payment_failed");
