@@ -490,3 +490,34 @@ describe("storno, anulare, PDF, e-Factura, conexiune", () => {
     expect(bad.ok).toBe(false);
   });
 });
+
+describe("descărcarea de gestiune raportată de adaptor", () => {
+  it("true doar dacă s-a trimis useStock (toate produsele se descarcă ȘI gestiunea e configurată)", async () => {
+    const f = fakeFetch({
+      "POST /invoice/v2": () => ({ body: issued }),
+      "GET /invoice/paymentstatus": () => ({ body: { errorText: "", invoiceTotalAmount: 786.81 } }),
+    });
+    expect((await provider(f.impl).issueInvoice(request())).stockDischarged).toBe(true);
+    // fără gestiune configurată: factura iese fără descărcare, iar adaptorul o spune
+    const noWarehouse = new SmartbillProvider({
+      credentials: { ...CREDS, warehouseName: "" },
+      fetch: f.impl,
+    });
+    expect((await noWarehouse.issueInvoice(request())).stockDischarged).toBe(false);
+    // un produs care nu se descarcă: întreaga factură fără descărcare
+    const mixed = request({
+      lines: [product(), product({ code: "X", dischargeStock: false }), shipping],
+    });
+    expect((await provider(f.impl).issueInvoice(mixed)).stockDischarged).toBe(false);
+    // proforma și stornoul nu descarcă niciodată
+    const g = fakeFetch({
+      "POST /estimate/v2": () => ({ body: issued }),
+      "POST /invoice/reverse": () => ({ body: issued }),
+    });
+    expect((await provider(g.impl).issueProforma(request())).stockDischarged).toBe(false);
+    expect(
+      (await provider(g.impl).reverseInvoice({ series: "FCT", number: "1" }, new Date()))
+        .stockDischarged,
+    ).toBe(false);
+  });
+});

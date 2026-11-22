@@ -232,3 +232,37 @@ export async function listUninvoicedOrders(
     SELECT count(*)::int AS n FROM customer_order o WHERE ${due}`);
   return { rows, total: totalRows[0]?.n ?? 0 };
 }
+
+export interface InvoiceQuantityWarningDto {
+  sku: string;
+  productTitle: string;
+  /** Pasul de vânzare efectiv, în zecimi de miime de unitate. */
+  stepTicks: number;
+}
+
+/**
+ * Produsele al căror pas de vânzare dă cantități cu MAI MULT de 2 zecimale pe factură (SmartBill acceptă cel mult 2, cu rotunjire la
+ * cea mai apropiată cifră; răspunsul contabilului din 2026-10-28). Pasul efectiv = al variantei, altfel al produsului. O comandă cu
+ * o astfel de cantitate NU se emite: construirea facturii o refuză (`INVOICE_QUANTITY_PRECISION`), deci pasul se corectează înainte.
+ * Avertizare la configurare, în ecranul Facturare; produsele arhivate nu intră.
+ */
+export async function listInvoiceQuantityWarnings(
+  db: Db,
+  options: { limit?: number } = {},
+): Promise<{ rows: InvoiceQuantityWarningDto[]; total: number }> {
+  const limit = Math.min(options.limit ?? 50, 200);
+  const rows = await db.$queryRaw<InvoiceQuantityWarningDto[]>(Prisma.sql`
+    SELECT v.sku AS "sku", p.title AS "productTitle", COALESCE(v."saleStep", p."saleStep") AS "stepTicks"
+    FROM product_variant v JOIN product p ON p.id = v."productId"
+    WHERE p.status <> 'archived'
+      AND COALESCE(v."saleStep", p."saleStep") IS NOT NULL
+      AND COALESCE(v."saleStep", p."saleStep") % 100 <> 0
+    ORDER BY p.title ASC, v.sku ASC
+    LIMIT ${limit}`);
+  const totalRows = await db.$queryRaw<{ n: number }[]>(Prisma.sql`
+    SELECT count(*)::int AS n FROM product_variant v JOIN product p ON p.id = v."productId"
+    WHERE p.status <> 'archived'
+      AND COALESCE(v."saleStep", p."saleStep") IS NOT NULL
+      AND COALESCE(v."saleStep", p."saleStep") % 100 <> 0`);
+  return { rows, total: totalRows[0]?.n ?? 0 };
+}

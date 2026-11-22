@@ -129,3 +129,14 @@ describe("furnizorul DEMO respinge orice diferență de bani", () => {
     expect((error as IntegrationError).code).toBe("INVOICE_REJECTED");
   });
 });
+
+describe("furnizorul DEMO spune dacă a descărcat gestiunea", () => {
+  it("factura cu useStock descarcă; proforma și stornoul nu", async () => {
+    const provider = new DemoInvoiceProvider({ env });
+    const withStock = { ...request([line()]), useStock: true };
+    expect((await provider.issueInvoice(withStock)).stockDischarged).toBe(true);
+    expect((await provider.issueInvoice(request([line()]))).stockDischarged).toBe(false);
+    expect((await provider.issueProforma(withStock)).stockDischarged).toBe(false);
+    expect((await provider.reverseInvoice()).stockDischarged).toBe(false);
+  });
+});

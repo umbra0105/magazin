@@ -6,3 +6,4 @@ export * from "./invoice-schedule";
 export * from "./invoice-service";
 export * from "./invoice-settings";
 export * from "./invoice-read";
+export * from "./rounding-probe";

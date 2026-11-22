@@ -504,3 +504,29 @@ describe("storno parțial: suma stornourilor unei linii = totalul liniei, la 1 b
     expect(issued.taxMinor).toBe(-4_285);
   });
 });
+
+describe("descărcarea de gestiune: o singură bifă pe factură", () => {
+  const order = (flags: boolean[]): DraftOrder => {
+    const base = orderOf({
+      items: flags.map((_, i) => ({ sku: `D${i}`, priceMinor: 1_000, quantity: "1" })),
+    }).order;
+    return {
+      ...base,
+      lines: base.lines.map((line, i) => ({ ...line, dischargeable: flags[i] as boolean })),
+    };
+  };
+
+  it("toate produsele gestionate → cu descărcare", () => {
+    expect(buildInvoiceDraft(order([true, true]), options).useStock).toBe(true);
+  });
+
+  it("un singur produs negestionat sau «La comandă» → ÎNTREAGA factură fără descărcare", () => {
+    const draft = buildInvoiceDraft(order([true, false]), options);
+    expect(draft.useStock).toBe(false);
+    expect(draft.lines.map((l) => l.dischargeStock)).toEqual([true, false]);
+  });
+
+  it("nicio linie de produs → fără descărcare (transportul singur nu se descarcă)", () => {
+    expect(buildInvoiceDraft(order([false]), options).useStock).toBe(false);
+  });
+});

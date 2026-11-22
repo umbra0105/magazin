@@ -96,7 +96,11 @@ export interface IssuedDocument extends DocumentRef {
   /** Documentul NU e fiscal (furnizorul DEMO). */
   simulated: boolean;
   efacturaStatus: EfacturaStatus;
-  /** Totalul pe care l-a calculat furnizorul (bani), ca magazinul să-l compare cu ce a încasat. */
+  /**
+   * Furnizorul A DESCĂRCAT stocul la emitere. Doar atunci ora facturii intră pe angajările de stoc (`markInvoiced`): dacă adaptorul
+   * a emis fără descărcare (de exemplu fără gestiune configurată), bucățile rămân angajate până la o sincronizare cu descărcarea reală.
+   */
+  stockDischarged: boolean;
   /** Totalul confirmat de furnizor (bani), sau `null` dacă furnizorul nu îl poate citi. */
   totalMinor: number | null;
   /** TVA-ul confirmat de furnizor (bani), sau `null` (SmartBill nu îl expune prin API). */

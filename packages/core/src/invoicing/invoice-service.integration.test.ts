@@ -15,6 +15,7 @@ import { addOrderEvent, transitionOrder } from "../orders/order-service";
 import { InvoiceService, type InvoiceProviderSource } from "./invoice-service";
 import {
   countInvoicesNeedingAttention,
+  listInvoiceQuantityWarnings,
   listOrderInvoices,
   listUninvoicedOrders,
 } from "./invoice-read";
@@ -42,6 +43,10 @@ class Spy implements InvoiceProvider {
   /** Erori de aruncat la următoarele emiteri (câte una pe apel). */
   failures: Array<{ code: string; message: string }> = [];
   counter = 0;
+  /** Furnizorul NU descarcă gestiunea, chiar dacă i s-a cerut (de exemplu fără gestiune configurată). */
+  ignoreStock = false;
+  /** Răspuns cu referință lipsă: scrierea documentului emis în baza noastră eșuează (după emiterea la furnizor). */
+  corruptRef = false;
 
   private maybeFail(): void {
     const f = this.failures.shift();
@@ -61,7 +66,12 @@ class Spy implements InvoiceProvider {
     this.maybeFail();
     this.requests.push(request);
     const doc = await this.inner.issueInvoice(request);
-    return { ...doc, number: this.number() };
+    return {
+      ...doc,
+      number: this.number(),
+      ...(this.ignoreStock ? { stockDischarged: false } : {}),
+      ...(this.corruptRef ? { providerRef: null as unknown as string } : {}),
+    };
   }
   async reverseInvoice(invoice: DocumentRef, issueDate: Date): Promise<IssuedDocument> {
     this.maybeFail();
@@ -470,7 +480,11 @@ describe("eșecuri: reîncercări, alertă, dead-letter, rezultat nesigur", () =
         { code: "INVOICE_REJECTED", message: "Seria nu a fost gasita" },
         { code: "INVOICE_REJECTED", message: "Seria nu a fost gasita" },
       ];
-      const alerts = () => h.tx.adminNotification.count({ where: { kind: "invoice_failed" } });
+      const alertsBefore = await h.tx.adminNotification.count({
+        where: { kind: "invoice_failed" },
+      });
+      const alerts = async () =>
+        (await h.tx.adminNotification.count({ where: { kind: "invoice_failed" } })) - alertsBefore;
 
       await service.processDue();
       let [doc] = await docs(h, orderId);
@@ -550,7 +564,11 @@ describe("eșecuri: reîncercări, alertă, dead-letter, rezultat nesigur", () =
       let [doc] = await docs(h, orderId);
       expect(doc).toMatchObject({ status: "failed", lastErrorCode: "INVOICE_PROVIDER_TIMEOUT" });
       expect(doc?.lastError).toContain("Rezultat nesigur");
-      expect(await h.tx.adminNotification.count({ where: { kind: "invoice_failed" } })).toBe(1);
+      expect(
+        await h.tx.adminNotification.count({
+          where: { kind: "invoice_failed", dedupKey: `invoice-failed:${doc?.id}` },
+        }),
+      ).toBe(1);
       clock.now = new Date(clock.now.getTime() + 86_400_000);
       expect((await service.processDue()).processed).toBe(0); // niciun apel automat
       expect(spy.requests).toHaveLength(0);
@@ -607,7 +625,11 @@ describe("eșecuri: reîncercări, alertă, dead-letter, rezultat nesigur", () =
         attempts: 0,
         lastErrorCode: "INVOICE_NOT_CONFIGURED",
       });
-      expect(await h.tx.adminNotification.count({ where: { kind: "invoice_failed" } })).toBe(0);
+      expect(
+        await h.tx.adminNotification.count({
+          where: { kind: "invoice_failed", dedupKey: `invoice-failed:${doc?.id}` },
+        }),
+      ).toBe(0);
       expect(service).toBeDefined();
     });
   });
@@ -774,6 +796,157 @@ describe("lista «comenzi confirmate fără factură»", () => {
       const [doc] = await listOrderInvoices(h.tx, orderId);
       expect(doc?.status).toBe("failed");
       expect(doc?.events.map((e) => e.type)).toEqual(["queued", "failed", "alert"]);
+    });
+  });
+});
+
+describe("avertizare la configurare: pași cu mai mult de 2 zecimale pe factură", () => {
+  it("un pas de 0,125 apare în listă; un pas de 0,25 (2 zecimale) și produsele arhivate, nu", async () => {
+    await withInvoicing(async ({ h }) => {
+      const bad = await h.product();
+      const ok = await h.product();
+      const archived = await h.product();
+      await h.tx.product.update({ where: { id: bad.productId }, data: { saleStep: 1_250 } });
+      await h.tx.product.update({ where: { id: ok.productId }, data: { saleStep: 2_500 } });
+      await h.tx.product.update({
+        where: { id: archived.productId },
+        data: { saleStep: 1_250, status: "archived" },
+      });
+      const { rows, total } = await listInvoiceQuantityWarnings(h.tx, { limit: 200 });
+      const skus = rows.map((r) => r.sku);
+      expect(skus).toContain(bad.sku);
+      expect(skus).not.toContain(ok.sku);
+      expect(skus).not.toContain(archived.sku);
+      expect(total).toBeGreaterThanOrEqual(1);
+      expect(rows.find((r) => r.sku === bad.sku)?.stepTicks).toBe(1_250);
+    });
+  });
+
+  it("pasul variantei îl suprascrie pe cel al produsului", async () => {
+    await withInvoicing(async ({ h }) => {
+      const p = await h.product();
+      await h.tx.product.update({ where: { id: p.productId }, data: { saleStep: 1_250 } });
+      await h.tx.productVariant.update({ where: { id: p.variantId }, data: { saleStep: 5_000 } });
+      const skus = (await listInvoiceQuantityWarnings(h.tx, { limit: 200 })).rows.map((r) => r.sku);
+      expect(skus).not.toContain(p.sku);
+    });
+  });
+});
+
+describe("stoc: factura marchează stocul doar dacă furnizorul l-a descărcat", () => {
+  it("furnizorul a emis FĂRĂ descărcare (cerută, dar nefăcută): ora facturii NU intră pe angajări, documentul spune adevărul", async () => {
+    await withInvoicing(async ({ h, spy, service }) => {
+      spy.ignoreStock = true;
+      const { orderId } = await place(h);
+      await service.processDue();
+      expect(spy.requests[0]?.useStock).toBe(true); // s-a cerut
+      const [doc] = await docs(h, orderId);
+      expect(doc).toMatchObject({ status: "issued", useStock: false }); // dar nu s-a făcut
+      const commitments = await h.tx.stockCommitment.findMany({ where: { refId: orderId } });
+      expect(commitments.length).toBeGreaterThan(0);
+      expect(commitments.every((c) => c.invoicedAt === null)).toBe(true);
+    });
+  });
+});
+
+describe("eroare DUPĂ emiterea la furnizor: nu se reîncearcă (ar dubla documentul)", () => {
+  it("scrierea documentului emis eșuează: «eșuat» cu rezultat nesigur, alertă, un singur apel la furnizor", async () => {
+    await withInvoicing(async ({ h, spy, service, clock }) => {
+      spy.corruptRef = true;
+      const { orderId } = await place(h);
+      await service.processDue();
+      let [doc] = await docs(h, orderId);
+      expect(doc).toMatchObject({ status: "failed", lastErrorCode: "INVOICE_OUTCOME_UNKNOWN" });
+      expect(doc?.number).toBeNull(); // nimic emis din punctul de vedere al bazei
+      expect(spy.requests).toHaveLength(1);
+      expect(
+        await h.tx.adminNotification.count({
+          where: { kind: "invoice_failed", dedupKey: `invoice-failed:${doc?.id}` },
+        }),
+      ).toBe(1);
+      clock.now = new Date(clock.now.getTime() + 86_400_000);
+      expect((await service.processDue()).processed).toBe(0);
+      expect(spy.requests).toHaveLength(1);
+      [doc] = await docs(h, orderId);
+      await expect(service.retry(doc!.id, "admin", false)).rejects.toMatchObject({
+        code: "INVOICE_OUTCOME_UNKNOWN",
+      });
+    });
+  });
+});
+
+describe("transfer bancar: factura așteaptă proforma aflată în emitere", () => {
+  it("factura nu pleacă înaintea proformei; după ce proforma e emisă, factura se leagă de ea", async () => {
+    await withInvoicing(async ({ h, spy, service }) => {
+      const { orderId } = await place(h, { paymentMethod: "bank_transfer" });
+      // plata se confirmă înainte ca proforma să apuce să fie emisă
+      await addOrderEvent(h.tx, orderId, {
+        type: "payment.confirmed",
+        message: "Plată confirmată",
+      });
+      const invoice = (await docs(h, orderId)).find((d) => d.kind === "invoice")!;
+      expect(await service.processById(invoice.id)).toBe("requeued");
+      expect(spy.requests).toHaveLength(0);
+      expect((await docs(h, orderId)).find((d) => d.kind === "invoice")).toMatchObject({
+        status: "queued",
+        attempts: 0,
+      });
+      await service.processDue(); // proforma
+      expect(spy.proformas).toHaveLength(1);
+      await h.tx.invoice.update({ where: { id: invoice.id }, data: { nextAttemptAt: null } });
+      await service.processDue();
+      expect(spy.requests[0]?.fromProforma?.series).toBe("DEMO");
+    });
+  });
+});
+
+describe("acțiunile manuale scriu OrderEvent (orice acțiune pe comandă)", () => {
+  it("«Emite acum», «Reîncearcă», stornoul și starea e-Factura apar în cronologia comenzii, cu actorul", async () => {
+    await withInvoicing(async ({ h, spy, service }) => {
+      const { orderId } = await place(h);
+      const types = async () =>
+        (
+          await h.tx.orderEvent.findMany({
+            where: { orderId, type: { startsWith: "invoice." } },
+            orderBy: { createdAt: "asc" },
+          })
+        ).map((e) => e.type);
+      spy.failures = [{ code: "INVOICE_REJECTED", message: "x" }];
+      await service.processDue();
+      const [doc] = await docs(h, orderId);
+      // eșec sigur, apoi «Reîncearcă» după epuizare nu e posibil; folosim un document eșuat prin timeout
+      await h.tx.invoice.update({
+        where: { id: doc!.id },
+        data: { status: "failed", lastErrorCode: "INVOICE_REJECTED" },
+      });
+      await service.retry(doc!.id, "admin@test.ro", false);
+      await service.processDue();
+      await service.setEfacturaStatus(doc!.id, "validated", "admin@test.ro");
+      await service.requestPartialStorno(
+        orderId,
+        "R1",
+        [
+          {
+            orderLineId: (await h.tx.orderLine.findFirstOrThrow({ where: { orderId } })).id,
+            quantityTicks: 10_000n,
+          },
+        ],
+        "admin@test.ro",
+      );
+      await service.requestReverse(orderId, "admin@test.ro").catch(() => null);
+      const found = await types();
+      expect(found).toEqual(
+        expect.arrayContaining([
+          "invoice.retry",
+          "invoice.invoice_issued",
+          "invoice.efactura",
+          "invoice.partial_storno_requested",
+        ]),
+      );
+      const retry = await h.tx.orderEvent.findFirstOrThrow({
+        where: { orderId, type: "invoice.retry" },
+      });
+      expect(retry.actorLabel).toBe("admin@test.ro");
     });
   });
 });

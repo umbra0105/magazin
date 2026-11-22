@@ -255,13 +255,47 @@ export class InvoiceService {
         "Furnizorul de facturare nu e configurat",
       );
 
+    if (doc.kind === "invoice") {
+      const proforma = await this.db.invoice.findUnique({
+        where: { orderId_docKey: { orderId: doc.orderId, docKey: "proforma" } },
+        select: { status: true },
+      });
+      if (proforma && (proforma.status === "queued" || proforma.status === "issuing")) {
+        await this.requeue(
+          doc.id,
+          1 * MINUTE,
+          "Proforma comenzii e în curs de emitere: factura așteaptă",
+        );
+        return "requeued";
+      }
+    }
     const { request, lines, useStock } = await this.prepare(doc, settings);
     await this.persistLines(doc, lines, useStock);
     const issued =
       doc.kind === "proforma"
         ? await provider.issueProforma(request)
         : await provider.issueInvoice(request);
-    return this.complete(doc, provider, issued, { useStock });
+    return this.finish(doc, provider, issued, {});
+  }
+
+  /**
+   * Încheie un document deja emis la furnizor. O eroare AICI (baza de date, o regulă încălcată) nu se reîncearcă: documentul există la
+   * furnizor, iar o a doua emitere l-ar dubla. Documentul trece în «eșuat» cu rezultat nesigur, iar adminul verifică în contul furnizorului.
+   */
+  private async finish(
+    doc: DocRow,
+    provider: InvoiceProvider,
+    issued: IssuedDocument,
+    opts: { negative?: boolean },
+  ): Promise<"issued"> {
+    try {
+      return await this.complete(doc, provider, issued, opts);
+    } catch {
+      throw new InvoiceServiceError(
+        "INVOICE_OUTCOME_UNKNOWN",
+        "Documentul a fost emis la furnizor, dar nu s-a putut înregistra aici: verifică în contul furnizorului și apasă «Reîncearcă» doar dacă documentul NU există",
+      );
+    }
   }
 
   private async executeStorno(
@@ -351,14 +385,15 @@ export class InvoiceService {
         viewUrl: null,
         simulated: parent.simulated,
         efacturaStatus: "not_applicable",
+        stockDischarged: false,
         totalMinor: null,
         taxMinor: null,
       };
-      return this.complete(doc, provider, synthetic, { useStock: false });
+      return this.finish(doc, provider, synthetic, {});
     }
     if (doc.docKey === "storno:total") {
       const issued = await provider.reverseInvoice(ref, issueDate);
-      return this.complete(doc, provider, issued, { useStock: false });
+      return this.finish(doc, provider, issued, {});
     }
     // storno parțial: factură cu cantități negative (PRESUPUS pentru SmartBill: nedocumentat, vezi adaptorul)
     const lines = await this.db.invoiceLine.findMany({
@@ -386,7 +421,7 @@ export class InvoiceService {
       sendEmail: false,
     };
     const issued = await provider.issueInvoice(request);
-    return this.complete(doc, provider, issued, { useStock: false, negative: true });
+    return this.finish(doc, provider, issued, { negative: true });
   }
 
   // -------------------------------------------------------------------------
@@ -543,7 +578,7 @@ export class InvoiceService {
     doc: DocRow,
     provider: InvoiceProvider,
     issued: IssuedDocument,
-    opts: { useStock: boolean; negative?: boolean },
+    opts: { negative?: boolean },
   ): Promise<"issued"> {
     const now = this.now();
     const expectedTotal = opts.negative ? -doc.totalMinor : doc.totalMinor;
@@ -565,6 +600,8 @@ export class InvoiceService {
           providerRef: issued.providerRef,
           pdfUrl: issued.viewUrl,
           efacturaStatus: doc.kind === "proforma" ? "not_applicable" : issued.efacturaStatus,
+          // ce s-a întâmplat DE FAPT la furnizor (descărcat sau nu), nu ce s-a cerut
+          useStock: issued.stockDischarged,
           issuedAt: now,
           attempts: { increment: 1 },
           lockedAt: null,
@@ -597,7 +634,7 @@ export class InvoiceService {
         message: `${label}: ${issued.series} ${issued.number}${issued.simulated ? " (SIMULAT)" : ""}`,
         data: { invoiceId: doc.id },
       });
-      if (doc.kind === "invoice" && opts.useStock) {
+      if (doc.kind === "invoice" && issued.stockDischarged) {
         // factura cu descărcare de gestiune: ora ei intră în regula «poză + angajat» (o bucată se scade o singură dată)
         await new StockService({ db: tx, now: () => now }).markInvoiced(
           { refType: ORDER_REF_TYPE, refId: doc.orderId },
@@ -842,6 +879,12 @@ export class InvoiceService {
           message: `Retrimis de ${actorLabel}${uncertain ? " (după verificarea în contul furnizorului)" : ""}`,
         },
       });
+      await addOrderEvent(tx, doc.orderId, {
+        type: "invoice.retry",
+        message: `Emiterea documentului a fost reîncercată de ${actorLabel}`,
+        actorLabel,
+        data: { invoiceId, docKey: doc.docKey },
+      });
     });
   }
 
@@ -861,10 +904,19 @@ export class InvoiceService {
           "Alege și activează un furnizor de facturare în setări",
         );
       }
-      return queueIssue(tx, orderId, "invoice", facts, {
+      const id = await queueIssue(tx, orderId, "invoice", facts, {
         trigger: "manual",
         requestedBy: actorLabel,
       });
+      if (id) {
+        await addOrderEvent(tx, orderId, {
+          type: "invoice.requested",
+          message: `Factura a fost cerută din admin de ${actorLabel} (în coadă)`,
+          actorLabel,
+          data: { invoiceId: id },
+        });
+      }
+      return id;
     });
   }
 
@@ -877,7 +929,16 @@ export class InvoiceService {
           "Alege și activează un furnizor de facturare în setări",
         );
       }
-      return queueReverse(tx, orderId, { trigger: "manual", requestedBy: actorLabel });
+      const id = await queueReverse(tx, orderId, { trigger: "manual", requestedBy: actorLabel });
+      if (id) {
+        await addOrderEvent(tx, orderId, {
+          type: "invoice.reverse_requested",
+          message: `Stornoul a fost cerut din admin de ${actorLabel} (în coadă)`,
+          actorLabel,
+          data: { invoiceId: id },
+        });
+      }
+      return id;
     });
   }
 
@@ -1000,6 +1061,12 @@ export class InvoiceService {
           data: { reference },
         },
       });
+      await addOrderEvent(tx, orderId, {
+        type: "invoice.partial_storno_requested",
+        message: `Stornoul parțial a fost cerut de ${actorLabel} (în coadă)`,
+        actorLabel,
+        data: { invoiceId: id, reference },
+      });
       return id;
     });
   }
@@ -1030,6 +1097,12 @@ export class InvoiceService {
           type: "efactura",
           message: `e-Factura marcată «${status}» de ${actorLabel}`,
         },
+      });
+      await addOrderEvent(tx, doc.orderId, {
+        type: "invoice.efactura",
+        message: `Starea e-Factura a documentului a fost marcată «${status}» de ${actorLabel}`,
+        actorLabel,
+        data: { invoiceId, status },
       });
     });
   }

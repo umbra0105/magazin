@@ -127,7 +127,11 @@ export class DemoInvoiceProvider implements InvoiceProvider {
     return `${seconds}${String(randomInt(0, 1000)).padStart(3, "0")}`;
   }
 
-  private issue(request: InvoiceRequest, efactura: EfacturaStatus): IssuedDocument {
+  private issue(
+    request: InvoiceRequest,
+    efactura: EfacturaStatus,
+    stockDischarged: boolean,
+  ): IssuedDocument {
     this.maybeFail();
     const totals = demoComputeTotals(request);
     const number = this.nextNumber();
@@ -138,17 +142,18 @@ export class DemoInvoiceProvider implements InvoiceProvider {
       viewUrl: null,
       simulated: true,
       efacturaStatus: efactura,
+      stockDischarged,
       totalMinor: totals.totalMinor,
       taxMinor: totals.taxMinor,
     };
   }
 
   async issueProforma(request: InvoiceRequest): Promise<IssuedDocument> {
-    return this.issue(request, "not_applicable");
+    return this.issue(request, "not_applicable", false);
   }
 
   async issueInvoice(request: InvoiceRequest): Promise<IssuedDocument> {
-    return this.issue(request, "pending");
+    return this.issue(request, "pending", request.useStock);
   }
 
   async reverseInvoice(): Promise<IssuedDocument> {
@@ -161,6 +166,7 @@ export class DemoInvoiceProvider implements InvoiceProvider {
       viewUrl: null,
       simulated: true,
       efacturaStatus: "pending",
+      stockDischarged: false,
       totalMinor: null,
       taxMinor: null,
     };

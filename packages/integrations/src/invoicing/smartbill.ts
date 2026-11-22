@@ -239,6 +239,7 @@ export class SmartbillProvider implements InvoiceProvider {
   private documentFrom(
     json: Record<string, unknown>,
     efacturaStatus: EfacturaStatus,
+    stockDischarged = false,
   ): IssuedDocument {
     const series = json["series"];
     const number = json["number"];
@@ -263,6 +264,7 @@ export class SmartbillProvider implements InvoiceProvider {
       viewUrl: typeof view === "string" && view !== "" ? view : null,
       simulated: false,
       efacturaStatus,
+      stockDischarged,
       totalMinor: null,
       taxMinor: null,
     };
@@ -302,8 +304,10 @@ export class SmartbillProvider implements InvoiceProvider {
 
   async issueInvoice(request: InvoiceRequest): Promise<IssuedDocument> {
     this.assertConfigured("invoice");
-    const json = await this.post("/invoice/v2", buildDocumentBody(request, this.creds, "invoice"));
-    const doc = this.documentFrom(json, "unknown");
+    const body = buildDocumentBody(request, this.creds, "invoice");
+    const json = await this.post("/invoice/v2", body);
+    // descărcarea de gestiune o decide corpul trimis (toate produsele se descarcă ȘI gestiunea e configurată), nu cererea inițială
+    const doc = this.documentFrom(json, "unknown", body["useStock"] === true);
     return { ...doc, totalMinor: await this.readTotal(doc) };
   }
 
