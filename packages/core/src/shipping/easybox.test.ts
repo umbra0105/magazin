@@ -9,6 +9,8 @@ const parcel = (shippingClass: Parcel["shippingClass"]): Parcel => ({
   realGrams: 1000,
   volumetricGrams: 0,
   chargeableGrams: 1000,
+  volumeCm3: 0,
+  wholeUnits: 1,
   lengthMm: null,
   widthMm: null,
   heightMm: null,

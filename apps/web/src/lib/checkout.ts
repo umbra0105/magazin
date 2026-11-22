@@ -80,6 +80,12 @@ export async function readShippingSettings(): Promise<ShippingRuntimeSettings> {
     pickupAddress: company.address,
     easyboxEnabled: shipping.easyboxEnabled,
     quoteTimeoutMs: shipping.quoteTimeoutMs,
+    pallet: {
+      priceMinor: shipping.palletPriceMinor,
+      switchThresholdMinor: shipping.palletSwitchThresholdMinor,
+      maxWeightGrams: shipping.palletMaxWeightGrams,
+      maxVolumeCm3: shipping.palletMaxVolumeCm3,
+    },
   };
 }
 

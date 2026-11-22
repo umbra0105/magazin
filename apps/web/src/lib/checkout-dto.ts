@@ -17,7 +17,7 @@ export interface CheckoutFormat {
 
 export interface CheckoutOfferDto {
   code: string;
-  kind: "courier" | "easybox" | "pickup";
+  kind: "courier" | "easybox" | "pickup" | "pallet";
   label: string;
   priceText: string;
   free: boolean;

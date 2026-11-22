@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_RATE_CARD, DemoShippingRateProvider } from "./demo-rates";
 import type { FallbackZone } from "./fallback-tariffs";
+import { DEFAULT_PALLET_SETTINGS } from "./pallet";
 import {
   ShippingService,
   type ShippingQuoteInput,
   type ShippingRuntimeSettings,
   type ShippingStore,
 } from "./shipping-service";
-import type { Parcel, RateOffer, RateRequest, ShippingRateProvider } from "./types";
+import {
+  RateRefusedError,
+  type Parcel,
+  type RateOffer,
+  type RateRequest,
+  type ShippingRateProvider,
+} from "./types";
 
 const parcel = (over: Partial<Parcel> = {}): Parcel => ({
   variantId: "v1",
@@ -16,6 +23,8 @@ const parcel = (over: Partial<Parcel> = {}): Parcel => ({
   realGrams: 2000,
   volumetricGrams: 0,
   chargeableGrams: 2000,
+  volumeCm3: 0,
+  wholeUnits: 1,
   lengthMm: null,
   widthMm: null,
   heightMm: null,
@@ -36,6 +45,7 @@ const settings = (over: Partial<ShippingRuntimeSettings> = {}): ShippingRuntimeS
   },
   easyboxEnabled: false,
   quoteTimeoutMs: 50,
+  pallet: DEFAULT_PALLET_SETTINGS,
   ...over,
 });
 
@@ -130,11 +140,11 @@ describe("furnizorul răspunde", () => {
     expect(quote.offers.some((o) => o.kind === "easybox")).toBe(false);
   });
 
-  it("produsele voluminoase merg pe marfă și nu au easybox, chiar cu easybox activat", async () => {
+  it("produsele `oversized` merg pe marfă și nu au easybox, chiar cu easybox activat", async () => {
     const quote = await service({ settings: { easyboxEnabled: true } }).quote(
       input({
-        parcels: [parcel({ shippingClass: "pallet", chargeableGrams: 60_000 })],
-        lines: [{ productId: "p1", shippingClass: "pallet" }],
+        parcels: [parcel({ shippingClass: "oversized", chargeableGrams: 60_000 })],
+        lines: [{ productId: "p1", shippingClass: "oversized" }],
       }),
     );
     expect(quote.offers.map((o) => o.kind).sort()).toEqual(["courier", "pickup"]);
@@ -330,5 +340,102 @@ describe("coletele incomplete", () => {
     const quote = await service({}).quote(input({ parcels: [parcel({ incomplete: true })] }));
     expect(quote.incomplete).toBe(true);
     expect(quote.offers.length).toBeGreaterThan(0);
+  });
+});
+
+describe("transport paletizat (Faza 12)", () => {
+  const heavy = parcel({
+    shippingClass: "pallet",
+    realGrams: 70_000,
+    chargeableGrams: 70_000,
+    volumeCm3: 36_000,
+  });
+
+  it("un produs `pallet`: DOAR paletizat (350 lei) și ridicarea; furnizorul nu se mai întreabă; easybox ascuns", async () => {
+    let called = 0;
+    const provider: ShippingRateProvider = {
+      name: "numărat",
+      quote: async () => {
+        called += 1;
+        return [];
+      },
+    };
+    const quote = await service({ provider, settings: { easyboxEnabled: true } }).quote(
+      input({ parcels: [heavy], lines: [{ productId: "p1", shippingClass: "pallet" }] }),
+    );
+    expect(called).toBe(0);
+    expect(quote.offers.map((o) => [o.kind, o.priceMinor])).toEqual([
+      ["pickup", 0],
+      ["pallet", 35_000],
+    ]);
+    expect(quote.transport).toEqual({ mode: "pallet_only", pallets: 1 });
+    expect(quote.fallbackUsed).toBe(false);
+  });
+
+  it("curierul peste 400 lei și paletul mai ieftin: curierul dispare, rămâne paletul", async () => {
+    const provider: ShippingRateProvider = {
+      name: "scump",
+      quote: async () => [
+        providerOffer({ code: "c", kind: "courier", priceMinor: 65_000 }),
+        providerOffer({ code: "e", kind: "easybox", priceMinor: 60_000 }),
+      ],
+    };
+    const quote = await service({ provider, settings: { easyboxEnabled: true } }).quote(input());
+    expect(quote.offers.map((o) => o.kind).sort()).toEqual(["pallet", "pickup"]);
+    expect(quote.transport.mode).toBe("switched");
+  });
+
+  it("paletul ar costa mai mult decât curierul: curierul rămâne", async () => {
+    const provider: ShippingRateProvider = {
+      name: "scump",
+      quote: async () => [providerOffer({ code: "c", kind: "courier", priceMinor: 50_000 })],
+    };
+    const quote = await service({ provider }).quote(
+      input({
+        parcels: [parcel({ realGrams: 1_300_000, chargeableGrams: 1_300_000 })],
+      }),
+    );
+    expect(quote.transport.mode).toBe("courier");
+    expect(quote.offers.some((o) => o.kind === "pallet")).toBe(false);
+    expect(quote.offers.some((o) => o.code === "c")).toBe(true);
+  });
+
+  it("furnizorul REFUZĂ tariful și nu există rezervă pe zonă: paletizatul, nu oferta DEMO de ultimă instanță", async () => {
+    const provider: ShippingRateProvider = {
+      name: "refuz",
+      quote: async () => {
+        throw new RateRefusedError();
+      },
+    };
+    const quote = await service({ provider, zones: [] }).quote(input());
+    expect(quote.transport.mode).toBe("refused");
+    expect(quote.offers.map((o) => o.kind).sort()).toEqual(["pallet", "pickup"]);
+    expect(quote.providerProblem).toBe("refused");
+  });
+
+  it("furnizorul CADE (nu refuză) și nu există rezervă: oferta de ultimă instanță, ca până acum", async () => {
+    const provider: ShippingRateProvider = {
+      name: "picat",
+      quote: async () => {
+        throw new Error("503");
+      },
+    };
+    const quote = await service({ provider, zones: [] }).quote(input());
+    expect(quote.transport.mode).toBe("courier");
+    expect(quote.offers.some((o) => o.source === "last_resort")).toBe(true);
+  });
+
+  it("comparația cu pragul se face înainte de scutirea de transport gratuit; paletul poate deveni gratuit dacă pragul e atins", async () => {
+    const provider: ShippingRateProvider = {
+      name: "scump",
+      quote: async () => [providerOffer({ code: "c", kind: "courier", priceMinor: 65_000 })],
+    };
+    const quote = await service({
+      provider,
+      settings: { freeShippingThresholdMinor: 100_000 },
+    }).quote(input({ subtotalMinor: 150_000 }));
+    const pallet = quote.offers.find((o) => o.kind === "pallet");
+    expect(quote.transport.mode).toBe("switched");
+    expect(pallet).toMatchObject({ priceMinor: 0, freeShipping: true });
   });
 });
