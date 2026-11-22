@@ -17,3 +17,4 @@ export * from "./zoned-time";
 export { pluralRo } from "./plural";
 export * from "./payment-provider";
 export * from "./shipping-provider";
+export * from "./invoice-provider";
