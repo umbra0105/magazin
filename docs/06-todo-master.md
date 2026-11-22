@@ -345,7 +345,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - **Notă:** «Recenziile mele» din linia 2 de mai jos rămâne nebifat, «amânat în Faza 17 (decizia utilizatorului, 2026-11-22)».
 
 - [ ] Dashboard, istoric comenzi, detaliu cu timeline și tracking AWB
-- [ ] Agendă de adrese, descărcare facturi, wishlist, recenziile mele
+- [ ] Agendă de adrese, descărcare facturi, wishlist, recenziile mele *(recenziile mele: amânat în Faza 17, decizia utilizatorului, 2026-11-22; restul e implementat în Faza 14, de bifat după verificarea utilizatorului)*
 - [ ] Preferințe de comunicare, export date GDPR, ștergere cont cu anonimizare
 - [ ] Schema ReturnRequest + state machine
 - [ ] Client: inițiere retur în fereastra de 14 zile, selectare produse și motiv
