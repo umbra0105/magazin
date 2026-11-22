@@ -797,7 +797,7 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
             {isPickup ? null : (
               // «la nivelul solului» e un mesaj despre livrare: nu se arată la ridicarea personală
               <p className="text-sm text-ink-secondary" data-ground-notice>
-                {props.groundNotice}
+                {chosenOffer?.kind === "pallet" ? m.palletNotice : props.groundNotice}
               </p>
             )}
             {continueButton("shipping")}

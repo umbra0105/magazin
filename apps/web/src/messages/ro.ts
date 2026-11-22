@@ -3749,6 +3749,15 @@ export const ro = {
       paymentCodHelpPickup: (fee: string) =>
         `Plătești în magazin la ridicare. Taxă de ramburs: ${fee}.`,
       paymentCodFreePickup: "Plătești în magazin la ridicare.",
+      // transport paletizat (decizia 2026-11-22): rambursul rămâne, dar transportatorul nu acceptă numerar
+      paymentCodHelpPallet: (fee: string) =>
+        `Plata la livrare doar cu cardul; curierul nu acceptă numerar. Taxă de ramburs: ${fee}.`,
+      paymentCodFreePallet: "Plata la livrare doar cu cardul; curierul nu acceptă numerar.",
+      offerPallet: "Transport paletizat (marfă grea sau voluminoasă)",
+      palletNotice:
+        "Livrarea se face la adresă, la nivelul solului; descărcarea și manipularea sunt în sarcina clientului.",
+      palletCount: (count: number) =>
+        `Estimare: ${countOf(count, "palet", "paleți", "de paleți")}.`,
       paymentCard: "Card online",
       paymentCardHelp:
         "Plătești acum, pe pagina securizată a procesatorului de plăți. Nu păstrăm datele cardului. Dacă plata nu reușește, comanda rămâne în așteptare și o poți reîncerca.",
@@ -3958,6 +3967,8 @@ export const ro = {
       whatNext: "Ce urmează",
       nextCod: "Comanda este confirmată. Plătești curierului la primirea coletului.",
       nextCodPickup: "Comanda este confirmată. Plătești în magazin la ridicare.",
+      nextCodPallet:
+        "Comanda este confirmată. Plata la livrare doar cu cardul; curierul nu acceptă numerar.",
       nextCardPaid: "Plata cu cardul a fost confirmată, iar comanda este confirmată.",
       stockLostNotice:
         "Plata a ajuns după expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.",
@@ -3983,6 +3994,10 @@ export const ro = {
       // ridicare personală: același ramburs, plătit în magazin
       paymentMethodsPickup: {
         cod: "Ramburs (în magazin, la ridicare)",
+      } as Record<string, string>,
+      // transport paletizat: același ramburs, doar cu cardul la livrare
+      paymentMethodsPallet: {
+        cod: "Ramburs (la livrare, doar cu cardul; curierul nu acceptă numerar)",
       } as Record<string, string>,
       status: "Stare",
       statuses: {

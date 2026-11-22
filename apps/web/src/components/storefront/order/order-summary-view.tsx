@@ -53,7 +53,9 @@ export function OrderSummaryView({
           <dd className="mt-1 font-medium">
             {(order.shipping.kind === "pickup"
               ? m.paymentMethodsPickup[order.paymentMethod]
-              : undefined) ??
+              : order.shipping.kind === "pallet"
+                ? m.paymentMethodsPallet[order.paymentMethod]
+                : undefined) ??
               m.paymentMethods[order.paymentMethod] ??
               order.paymentMethod}
           </dd>

@@ -68,6 +68,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     limit = { limitMinor, remainingMinor: Math.max(0, limitMinor - (used._sum.amountMinor ?? 0)) };
   }
 
+  const paymentLabel =
+    (detail.shipping.kind === "pallet" ? t.methodsPallet[detail.paymentMethod] : undefined) ??
+    t.methods[detail.paymentMethod] ??
+    detail.paymentMethod;
   const moneyHeld = ["paid", "partially_refunded", "authorized"].includes(detail.paymentStatus);
   const shippingAddress = detail.addresses?.find((a) => a.kind === "shipping") ?? null;
   const billingAddress = detail.addresses?.find((a) => a.kind === "billing") ?? null;
@@ -114,7 +118,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </div>
         <p className="text-body text-ink-secondary">
           {t.detail.placed(when(detail.placedAt))} · {t.detail.channel}: {detail.channelName} ·{" "}
-          {t.methods[detail.paymentMethod] ?? detail.paymentMethod}
+          {paymentLabel}
         </p>
         {detail.reservationExpiresAt && detail.status === "pending" && (
           <p className="text-body text-ink-secondary">
@@ -283,7 +287,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <dl className="grid gap-x-6 gap-y-3 md:grid-cols-3">
             <div className="flex flex-col">
               <dt className="text-label text-ink-secondary">{t.detail.payment.method}</dt>
-              <dd>{t.methods[detail.paymentMethod] ?? detail.paymentMethod}</dd>
+              <dd>{paymentLabel}</dd>
             </div>
             <div className="flex flex-col">
               <dt className="text-label text-ink-secondary">{t.detail.payment.refunded}</dt>

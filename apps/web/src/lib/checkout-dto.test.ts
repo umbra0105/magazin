@@ -110,3 +110,54 @@ describe("rambursul oferit la ridicarea personală", () => {
     expect(withMethods(courier, 0)?.helpText).toBe("Plătești curierului la primirea coletului.");
   });
 });
+
+/** Transportul paletizat (decizia din 2026-11-22): rambursul rămâne, dar doar cu cardul la livrare (textul, nu suma). */
+describe("rambursul la transportul paletizat", () => {
+  const PALLET: RateOffer = offer({
+    code: "pallet",
+    kind: "pallet",
+    carrier: "Transport paletizat",
+    service: "marfă grea sau voluminoasă",
+    priceMinor: 70_000,
+    estimatedDays: null,
+    source: "pallet",
+    demo: false,
+    pallets: 2,
+  });
+  const dtoFor = (selected: RateOffer) =>
+    toCheckoutPreviewDto(
+      {
+        ...preview([selected, PICKUP], selected),
+        methods: [{ method: "cod", available: true, reason: null }],
+      } as unknown as CheckoutPreview,
+      FORMAT,
+      LIMITS,
+      { isCompany: false },
+    );
+
+  it("oferta se numește «Transport paletizat (marfă grea sau voluminoasă)» și arată numărul de paleți", () => {
+    const offerDto = dtoFor(PALLET).offers.find((o) => o.kind === "pallet");
+    expect(offerDto?.label).toBe("Transport paletizat (marfă grea sau voluminoasă)");
+    expect(offerDto?.daysText).toBe("Estimare: 2 paleți.");
+    expect(offerDto?.demo).toBe(false);
+  });
+
+  it("rambursul rămâne disponibil, cu textul «doar cu cardul; curierul nu acceptă numerar»", () => {
+    const cod = dtoFor(PALLET).methods?.find((m) => m.method === "cod");
+    expect(cod?.available).toBe(true);
+    expect(cod?.helpText).toBe("Plata la livrare doar cu cardul; curierul nu acceptă numerar.");
+    expect(cod?.helpText).not.toMatch(/Plătești curierului/);
+  });
+
+  it("cu taxă de ramburs, textul rămâne, iar taxa se arată", () => {
+    const cod = dtoFor({ ...PALLET, codFeeMinor: 500 }).methods?.find((m) => m.method === "cod");
+    expect(cod?.helpText).toMatch(
+      /^Plata la livrare doar cu cardul; curierul nu acceptă numerar\. Taxă de ramburs: /,
+    );
+  });
+
+  it("un singur palet: «1 palet»", () => {
+    const one = dtoFor({ ...PALLET, pallets: 1 }).offers.find((o) => o.kind === "pallet");
+    expect(one?.daysText).toBe("Estimare: 1 palet.");
+  });
+});

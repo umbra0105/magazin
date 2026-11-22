@@ -107,6 +107,8 @@ export function merchantOf(store: StoreEmailSettings): MerchantModel {
 function orderModelOf(summary: OrderSummary, store: StoreEmailSettings): OrderEmailModel {
   const money = (minor: number) => formatMoney(minor, store.currency, store.locale);
   const pickup = summary.shipping.kind === "pickup";
+  // transport paletizat (decizia 2026-11-22): rambursul rămâne, dar transportatorul nu acceptă numerar
+  const pallet = summary.shipping.kind === "pallet";
   const method = (
     ["cod", "bank_transfer", "card"].includes(summary.paymentMethod) ? summary.paymentMethod : "cod"
   ) as "cod" | "bank_transfer" | "card";
@@ -143,7 +145,9 @@ function orderModelOf(summary: OrderSummary, store: StoreEmailSettings): OrderEm
         method === "cod"
           ? pickup
             ? "Plătești în magazin la ridicare"
-            : "Plătești curierului la primirea coletului"
+            : pallet
+              ? "Plata la livrare doar cu cardul; curierul nu acceptă numerar"
+              : "Plătești curierului la primirea coletului"
           : null,
     },
     delivery: pickup
