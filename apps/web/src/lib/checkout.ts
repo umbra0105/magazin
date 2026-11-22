@@ -3,7 +3,6 @@ import { loadEnv } from "@ecom/config";
 import {
   CartService,
   CheckoutService,
-  DemoShippingRateProvider,
   GeoService,
   reservationExpiresAt,
   ShippingService,
@@ -21,6 +20,7 @@ import { AnafClient } from "@ecom/integrations";
 import { ORDER_ACCESS_COOKIE } from "./consent";
 import { getStorage } from "./media";
 import { getPaymentConfig } from "./payments";
+import { getCarrierRuntime } from "./shipping";
 import { readCartSettings } from "./cart";
 import { getCounterStore, getSettings } from "./services";
 import { getStorefrontFormat } from "./storefront-catalog";
@@ -91,8 +91,9 @@ export async function readShippingSettings(): Promise<ShippingRuntimeSettings> {
 
 export function getShippingService(): ShippingService {
   globalForCheckout.__ecomShipping ??= new ShippingService({
-    // Faza 9: furnizorul DEMO (tarife demonstrative); agregatorul real vine în Faza 12, prin aceeași interfață
-    provider: new DemoShippingRateProvider(),
+    // Faza 12: curierul activ (tarife în timp real, cache scurt, întrerupător de circuit) sau, fără curier activ, furnizorul DEMO
+    // de tarife (marcat «DEMO»); la cădere sau refuz, rezerva pe zone și transportul paletizat
+    provider: getCarrierRuntime().rateProvider(),
     store: createPrismaShippingStore(getDb()),
     readSettings: readShippingSettings,
   });

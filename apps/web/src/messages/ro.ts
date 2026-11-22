@@ -5,6 +5,7 @@
  */
 import { pluralRo } from "@ecom/shared/plural";
 import { adminEmailRo, adminOrdersRo } from "./admin-orders-ro";
+import { adminShippingRo } from "./admin-shipping-ro";
 
 /** Acord cu numărul în română (1 = singular, 0 și 2–19 = plural, 20+ cu «de»); funcția comună și testată din `@ecom/shared`. */
 const countOf = pluralRo;
@@ -138,6 +139,8 @@ export const ro = {
   admin: {
     /** Comenzile și emailurile lor (Faza 11): textele stau în `admin-orders-ro.ts`. */
     orders: adminOrdersRo,
+    /** Livrare și AWB (Faza 12): textele stau în `admin-shipping-ro.ts`. */
+    shipping: adminShippingRo,
     email: adminEmailRo,
     notifications: {
       title: "Notificări",
@@ -224,6 +227,10 @@ export const ro = {
       emailTemplates: "Șabloane email",
       installRequests: "Cereri de instalare",
       offers: "Oferte de plată",
+      shipments: "Expediere în masă",
+      codReconciliation: "Rambursuri",
+      palletSettings: "Transport paletizat",
+      carrierSettings: "Curieri",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {
