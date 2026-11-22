@@ -333,6 +333,17 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] **Momentul facturii pentru «La comandă»** (răspuns contabil): la plată dacă a fost plătit, la expediere dacă se plătește la livrare (ramburs)
 
 ## FAZA 14 — Cont client și retururi
+**Deciziile utilizatorului (2026-11-22; nu se rediscută, orice abatere = 🛑; sursa: `local-data/prompt-faza-14.md` §3):**
+- **D1 Suma rambursată la retur:** DOAR produsele returnate (liniile acceptate, la prețul plătit, o singură rotunjire pe linie, half-up, prin `Money`/`Quantity`); transportul NU se adaugă automat (adminul îl poate adăuga manual, cu motiv); rambursarea trece EXCLUSIV prin serviciul din Faza 10; storno-ul parțial se emite pe aceleași linii și sume (diferență de 1 ban = 🛑). Întrebările contabile #11 și #14 rămân 🟡: de confirmat cu contabilul înainte de lansare.
+- **D2 «Recenziile mele»:** amânat în Faza 17 (decizia utilizatorului, 2026-11-22); fără pagină goală și fără intrare de meniu.
+- **D3 Comenzi de oaspete în cont:** doar după email verificat (`emailVerified = true`, comparație normalizată ca la checkout) plus `customerId`; `CheckoutService` nu se modifică; schimbarea emailului nu face parte din fază.
+- **D4 Ștergerea contului = anonimizare;** comenzile, facturile și snapshot-urile rămân neschimbate; refuzată cu comenzi nefinalizate sau retur deschis; cere parola și un `Dialog`; termenul de păstrare a comenzilor e o setare («de confirmat cu avocatul», 3.3); emailul clientului nu intră în `audit_log`.
+- **D5 AWB de retur:** manual din admin (număr, curier, link), fără API de curier.
+- **D6 Fereastra de retur:** 14 zile de la livrare, setarea `returns.windowDays`; fără livrare consemnată, clientul nu poate iniția returul; nicio blocare pe «la comandă», «paletizat», «supradimensionat».
+- **D7 Wishlist** în spatele flag-ului `wishlist` (oprit = 404 și niciun cod încărcat), doar pentru clienți autentificați.
+- **D8 Preferințe de comunicare:** emailurile de serviciu mereu active; «oferte și noutăți» = consimțământ de marketing implicit OPRIT, cu momentul și textul salvate; nimic de marketing trimis în această fază.
+- **Notă:** «Recenziile mele» din linia 2 de mai jos rămâne nebifat, «amânat în Faza 17 (decizia utilizatorului, 2026-11-22)».
+
 - [ ] Dashboard, istoric comenzi, detaliu cu timeline și tracking AWB
 - [ ] Agendă de adrese, descărcare facturi, wishlist, recenziile mele
 - [ ] Preferințe de comunicare, export date GDPR, ștergere cont cu anonimizare
