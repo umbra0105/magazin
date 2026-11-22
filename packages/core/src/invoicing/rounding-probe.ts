@@ -2,22 +2,25 @@ import {
   formatQuantity,
   parseQuantity,
   quantityFromTicks,
+  vatFromGross,
   type InvoiceDocLine,
-  type Quantity,
 } from "@ecom/shared";
 import { computeOrderTotals } from "../orders/order-totals";
-import { priceLines, type PricingLineInput } from "../pricing";
-import { buildInvoiceDraft, toDocLines, type DraftLine, type DraftOrder } from "./invoice-draft";
+import {
+  buildInvoiceDraft,
+  lineTotalFromUnit,
+  toDocLines,
+  type DraftLine,
+  type DraftOrder,
+} from "./invoice-draft";
 
 /**
  * Verificarea rotunjirii în contul SmartBill (punctul ⚠️ din docs/06, decizia 2026-11-22): cele 3 comenzi de probă cu linii zecimale,
- * calculate cu MOTORUL DE PREȚURI real și cu aceleași funcții ca la checkout, și raportul «identic / diferență de N bani». Doar logică
+ * calculate cu aceleași funcții exacte ca la facturare (o rotunjire pe linie, TVA din brutul liniei; prețuri întregi, fără reduceri, deci egale cu ce dă motorul de prețuri), și raportul «identic / diferență de N bani». Doar logică
  * pură (fără rețea, fără bază de date): scriptul `scripts/facturare/verifica-rotunjirea.ts` o folosește, dar îl pornește OMUL, într-un
  * cont de test; nicio rulare automată nu emite documente. Rezultatul NU dovedește nimic despre SmartBill până nu se rulează acolo.
  */
-const NOW = new Date("2026-06-01T10:00:00.000Z");
 const RATE_BPS = 2100;
-const ONE: Quantity = quantityFromTicks(10_000n);
 
 interface ProbeItem {
   sku: string;
@@ -110,35 +113,30 @@ export interface ProbeExpectation {
 
 /** Comanda de probă exact cum ar ieși din motorul de prețuri și din `computeOrderTotals`, apoi liniile facturii. */
 export function buildProbe(scenario: ProbeScenario): ProbeExpectation {
-  const inputs: PricingLineInput[] = scenario.items.map((item) => ({
-    key: item.sku,
-    productId: `p-${item.sku}`,
-    categoryIds: [],
-    basis: "unit",
-    priceMinor: item.priceMinor,
-    salePriceMinor: null,
-    quantity: parseQuantity(item.quantity, { maxDecimals: 4 }),
-    step: ONE,
-    taxRateBps: RATE_BPS,
-    excludeFromGroupDiscount: false,
-    costNetMinor: null,
-  }));
-  const priced = priceLines(inputs, {
-    applySale: true,
-    group: { pricingType: "none" },
-    coupon: null,
-    now: NOW,
-    maxLineMinor: 1_000_000_000,
+  // fără motorul de prețuri (calculul de preț stă doar în pricing/ și cart/): prețuri întregi, fără reduceri, deci linia = o singură
+  // rotunjire half-up din prețul unitar × cantitate (aceeași funcție ca la construirea facturii) și TVA din brutul liniei
+  const priced = scenario.items.map((item) => {
+    const quantity = parseQuantity(item.quantity, { maxDecimals: 4 });
+    const totalMinor = lineTotalFromUnit(item.priceMinor, quantity);
+    const vatMinor = vatFromGross(totalMinor, RATE_BPS);
+    return {
+      unitPriceMinor: item.priceMinor,
+      totalMinor,
+      vatMinor,
+      netMinor: totalMinor - vatMinor,
+    };
   });
+  const cartTotal = priced.reduce((sum, line) => sum + line.totalMinor, 0);
+  const cartVat = priced.reduce((sum, line) => sum + line.vatMinor, 0);
   const totals = computeOrderTotals({
-    cart: { totalMinor: priced.totals.totalMinor, vatMinor: priced.totals.vatMinor },
+    cart: { totalMinor: cartTotal, vatMinor: cartVat },
     shippingMinor: scenario.shippingMinor,
     codFeeMinor: scenario.codFeeMinor,
     paymentMethod: scenario.codFeeMinor > 0 ? "cod" : "card",
     taxRateBps: RATE_BPS,
   });
   const order: DraftOrder = {
-    lines: priced.lines.map((line, index) => {
+    lines: priced.map((line, index) => {
       const item = scenario.items[index] as ProbeItem;
       return {
         id: `probe-${item.sku}`,
