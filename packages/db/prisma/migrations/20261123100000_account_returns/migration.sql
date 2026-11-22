@@ -43,6 +43,7 @@ CREATE TABLE "customer_preference" (
     "marketingOptIn" BOOLEAN NOT NULL DEFAULT false,
     "marketingDecisionAt" TIMESTAMP(3),
     "marketingDecisionText" TEXT,
+    "phone" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -370,3 +371,6 @@ ALTER TABLE "customer_address" ADD CONSTRAINT "customer_address_vat_ck" CHECK (
   ("vatId" IS NULL AND "vatIdVerification" IS NULL)
   OR ("vatId" IS NOT NULL AND "vatIdVerification" IS NOT NULL AND "vatIdVerification" IN ('verified', 'unverified'))
 );
+
+-- Profil: telefonul, normalizat `+40…` (o valoare scrisă altfel nu intră).
+ALTER TABLE "customer_preference" ADD CONSTRAINT "customer_preference_phone_ck" CHECK ("phone" IS NULL OR "phone" ~ '^[+]40[0-9]{9}$');

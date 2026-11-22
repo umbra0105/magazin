@@ -2045,6 +2045,8 @@ model CustomerPreference {
   marketingOptIn        Boolean   @default(false)
   marketingDecisionAt   DateTime?
   marketingDecisionText String?
+  /// Telefonul clientului (profil), normalizat `+40…`; nul dacă nu l-a completat. Se șterge la anonimizare.
+  phone                 String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 

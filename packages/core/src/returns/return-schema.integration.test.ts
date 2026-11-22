@@ -781,6 +781,18 @@ describe("agenda de adrese, wishlist, preferințe", () => {
     }, "Unique constraint");
   });
 
+  it("telefonul din profil are forma +40 și 9 cifre", async () => {
+    await accepts((tx, f) =>
+      tx.customerPreference.create({ data: { userId: f.userId, phone: "+40722123456" } }),
+    );
+    for (const bad of ["0722123456", "+4072212345", "+407221234567", "telefon"]) {
+      await rejects(
+        (tx, f) => tx.customerPreference.create({ data: { userId: f.userId, phone: bad } }),
+        "customer_preference_phone_ck",
+      );
+    }
+  });
+
   it("preferințele: «oferte și noutăți» e oprit implicit; o decizie păstrează momentul ȘI textul (una setată, una nulă)", async () => {
     await accepts(async (tx, f) => {
       const p = await tx.customerPreference.create({ data: { userId: f.userId } });
