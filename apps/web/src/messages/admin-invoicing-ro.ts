@@ -42,7 +42,7 @@ export const adminInvoicingRo = {
     vatRate: "Cota standard de TVA",
     vatRateValue: (percent: string) => `${percent}%`,
     vatRateHelp:
-      "Citită din setări (`tax.standardRate`). Se aplică la toate produsele și la transport; nu se schimbă de aici. Un singur TVA pe comandă, extras din prețul cu TVA inclus.",
+      "Citită din setări (setarea «tax.standardRate»). Se aplică la toate produsele și la transport; nu se schimbă de aici. Un singur TVA pe comandă, extras din prețul cu TVA inclus.",
     save: "Salvează",
     saving: "Se salvează…",
     unsaved: "Modificări nesalvate",

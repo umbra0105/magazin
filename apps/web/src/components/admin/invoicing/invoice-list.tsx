@@ -29,13 +29,13 @@ export function InvoiceList({ rows, canWrite }: { rows: InvoiceRowDto[]; canWrit
         <Tr>
           <Th priority="primary">{m.documents.colOrder}</Th>
           <Th priority="primary">{m.documents.colDocument}</Th>
-          <Th priority="secondary">{m.documents.colStatus}</Th>
+          <Th priority="primary">{m.documents.colStatus}</Th>
           <Th priority="secondary">{m.documents.colEfactura}</Th>
           <Th priority="primary" numeric>
             {m.documents.colTotal}
           </Th>
           <Th priority="secondary">{m.documents.colWhen}</Th>
-          <Th priority="secondary">{m.documents.colActions}</Th>
+          <Th priority="primary">{m.documents.colActions}</Th>
         </Tr>
       </THead>
       <TBody>
@@ -54,7 +54,7 @@ export function InvoiceList({ rows, canWrite }: { rows: InvoiceRowDto[]; canWrit
                 <span className="block text-label text-ink-secondary">{row.lastError}</span>
               ) : null}
             </Td>
-            <Td priority="secondary">
+            <Td priority="primary">
               <StatusBadges doc={row} />
             </Td>
             <Td priority="secondary">
@@ -66,7 +66,7 @@ export function InvoiceList({ rows, canWrite }: { rows: InvoiceRowDto[]; canWrit
               {row.totalText}
             </Td>
             <Td priority="secondary">{row.whenText}</Td>
-            <Td priority="secondary">
+            <Td priority="primary">
               <div className="flex flex-wrap items-center gap-2">
                 {row.status === "issued" ? (
                   <Link
@@ -158,7 +158,7 @@ export function UninvoicedList({
             <Th priority="secondary" numeric>
               {m.uninvoiced.colCommitments}
             </Th>
-            <Th priority="secondary">{m.uninvoiced.colActions}</Th>
+            <Th priority="primary">{m.uninvoiced.colActions}</Th>
           </Tr>
         </THead>
         <TBody>
@@ -182,7 +182,7 @@ export function UninvoicedList({
               <Td priority="secondary" numeric>
                 {row.openCommitments}
               </Td>
-              <Td priority="secondary">
+              <Td priority="primary">
                 {row.failedInvoiceId ? (
                   <Link href={`/admin/comenzi/${row.orderId}#invoicing`} className="underline">
                     {m.uninvoiced.openInvoice}
