@@ -2,6 +2,7 @@ import type { Prisma } from "@ecom/db";
 import type { Db } from "../db-tx";
 import { scheduleOrderEmails } from "../email/order-email-triggers";
 import { scheduleOrderInvoices } from "../invoicing/invoice-schedule";
+import { settleReturnOnRefund } from "../returns/return-settle";
 import { OrderError } from "./order-errors";
 import {
   assertTransition,
@@ -133,4 +134,6 @@ export async function addOrderEvent(
   await scheduleOrderEmails(tx, orderId, { id: created.id, type: event.type, data: event.data });
   // documentele fiscale (proformă, factură, storno) se pun în outbox în aceeași tranzacție; le emite workerul (Faza 13)
   await scheduleOrderInvoices(tx, orderId, { id: created.id, type: event.type });
+  // rambursarea unui retur, confirmată: returul se încheie și stornoul parțial se pune în coadă (Faza 14)
+  await settleReturnOnRefund(tx, orderId, { type: event.type, data: event.data });
 }
