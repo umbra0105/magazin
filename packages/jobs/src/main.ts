@@ -14,6 +14,7 @@ import { startCartJobsFromEnv } from "./cart-jobs";
 import { startOrderJobsFromEnv } from "./order-jobs";
 import { startPaymentJobsFromEnv } from "./payment-jobs";
 import { startOfferJobsFromEnv } from "./offer-jobs";
+import { startShippingJobsFromEnv } from "./shipping-jobs";
 import { startOrderEmailJobsFromEnv } from "./order-email-jobs";
 
 try {
@@ -35,6 +36,7 @@ const orderJobs = startOrderJobsFromEnv();
 const paymentJobs = startPaymentJobsFromEnv();
 const orderEmailJobs = startOrderEmailJobsFromEnv();
 const offerJobs = startOfferJobsFromEnv();
+const shippingJobs = startShippingJobsFromEnv();
 logger.info(
   { queues: ["emails", "media", "product-import", "product-import-images", "payment-events"] },
   "worker pornit (Ctrl+C pentru oprire)",
@@ -52,6 +54,7 @@ async function shutdown(signal: string): Promise<void> {
     cartJobs.close();
     orderJobs.close();
     offerJobs.close();
+    shippingJobs.close();
     await paymentJobs.close();
     await orderEmailJobs.close();
     await Promise.all([email.close(), media.close(), imports.close(), importImages.close()]);

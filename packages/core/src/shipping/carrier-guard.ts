@@ -140,7 +140,8 @@ export class GuardedCarrier implements ShippingCarrier {
 
 export interface CarrierRateProviderOptions {
   carrier: ShippingCarrier;
-  breaker: CircuitBreaker;
+  /** Lipsă = apelurile curierului sunt deja protejate (curier înfășurat în `GuardedCarrier`). */
+  breaker?: CircuitBreaker;
   /** Cât se păstrează un tarif în cache (secunde); 0 = fără cache. */
   cacheSeconds: number;
   now?: () => number;
@@ -203,9 +204,8 @@ export class CarrierRateProvider implements ShippingRateProvider {
     const hit = this.cache.get(key);
     if (ttl > 0 && hit && hit.expiresAt > now) return hit.quotes;
     try {
-      const quotes = await this.options.breaker.run(() =>
-        this.options.carrier.quote(request, signal),
-      );
+      const call = () => this.options.carrier.quote(request, signal);
+      const quotes = this.options.breaker ? await this.options.breaker.run(call) : await call();
       if (ttl > 0) {
         if (this.cache.size >= CACHE_LIMIT)
           this.cache.delete(this.cache.keys().next().value as string);
