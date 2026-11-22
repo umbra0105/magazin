@@ -1,6 +1,7 @@
 import {
   DomainError,
   INVOICE_QUANTITY_TICK_MULTIPLE,
+  QUANTITY_FACTOR,
   exactFromMinor,
   type InvoiceDocLine,
   lineByUnitPrice,
@@ -98,7 +99,7 @@ export interface InvoiceDraft {
   collapsedPositions: number[];
 }
 
-const ONE_UNIT_TICKS = 10_000n;
+const ONE_UNIT_TICKS = QUANTITY_FACTOR;
 
 const sum = (values: readonly number[]): number => values.reduce((acc, v) => acc + v, 0);
 
@@ -283,7 +284,7 @@ export interface PartialStorno {
 
 /**
  * Liniile unui storno parțial. Suma unei returnări parțiale = `round(preț unitar × cantitate)`; ULTIMA bucată din linie ia
- * restul exact (total și TVA originale minus ce s-a stornat deja), ca suma stornourilor unei linii să fie EXACT totalul liniei.
+ * restul exact al TOTALULUI (total original minus ce s-a stornat deja), ca suma stornourilor unei linii să fie EXACT totalul liniei.
  * Cantitatea totală stornată nu poate depăși cantitatea facturată.
  */
 export function buildPartialStorno(
@@ -330,9 +331,9 @@ export function buildPartialStorno(
     const total = isLast
       ? original.lineTotalMinor - done.lineTotalMinor
       : lineTotalFromUnit(original.unitPriceMinor, req.quantityTicks);
-    const tax = isLast
-      ? original.taxMinor - done.taxMinor
-      : vatFromGross(total, original.taxRateBps);
+    // TVA-ul fiecărei linii se extrage din brutul ei, ca la orice linie (și cum o calculează furnizorul); suma TVA-urilor unei linii
+    // stornate în bucăți poate diferi cu cel mult câțiva bani de TVA-ul liniei originale (de confirmat cu contabilul)
+    const tax = vatFromGross(total, original.taxRateBps);
     lines.push({
       kind: "product",
       orderLineId: original.orderLineId,

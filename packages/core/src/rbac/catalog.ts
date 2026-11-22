@@ -51,6 +51,8 @@ export const PERMISSIONS = {
     "Configurează serverul SMTP (parola, testul conexiunii); doar Owner, ca la cheile de integrare",
   "invoices.read": "Vede facturile",
   "invoices.write": "Emite și stornează facturi",
+  "invoices.configure":
+    "Configurează furnizorul de facturare (chei, mod test/live, activare); doar Owner, ca la cheile de integrare",
   "reports.read": "Vede rapoartele operaționale",
   "reports.financial": "Vede rapoartele financiare",
   "settings.read": "Vede setările",
@@ -90,6 +92,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
         p !== "system.update" &&
         p !== "integrations.write" &&
         p !== "payments.configure" &&
+        p !== "invoices.configure" &&
         p !== "email.configure",
     ),
   },
@@ -109,6 +112,8 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "email.read",
       "payments.read",
       "payments.refund",
+      "invoices.read",
+      "invoices.write",
       "products.read",
       "products.write",
       "products.content.write",

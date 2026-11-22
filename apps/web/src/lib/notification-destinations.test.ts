@@ -72,6 +72,13 @@ const DESTINATIONS: readonly Destination[] = [
     page: "oferte/[id]/page.tsx",
     pagePermission: "orders.offers",
   },
+  {
+    // factura care nu s-a putut emite: duce la comandă (jurnalul facturii e în detaliul ei)
+    writer: "invoicing/invoice-service.ts",
+    permission: "invoices.read",
+    page: "[id]/page.tsx",
+    pagePermission: "orders.read",
+  },
 ];
 
 function sourceFiles(dir: string): string[] {
@@ -112,10 +119,11 @@ describe("notificările din clopoțel: destinația", () => {
     expect(writers).toEqual([...new Set(DESTINATIONS.map((d) => d.writer))].sort());
   });
 
-  it("toate tipurile de notificare sunt cunoscute (plată, rambursare, notificare blocată, email, ofertă)", () => {
+  it("toate tipurile de notificare sunt cunoscute (plată, rambursare, notificare blocată, email, ofertă, factură)", () => {
     expect([...NOTIFICATION_KINDS].sort()).toEqual(
       [
         "email_failed",
+        "invoice_failed",
         "offer_stale",
         "payment_attention",
         "refund_manual",

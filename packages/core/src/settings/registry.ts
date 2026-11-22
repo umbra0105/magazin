@@ -42,6 +42,16 @@ export const settingGroups = {
     phone: z.string().default(""),
     iban: z.string().default(""),
     bankName: z.string().default(""),
+    /**
+     * Programul de ridicare personală (text liber, scurt, fără HTML): se arată în checkout, confirmare, pagina comenzii și email,
+     * lângă adresa de ridicare, doar când e completat. Fără reguli de business în jurul lui.
+     */
+    pickupHours: z
+      .string()
+      .trim()
+      .max(300)
+      .refine((v) => !/[<>]/.test(v), "Textul nu poate conține HTML")
+      .default(""),
   },
   regional: {
     allowedCountries: z.array(z.string().length(2)).min(1).default(["RO"]),
@@ -240,6 +250,36 @@ export const settingGroups = {
       .array(z.string().trim().toLowerCase().email().max(200))
       .max(20)
       .default([]),
+  },
+  invoicing: {
+    /**
+     * Furnizorul de facturare activ (Faza 13): smartbill | demo (doar dezvoltare). Gol = nu se emite nimic automat; comenzile apar
+     * în lista «comenzi confirmate fără factură». Un furnizor real se folosește doar dacă e activ, complet configurat și, în LIVE,
+     * verificat cu un cont real.
+     */
+    provider: z.enum(["", "smartbill", "demo"]).default(""),
+    /** Numele unităților din contul furnizorului, după simbolul unității din magazin (ex. {"mp":"mp"}); lipsă = simbolul. */
+    unitNames: z
+      .record(z.string().trim().min(1).max(40), z.string().trim().min(1).max(40))
+      .default({}),
+    /** Denumirea liniei de transport și a taxei de ramburs pe factură, și unitatea lor de măsură. */
+    shippingLabel: z.string().trim().min(1).max(80).default("Transport"),
+    codFeeLabel: z.string().trim().min(1).max(80).default("Taxă de ramburs"),
+    serviceUnit: z.string().trim().min(1).max(40).default("buc"),
+    /** Furnizorul trimite factura clientului pe email (SmartBill: cere un server de email configurat în contul lor). */
+    sendEmailByProvider: z.boolean().default(false),
+    /** Încercări de emitere înainte ca documentul să treacă în «eșuat» (cere decizia adminului). */
+    maxAttempts: z.number().int().min(1).max(10).default(5),
+    /** După câte eșecuri apare alerta în admin (o singură dată pe document). */
+    alertAfterFailures: z.number().int().min(1).max(10).default(3),
+    /** Așteptarea până la următoarea încercare, în minute, după fiecare eșec (ultima valoare se repetă). */
+    backoffMinutes: z
+      .array(z.number().int().min(1).max(1440))
+      .min(1)
+      .max(10)
+      .default([1, 5, 15, 60]),
+    /** Cât poate dura o emitere înainte să fie socotită cu rezultat nesigur (minute). */
+    leaseMinutes: z.number().int().min(2).max(120).default(10),
   },
   legal: {
     anpcUrl: z.string().default(""),

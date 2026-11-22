@@ -16,6 +16,8 @@ export const NOTIFICATION_KINDS = [
   "stock_sync_stale",
   /** O ofertă de plată nu mai poate fi plătită (prețul, transportul, TVA-ul sau stocul s-au schimbat). */
   "offer_stale",
+  /** O factură nu s-a putut emite (3 eșecuri, rezultat nesigur sau diferență de sumă): documentul fiscal lipsește sau e de verificat. */
+  "invoice_failed",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
