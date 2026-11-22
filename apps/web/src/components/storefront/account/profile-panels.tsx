@@ -272,8 +272,8 @@ export function ExportPanel() {
     setMessage(null);
     try {
       const response = await fetch("/api/account/export", {
-        method: "POST",
         credentials: "same-origin",
+        cache: "no-store",
       });
       if (response.status === 429) return setMessage(m.exportLimited);
       if (!response.ok) return setMessage(m.exportFailed);
