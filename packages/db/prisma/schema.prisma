@@ -1364,6 +1364,7 @@ model Order {
   notes                  OrderNote[]
   offer                  OrderOffer?
   shipments              Shipment[]
+  invoices               Invoice[]
 
   @@index([status, paymentStatus])
   @@index([email])
@@ -1873,4 +1874,101 @@ model FreeShippingExclusion {
   createdAt DateTime @default(now())
 
   @@map("free_shipping_exclusion")
+}
+
+/// Document fiscal al unei comenzi (Faza 13), ȘI rând de outbox: creat «în coadă» la evenimentul comenzii, în aceeași tranzacție,
+/// emis de worker prin `InvoiceProvider`. `kind`: proforma | invoice | storno. `docKey` (unic pe comandă) face emiterea
+/// idempotentă: `proforma`, `invoice`, `storno:total` sau `storno:<referință>` (storno parțial). Seria și numărul le definește
+/// furnizorul (SmartBill): aplicația nu numerotează. `status`: queued | issuing | issued | failed | skipped. `failed` = epuizat sau
+/// cu rezultat nesigur (cere decizia adminului), `skipped` = nu mai e nevoie (comanda anulată înainte de emitere). Un document emis
+/// nu își mai schimbă câmpurile fiscale (trigger); nimic din costul de achiziție nu intră aici.
+model Invoice {
+  id                String         @id @default(cuid())
+  orderId           String
+  order             Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  kind              String
+  docKey            String
+  parentId          String?
+  parent            Invoice?       @relation("InvoiceStorno", fields: [parentId], references: [id], onDelete: Restrict)
+  stornos           Invoice[]      @relation("InvoiceStorno")
+  status            String         @default("queued")
+  /// smartbill | demo; setat doar la emitere.
+  provider          String?
+  /// Documentul emis de furnizorul DEMO: marcat «SIMULAT, nu este document fiscal» în interfață și în PDF.
+  simulated         Boolean        @default(false)
+  series            String?
+  number            String?
+  /// Identificatorul documentului la furnizor (SmartBill: `documentId`).
+  providerRef       String?
+  /// Link de vizualizare dat de furnizor (poate conține un hash); doar pentru admin.
+  pdfUrl            String?
+  /// not_applicable | unknown | pending | sent | validated | error. SmartBill nu expune statusul prin API: `unknown`.
+  efacturaStatus    String         @default("not_applicable")
+  efacturaCheckedAt DateTime?
+  currency          String         @default("RON")
+  totalMinor        Int
+  taxMinor          Int
+  /// Factura cere descărcarea de gestiune la furnizor (toate liniile de produs au stoc gestionat). Altfel se emite FĂRĂ descărcare.
+  useStock          Boolean        @default(false)
+  attempts          Int            @default(0)
+  nextAttemptAt     DateTime?
+  lastErrorCode     String?
+  /// Mesaj scurt, fără date personale și fără corpul cererii sau al răspunsului.
+  lastError         String?
+  lockedAt          DateTime?
+  /// Alerta de după 3 eșecuri a fost deja trimisă (o singură dată pe document).
+  alertedAt         DateTime?
+  issuedAt          DateTime?
+  requestedBy       String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  lines             InvoiceLine[]
+  events            InvoiceEvent[]
+
+  @@unique([orderId, docKey])
+  @@index([status, nextAttemptAt])
+  @@index([orderId])
+  @@map("invoice")
+}
+
+/// Linia unui document, înghețată la crearea lui (snapshot): produs (din linia comenzii), transport sau taxă de ramburs. Sumele
+/// sunt cu TVA inclus, ca pe comandă; `netMinor + taxMinor = lineTotalMinor`. Cantitatea e în zecimi de miime, cu cel mult 2
+/// zecimale (SmartBill). La stornoul parțial, linia poartă cantitatea returnată.
+model InvoiceLine {
+  id             String   @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  position       Int
+  /// product | shipping | cod_fee
+  kind           String
+  orderLineId    String?
+  sku            String?
+  title          String
+  unitName       String
+  quantityTicks  BigInt
+  unitPriceMinor Int
+  lineTotalMinor Int
+  netMinor       Int
+  taxMinor       Int
+  taxRateBps     Int
+  /// Linia se descarcă din gestiune la furnizor (doar produse cu stoc gestionat).
+  dischargeStock Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@unique([invoiceId, position])
+  @@map("invoice_line")
+}
+
+/// Jurnalul unui document (încercări, emitere, eșecuri, alertă, retrimitere). Doar se adaugă (trigger).
+model InvoiceEvent {
+  id        String   @id @default(cuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId, createdAt])
+  @@map("invoice_event")
 }
