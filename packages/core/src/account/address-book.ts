@@ -54,6 +54,7 @@ const SELECT = {
   tradeRegisterNo: true,
   phone: true,
   countySirutaCode: true,
+  county: { select: { countyCode: true } },
   countyName: true,
   localitySirutaCode: true,
   localityName: true,
@@ -74,6 +75,7 @@ function toView(row: {
   tradeRegisterNo: string | null;
   phone: string;
   countySirutaCode: number;
+  county: { countyCode: number };
   countyName: string;
   localitySirutaCode: number;
   localityName: string;
@@ -92,7 +94,8 @@ function toView(row: {
     vatIdVerification: row.vatIdVerification,
     tradeRegisterNo: row.tradeRegisterNo,
     phone: row.phone,
-    countyCode: row.countySirutaCode,
+    // codul JUD al județului (cel din lista de județe), nu codul SIRUTA al unității
+    countyCode: row.county.countyCode,
     countyName: row.countyName,
     localityCode: row.localitySirutaCode,
     localityName: row.localityName,

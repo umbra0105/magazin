@@ -134,6 +134,8 @@ describe("izolarea între clienți (IDOR)", () => {
         "ACCOUNT_ADDRESS_NOT_FOUND",
       );
       expect((await book.get(b.id, mine.id)).street).toBe("Str. Exemplu 1");
+      // codul județului din agendă e cel din lista de județe (JUD), ca formularul de editare să-l poată alege
+      expect((await book.get(b.id, mine.id)).countyCode).toBe(h.geo.countyCode);
       expect(await book.list(a.id)).toEqual([]);
     });
   });

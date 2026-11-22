@@ -62,13 +62,12 @@ export async function listAccountOrders(
   page: number,
   pageSize: number,
 ): Promise<AccountOrderListPage> {
-  const where = ownedOrdersWhere(user);
   const safePage = Math.max(1, Math.floor(page));
   const size = Math.min(50, Math.max(1, Math.floor(pageSize)));
   const [total, rows] = await Promise.all([
-    db.order.count({ where }),
+    db.order.count({ where: ownedOrdersWhere(user) }),
     db.order.findMany({
-      where,
+      where: ownedOrdersWhere(user),
       orderBy: { placedAt: "desc" },
       skip: (safePage - 1) * size,
       take: size,

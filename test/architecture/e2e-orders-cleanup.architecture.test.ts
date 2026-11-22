@@ -452,6 +452,7 @@ describe("specurile E2E reale", () => {
     );
     expect(callers.map((entry) => entry.path).sort()).toEqual(
       [
+        "e2e/account.spec.ts",
         "e2e/card-payments.spec.ts",
         "e2e/checkout-pickup.spec.ts",
         "e2e/checkout.spec.ts",
