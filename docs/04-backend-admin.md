@@ -642,6 +642,8 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `orders.fulfill` — Pregătește și expediază comenzi (fulfillment, AWB) | ✓ | ✓ | ✓ |  |  | ✓ |  |
 | `orders.offers` — Creează și gestionează ofertele de plată (link de plată pentru client); doar Manager, Admin, Owner | ✓ | ✓ | ✓ |  |  |  |  |
 | `orders.mark_paid` — Marchează ca plătite comenzile cu transfer bancar (suma primită și referința din extras) | ✓ | ✓ | ✓ |  |  |  |  |
+| `returns.view` — Vede retururile (cererile clienților, motivele, rapoartele de retur) | ✓ | ✓ | ✓ |  | ✓ |  |  |
+| `returns.manage` — Gestionează retururile: aprobă sau respinge, introduce AWB-ul de retur, recepționează, inspectează, repune pe stoc; rambursarea cere și orders.refund | ✓ | ✓ | ✓ |  | ✓ |  |  |
 | `products.read` — Vede produsele | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |
 | `products.write` — Creează și modifică produse (prețuri, stoc, variante, clasă de livrare, TVA) | ✓ | ✓ | ✓ |  |  |  |  |
 | `products.content.write` — Editează conținutul produselor (descriere, SEO, media, documente), fără prețuri, stoc sau cost | ✓ | ✓ | ✓ | ✓ |  |  |  |

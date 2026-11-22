@@ -15,6 +15,9 @@ export const PERMISSIONS = {
     "Creează și gestionează ofertele de plată (link de plată pentru client); doar Manager, Admin, Owner",
   "orders.mark_paid":
     "Marchează ca plătite comenzile cu transfer bancar (suma primită și referința din extras)",
+  "returns.view": "Vede retururile (cererile clienților, motivele, rapoartele de retur)",
+  "returns.manage":
+    "Gestionează retururile: aprobă sau respinge, introduce AWB-ul de retur, recepționează, inspectează, repune pe stoc; rambursarea cere și orders.refund",
   "products.read": "Vede produsele",
   "products.write": "Creează și modifică produse (prețuri, stoc, variante, clasă de livrare, TVA)",
   "products.content.write":
@@ -109,6 +112,8 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "orders.fulfill",
       "orders.mark_paid",
       "orders.offers",
+      "returns.view",
+      "returns.manage",
       "email.read",
       "payments.read",
       "payments.refund",
@@ -156,6 +161,8 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "orders.cancel",
       // rambursare cu LIMITĂ: fără `payments.refund` (care înlătură limita), deci nu poate ocoli limita pe nicio cale
       "orders.refund",
+      "returns.view",
+      "returns.manage",
       "customers.read",
       "customers.read_pii",
     ],
