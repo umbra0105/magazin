@@ -67,6 +67,8 @@ export class InvoiceServiceError extends DomainError {
 
 /** De unde vine furnizorul de facturare (configurat, cu chei decriptate și garda LIVE). */
 export interface InvoiceProviderSource {
+  /** Furnizorul pe care îl folosește acum magazinul pentru documente NOI (ales, activ, configurat, verificat în LIVE), sau `null`. */
+  active(): Promise<InvoiceProviderCode | null>;
   /** Furnizorul pentru un cod, sau `null` dacă nu e configurat sau nu are voie să ruleze (LIVE neverificat). */
   provider(code: InvoiceProviderCode): Promise<InvoiceProvider | null>;
 }
@@ -213,7 +215,7 @@ export class InvoiceService {
   ): Promise<"issued" | "failed" | "requeued" | "skipped" | "ignored"> {
     if (doc.kind === "storno") return this.executeStorno(doc);
     const settings = await readInvoicingSettings(this.db);
-    const code = await selectedInvoiceProvider(this.db);
+    const code = await this.source.active();
     const provider = code ? await this.source.provider(code) : null;
     if (!provider)
       throw new IntegrationError(

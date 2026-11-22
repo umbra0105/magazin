@@ -96,7 +96,10 @@ async function withInvoicing<T>(
         });
       }
       const spy = new Spy();
-      const source: InvoiceProviderSource = { provider: async () => spy };
+      const source: InvoiceProviderSource = {
+        active: async () => "demo",
+        provider: async () => spy,
+      };
       const clock = { now: new Date(NOW.getTime() + 60_000) };
       const service = new InvoiceService({
         db: h.tx as unknown as PrismaClient,
@@ -588,7 +591,7 @@ describe("eșecuri: reîncercări, alertă, dead-letter, rezultat nesigur", () =
     await withInvoicing(async ({ h, service, clock }) => {
       const noProvider = new InvoiceService({
         db: h.tx as unknown as PrismaClient,
-        source: { provider: async () => null },
+        source: { active: async () => "demo", provider: async () => null },
         now: () => clock.now,
       });
       const { orderId } = await place(h);

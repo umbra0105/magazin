@@ -1,3 +1,4 @@
+export * from "./invoice-config";
 export * from "./invoice-draft";
 export * from "./invoice-rules";
 export * from "./invoice-schedule";
