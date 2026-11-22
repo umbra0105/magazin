@@ -2689,6 +2689,11 @@ async function deleteE2eOrders(pattern: string): Promise<number> {
       `delete from return_request where "orderId" in (select id from customer_order where email like $1)`,
       [pattern],
     );
+    // rambursările pornite pentru retururi (Faza 14) refera comanda cu RESTRICT: se șterg după retururile care le referă
+    await db.query(
+      `delete from refund where "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
     const removed = await db.query(`delete from customer_order where email like $1`, [pattern]);
     return removed.rowCount ?? 0;
   });

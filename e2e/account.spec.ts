@@ -158,7 +158,7 @@ test.describe("izolarea între clienți", () => {
   test("fără sesiune, contul trimite la autentificare", async ({ page }) => {
     await page.goto("/cont/comenzi");
     await page.waitForURL(/\/autentificare/);
-    const exportCall = await page.request.post("/api/account/export");
+    const exportCall = await page.request.get("/api/account/export");
     expect(exportCall.status()).toBe(401);
   });
 });

@@ -9,9 +9,9 @@ export const runtime = "nodejs";
 /**
  * Exportul GDPR al contului (Faza 14): un fișier JSON cu datele clientului autentificat (cont, adrese, preferințe, favorite, comenzi
  * cu linii și sume, retururi). Doar datele lui: fără câmpuri interne, fără costuri, fără note ale adminului. Limitat ca frecvență pe
- * client; nu se pune în cache. POST (nu GET), ca un link sau un prefetch să nu-l poată declanșa.
+ * client; nu se pune în cache. Doar citire (GET), apelat din buton cu fetch; cookie-ul de sesiune e SameSite=Lax, deci o navigare dintr-un alt site nu poate citi răspunsul.
  */
-export async function POST(): Promise<Response> {
+export async function GET(): Promise<Response> {
   const customer = await getCustomer();
   if (!customer) return new Response("Autentificare necesară", { status: 401 });
   if (!(await allowAccountRequest("export", customer.user.id))) {

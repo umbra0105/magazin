@@ -263,7 +263,7 @@ export function CommunicationPanel({ marketingOptIn }: { marketingOptIn: boolean
   );
 }
 
-/** Exportul GDPR: fișier JSON cu datele contului, descărcat printr-un POST (limitat ca frecvență pe server). */
+/** Exportul GDPR: fișier JSON cu datele contului, descărcat printr-un GET (limitat ca frecvență pe server). */
 export function ExportPanel() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);

@@ -53,3 +53,23 @@ export async function addToWishlist(db: Db, userId: string, variantId: string): 
 export async function removeFromWishlist(db: Db, userId: string, variantId: string): Promise<void> {
   await db.wishlistItem.deleteMany({ where: { userId, variantId } });
 }
+
+/** Variantele din favorite cu produsul lor (id și titlu), în ordinea adăugării (cele mai noi primele): pentru pagina «Favorite». */
+export async function listWishlistProducts(
+  db: Db,
+  userId: string,
+): Promise<Array<{ variantId: string; productId: string; title: string }>> {
+  const rows = await db.wishlistItem.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      variantId: true,
+      variant: { select: { productId: true, product: { select: { title: true } } } },
+    },
+  });
+  return rows.map((r) => ({
+    variantId: r.variantId,
+    productId: r.variant.productId,
+    title: r.variant.product.title,
+  }));
+}
