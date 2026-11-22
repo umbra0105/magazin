@@ -458,6 +458,7 @@ describe("specurile E2E reale", () => {
         "e2e/faza10-capturi.spec.ts",
         "e2e/faza11-capturi.spec.ts",
         "e2e/faza9-capturi.spec.ts",
+        "e2e/invoicing.spec.ts",
         "e2e/orders-offers.spec.ts",
         "e2e/payments-admin.spec.ts",
         "e2e/ridicare-capturi.spec.ts",

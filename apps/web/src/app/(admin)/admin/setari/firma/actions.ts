@@ -55,13 +55,14 @@ export const saveCompanySettings = withPermission(
     const d = parsed.data;
     const errors: Record<string, string> = {};
 
-    const vatId = d.vatId.replace(/\s+/g, "").toUpperCase();
+    // valorile se salvează așa cum le-a scris adminul (tăiate de spații); validarea ignoră spațiile din interior
+    const vatId = d.vatId.trim();
     const email = d.email.trim().toLowerCase();
-    const iban = d.iban.replace(/\s+/g, "").toUpperCase();
+    const iban = d.iban.trim();
     const country = d.country.trim().toUpperCase();
-    if (!VAT_ID.test(vatId)) errors["vatId"] = "vatId";
+    if (!VAT_ID.test(vatId.replace(/\s+/g, ""))) errors["vatId"] = "vatId";
     if (email !== "" && !EMAIL.test(email)) errors["email"] = "email";
-    if (iban !== "" && !IBAN.test(iban)) errors["iban"] = "iban";
+    if (iban !== "" && !IBAN.test(iban.replace(/\s+/g, ""))) errors["iban"] = "iban";
     if (!/^[A-Z]{2}$/.test(country)) errors["country"] = "country";
     for (const key of ["anpcUrl", "salUrl", "odrUrl"] as const) {
       const value = d[key].trim();
