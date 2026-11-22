@@ -380,7 +380,7 @@ Citește `docs/13-protocol-de-lucru.md` și respectă-l la literă. Pe scurt:
   lint, `lint:root`, typecheck, `prettier --check .` pe TOT repo-ul și E2E complet pe build de
   producție (număr de teste trecute, picate, nerulate). NU fac commit înainte de a fi citit
   rezultatul complet; un test picat se repară înainte de commit. Fixture-urile comune cu
-  curățare globală se folosesc dintr-un singur fișier de teste.
+  curățare globală se folosesc dintr-un singur fișier de teste. Curățarea comenzilor și a plăților în specurile E2E: fiecare spec șterge doar ce e al lui, pe tag (`removeE2eOrders({ tag })`, `removeE2eDemoPayments({ tag })`), iar cine apelează `seedE2eDemoPayments` apelează `removeE2eDemoProvider()` în `afterAll`; ștergerile globale (`removeAllE2eOrders`, `removeAllE2eDemoPayments`) există doar în `global-setup` și `global-teardown`. Regula o impune testul de arhitectură `e2e-orders-cleanup`.
 - **Integrarea se rulează pe DOUĂ baze, ambele citite integral:** `ecom_test` (seed-uită) ȘI o bază
   doar migrată, ca în CI. Pentru a doua: `TEST_DATABASE_URL` către o bază nouă cu «test» în nume
   (de exemplu `ecom_ci_test`, pe același server; `test:integration` o creează și o migrează singur),
