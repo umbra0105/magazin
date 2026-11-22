@@ -20,3 +20,4 @@ export * from "./exclusion-service";
 export * from "./carrier-config";
 export * from "./carrier-guard";
 export * from "./shipment-service";
+export * from "./cod-reconciliation";

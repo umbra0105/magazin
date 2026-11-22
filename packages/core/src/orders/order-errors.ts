@@ -30,6 +30,8 @@ export const ORDER_ERROR_CODES = [
   "ORDER_PAYMENT_AMOUNT_MISMATCH",
   "ORDER_PAYMENT_AMOUNT_INVALID",
   "ORDER_PAYMENT_REFERENCE_INVALID",
+  /** «Marchează încasat» (ramburs): data virării în viitor sau înaintea plasării comenzii. */
+  "ORDER_PAYMENT_DATE_INVALID",
   /** Vederile salvate: nume sau filtre invalide, nume duplicat, limită atinsă, vedere inexistentă. */
   "ORDER_VIEW_INVALID",
   "ORDER_VIEW_DUPLICATE",
