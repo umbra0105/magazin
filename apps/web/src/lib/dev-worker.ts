@@ -2,6 +2,7 @@ import {
   startEmailWorkerFromEnv,
   startImageImportWorkerFromEnv,
   startImportWorkerFromEnv,
+  startInvoiceJobsFromEnv,
   startMediaWorkerFromEnv,
   startCartJobsFromEnv,
   startOfferJobsFromEnv,
@@ -33,6 +34,7 @@ export function startDevEmailWorker(): void {
     startPaymentJobsFromEnv();
     startOrderEmailJobsFromEnv();
     startOfferJobsFromEnv();
+    startInvoiceJobsFromEnv();
     getLogger().info(
       {
         queues: ["emails", "media", "product-import", "product-import-images"],
@@ -50,6 +52,9 @@ export function startDevEmailWorker(): void {
           "order-email-sweep",
           "offer-expire",
           "payment-reconcile",
+          "invoices (coadă)",
+          "invoice-sweep",
+          "invoice-efactura",
         ],
       },
       "workeri porniți în procesul de dezvoltare",

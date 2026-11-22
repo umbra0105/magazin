@@ -2664,6 +2664,20 @@ async function deleteE2eOrders(pattern: string): Promise<number> {
       `delete from shipment where "orderId" in (select id from customer_order where email like $1)`,
       [pattern],
     );
+    // documentele fiscale (Faza 13) refera comanda cu RESTRICT, iar stornoul refera factura: întâi notificările și stornourile.
+    // Documentele din E2E sunt SIMULATE (DEMO), deci triggerul permite ștergerea lor; un document real nu se șterge niciodată.
+    await db.query(
+      `delete from admin_notification n where n."dedupKey" like 'invoice-failed:%' and substring(n."dedupKey" from 16) in (select i.id from invoice i where i."orderId" in (select id from customer_order where email like $1))`,
+      [pattern],
+    );
+    await db.query(
+      `delete from invoice where kind = 'storno' and "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
+    await db.query(
+      `delete from invoice where "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
     const removed = await db.query(`delete from customer_order where email like $1`, [pattern]);
     return removed.rowCount ?? 0;
   });
@@ -3107,5 +3121,87 @@ export async function readE2eShipments(number: string): Promise<
       status: string;
       codAmountMinor: number;
     }>;
+  });
+}
+
+// ------------------------------------------------------------------------------------------- facturare (Faza 13)
+
+/**
+ * Activează furnizorul DEMO de facturare și îl alege (`invoicing.provider = demo`). DEMO cere E2E_HARNESS=1 pe server. Niciun test nu
+ * emite o factură reală: documentele se pun direct în bază cu `seedE2eInvoice` (starea engine-ului e acoperită de testele de
+ * integrare), iar PDF-ul vine de la furnizorul simulat, marcat «SIMULAT, nu este document fiscal».
+ */
+export async function seedE2eDemoInvoicing(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `insert into integration (id, type, provider, config, "isActive", "updatedAt")
+       values (gen_random_uuid()::text, 'invoicing', 'demo', '{"mode":"test"}'::jsonb, true, now())
+       on conflict (type, provider) do update set "isActive" = true, "updatedAt" = now()`,
+    );
+  });
+  await setE2eSettings({ "invoicing.provider": "demo" });
+}
+
+/** Starea comună a facturării DEMO (rândul de integrare și alegerea furnizorului); se apelează în `afterAll` de cine a seedat-o. */
+export async function removeE2eDemoInvoicing(): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`delete from integration where type = 'invoicing'`);
+  });
+  await clearE2eSettings(["invoicing.provider", "invoicing.shippingLabel"]);
+}
+
+export interface E2eInvoiceRow {
+  kind: string;
+  docKey: string;
+  status: string;
+  attempts: number;
+  series: string | null;
+  number: string | null;
+  simulated: boolean;
+  lastErrorCode: string | null;
+  totalMinor: number;
+  taxMinor: number;
+}
+
+/** Documentele fiscale ale unei comenzi, în ordinea creării. */
+export async function readE2eInvoices(orderNumber: string): Promise<E2eInvoiceRow[]> {
+  return withClient(async (db) => {
+    const found = await db.query(
+      `select i.kind, i."docKey", i.status, i.attempts, i.series, i.number, i.simulated, i."lastErrorCode",
+              i."totalMinor", i."taxMinor"
+         from invoice i join customer_order o on o.id = i."orderId" where o.number = $1 order by i."createdAt", i.id`,
+      [orderNumber],
+    );
+    return found.rows as E2eInvoiceRow[];
+  });
+}
+
+/**
+ * Trece un document din coadă în starea dorită, ca și cum lucrătorul l-ar fi procesat (în E2E nu rulează niciun lucrător):
+ * `issued` (document DEMO emis, SIMULAT) sau `failed` (cu cod de rezultat nesigur sau de refuz). Doar pentru documente create de
+ * aplicație la plasarea comenzii; nu emite nimic real.
+ */
+export async function setE2eInvoiceState(
+  orderNumber: string,
+  docKey: string,
+  state: { status: "issued" } | { status: "failed"; code: string; message: string },
+): Promise<void> {
+  await withClient(async (db) => {
+    if (state.status === "issued") {
+      const seq = String(Date.now()).slice(-9);
+      await db.query(
+        `update invoice set status = 'issued', provider = 'demo', simulated = true, series = 'DEMO', number = $3,
+                "providerRef" = $3, "issuedAt" = now(), "efacturaStatus" = case when kind = 'proforma' then 'not_applicable' else 'pending' end,
+                attempts = attempts + 1, "lastErrorCode" = null, "lastError" = null
+          where "docKey" = $2 and "orderId" in (select id from customer_order where number = $1)`,
+        [orderNumber, docKey, seq],
+      );
+    } else {
+      await db.query(
+        `update invoice set status = 'failed', attempts = attempts + 1, "lastErrorCode" = $3, "lastError" = $4
+          where "docKey" = $2 and "orderId" in (select id from customer_order where number = $1)`,
+        [orderNumber, docKey, state.code, state.message],
+      );
+    }
   });
 }

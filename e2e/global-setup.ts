@@ -5,6 +5,7 @@ import {
   removeAllE2eDemoPayments,
   removeAllE2eOrders,
   removeE2eDemoCarrier,
+  removeE2eDemoInvoicing,
 } from "../packages/core/test/e2e-support";
 import { cleanupE2eUsers, setTestSetting } from "../packages/db/test/cleanup-e2e-users";
 import { prepareTestDatabase } from "../packages/db/test/prepare-test-database";
@@ -31,6 +32,7 @@ export default async function globalSetup(): Promise<void> {
   // șterg doar ce e al lor, pe tag). Întâi plățile (rambursările blochează ștergerea comenzilor).
   await removeAllE2eDemoPayments();
   await removeE2eDemoCarrier();
+  await removeE2eDemoInvoicing();
   const orders = await removeAllE2eOrders();
   if (orders > 0) console.log(`[e2e] șterse ${orders} comenzi E2E rămase din rulări anterioare`);
 

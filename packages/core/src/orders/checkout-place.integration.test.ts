@@ -776,3 +776,48 @@ describe("cererea de instalare și notele", () => {
     });
   });
 });
+
+describe("programul de ridicare personală (Faza 13): doar text, doar când e completat", () => {
+  const setHours = (h: Harness, value: string) =>
+    h.tx.setting.upsert({
+      where: { key: "company.pickupHours" },
+      create: { key: "company.pickupHours", group: "company", value },
+      update: { value },
+    });
+  const orderWith = async (h: Harness, offerCode: string) => {
+    const a = await h.product();
+    const owner = await h.fill([{ variantId: a.variantId }]);
+    return h.checkout.place(owner, await h.input(owner, { shippingOfferCode: offerCode }));
+  };
+
+  it("apare în rezumatul comenzii cu ridicare, citit din setări; sumele comenzii nu depind de el", async () => {
+    await harness(async (h) => {
+      const without = await orderWith(h, "pickup");
+      expect((await getOrderSummary(h.tx, without.orderId))?.shipping.pickupHoursText).toBeNull();
+      await setHours(h, "  Luni–Vineri, 09:00–17:00  ");
+      const placed = await orderWith(h, "pickup");
+      const summary = await getOrderSummary(h.tx, placed.orderId);
+      expect(summary?.shipping.pickupHoursText).toBe("Luni–Vineri, 09:00–17:00");
+      // programul nu e în snapshot și nu atinge banii
+      const order = await orderOf(h.tx, placed.orderId);
+      expect(JSON.stringify(order.shippingSnapshot)).not.toContain("Luni");
+      expect(order.totalMinor).toBe(summary?.totals.totalMinor);
+      // o schimbare ulterioară se vede la afișare (programul de azi)
+      await setHours(h, "Doar la programare");
+      expect((await getOrderSummary(h.tx, placed.orderId))?.shipping.pickupHoursText).toBe(
+        "Doar la programare",
+      );
+    });
+  });
+
+  it("textul gol sau doar spații nu se arată; comanda cu curier nu are program", async () => {
+    await harness(async (h) => {
+      await setHours(h, "   ");
+      const pickup = await orderWith(h, "pickup");
+      expect((await getOrderSummary(h.tx, pickup.orderId))?.shipping.pickupHoursText).toBeNull();
+      await setHours(h, "Luni–Vineri");
+      const courier = await orderWith(h, "demo:courier");
+      expect((await getOrderSummary(h.tx, courier.orderId))?.shipping.pickupHoursText).toBeNull();
+    });
+  });
+});

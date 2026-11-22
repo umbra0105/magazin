@@ -19,6 +19,7 @@ export const EMAIL_NOTE_LABELS: Readonly<Record<string, string>> = {
   "internal.stock_out": "Notificare internă: stoc epuizat",
   "internal.installation_request": "Notificare internă: cerere de instalare",
   "internal.stock_sync_stale": "Alertă internă: sincronizarea SmartBill e neactualizată",
+  "internal.invoice_failed": "Alertă internă: factura nu s-a putut emite",
 };
 
 export const emailNoteLabel = (template: string): string =>

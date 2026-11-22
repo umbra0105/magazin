@@ -38,6 +38,14 @@ este același cu codul de produs din SmartBill.
 - **Întrebarea 5 (produse pe ambalaj):** la kilograme se facturează în kg; sacul se facturează ca bucată.
 - **Întrebarea 7 (momentul facturii la «La comandă»):** produsele «La comandă» se facturează la plată dacă au fost plătite, iar la expediere dacă se plătesc la livrare (ramburs).
 - **Întrebarea 4 (rotunjirea) — răspuns primit de la utilizator, nu de la contabil în scris, 2026-11-17:** SmartBill preia exact suma comenzilor din website, fără rotunjire proprie, și acceptă 2 zecimale. Regula magazinului rămâne «o singură rotunjire pe linie, la 2 zecimale, în magazin» (R1 pe unitate / R2 pe pas); Faza 8 nu așteaptă alt răspuns. **De confirmat în sandbox-ul SmartBill (Faza 13): o diferență de 1 ban acolo = 🛑.**
+- **Stare după Faza 13 (2026-11-22), ce s-a implementat din fiecare întrebare:**
+  - **3, 5, 7 (zecimale, unități, «La comandă»):** implementate. Factura refuză cantitățile cu mai mult de 2 zecimale (și ecranul Facturare avertizează pașii care le produc), kg se facturează în kg, sacul ca bucată, «La comandă» la plată sau (la ramburs) la expediere.
+  - **1, 8 (factura fără descărcare):** implementat: o factură cu un produs negestionat sau «La comandă» se emite întreagă FĂRĂ descărcare de gestiune și nu se socotește «oglindită».
+  - **4 (rotunjirea):** regula din magazin (o rotunjire pe linie, TVA = suma TVA-urilor pe linii) e verificată pe 20 de cazuri numerice, cu furnizorul simulat care respinge orice diferență; **confirmarea în SmartBill rămâne PASUL SEPARAT al utilizatorului** (`docs/FACTURARE-VERIFICARE-ROTUNJIRE.md`), iar LIVE e blocat până atunci.
+  - 🟡 **12 (TVA la transport și la taxa de ramburs):** regula provizorie din magazin (sume cu TVA inclus, TVA extras din brut cu `tax.standardRate`, linii separate pe factură; transportul paletizat la fel). **De confirmat cu contabilul înainte de lansare.**
+  - 🟡 **11 (transportul la retur parțial):** storno parțial doar pe produse; transportul NU se stornează automat.
+  - **13 (card confirmat după reîncercare):** o singură factură pe comandă (unicitate pe comandă și tip), emisă când plata reușită se confirmă; data facturii e ziua emiterii.
+  - 🟡 **14 (rambursare parțială):** o rambursare parțială de bani nu emite niciun document; stornoul parțial se cere explicit, pe produse. De decis cu contabilul.
 - Consecințele pentru cod sunt trecute în TODO, Faza 13 (factura fără descărcare pentru «La comandă» sau fără stoc; cel mult 2 zecimale pe factură). Nu sunt rezolvate încă.
 
 ---

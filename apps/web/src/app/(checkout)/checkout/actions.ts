@@ -4,10 +4,12 @@ import { z } from "zod";
 import {
   OrderError,
   PAYMENT_METHODS,
+  readPickupHours,
   validateCui,
   verifyCuiForCheckout,
   type LocalityOption,
 } from "@ecom/core";
+import { getDb } from "@ecom/db";
 import { DomainError, getLogger, localDateTime } from "@ecom/shared";
 import { resolveCartOwner, resolveOwnerForWrite } from "@/lib/cart";
 import {
@@ -72,10 +74,16 @@ export async function previewCheckoutAction(input: unknown): Promise<PreviewActi
       paymentMethod: parsed.data.paymentMethod ?? null,
       vatId,
     });
-    const [format, settings] = await Promise.all([getStorefrontFormat(), readCheckoutSettings()]);
+    const [format, settings, pickupHours] = await Promise.all([
+      getStorefrontFormat(),
+      readCheckoutSettings(),
+      readPickupHours(getDb()),
+    ]);
     return {
       ok: true,
-      preview: toCheckoutPreviewDto(preview, format, settings, { isCompany: vatId !== null }),
+      preview: toCheckoutPreviewDto(preview, { ...format, pickupHours }, settings, {
+        isCompany: vatId !== null,
+      }),
     };
   } catch (error) {
     if (error instanceof DomainError) return { ok: false, code: "invalid_input" };

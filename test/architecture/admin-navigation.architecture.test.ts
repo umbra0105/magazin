@@ -163,6 +163,8 @@ describe("grupul «Comenzi» din meniu (același model ca «Catalog»)", () => {
       payments: "payments.read",
       shipments: "orders.fulfill",
       codReconciliation: "orders.read",
+      invoices: "invoices.read",
+      uninvoiced: "invoices.read",
       offers: "orders.offers",
       emailTemplates: "email.read",
       installRequests: "orders.read",

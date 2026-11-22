@@ -668,8 +668,9 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `email.read` — Vede șabloanele de email, previzualizările și jurnalul de trimiteri (inclusiv emailurile blocate) | ✓ | ✓ | ✓ |  |  |  |  |
 | `email.write` — Suprascrie șabloanele de email, trimite emailuri de test și retrimite emailuri din jurnal | ✓ | ✓ |  |  |  |  |  |
 | `email.configure` — Configurează serverul SMTP (parola, testul conexiunii); doar Owner, ca la cheile de integrare | ✓ |  |  |  |  |  |  |
-| `invoices.read` — Vede facturile | ✓ | ✓ |  |  |  |  | ✓ |
-| `invoices.write` — Emite și stornează facturi | ✓ | ✓ |  |  |  |  |  |
+| `invoices.read` — Vede facturile | ✓ | ✓ | ✓ |  |  |  | ✓ |
+| `invoices.write` — Emite și stornează facturi | ✓ | ✓ | ✓ |  |  |  |  |
+| `invoices.configure` — Configurează furnizorul de facturare (chei, mod test/live, activare); doar Owner, ca la cheile de integrare | ✓ |  |  |  |  |  |  |
 | `reports.read` — Vede rapoartele operaționale | ✓ | ✓ | ✓ |  |  |  | ✓ |
 | `reports.financial` — Vede rapoartele financiare | ✓ | ✓ |  |  |  |  | ✓ |
 | `settings.read` — Vede setările | ✓ | ✓ |  |  |  |  |  |

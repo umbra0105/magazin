@@ -5,6 +5,7 @@
  */
 import { pluralRo } from "@ecom/shared/plural";
 import { adminEmailRo, adminOrdersRo } from "./admin-orders-ro";
+import { adminInvoicingRo } from "./admin-invoicing-ro";
 import { adminShippingRo } from "./admin-shipping-ro";
 
 /** Acord cu numărul în română (1 = singular, 0 și 2–19 = plural, 20+ cu «de»); funcția comună și testată din `@ecom/shared`. */
@@ -141,6 +142,8 @@ export const ro = {
     orders: adminOrdersRo,
     /** Livrare și AWB (Faza 12): textele stau în `admin-shipping-ro.ts`. */
     shipping: adminShippingRo,
+    /** Facturare (Faza 13): textele stau în `admin-invoicing-ro.ts`. */
+    invoicing: adminInvoicingRo,
     email: adminEmailRo,
     notifications: {
       title: "Notificări",
@@ -231,6 +234,10 @@ export const ro = {
       codReconciliation: "Rambursuri",
       palletSettings: "Transport paletizat",
       carrierSettings: "Curieri",
+      invoices: "Facturi",
+      uninvoiced: "Fără factură",
+      companyData: "Datele firmei",
+      invoicingSettings: "Facturare",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {
@@ -3726,6 +3733,7 @@ export const ro = {
       pickupLede: "De la sediul magazinului, fără cost de transport.",
       pickupAddress: (address: string) => `Adresa de ridicare: ${address}`,
       pickupFrom: (address: string) => `Ridicare personală de la: ${address}`,
+      pickupHours: (hours: string) => `Program de ridicare: ${hours}`,
       // cu ridicare personală, adresa cerută la pasul 2 nu e o adresă de livrare: e adresa clientului, pentru contact și facturare
       stepsPickup: { delivery: "Adresa ta (contact și facturare)" },
       billingSamePickup: "Aceleași date ca la adresa ta",
@@ -3987,6 +3995,7 @@ export const ro = {
       deliveryTo: "Livrare în",
       pickupLabel: "Ridicare",
       pickupFrom: "Ridicare personală de la:",
+      pickupHours: "Program de ridicare:",
       pickupNoAddress: "Ridicare personală",
       estimate: (days: number) => `Estimare: aproximativ ${countOf(days, "zi", "zile", "de zile")}`,
       leadTime: (days: number) =>

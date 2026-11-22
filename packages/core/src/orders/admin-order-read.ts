@@ -1,6 +1,7 @@
 import type { Db } from "../db-tx";
 import type { AttentionReason } from "../payments/payment-errors";
 import { pickupAddressTextFromSnapshot } from "../shipping/pickup-address";
+import { readPickupHours } from "../shipping/pickup-hours";
 import { listOrderNotes, type OrderNoteDto } from "./order-notes";
 
 /**
@@ -132,6 +133,8 @@ export interface AdminOrderDetail {
     freeShipping: boolean;
     /** Adresa MAGAZINULUI din snapshot, la ridicare; niciodată adresa clientului. */
     pickupAddressText: string | null;
+    /** Programul de ridicare din setări, doar la ridicare personală și doar când e completat. */
+    pickupHoursText: string | null;
   };
   addresses: AdminOrderAddress[] | null;
   customerNote: string | null;
@@ -243,6 +246,7 @@ export async function getAdminOrderDetail(
       freeShipping: snapshot["freeShipping"] === true,
       pickupAddressText:
         snapshot["kind"] === "pickup" ? pickupAddressTextFromSnapshot(snapshot) : null,
+      pickupHoursText: snapshot["kind"] === "pickup" ? await readPickupHours(db) : null,
     },
     addresses: viewer.pii
       ? order.addresses

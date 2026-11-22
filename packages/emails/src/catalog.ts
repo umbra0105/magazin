@@ -70,6 +70,9 @@ function paymentDeliveryBlock(order: OrderEmailModel): EmailBlock {
           : order.payment.methodLabel,
       },
       { label: order.delivery.heading, value: order.delivery.text },
+      ...(order.delivery.pickupHoursText
+        ? [{ label: "Program de ridicare", value: order.delivery.pickupHoursText }]
+        : []),
       ...(order.delivery.termText
         ? [{ label: "Termen de executare", value: order.delivery.termText }]
         : []),
@@ -565,6 +568,30 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
     build: (context) =>
       context.vars["linkAdmin"]
         ? [{ type: "button", label: "Vezi stocul", link: context.vars["linkAdmin"] }]
+        : [],
+  },
+  {
+    key: "internal.invoice_failed",
+    label: "Alertă internă: factura nu s-a putut emite",
+    description:
+      "Trimis o singură dată pe document (după 3 eșecuri de emitere, la un rezultat nesigur sau la o diferență de sumă), către utilizatorii activi cu email verificat și permisiunea de facturare (reverificați la fiecare trimitere). Nu conține date ale clientului.",
+    audience: "internal",
+    wired: true,
+    phaseNote: null,
+    variables: [
+      COMMON.magazin,
+      COMMON.numar,
+      v("motiv", "Motivul scurt", "3 încercări eșuate de emitere"),
+      v("linkAdmin", "Linkul comenzii în admin", "https://magazin.exemplu/admin/comenzi/exemplu"),
+    ],
+    defaultSubject: "Factura comenzii {{numar}} nu s-a putut emite – {{magazin}}",
+    heading: "Factura nu s-a putut emite",
+    preview: "Documentul fiscal al comenzii {{numar}} cere atenție.",
+    defaultIntro:
+      "Documentul fiscal al comenzii {{numar}} nu s-a putut emite ({{motiv}}). Comanda nu e blocată; deschide comanda din admin ca să vezi jurnalul documentului și să reîncerci.",
+    build: (context) =>
+      context.vars["linkAdmin"]
+        ? [{ type: "button", label: "Vezi comanda", link: context.vars["linkAdmin"] }]
         : [],
   },
   // --- șabloane înregistrate, declanșatorul vine în altă fază ---

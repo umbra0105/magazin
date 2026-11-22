@@ -421,7 +421,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
   const chosenOffer = preview?.offers.find((o) => o.code === values.offerCode) ?? null;
   const isPickup = chosenOffer?.kind === "pickup";
   const pickupFrom =
-    isPickup && chosenOffer?.addressText ? m.pickupFrom(chosenOffer.addressText) : null;
+    isPickup && chosenOffer?.addressText
+      ? chosenOffer.hoursLine
+        ? `${m.pickupFrom(chosenOffer.addressText)}. ${chosenOffer.hoursLine}`
+        : m.pickupFrom(chosenOffer.addressText)
+      : null;
 
   const summaryOf = (id: StepId): string | null => {
     if (stepIndex(id) >= reached && open !== id) return null;
@@ -765,6 +769,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
                     {offer.addressLine ? (
                       <span className="text-sm" data-offer-address>
                         {offer.addressLine}
+                      </span>
+                    ) : null}
+                    {offer.hoursLine ? (
+                      <span className="text-sm" data-offer-hours>
+                        {offer.hoursLine}
                       </span>
                     ) : null}
                     {offer.demo ? (

@@ -62,6 +62,8 @@ export interface OrderEmailModel {
     text: string;
     /** Termenul de execuție în clar («aproximativ 3 zile»), dacă se cunoaște. */
     termText: string | null;
+    /** Doar ridicarea personală: programul de ridicare (setarea `company.pickupHours`), doar când e completat. */
+    pickupHoursText?: string | null;
   };
   /** Cel puțin o linie «La comandă»: se adaugă nota despre retragere. */
   hasOnOrderLines: boolean;
@@ -98,6 +100,7 @@ export const TEMPLATE_KEYS = [
   "internal.stock_out",
   "internal.installation_request",
   "internal.stock_sync_stale",
+  "internal.invoice_failed",
   "return.received",
   "return.approved",
   "return.rejected",

@@ -2,7 +2,9 @@ import {
   STOCK_SYNC_ALERT_TEMPLATE,
   formatCompanyAddress,
   getOrderSummary,
+  isInvoiceAlertRecipient,
   isStockAlertRecipient,
+  INVOICE_ALERT_TEMPLATE,
   issueRetryTokenFor,
   type DispatchRow,
   type Db,
@@ -157,6 +159,8 @@ function orderModelOf(summary: OrderSummary, store: StoreEmailSettings): OrderEm
           // adresa MAGAZINULUI din snapshot; fără ea, doar eticheta (niciodată adresa clientului)
           text: summary.shipping.pickupAddressText ?? "adresa magazinului",
           termText: null,
+          // programul de ridicare, doar când e completat în setări (se citește la trimitere, nu din snapshot)
+          pickupHoursText: summary.shipping.pickupHoursText,
         }
       : {
           kind: "courier",
@@ -234,6 +238,12 @@ export async function buildOrderEmailContext(
     };
   }
 
+  // alerta de facturare: destinatarul se REVERIFICĂ la trimitere (rol retras, email schimbat între timp)
+  if (dispatch.template === INVOICE_ALERT_TEMPLATE) {
+    if (!(await isInvoiceAlertRecipient(env.db, dispatch.recipient))) {
+      return { kind: "skip", reason: "destinatarul nu mai are drept la alerta de facturare" };
+    }
+  }
   const order = await env.db.order.findUnique({
     where: { id: dispatch.orderId },
     select: {
@@ -298,6 +308,9 @@ export async function buildOrderEmailContext(
     case "order.shipped":
       vars["awb"] = typeof data["awb"] === "string" ? data["awb"] : "";
       vars["curier"] = typeof data["carrier"] === "string" ? data["carrier"] : "";
+      break;
+    case "internal.invoice_failed":
+      vars["motiv"] = typeof data["reason"] === "string" ? data["reason"] : "";
       break;
     case "internal.stock_out": {
       const variantId = typeof data["variantId"] === "string" ? data["variantId"] : "";

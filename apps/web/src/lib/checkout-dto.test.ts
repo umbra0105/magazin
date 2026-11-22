@@ -80,6 +80,24 @@ describe("oferta de ridicare în previzualizarea checkout-ului", () => {
   });
 });
 
+describe("programul de ridicare în oferta de ridicare (Faza 13)", () => {
+  const build = (pickupHours: string | null) =>
+    toCheckoutPreviewDto(preview([offer(), PICKUP], PICKUP), { ...FORMAT, pickupHours }, LIMITS, {
+      isCompany: false,
+    }).offers;
+
+  it("apare lângă adresa de ridicare, doar când e completat", () => {
+    const pickup = build("Luni–Vineri, 09:00–17:00").find((o) => o.kind === "pickup");
+    expect(pickup?.hoursLine).toBe("Program de ridicare: Luni–Vineri, 09:00–17:00");
+    expect(build(null).find((o) => o.kind === "pickup")?.hoursLine).toBeNull();
+    expect(build("").find((o) => o.kind === "pickup")?.hoursLine).toBeNull();
+  });
+
+  it("oferta de curier nu are program", () => {
+    expect(build("Luni–Vineri").find((o) => o.kind === "courier")?.hoursLine).toBeNull();
+  });
+});
+
 /** Rambursul la ridicare (decizia din 2026-11-19): rămâne oferit, dar cu textul «în magazin», nu «curierului». */
 describe("rambursul oferit la ridicarea personală", () => {
   const withMethods = (selected: RateOffer, fee: number) =>
