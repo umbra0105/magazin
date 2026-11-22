@@ -6,6 +6,7 @@ import {
   getAdminOrderDetail,
   INSTALLATION_STATUSES,
   listOrderInvoices,
+  listOrderReturns,
   listOrderShipments,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
@@ -19,6 +20,7 @@ import {
 } from "@/components/admin/orders/order-panels";
 import { CrumbLabel } from "@/components/admin/crumb-labels";
 import { InvoicePanel } from "@/components/admin/invoicing/invoice-panel";
+import { PickupButton } from "@/components/admin/returns/pickup-button";
 import { ShipmentPanel, type ShipmentDto } from "@/components/admin/shipping/shipment-panel";
 import { OrderActions } from "@/components/admin/orders/order-actions";
 import { requireAdmin } from "@/lib/admin-page";
@@ -118,6 +120,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const shippingAddress = detail.addresses?.find((a) => a.kind === "shipping") ?? null;
   const billingAddress = detail.addresses?.find((a) => a.kind === "billing") ?? null;
   const pickup = detail.shipping.kind === "pickup";
+  const orderReturns = can(subject, "returns.view") ? await listOrderReturns(db, detail.id) : [];
   const refundedTotal = (detail.payments ?? []).reduce((sum, p) => sum + p.refundCommittedMinor, 0);
   const owed = detail.refundable?.remainingMinor ?? 0;
   const attention = (detail.payments ?? []).find((p) => p.attentionReason)?.attentionReason ?? null;
@@ -462,6 +465,32 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               )
             }
           />
+        </Section>
+      ) : null}
+
+      {can(subject, "returns.view") ? (
+        <Section id="returns" title={getMessages().admin.returns.orderSection.title}>
+          {orderReturns.length === 0 ? (
+            <p className="text-body text-ink-secondary" data-order-returns-empty>
+              {getMessages().admin.returns.orderSection.none}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2" data-order-returns>
+              {orderReturns.map((r) => (
+                <li key={r.id} className="flex flex-wrap items-center gap-3">
+                  <Link href={`/admin/comenzi/retururi/${r.id}`} className="underline">
+                    R-{r.number}
+                  </Link>
+                  <Badge variant="info">
+                    {getMessages().admin.returns.status[r.status] ?? r.status}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+          {pickup && can(subject, "orders.fulfill") && detail.fulfillmentStatus !== "delivered" ? (
+            <PickupButton orderId={detail.id} />
+          ) : null}
         </Section>
       ) : null}
 

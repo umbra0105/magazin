@@ -221,6 +221,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
           {defaultVariant ? (
             <PurchasePanel
               productTitle={product.title}
+              wishlist={chrome.slots.wishlist === "active"}
               options={product.options}
               defaultVariantId={defaultVariant.id}
               contact={{

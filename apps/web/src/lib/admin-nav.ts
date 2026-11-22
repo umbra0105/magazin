@@ -55,6 +55,7 @@ export type AdminNavItemId =
   | "carrierSettings"
   | "invoices"
   | "uninvoiced"
+  | "returns"
   | "companyData"
   | "invoicingSettings";
 
@@ -129,6 +130,7 @@ export const ORDERS_ITEMS: readonly AdminNavItem[] = [
   { id: "codReconciliation", href: "/admin/comenzi/rambursuri", permission: "orders.read" },
   { id: "invoices", href: "/admin/comenzi/facturi", permission: "invoices.read" },
   { id: "uninvoiced", href: "/admin/comenzi/fara-factura", permission: "invoices.read" },
+  { id: "returns", href: "/admin/comenzi/retururi", permission: "returns.view" },
   { id: "offers", href: "/admin/comenzi/oferte", permission: "orders.offers" },
   { id: "emailTemplates", href: "/admin/comenzi/sabloane-email", permission: "email.read" },
   {

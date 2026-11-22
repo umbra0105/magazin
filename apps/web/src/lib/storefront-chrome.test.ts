@@ -17,8 +17,8 @@ describe("headerSlots: elementele din header care aparțin fazelor viitoare", ()
     });
   });
 
-  it("starea oficială de azi: căutarea și coșul sunt gata, favoritele nu", () => {
-    expect(STOREFRONT_READINESS).toEqual({ search: true, cart: true, wishlist: false });
+  it("starea oficială de azi: căutarea, coșul și favoritele (Faza 14, în spatele flag-ului) sunt gata", () => {
+    expect(STOREFRONT_READINESS).toEqual({ search: true, cart: true, wishlist: true });
   });
 
   it("când faza e gata, elementul devine activ", () => {

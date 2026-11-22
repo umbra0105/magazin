@@ -1,5 +1,6 @@
 "use client";
 
+import { WishlistButton } from "../account/wishlist-button";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { StoreButton, StorePill, type StorePillTone } from "@ecom/ui";
 import { QUANTITY_FACTOR, formatQuantity, quantityFromTicks } from "@ecom/shared/quantity";
@@ -58,8 +59,11 @@ export function PurchasePanel({
   defaultVariantId,
   contact,
   productTitle,
+  wishlist = false,
 }: {
   productTitle: string;
+  /** Arată butonul «Favorite» (flag-ul `wishlist` pornit). */
+  wishlist?: boolean;
   options: readonly PanelOption[];
   variants: readonly PanelVariant[];
   defaultVariantId: string;
@@ -174,6 +178,9 @@ export function PurchasePanel({
         <StorePill tone={selected.tone}>{selected.availabilityLabel}</StorePill>
         {selected.availabilityDetail ? (
           <span className="text-sm text-ink-secondary">{selected.availabilityDetail}</span>
+        ) : null}
+        {wishlist ? (
+          <WishlistButton variantId={selected.id} name={productTitle} className="ml-auto" />
         ) : null}
       </div>
 
