@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { can, getAdminOrderDetail, INSTALLATION_STATUSES, listOrderShipments } from "@ecom/core";
+import {
+  can,
+  getAdminOrderDetail,
+  INSTALLATION_STATUSES,
+  listOrderInvoices,
+  listOrderShipments,
+} from "@ecom/core";
 import { getDb } from "@ecom/db";
 import { templateDefinition } from "@ecom/jobs";
 import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared";
@@ -12,10 +18,12 @@ import {
   ResendEmailButton,
 } from "@/components/admin/orders/order-panels";
 import { CrumbLabel } from "@/components/admin/crumb-labels";
+import { InvoicePanel } from "@/components/admin/invoicing/invoice-panel";
 import { ShipmentPanel, type ShipmentDto } from "@/components/admin/shipping/shipment-panel";
 import { OrderActions } from "@/components/admin/orders/order-actions";
 import { requireAdmin } from "@/lib/admin-page";
 import { formatDateTime } from "@/lib/format-date";
+import { toInvoiceDocDto } from "@/lib/invoice-dto";
 import { formatMoney } from "@/lib/money-input";
 import {
   EMAIL_STATUS_TONE,
@@ -57,6 +65,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const regional = await getSettings().getGroup("regional");
   const money = (minor: number) => formatMoney(minor, regional.currency, regional.locale);
   const when = (date: Date) => formatDateTime(date, regional.locale, regional.timezone);
+
+  // documentele fiscale ale comenzii (Faza 13): sumele și datele se formatează pe server, fără nicio dată personală
+  const invoiceFormat = {
+    currency: regional.currency,
+    locale: regional.locale,
+    timezone: regional.timezone,
+  };
+  const invoiceDocs = can(subject, "invoices.read")
+    ? (await listOrderInvoices(db, id)).map((doc) => toInvoiceDocDto(doc, invoiceFormat))
+    : [];
+  const invoicingProvider = (await getSettings().getGroup("invoicing")).provider;
 
   // limita rolului Suport: ce mai poate rambursa pe această comandă (serverul o aplică oricum, sub blocare)
   const unlimited = can(subject, "payments.refund");
@@ -422,6 +441,29 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           manualCarriers={manualCarriers}
         />
       </Section>
+
+      {can(subject, "invoices.read") ? (
+        <Section id="invoicing" title={getMessages().admin.invoicing.panel.title}>
+          <InvoicePanel
+            orderId={detail.id}
+            docs={invoiceDocs}
+            canWrite={can(subject, "invoices.write")}
+            providerOn={invoicingProvider !== ""}
+            canIssue={
+              !["cancelled", "draft", "returned"].includes(detail.status) &&
+              !invoiceDocs.some(
+                (d) => d.kind === "invoice" && d.status !== "skipped" && d.status !== "failed",
+              )
+            }
+            canReverse={
+              invoiceDocs.some((d) => d.kind === "invoice" && d.status === "issued") &&
+              !invoiceDocs.some(
+                (d) => d.kind === "storno" && d.docKey === "storno:total" && d.status !== "skipped",
+              )
+            }
+          />
+        </Section>
+      ) : null}
 
       <Section id="delivery" title={t.detail.sections.delivery}>
         {pickup ? (

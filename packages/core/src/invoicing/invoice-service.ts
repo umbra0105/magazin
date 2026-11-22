@@ -88,6 +88,10 @@ const UNCERTAIN_CODES: ReadonlySet<string> = new Set([
   "INVOICE_PROVIDER_TIMEOUT",
   "INVOICE_BAD_RESPONSE",
 ]);
+/** Reîncercarea după acest cod cere confirmarea că documentul NU există la furnizor (rezultat nesigur). */
+export const isUncertainInvoiceCode = (code: string | null): boolean =>
+  code !== null && UNCERTAIN_CODES.has(code);
+
 const DOC_SELECT = {
   id: true,
   orderId: true,

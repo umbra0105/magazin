@@ -345,8 +345,9 @@ describe("plățile respectă regulile (codul real)", () => {
       .filter((f) => /confirmLive\s*:\s*true/.test(stripComments(f.content)))
       .map((f) => f.path)
       .sort();
-    // plățile (Faza 10) și curierii (Faza 12) au fiecare ecranul lor de admin, cu aceeași gardă pe server
+    // plățile (Faza 10), curierii (Faza 12) și facturarea (Faza 13) au fiecare ecranul lor de admin, cu aceeași gardă pe server
     expect(callers).toEqual([
+      "apps/web/src/components/admin/invoicing/invoicing-settings.tsx",
       "apps/web/src/components/admin/payments/provider-settings.tsx",
       "apps/web/src/components/admin/shipping/carrier-settings.tsx",
     ]);

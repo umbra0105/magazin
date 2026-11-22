@@ -52,7 +52,11 @@ export type AdminNavItemId =
   | "shipments"
   | "codReconciliation"
   | "palletSettings"
-  | "carrierSettings";
+  | "carrierSettings"
+  | "invoices"
+  | "uninvoiced"
+  | "companyData"
+  | "invoicingSettings";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -123,6 +127,8 @@ export const ORDERS_ITEMS: readonly AdminNavItem[] = [
   { id: "payments", href: "/admin/comenzi/plati", permission: "payments.read" },
   { id: "shipments", href: "/admin/comenzi/expedieri", permission: "orders.fulfill" },
   { id: "codReconciliation", href: "/admin/comenzi/rambursuri", permission: "orders.read" },
+  { id: "invoices", href: "/admin/comenzi/facturi", permission: "invoices.read" },
+  { id: "uninvoiced", href: "/admin/comenzi/fara-factura", permission: "invoices.read" },
   { id: "offers", href: "/admin/comenzi/oferte", permission: "orders.offers" },
   { id: "emailTemplates", href: "/admin/comenzi/sabloane-email", permission: "email.read" },
   {
@@ -153,11 +159,15 @@ export function itemHref(
 export const SETTINGS_ITEMS: readonly AdminNavItem[] = [
   { id: "appearance", href: "/admin/setari/aspect", permission: "settings.read" },
   { id: "maintenance", href: "/admin/setari/mentenanta", permission: "settings.read" },
+  // datele firmei (facturare, subsol, JSON-LD, ridicare): citire cu `settings.read`, salvare cu `settings.write`
+  { id: "companyData", href: "/admin/setari/firma", permission: "settings.read" },
   { id: "cartSettings", href: "/admin/setari/cos", permission: "settings.read" },
   { id: "shippingZones", href: "/admin/setari/livrare", permission: "settings.read" },
   { id: "palletSettings", href: "/admin/setari/paleti", permission: "settings.read" },
   // cheile curierilor (criptate): doar cu `integrations.write` (Owner), ca la plăți
   { id: "carrierSettings", href: "/admin/setari/curieri", permission: "integrations.write" },
+  // cheile furnizorului de facturare (criptate): doar cu `invoices.configure` (Owner), ca la integrări
+  { id: "invoicingSettings", href: "/admin/setari/facturare", permission: "invoices.configure" },
   // cheile furnizorilor de plată: doar cu `payments.configure` (Owner), ca la integrări
   { id: "paymentSettings", href: "/admin/setari/plati", permission: "payments.configure" },
   // serverul SMTP (parola criptată): doar cu `email.configure` (Owner), ca la integrări
