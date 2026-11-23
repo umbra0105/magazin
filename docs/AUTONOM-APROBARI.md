@@ -29,6 +29,7 @@ Modul B:
 - Faza 10: aprobat, 2026-11-19, plăți verificate cu DEMO
 - Faza 13: aprobat, 2026-11-22, facturare verificată
 - Faza 14b: în așteptare
+- Faza 14c: în așteptare
 - Faza 15: în așteptare
 - Faza 15b: în așteptare
 
