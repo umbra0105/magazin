@@ -144,9 +144,9 @@ Pentru comenzile mixte, produsele fizice își păstrează dreptul de retur de 1
 |---|---|
 | Coș doar digital | Fără pas de livrare, fără adresă de livrare, doar adresă de facturare. Ramburs ascuns. |
 | Coș doar fizic | Fluxul normal |
-| Coș mixt | Transport calculat **doar pe liniile fizice**. Adresă de livrare obligatorie. Ramburs disponibil, dar produsul digital se livrează abia la confirmarea încasării *(🟡 momentul exact — la livrare confirmată sau la virament — e o decizie deschisă, vezi `10` Partea I)* |
+| Coș mixt | Transport calculat **doar pe liniile fizice**. Adresă de livrare obligatorie. Ramburs disponibil, dar produsul digital se livrează abia la **livrarea confirmată** a părții fizice *(✅ decis de utilizator, 2026-11-23)* |
 | Prag de transport gratuit | Se calculează **doar din valoarea produselor fizice** (altfel cumperi un curs de 300 lei și primești transport gratuit la o șurubelniță) |
-| Comandă mixtă plătită cu ramburs | Digitalul NU se eliberează la plasare. 🟡 **Deschis:** recomandarea e eliberarea la **livrare confirmată**, nu la virament (decizia utilizatorului în așteptare, `10` Partea I). Explică regula clientului în checkout. |
+| Comandă mixtă plătită cu ramburs | Digitalul NU se eliberează la plasare. ✅ **Decis (2026-11-23):** accesul se acordă la **livrare confirmată** (`fulfillmentStatus = delivered`: marcajul adminului pe expediere sau «Marchează ridicată»; cu mai multe expedieri, când toate liniile fizice sunt livrate), nu la virarea banilor de către curier. Regula se explică clientului în checkout, în confirmare și în emailul comenzii. |
 | Rambursare parțială | Doar linia rambursată își pierde entitlement-ul |
 
 `fulfillmentStatus` trebuie să suporte `partially_fulfilled`: digitalul livrat, fizicul încă nu.

@@ -70,6 +70,7 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | ✅ | Curieri: **wootPRO** ca agregator principal + **Sameday direct** ca al doilea adaptor |
 | ✅ | ⚠️ **Fără integrare Cargus separată** — Sameday a achiziționat Cargus în august 2026, sistemele se unifică |
 | ✅ | Video tutoriale: **Bunny Stream** în producție, driver `local` pe localhost |
+| ✅ | **Produs digital în comandă mixtă cu ramburs (decizia utilizatorului, 2026-11-23):** accesul se acordă la **livrare confirmată** (`fulfillmentStatus = delivered`, toate liniile fizice), nu la virarea banilor de către curier; regula se explică clientului în checkout, confirmare și email. La card: la plata confirmată; la transfer bancar: la «Marchează plătit»; la comenzile doar digitale, rambursul se ascunde |
 | ✅ | Produse digitale: **acces pe viață** · vânzare **doar în România** (ca toate produsele, fără OSS) · TVA 21% · **lecție de preview gratuită** pe pagina de produs |
 | ✅ | Texte legale: **template-uri generate de instalator**, revizuite de avocat înainte de lansare |
 | ✅ | Depozite: **model multi-depozit în bază, UI simplu cu un depozit implicit**, multi activabil prin flag |
@@ -101,7 +102,6 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | 🟡 | **Voucher cadou: metodă de plată sau reducere?** | Contabilul a spus „reducere din comandă", dar proiectul îl tratează ca **metodă de plată** (nu reduce baza de TVA). Rămâne metodă de plată până lămurește contabilul diferența dintre **voucher cumpărat** (plată anticipată) și **cod de reducere gratuit**. *Consecință colaterală:* un voucher poate acoperi integral o comandă (regula „în bani ≥ transport" privește punctele, nu voucherele); de stabilit cum se tratează plata fără gateway | Faza 15b |
 | 🟡 | **Termenul legal minim de valabilitate al voucherelor** | Contabilul se interesează | Faza 15b |
 | 🟡 | **Puncte de loialitate: TVA pe 100 sau pe 90?** | Contabilul a spus „linie de discount, nu afectează baza de TVA", ambiguu. Întrebare trimisă: la 100 lei cu 10 lei plătiți în puncte, TVA se calculează pe 100 sau pe 90? | Faza 15b |
-| 🟡 | **Produs digital în comandă mixtă cu ramburs** | Recomandarea: eliberare la **livrare confirmată**, nu la virament (`11` spune acum „la confirmarea încasării"). În așteptarea deciziei utilizatorului | Faza 14b |
 | 🟡 | **Storage-ul de producție** | Codul vorbește S3 generic (`STORAGE_DRIVER`, `S3_*` din `.env`); furnizorul se schimbă fără modificări de cod. Candidați: Cloudflare R2, alt S3 gestionat, MinIO self-hosted. *Mutat din Faza 3 (decizie utilizator, 2026-10-12): nu blochează implementarea media* | Faza 18 |
 
 ---
