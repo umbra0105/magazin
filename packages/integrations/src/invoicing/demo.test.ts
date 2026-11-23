@@ -140,3 +140,49 @@ describe("furnizorul DEMO spune dacă a descărcat gestiunea", () => {
     expect((await provider.reverseInvoice()).stockDischarged).toBe(false);
   });
 });
+
+describe("furnizorul DEMO: refuză orice storno care ar duce suma cumulată peste totalul facturii", () => {
+  const negative = (totalMinor: number): InvoiceDocLine =>
+    line({
+      quantityTicks: -10_000n,
+      unitPriceMinor: -totalMinor === 0 ? 0 : Math.abs(totalMinor),
+      lineTotalMinor: totalMinor,
+      taxMinor: -Math.round((Math.abs(totalMinor) * 2100) / 12100),
+    });
+
+  it("un storno parțial care încape sub total e acceptat, unul care îl depășește e refuzat cu cod stabil", async () => {
+    const provider = new DemoInvoiceProvider({ env });
+    const ok = {
+      ...request([negative(-10_000)]),
+      reversal: { invoiceTotalMinor: 100_000, alreadyReversedMinor: 90_000 },
+    };
+    await expect(provider.issueInvoice(ok)).resolves.toMatchObject({ totalMinor: -10_000 });
+    const over = {
+      ...request([negative(-10_000)]),
+      reversal: { invoiceTotalMinor: 100_000, alreadyReversedMinor: 90_001 },
+    };
+    await expect(provider.issueInvoice(over)).rejects.toMatchObject({
+      code: "INVOICE_STORNO_EXCEEDS_TOTAL",
+    });
+    await expect(provider.issueInvoice(over)).rejects.toBeInstanceOf(IntegrationError);
+  });
+
+  it("stornoul total (reverseInvoice) cu ceva deja stornat e refuzat; fără nimic stornat, trece", async () => {
+    const provider = new DemoInvoiceProvider({ env });
+    const ref = { series: "DEMO", number: "1" };
+    await expect(
+      provider.reverseInvoice(ref, new Date(), {
+        invoiceTotalMinor: 100_000,
+        alreadyReversedMinor: 40_000,
+      }),
+    ).rejects.toMatchObject({ code: "INVOICE_STORNO_EXCEEDS_TOTAL" });
+    await expect(
+      provider.reverseInvoice(ref, new Date(), {
+        invoiceTotalMinor: 100_000,
+        alreadyReversedMinor: 0,
+      }),
+    ).resolves.toMatchObject({ simulated: true });
+    // apelul vechi, fără context, rămâne valid
+    await expect(provider.reverseInvoice()).resolves.toMatchObject({ simulated: true });
+  });
+});

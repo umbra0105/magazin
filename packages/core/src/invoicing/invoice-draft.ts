@@ -24,6 +24,8 @@ export const INVOICE_DRAFT_CODES = [
   "INVOICE_QUANTITY_PRECISION",
   "INVOICE_UNSUPPORTED_ORDER",
   "INVOICE_RETURN_INVALID",
+  /** Stornourile existente depășesc factura (cantitate sau brut): nu se mai creează niciun document peste ele. */
+  "INVOICE_STORNO_EXCEEDS_TOTAL",
 ] as const;
 export type InvoiceDraftCode = (typeof INVOICE_DRAFT_CODES)[number];
 
@@ -354,6 +356,139 @@ export function buildPartialStorno(
     totalMinor: sum(lines.map((l) => l.lineTotalMinor)),
     taxMinor: sum(lines.map((l) => l.taxMinor)),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Stornoul «total» ca REST nestornat (mini-faza storno-total, decizia 2026-11-23)
+// ---------------------------------------------------------------------------
+
+/** O linie a facturii de stornat (produs, transport sau taxă de ramburs), așa cum e înghețată pe documentul emis. */
+export interface StornoParentLine {
+  kind: "product" | "shipping" | "cod_fee";
+  orderLineId: string | null;
+  sku: string | null;
+  title: string;
+  unitName: string;
+  quantityTicks: bigint;
+  unitPriceMinor: number;
+  lineTotalMinor: number;
+  netMinor: number;
+  taxMinor: number;
+  taxRateBps: number;
+}
+
+/** O linie dintr-un storno existent (parțial), cu cantitate și sume POZITIVE, ca în `invoice_line`. */
+export interface StornoEarlierLine {
+  kind: string;
+  orderLineId: string | null;
+  quantityTicks: bigint;
+  lineTotalMinor: number;
+  taxMinor: number;
+}
+
+/**
+ * Restul nestornat al unei facturi: pe fiecare linie, cantitatea și brutul rămase după toate stornourile existente (ultima bucată ia
+ * restul EXACT al brutului liniei). Liniile neatinse de stornouri se copiază cu valorile lor din factură (inclusiv TVA); liniile
+ * atinse primesc TVA extras din brutul restului, ca orice storno (decizia 2026-11-23: suma TVA poate diferi de TVA-ul liniei cu cel
+ * mult 1 ban, de confirmat cu contabilul). Transportul și taxa de ramburs intră în rest cât timp nu au fost stornate.
+ *
+ * Refuză (nu ascunde): stornouri care depășesc cantitatea sau brutul unei linii, sau un total care nu se închide la ban
+ * (`brut stornat anterior + brut rest = brutul facturii`).
+ */
+export function buildRemainderStorno(
+  parent: readonly StornoParentLine[],
+  earlier: readonly StornoEarlierLine[],
+): PartialStorno {
+  const keyOf = (l: { kind: string; orderLineId: string | null }): string =>
+    l.orderLineId ?? `kind:${l.kind}`;
+  const done = new Map<string, { quantityTicks: bigint; lineTotalMinor: number }>();
+  for (const e of earlier) {
+    const prev = done.get(keyOf(e)) ?? { quantityTicks: 0n, lineTotalMinor: 0 };
+    done.set(keyOf(e), {
+      quantityTicks: prev.quantityTicks + e.quantityTicks,
+      lineTotalMinor: prev.lineTotalMinor + e.lineTotalMinor,
+    });
+  }
+  const known = new Set(parent.map(keyOf));
+  for (const key of done.keys()) {
+    if (!known.has(key)) {
+      throw new InvoiceDraftError(
+        "INVOICE_RETURN_INVALID",
+        "Un storno existent are o linie care nu face parte din factura originală",
+      );
+    }
+  }
+  const lines: DraftLine[] = [];
+  for (const p of parent) {
+    const d = done.get(keyOf(p)) ?? { quantityTicks: 0n, lineTotalMinor: 0 };
+    const remainingQty = p.quantityTicks - d.quantityTicks;
+    const remainingTotal = p.lineTotalMinor - d.lineTotalMinor;
+    if (remainingQty < 0n || remainingTotal < 0) {
+      throw new InvoiceDraftError(
+        "INVOICE_STORNO_EXCEEDS_TOTAL",
+        `Stornourile existente depășesc factura la linia «${p.title}»`,
+        { orderLineId: p.orderLineId, kind: p.kind },
+      );
+    }
+    if (remainingQty === 0n) {
+      if (remainingTotal !== 0) {
+        throw new InvoiceDraftError(
+          "INVOICE_TOTAL_MISMATCH",
+          `Linia «${p.title}» e stornată integral ca cantitate, dar brutul stornat și cel al facturii nu coincid`,
+          { remainingTotal },
+        );
+      }
+      continue;
+    }
+    const untouched = d.quantityTicks === 0n && d.lineTotalMinor === 0;
+    const tax = untouched ? p.taxMinor : vatFromGross(remainingTotal, p.taxRateBps);
+    lines.push({
+      kind: p.kind,
+      orderLineId: p.orderLineId,
+      sku: p.sku,
+      title: p.title,
+      unitName: p.unitName,
+      quantityTicks: remainingQty,
+      unitPriceMinor: p.unitPriceMinor,
+      lineTotalMinor: remainingTotal,
+      netMinor: untouched ? p.netMinor : remainingTotal - tax,
+      taxMinor: tax,
+      taxRateBps: p.taxRateBps,
+      dischargeStock: false,
+    });
+  }
+  const totalMinor = sum(lines.map((l) => l.lineTotalMinor));
+  const earlierMinor = sum(earlier.map((e) => e.lineTotalMinor));
+  const invoiceMinor = sum(parent.map((l) => l.lineTotalMinor));
+  if (earlierMinor + totalMinor !== invoiceMinor) {
+    throw new InvoiceDraftError(
+      "INVOICE_TOTAL_MISMATCH",
+      `Brutul stornat (${earlierMinor} + ${totalMinor} bani) nu coincide cu brutul facturii (${invoiceMinor} bani)`,
+      { earlierMinor, remainderMinor: totalMinor, invoiceMinor },
+    );
+  }
+  return { lines, totalMinor, taxMinor: sum(lines.map((l) => l.taxMinor)) };
+}
+
+/**
+ * Liniile restului, pregătite pentru furnizor: dacă `round(preț unitar × cantitate)` nu dă brutul rămas al liniei (ultima bucată ia
+ * restul EXACT, iar furnizorul recalculează preț × cantitate), linia pleacă «cantitatea 1 × brutul rămas», ca la factură
+ * (`buildInvoiceDraft`, aceeași regulă: documentul nu diferă cu 1 ban de ce s-a încasat). În baza noastră rămân cantitatea reală.
+ */
+export function collapseInexactLines(
+  lines: readonly DraftLine[],
+  serviceUnit: string,
+): DraftLine[] {
+  return lines.map((l) => {
+    if (lineTotalFromUnit(l.unitPriceMinor, l.quantityTicks) === l.lineTotalMinor) return l;
+    return {
+      ...l,
+      quantityTicks: ONE_UNIT_TICKS,
+      unitPriceMinor: l.lineTotalMinor,
+      unitName: serviceUnit,
+      dischargeStock: false,
+    };
+  });
 }
 
 /** Liniile unui storno parțial așa cum le primește furnizorul: cantitate și sume cu semn schimbat (factură cu cantități negative). */

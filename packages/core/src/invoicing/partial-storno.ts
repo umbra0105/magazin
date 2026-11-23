@@ -83,6 +83,14 @@ export async function queuePartialStorno(
         taxRateBps: l.taxRateBps,
       }));
     const storno = buildPartialStorno(source, returned, returns);
+    // apărare în plus: suma stornourilor (brut) nu depășește niciodată totalul facturii
+    const earlierMinor = earlier.reduce((acc, s) => acc + s.totalMinor, 0);
+    if (earlierMinor + storno.totalMinor > parent.totalMinor) {
+      throw new InvoiceServiceError(
+        "INVOICE_STORNO_EXCEEDS_TOTAL",
+        "Stornoul ar duce suma stornată peste totalul facturii",
+      );
+    }
     const created = await tx.invoice.createManyAndReturn({
       data: [
         {

@@ -13,6 +13,7 @@ import {
   type InvoiceProvider,
   type InvoiceRequest,
   type IssuedDocument,
+  type ReversalContext,
 } from "@ecom/shared";
 import { isDemoPaymentAllowed, type DemoGuardEnv } from "../payments/demo-guard";
 
@@ -134,6 +135,15 @@ export class DemoInvoiceProvider implements InvoiceProvider {
   ): IssuedDocument {
     this.maybeFail();
     const totals = demoComputeTotals(request);
+    if (request.reversal) {
+      const cumulative = request.reversal.alreadyReversedMinor + Math.abs(totals.totalMinor);
+      if (cumulative > request.reversal.invoiceTotalMinor) {
+        throw new IntegrationError(
+          "INVOICE_STORNO_EXCEEDS_TOTAL",
+          `Stornourile (${cumulative} bani) ar depăși totalul facturii (${request.reversal.invoiceTotalMinor} bani)`,
+        );
+      }
+    }
     const number = this.nextNumber();
     return {
       series: DEMO_INVOICE_SERIES,
@@ -156,8 +166,21 @@ export class DemoInvoiceProvider implements InvoiceProvider {
     return this.issue(request, "pending", request.useStock);
   }
 
-  async reverseInvoice(): Promise<IssuedDocument> {
+  async reverseInvoice(
+    invoice?: DocumentRef,
+    issueDate?: Date,
+    context?: ReversalContext,
+  ): Promise<IssuedDocument> {
+    void invoice;
+    void issueDate;
     this.maybeFail();
+    // stornoul TOTAL acoperă toată factura: dacă ceva a fost deja stornat, suma cumulată ar depăși totalul
+    if (context && context.alreadyReversedMinor > 0) {
+      throw new IntegrationError(
+        "INVOICE_STORNO_EXCEEDS_TOTAL",
+        `Stornoul total ar depăși totalul facturii: ${context.alreadyReversedMinor} bani sunt deja stornați din ${context.invoiceTotalMinor}`,
+      );
+    }
     const number = this.nextNumber();
     return {
       series: DEMO_INVOICE_SERIES,

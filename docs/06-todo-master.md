@@ -344,13 +344,14 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - **D8 Preferințe de comunicare:** emailurile de serviciu mereu active; «oferte și noutăți» = consimțământ de marketing implicit OPRIT, cu momentul și textul salvate; nimic de marketing trimis în această fază.
 - **Notă:** «Recenziile mele» din linia 2 de mai jos rămâne nebifat, «amânat în Faza 17 (decizia utilizatorului, 2026-11-22)».
 
-- [ ] Dashboard, istoric comenzi, detaliu cu timeline și tracking AWB
-- [ ] Agendă de adrese, descărcare facturi, wishlist, recenziile mele *(recenziile mele: amânat în Faza 17, decizia utilizatorului, 2026-11-22; restul e implementat în Faza 14, de bifat după verificarea utilizatorului)*
-- [ ] Preferințe de comunicare, export date GDPR, ștergere cont cu anonimizare
-- [ ] Schema ReturnRequest + state machine
-- [ ] Client: inițiere retur în fereastra de 14 zile, selectare produse și motiv
-- [ ] Admin: aprobare, AWB retur, recepție, inspecție, rambursare, repunere pe stoc
-- [ ] Emailuri la fiecare tranziție + raport de motive
+- [x] Dashboard, istoric comenzi, detaliu cu timeline și tracking AWB
+- [ ] Agendă de adrese, descărcare facturi, wishlist, recenziile mele *(**«Recenziile mele» rămâne nebifat: amânat în Faza 17 (decizia utilizatorului, 2026-11-22).** Restul punctului, agenda de adrese, descărcarea facturilor și wishlist-ul, e implementat și îmbinat în Faza 14, `ae1deda`)*
+- [x] Preferințe de comunicare, export date GDPR, ștergere cont cu anonimizare
+- [x] Schema ReturnRequest + state machine
+- [x] Client: inițiere retur în fereastra de 14 zile, selectare produse și motiv
+- [x] Admin: aprobare, AWB retur, recepție, inspecție, rambursare, repunere pe stoc
+- [x] Emailuri la fiecare tranziție + raport de motive
+- Faza 14 e îmbinată prin poartă (PR #23, `ae1deda`; `verify:full` pe `e915386`: 4594 / 1829×2 / 614, fără picate; CI 16/16). Punctele acoperite doar de teste automate, nu și de verificarea utilizatorului, sunt în `docs/FINISAJE.md` («Neverificat de utilizator, Faza 14»).
 
 ## FAZA 14b — Produse digitale
 - [ ] 🟡 **Decizie deschisă a utilizatorului, înainte de a începe:** în comanda mixtă plătită cu ramburs, produsul digital se eliberează la **livrare confirmată** (recomandare) sau la virarea banilor? (`10` Partea I)
@@ -612,6 +613,16 @@ Motiv (cauză DOVEDITĂ în `ci-e2e-paralel`, vezi FINISAJE și PROGRESS): `remo
 - [x] Dovada pe fluxul real, pe o bază NOUĂ doar migrată: `checkout.spec.ts --repeat-each=3` cu un proces separat care apelează în buclă curățarea scoped a unui ALT tag (3 din 3 verzi), plus martorul cu ștergerea globală pe codul vechi
 - [x] `docs/FINISAJE.md`: intrarea «Test E2E intermitent, `checkout.spec.ts:146`, cursă între specuri» bifată; patru S3 noi (interacțiunea DEMO `card-payments`/`payments-admin`, lipsa barierei din `e2e-isolated` cu `--no-deps`, interferența latentă din `chromium-global-state`, comentariul depășit din `e2e-projects.ts`)
 - [x] Verificarea finală: `verify:full` o singură dată pe codul final (E2E 585, nemodificat), PR draft, CI verde la push și la cerere cu toate cele 8 verificări, `gate:merge --dry-run`; poarta reală abia după «am verificat, continuă» al utilizatorului _(închisă: `verify:full` pe `c54709d` cu E2E 585 și 0 picate; PR #19 draft, CI 16/16 verde; îmbinată prin poartă la `d68115f`, 2026-11-22; dovada pe fluxul real s-a făcut cu trei rulări succesive, nu cu `--repeat-each`, vezi FINISAJE)_
+
+### Mini-fază `storno-total` (modul A, ramura `faza-storno-total`; cerută de utilizator, 2026-11-23, imediat după Faza 14)
+Motiv (intrarea S3 «Facturare, storno total după storno parțial», `docs/FINISAJE.md`): `queueReverse` (Faza 13) creează `storno:total` pe TOTALUL facturii, fără să țină seama de stornourile parțiale existente. Scenariu: comandă de 1000 lei cu transport gratuit, plătită cu cardul, două retururi (400 + 600): se stornează 400 și apoi 1000, deci 1400 la o factură de 1000. Aceeași cale se atinge din rambursarea manuală (Faza 10), din anulare și din acțiunea manuală de storno din admin.
+- [x] `storno-total` → «A» în `PHASE_MODES` (ramura `faza-storno-total`, etichetele `pre-faza-storno-total` și `faza-storno-total-completa`, garda de aprobări), cu teste; această secțiune; lista modului A din `docs/20` §3
+- [x] Teste scrise ÎNTÂI și văzute picând: 1000 → 400 + 600 (total stornat 1000, nu 1400); cu transport și cu taxă de ramburs; cu linii zecimale; trei stornouri parțiale apoi restul; rest zero; suma TVA a stornourilor; anularea proformei neschimbată; idempotență; aceleași scenarii din cele trei căi (`payment.refunded`, rambursarea manuală, acțiunea manuală de storno); concurența pe Postgres real
+- [x] **Decizie 2026-11-23 (🛑 rezolvat):** restul se emite cu TVA extras din brutul restului, brutul tuturor stornourilor = totalul facturii EXACT, deriva de TVA ≤ 1 ban pe linie atinsă (întrebarea #16 din `INTREBARI-CONTABIL`); restul se emite ca factură cu cantități negative.
+- [x] Stornoul «total» acoperă doar restul nestornat (pe linii, inclusiv transport și taxa de ramburs); fără stornouri parțiale comportamentul rămâne EXACT cel de azi; se numără toate stornourile care nu sunt «sărite», indiferent de stare; calculul și crearea documentului într-o tranzacție care blochează factura părinte; rest zero = doar un eveniment pe factură, fără document
+- [x] Apărare în plus: furnizorul DEMO și serviciul refuză orice storno care ar duce suma cumulată peste totalul facturii (cod de eroare stabil; alertă în admin, fără blocarea comenzii)
+- [x] Returul din Faza 14 NU se modifică (refuzul rambursării care ar completa totalul rămâne); «de reevaluat după `storno-total`» în FINISAJE
+- [ ] Mutanți (cel puțin 4), `verify:full` o singură dată pe codul final, PR draft, CI verde, `gate:merge --dry-run`; poarta reală abia după «am verificat, continuă»
 
 ## Documentație: puncte de reconciliat între `18` / `19` și documentele existente (2026-11-13)
 Verificare făcută la intrarea documentelor 18 și 19: fără credențiale sau date personale în ele, iar linkurile dintre ele sunt corecte. **Regula: documentul existent câștigă până decide utilizatorul.** Fiecare punct se reia la începutul fazei care folosește regula, iar 18 și 19 se ajustează atunci (nu înainte).

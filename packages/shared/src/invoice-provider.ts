@@ -78,6 +78,18 @@ export interface InvoiceRequest {
   fromProforma: DocumentRef | null;
   /** Documentul trimite emailul către client prin furnizor (setare; implicit oprit). */
   sendEmail: boolean;
+  /**
+   * Doar la un STORNO emis ca factură cu cantități negative (parțial sau restul facturii): ce s-a stornat deja din factura de bază.
+   * Un furnizor care ține evidența (DEMO) refuză un document care ar duce suma stornată peste totalul facturii
+   * (`INVOICE_STORNO_EXCEEDS_TOTAL`).
+   */
+  reversal?: ReversalContext;
+}
+
+/** Totalul facturii de stornat și suma stornată deja din ea (bani, brut), fără documentul curent. */
+export interface ReversalContext {
+  invoiceTotalMinor: number;
+  alreadyReversedMinor: number;
 }
 
 export type InvoicePaymentType = "Card online" | "Ordin plata" | "Ramburs";
@@ -124,8 +136,15 @@ export interface InvoiceProvider {
   readonly reportsEfactura: boolean;
   issueProforma(request: InvoiceRequest): Promise<IssuedDocument>;
   issueInvoice(request: InvoiceRequest): Promise<IssuedDocument>;
-  /** Stornează TOTAL o factură emisă. */
-  reverseInvoice(invoice: DocumentRef, issueDate: Date): Promise<IssuedDocument>;
+  /**
+   * Stornează TOTAL o factură emisă. `context` (opțional) spune ce s-a stornat deja: un furnizor care ține evidența refuză un storno
+   * total peste ce a rămas (`INVOICE_STORNO_EXCEEDS_TOTAL`); fără context, comportamentul e cel de dinainte.
+   */
+  reverseInvoice(
+    invoice: DocumentRef,
+    issueDate: Date,
+    context?: ReversalContext,
+  ): Promise<IssuedDocument>;
   /** Anulează o proformă (comanda a fost anulată înainte de plată). */
   cancelProforma(proforma: DocumentRef): Promise<void>;
   getInvoicePdf(invoice: DocumentRef): Promise<InvoicePdf>;
@@ -148,6 +167,8 @@ export const INVOICE_ERROR_CODES = [
   "INVOICE_UNSUPPORTED",
   /** Totalul calculat de furnizor diferă de ce a încasat magazinul: documentul NU se păstrează ca emis. */
   "INVOICE_TOTAL_MISMATCH",
+  /** Un storno ar duce suma stornată peste totalul facturii: documentul NU se emite (refuz, fără rezultat nesigur). */
+  "INVOICE_STORNO_EXCEEDS_TOTAL",
   "INVOICE_NOT_CONFIGURED",
 ] as const;
 export type InvoiceErrorCode = (typeof INVOICE_ERROR_CODES)[number];

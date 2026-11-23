@@ -7,6 +7,8 @@ export const INVOICE_SERVICE_CODES = [
   "INVOICE_ORDER_NOT_ELIGIBLE",
   "INVOICE_OUTCOME_UNKNOWN",
   "INVOICE_PARENT_UNRESOLVED",
+  /** Un storno ar duce suma stornată peste totalul facturii: nu se creează și nu se trimite la furnizor. */
+  "INVOICE_STORNO_EXCEEDS_TOTAL",
 ] as const;
 
 export class InvoiceServiceError extends DomainError {

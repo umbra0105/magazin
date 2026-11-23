@@ -1,4 +1,12 @@
 import type { Db } from "../db-tx";
+import { notifyAdmins, orderContext } from "../notifications/admin-notifications";
+import { enqueueInvoiceAlertEmail } from "./invoice-alert";
+import {
+  InvoiceDraftError,
+  buildRemainderStorno,
+  type StornoEarlierLine,
+  type StornoParentLine,
+} from "./invoice-draft";
 import {
   INVOICE_TRIGGER_EVENT_TYPES,
   invoiceActionsFor,
@@ -99,12 +107,63 @@ export async function queueIssue(
   return id;
 }
 
-/** Pune în coadă stornoul total al facturii (sau anularea proformei) unei comenzi. Întoarce id-ul rândului nou sau `null`. */
+const REMAINDER_EVENT = "reverse_not_needed";
+const REFUSED_EVENT = "storno_refused";
+
+/** Un storno refuzat la punerea în coadă NU blochează comanda: eveniment pe factură și alertă în admin (clopoțel, email intern). */
+async function refuseStorno(
+  tx: Db,
+  parent: { id: string; orderId: string },
+  reason: string,
+  meta: { trigger: string },
+): Promise<void> {
+  const already = await tx.invoiceEvent.count({
+    where: { invoiceId: parent.id, type: REFUSED_EVENT },
+  });
+  if (already === 0) {
+    await logEvent(tx, parent.id, REFUSED_EVENT, reason.slice(0, 300), { trigger: meta.trigger });
+  }
+  const order = await tx.order.findUnique({
+    where: { id: parent.orderId },
+    select: { number: true },
+  });
+  const created = await notifyAdmins(tx, {
+    kind: "invoice_failed",
+    title: "Stornoul nu s-a putut pune în coadă",
+    context: orderContext(order?.number ?? "", "Stornourile depășesc factura"),
+    href: `/admin/comenzi/${parent.orderId}`,
+    permission: "invoices.read",
+    dedupKey: `storno-refused:${parent.id}`,
+  });
+  if (created) {
+    await enqueueInvoiceAlertEmail(tx, {
+      invoiceId: parent.id,
+      orderId: parent.orderId,
+      reason: "Stornourile depășesc factura",
+    });
+  }
+}
+
+/**
+ * Pune în coadă stornoul «total» al facturii (sau anularea proformei) unei comenzi. Întoarce id-ul rândului nou sau `null`.
+ *
+ * Stornoul total acoperă DOAR restul nestornat al facturii (mini-faza `storno-total`, 2026-11-23):
+ *  - fără niciun storno parțial existent, comportamentul e cel dintotdeauna: același document `storno:total`, pe totalul și TVA-ul
+ *    facturii, emis prin `reverseInvoice` (liniile se copiază la emitere);
+ *  - cu stornouri parțiale (orice stare în afară de «sărit»: în coadă, în emitere, emise, eșuate), documentul acoperă restul pe linii
+ *    (cantități și brut rămase, inclusiv transportul și taxa de ramburs nestornate), cu liniile scrise acum; se emite ca factură cu
+ *    cantități negative. Brutul tuturor stornourilor = totalul facturii EXACT; TVA-ul restului e extras din brutul restului;
+ *  - rest zero: niciun document, doar un eveniment pe factură (o singură dată);
+ *  - date incoerente (stornouri peste factură): nimic nu se creează, comanda nu se blochează, alertă în admin.
+ * Calculul și crearea documentului se fac în tranzacția apelantului, cu comanda și factura-părinte blocate (`FOR UPDATE`), ca un storno
+ * parțial simultan (`queuePartialStorno`, același lacăt pe comandă) să nu poată depăși totalul.
+ */
 export async function queueReverse(
   tx: Db,
   orderId: string,
   meta: { trigger: string; requestedBy?: string | null },
 ): Promise<string | null> {
+  await tx.$queryRaw`SELECT id FROM customer_order WHERE id = ${orderId} FOR UPDATE`;
   const docs = await tx.invoice.findMany({
     where: { orderId, kind: { in: ["invoice", "proforma"] }, status: { not: "skipped" } },
     select: { id: true, kind: true, status: true, totalMinor: true, taxMinor: true },
@@ -134,6 +193,89 @@ export async function queueReverse(
   const proforma = pending.find((d) => d.kind === "proforma");
   const parent = invoice ?? proforma;
   if (!parent) return null;
+
+  let totalMinor = parent.totalMinor;
+  let taxMinor = parent.taxMinor;
+  let remainderLines: ReturnType<typeof buildRemainderStorno>["lines"] = [];
+  if (invoice) {
+    await tx.$queryRaw`SELECT id FROM invoice WHERE id = ${invoice.id} FOR UPDATE`;
+    const total = await tx.invoice.findUnique({
+      where: { orderId_docKey: { orderId, docKey: DOC_KEY_STORNO_TOTAL } },
+      select: { id: true },
+    });
+    if (total) return null; // același storno cerut a doua oară: idempotent
+    const earlier = await tx.invoice.findMany({
+      where: {
+        orderId,
+        kind: "storno",
+        parentId: invoice.id,
+        docKey: { startsWith: "storno:", not: DOC_KEY_STORNO_TOTAL },
+        status: { not: "skipped" },
+      },
+      select: { totalMinor: true, lines: true },
+    });
+    if (earlier.length > 0) {
+      const full = await tx.invoice.findUniqueOrThrow({
+        where: { id: invoice.id },
+        include: { lines: { orderBy: { position: "asc" } } },
+      });
+      try {
+        const rest = buildRemainderStorno(
+          full.lines.map((l): StornoParentLine => ({
+            kind: l.kind as StornoParentLine["kind"],
+            orderLineId: l.orderLineId,
+            sku: l.sku,
+            title: l.title,
+            unitName: l.unitName,
+            quantityTicks: l.quantityTicks,
+            unitPriceMinor: l.unitPriceMinor,
+            lineTotalMinor: l.lineTotalMinor,
+            netMinor: l.netMinor,
+            taxMinor: l.taxMinor,
+            taxRateBps: l.taxRateBps,
+          })),
+          earlier.flatMap((e) =>
+            e.lines.map((l): StornoEarlierLine => ({
+              kind: l.kind,
+              orderLineId: l.orderLineId,
+              quantityTicks: l.quantityTicks,
+              lineTotalMinor: l.lineTotalMinor,
+              taxMinor: l.taxMinor,
+            })),
+          ),
+        );
+        const earlierHeaders = earlier.reduce((acc, e) => acc + e.totalMinor, 0);
+        if (earlierHeaders + rest.totalMinor !== invoice.totalMinor) {
+          throw new InvoiceDraftError(
+            "INVOICE_STORNO_EXCEEDS_TOTAL",
+            `Stornourile (${earlierHeaders} + ${rest.totalMinor} bani) nu se închid pe totalul facturii (${invoice.totalMinor} bani)`,
+          );
+        }
+        if (rest.lines.length === 0) {
+          const noted = await tx.invoiceEvent.count({
+            where: { invoiceId: invoice.id, type: REMAINDER_EVENT },
+          });
+          if (noted === 0) {
+            await logEvent(
+              tx,
+              invoice.id,
+              REMAINDER_EVENT,
+              "Factura e deja integral stornată prin stornouri parțiale: nu se mai creează un storno total",
+              { trigger: meta.trigger },
+            );
+          }
+          return null;
+        }
+        totalMinor = rest.totalMinor;
+        taxMinor = rest.taxMinor;
+        remainderLines = rest.lines;
+      } catch (error) {
+        if (!(error instanceof InvoiceDraftError)) throw error;
+        await refuseStorno(tx, { id: invoice.id, orderId }, error.message, meta);
+        return null;
+      }
+    }
+  }
   const created = await tx.invoice.createManyAndReturn({
     data: [
       {
@@ -141,8 +283,8 @@ export async function queueReverse(
         kind: "storno",
         docKey: invoice ? DOC_KEY_STORNO_TOTAL : DOC_KEY_STORNO_PROFORMA,
         parentId: parent.id,
-        totalMinor: parent.totalMinor,
-        taxMinor: parent.taxMinor,
+        totalMinor,
+        taxMinor,
         ...(meta.requestedBy ? { requestedBy: meta.requestedBy } : {}),
       },
     ],
@@ -151,11 +293,35 @@ export async function queueReverse(
   });
   const id = created[0]?.id ?? null;
   if (id) {
+    if (remainderLines.length > 0) {
+      await tx.invoiceLine.createMany({
+        data: remainderLines.map((l, index) => ({
+          invoiceId: id,
+          position: index + 1,
+          kind: l.kind,
+          orderLineId: l.orderLineId,
+          sku: l.sku,
+          title: l.title,
+          unitName: l.unitName,
+          quantityTicks: l.quantityTicks,
+          unitPriceMinor: l.unitPriceMinor,
+          lineTotalMinor: l.lineTotalMinor,
+          netMinor: l.netMinor,
+          taxMinor: l.taxMinor,
+          taxRateBps: l.taxRateBps,
+          dischargeStock: false,
+        })),
+      });
+    }
     await logEvent(
       tx,
       id,
       "queued",
-      invoice ? "Stornoul total a fost pus în coadă" : "Anularea proformei a fost pusă în coadă",
+      invoice
+        ? remainderLines.length > 0
+          ? "Stornoul pe restul nestornat al facturii a fost pus în coadă"
+          : "Stornoul total a fost pus în coadă"
+        : "Anularea proformei a fost pusă în coadă",
       { trigger: meta.trigger },
     );
   }
