@@ -344,13 +344,14 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - **D8 Preferințe de comunicare:** emailurile de serviciu mereu active; «oferte și noutăți» = consimțământ de marketing implicit OPRIT, cu momentul și textul salvate; nimic de marketing trimis în această fază.
 - **Notă:** «Recenziile mele» din linia 2 de mai jos rămâne nebifat, «amânat în Faza 17 (decizia utilizatorului, 2026-11-22)».
 
-- [ ] Dashboard, istoric comenzi, detaliu cu timeline și tracking AWB
-- [ ] Agendă de adrese, descărcare facturi, wishlist, recenziile mele *(recenziile mele: amânat în Faza 17, decizia utilizatorului, 2026-11-22; restul e implementat în Faza 14, de bifat după verificarea utilizatorului)*
-- [ ] Preferințe de comunicare, export date GDPR, ștergere cont cu anonimizare
-- [ ] Schema ReturnRequest + state machine
-- [ ] Client: inițiere retur în fereastra de 14 zile, selectare produse și motiv
-- [ ] Admin: aprobare, AWB retur, recepție, inspecție, rambursare, repunere pe stoc
-- [ ] Emailuri la fiecare tranziție + raport de motive
+- [x] Dashboard, istoric comenzi, detaliu cu timeline și tracking AWB
+- [ ] Agendă de adrese, descărcare facturi, wishlist, recenziile mele *(**«Recenziile mele» rămâne nebifat: amânat în Faza 17 (decizia utilizatorului, 2026-11-22).** Restul punctului, agenda de adrese, descărcarea facturilor și wishlist-ul, e implementat și îmbinat în Faza 14, `ae1deda`)*
+- [x] Preferințe de comunicare, export date GDPR, ștergere cont cu anonimizare
+- [x] Schema ReturnRequest + state machine
+- [x] Client: inițiere retur în fereastra de 14 zile, selectare produse și motiv
+- [x] Admin: aprobare, AWB retur, recepție, inspecție, rambursare, repunere pe stoc
+- [x] Emailuri la fiecare tranziție + raport de motive
+- Faza 14 e îmbinată prin poartă (PR #23, `ae1deda`; `verify:full` pe `e915386`: 4594 / 1829×2 / 614, fără picate; CI 16/16). Punctele acoperite doar de teste automate, nu și de verificarea utilizatorului, sunt în `docs/FINISAJE.md` («Neverificat de utilizator, Faza 14»).
 
 ## FAZA 14b — Produse digitale
 - [ ] 🟡 **Decizie deschisă a utilizatorului, înainte de a începe:** în comanda mixtă plătită cu ramburs, produsul digital se eliberează la **livrare confirmată** (recomandare) sau la virarea banilor? (`10` Partea I)
