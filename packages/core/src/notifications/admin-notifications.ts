@@ -22,6 +22,8 @@ export const NOTIFICATION_KINDS = [
   "return_requested",
   /** Stornoul parțial al unui retur rambursat nu s-a putut emite sau nu coincide cu rambursarea: verificare fiscală. */
   "return_storno_failed",
+  /** Același drept de acces digital e folosit de prea multe adrese IP (Faza 14b): fără date personale, doar numărul comenzii. */
+  "digital_ip_anomaly",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

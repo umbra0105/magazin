@@ -673,6 +673,9 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `invoices.read` — Vede facturile | ✓ | ✓ | ✓ |  |  |  | ✓ |
 | `invoices.write` — Emite și stornează facturi | ✓ | ✓ | ✓ |  |  |  |  |
 | `invoices.configure` — Configurează furnizorul de facturare (chei, mod test/live, activare); doar Owner, ca la cheile de integrare | ✓ |  |  |  |  |  |  |
+| `digital.view` — Vede conținutul digital al produselor, drepturile de acces ale clienților, jurnalul de accesări și alertele | ✓ | ✓ | ✓ |  | ✓ |  |  |
+| `digital.manage` — Editează conținutul digital (module, fișiere, previzualizare), resetează contorul de descărcări, prelungește, revocă sau restabilește accesul | ✓ | ✓ | ✓ |  |  |  |  |
+| `digital.configure` — Configurează livrarea conținutului digital (chei Bunny Stream și S3, confirmarea testului cu cont real); doar Owner, ca la cheile de integrare | ✓ |  |  |  |  |  |  |
 | `reports.read` — Vede rapoartele operaționale | ✓ | ✓ | ✓ |  |  |  | ✓ |
 | `reports.financial` — Vede rapoartele financiare | ✓ | ✓ |  |  |  |  | ✓ |
 | `settings.read` — Vede setările | ✓ | ✓ |  |  |  |  |  |

@@ -188,6 +188,27 @@ export const settingGroups = {
      */
     orderRetentionYears: z.number().int().min(1).max(30).default(10),
   },
+  digital: {
+    /** Unde stau videoclipurile noi (Faza 14b): local (stocarea platformei, dezvoltare) | bunny (Bunny Stream; doar după confirmarea lui Owner). */
+    videoProvider: z.enum(["local", "bunny"]).default("local"),
+    /** Unde stau fișierele noi (PDF, arhive): local (stocarea platformei, dezvoltare) | s3 (bucket propriu; doar după confirmarea lui Owner). */
+    fileProvider: z.enum(["local", "s3"]).default("local"),
+    /** Cât ține un link de acces (secunde): scurt, creat la cerere, după verificarea dreptului de acces; niciodată permanent. */
+    linkSeconds: z.number().int().min(15).max(3600).default(120),
+    /** Mărimea maximă a unui fișier încărcat din admin, în MB. */
+    maxUploadMb: z.number().int().min(1).max(2048).default(200),
+    /** Alerta de tipar anormal: același drept de acces folosit de mai multe adrese IP distincte decât această valoare, în fereastră. */
+    maxIpsPerEntitlement: z.number().int().min(2).max(1000).default(5),
+    /** Fereastra (ore) în care se numără adresele IP distincte ale unui drept de acces. */
+    ipWindowHours: z.number().int().min(1).max(720).default(24),
+    /**
+     * Cât se păstrează IP-ul și user-agent-ul din jurnalul de accesări, în zile; după aceea devin nule (jurnalul rămâne, fără date
+     * personale). Valoarea e de confirmat cu avocatul (INTREBARI-AVOCAT 3.5), de aceea e setare, nu constantă în cod.
+     */
+    accessLogRetentionDays: z.number().int().min(7).max(3650).default(180),
+    /** Textul bifei de renunțare la dreptul de retragere (INTREBARI-AVOCAT 5.2); gol = textul implicit din mesaje. */
+    consentText: z.string().trim().max(600).default(""),
+  },
   orders: {
     /** Cât e valabilă o ofertă de plată (link pentru client), în ore; după aceea expiră (job). */
     offerValidityHours: z.number().int().min(1).max(720).default(72),

@@ -100,6 +100,13 @@ const DESTINATIONS: readonly Destination[] = [
     page: "retururi/[id]/page.tsx",
     pagePermission: "returns.view",
   },
+  {
+    // același drept de acces digital folosit de prea multe adrese IP: duce la comandă (drepturile de acces sunt în detaliul ei)
+    writer: "digital/digital-access.ts",
+    permission: "digital.view",
+    page: "[id]/page.tsx",
+    pagePermission: "orders.read",
+  },
 ];
 
 function sourceFiles(dir: string): string[] {
