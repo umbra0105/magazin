@@ -28,7 +28,9 @@ export interface ReturnableLine {
 
 export async function loadReturnableLines(db: Db, orderId: string): Promise<ReturnableLine[]> {
   const lines = await db.orderLine.findMany({
-    where: { orderId },
+    // liniile digitale nu se returnează din cont (Faza 14b, D6): nu apar în listă, iar cererea cu ele e respinsă ca «nu face parte din
+    // comandă»; accesul se retrage de admin, prin rambursarea liniei
+    where: { orderId, isDigital: false },
     orderBy: { createdAt: "asc" },
     select: {
       id: true,
