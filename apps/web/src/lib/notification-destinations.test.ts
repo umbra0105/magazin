@@ -80,6 +80,13 @@ const DESTINATIONS: readonly Destination[] = [
     pagePermission: "orders.read",
   },
   {
+    // stornoul refuzat la punerea în coadă (stornouri peste factură): aceeași destinație și aceeași permisiune ca factura eșuată
+    writer: "invoicing/invoice-schedule.ts",
+    permission: "invoices.read",
+    page: "[id]/page.tsx",
+    pagePermission: "orders.read",
+  },
+  {
     // cerere nouă de retur: duce la returul din admin
     writer: "returns/return-customer.ts",
     permission: "returns.view",
