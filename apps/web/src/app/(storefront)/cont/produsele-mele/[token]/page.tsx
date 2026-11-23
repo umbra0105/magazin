@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: getMessages().digital.library.metaTitle,
   // adresa conține un jeton de acces: nu se indexează și nu se trimite mai departe
   robots: { index: false, follow: false },
-  referrer: "no-referrer",
+  referrer: "same-origin",
 };
 export const dynamic = "force-dynamic";
 

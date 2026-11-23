@@ -58,6 +58,7 @@ export function DigitalProductSection({ digital }: { digital: StorefrontDigitalD
                   <DigitalPlayer
                     mode="preview"
                     assetId={asset.id}
+                    assetType={asset.type === "file" ? "file" : "video"}
                     texts={{
                       play: m.previewButton,
                       close: m.previewClose,

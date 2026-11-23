@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowUp, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useEffect, useState, useTransition, type FormEvent } from "react";
 import type { DigitalContentDto } from "@ecom/core";
 import { Badge, Button, Dialog, FileInput, Input, Progress, Select, Textarea } from "@ecom/ui";
 import {
@@ -91,6 +91,8 @@ export function DigitalTab({
 
   // module
   const [assets, setAssets] = useState<Asset[]>([...initial.assets]);
+  // după `router.refresh()` serverul trimite lista nouă (modul încărcat, adăugat sau schimbat): starea locală o preia
+  useEffect(() => setAssets([...initial.assets]), [initial.assets]);
   const [removing, setRemoving] = useState<Asset | null>(null);
   const [renaming, setRenaming] = useState<Record<string, string>>({});
 
@@ -475,7 +477,7 @@ export function DigitalTab({
                   />
                 )}
               </Field>
-              <Field id="dg-upload-title" label={t.uploadTitleLabel}>
+              <Field id="dg-upload-name" label={t.uploadTitleLabel}>
                 {(control) => (
                   <Input
                     {...control}
@@ -506,7 +508,7 @@ export function DigitalTab({
 
           <Section id="dg-link" title={t.linkTitle}>
             <form noValidate onSubmit={onAddLink} className="flex max-w-2xl flex-col gap-4">
-              <Field id="dg-link-title" label={t.linkName}>
+              <Field id="dg-link-name" label={t.linkName}>
                 {(control) => (
                   <Input
                     {...control}

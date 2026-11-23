@@ -3378,3 +3378,168 @@ export async function countE2eReturnsOfOrder(orderId: string): Promise<number> {
     return (row.rows[0]?.n as number) ?? 0;
   });
 }
+
+// ------------------------------------------------------------------------------------------------ produse digitale (Faza 14b)
+
+export interface E2eDigitalProduct {
+  productId: string;
+  variantId: string;
+  slug: string;
+  title: string;
+  sku: string;
+}
+
+/** Un produs digital ACTIV, cu extensia digitală (acces pe viață, limita de descărcări dată) și variantă; urmărit pentru ștergere. */
+export async function seedE2eDigitalProduct(
+  tag: string,
+  key: string,
+  options: { maxDownloads: number | null; price?: number },
+): Promise<E2eDigitalProduct> {
+  assertE2eTag(tag);
+  const slug = `e2e-dig-${tag}-${key}`;
+  const title = `Curs digital ${key} ${tag}`;
+  const sku = `E2E-DIG-${tag}-${key}`.toUpperCase();
+  trackedProducts.add(slug);
+  return withClient(async (db) => {
+    const product = await db.query(
+      `insert into product (id, slug, title, status, type, "manageStock", "stockStatus", "publishedAt", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, 'active', 'digital', false, 'instock', now(), now()) returning id`,
+      [slug, title],
+    );
+    const productId = product.rows[0]?.id as string;
+    const variant = await db.query(
+      `insert into product_variant (id, "productId", sku, price, "isDefault", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $3, true, now()) returning id`,
+      [productId, sku, options.price ?? 9_900],
+    );
+    await db.query(
+      `insert into digital_product ("productId", "maxDownloads", "updatedAt") values ($1, $2, now())`,
+      [productId, options.maxDownloads],
+    );
+    return { productId, variantId: variant.rows[0]?.id as string, slug, title, sku };
+  });
+}
+
+export interface E2eDigitalOrder {
+  orderId: string;
+  orderNumber: string;
+  /** Jetonul dreptului de acces (`null` cât accesul nu e acordat). */
+  token: string | null;
+}
+
+/**
+ * O comandă cu o linie digitală, legată de cont prin `customerId` (plata la livrare). Cu `granted` are și dreptul de acces (jeton
+ * generat aici); fără, comanda e «în așteptarea livrării». Se șterge pe tag odată cu comenzile; dreptul cade în cascadă.
+ */
+export async function seedE2eDigitalOrder(input: {
+  tag: string;
+  key: string;
+  customerEmail: string;
+  product: E2eDigitalProduct;
+  granted: boolean;
+}): Promise<E2eDigitalOrder> {
+  assertE2eTag(input.tag);
+  const email = `dig-${input.key}-${input.tag}${E2E_ORDER_EMAIL_DOMAIN}`;
+  const number = `E2E-${input.tag}-${input.key}`.toUpperCase();
+  const total = 9_900;
+  const tax = Math.round((total * 21) / 121);
+  return withClient(async (db) => {
+    const user = await db.query(`select id from "user" where email = $1`, [input.customerEmail]);
+    const userId = user.rows[0]?.id as string | undefined;
+    if (!userId) throw new Error(`Clientul de test ${input.customerEmail} nu există`);
+    const channel = await db.query(`select id from sales_channel order by "createdAt" limit 1`);
+    const channelId = channel.rows[0]?.id as string | undefined;
+    if (!channelId) throw new Error("Nu există niciun canal de vânzare în baza de test");
+    const token = input.granted ? randomBytes(32).toString("base64url") : null;
+    await db.query("begin");
+    try {
+      const order = await db.query(
+        `insert into customer_order (id, number, "channelId", "customerId", email, phone, status, "paymentStatus", "fulfillmentStatus",
+           "subtotalMinor", "shippingMinor", "taxMinor", "totalMinor", "taxRateBps", "shippingMethodCode", "shippingSnapshot", "paymentMethod",
+           "termsAcceptedAt", "termsConsentText", "termsConsentVersion", "digitalConsentAt", "digitalConsentText", "digitalConsentVersion",
+           "idempotencyKey", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, $4, '0722000000', 'confirmed', 'pending', $5, $6, 0, $7, $6, 2100, 'digital',
+           '{"kind":"digital"}'::jsonb, 'cod', now(), 'Sunt de acord', 't', now(), 'Solicit livrarea imediată', 'e2e',
+           gen_random_uuid()::text, now()) returning id`,
+        [number, channelId, userId, email, input.granted ? "fulfilled" : "unfulfilled", total, tax],
+      );
+      const orderId = order.rows[0]?.id as string;
+      const line = await db.query(
+        `insert into order_line (id, "orderId", "variantId", sku, title, quantity, "unitSymbol", "unitDecimals", "unitPriceMinor",
+           "lineTotalMinor", "netMinor", "taxMinor", "taxRateBps", "stockState", "shippingClass", "productSnapshot", "isDigital")
+         values (gen_random_uuid()::text, $1, $2, $3, $4, 10000, 'buc', 0, $5, $5, $6, $7, 2100, 'in_stock', 'standard', $8::jsonb, true)
+         returning id`,
+        [
+          orderId,
+          input.product.variantId,
+          input.product.sku,
+          input.product.title,
+          total,
+          total - tax,
+          tax,
+          JSON.stringify({ productId: input.product.productId }),
+        ],
+      );
+      if (token) {
+        await db.query(
+          `insert into digital_entitlement (id, "orderId", "orderLineId", "customerId", "productId", "accessToken", "grantReason",
+             "maxDownloads", "updatedAt")
+           select gen_random_uuid()::text, $1, $2, $3, $4, $5, 'delivery', dp."maxDownloads", now()
+           from digital_product dp where dp."productId" = $4`,
+          [orderId, line.rows[0]?.id as string, userId, input.product.productId, token],
+        );
+      }
+      await db.query("commit");
+      return { orderId, orderNumber: number, token };
+    } catch (error) {
+      await db.query("rollback");
+      throw error;
+    }
+  });
+}
+
+export interface E2eEntitlement {
+  downloadCount: number;
+  maxDownloads: number | null;
+  revoked: boolean;
+}
+
+export async function readE2eEntitlement(orderId: string): Promise<E2eEntitlement | null> {
+  return withClient(async (db) => {
+    const row = await db.query(
+      `select "downloadCount", "maxDownloads", "revokedAt" is not null as revoked from digital_entitlement where "orderId" = $1`,
+      [orderId],
+    );
+    const found = row.rows[0] as
+      { downloadCount: number; maxDownloads: number | null; revoked: boolean } | undefined;
+    return found
+      ? {
+          downloadCount: found.downloadCount,
+          maxDownloads: found.maxDownloads,
+          revoked: found.revoked,
+        }
+      : null;
+  });
+}
+
+export async function revokeE2eEntitlement(orderId: string): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `update digital_entitlement set "revokedAt" = now(), "revokedReason" = 'Rambursat (test)' where "orderId" = $1`,
+      [orderId],
+    );
+  });
+}
+
+/** Modulele unui produs digital (id, titlu, preview), în ordine; pentru ce a încărcat testul din admin. */
+export async function readE2eDigitalAssets(
+  productId: string,
+): Promise<Array<{ id: string; title: string; type: string; isPreview: boolean }>> {
+  return withClient(async (db) => {
+    const rows = await db.query(
+      `select id, title, type, "isPreview" from digital_asset where "productId" = $1 order by position, id`,
+      [productId],
+    );
+    return rows.rows as Array<{ id: string; title: string; type: string; isPreview: boolean }>;
+  });
+}

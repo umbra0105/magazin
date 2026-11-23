@@ -24,12 +24,14 @@ interface Props {
   assetId: string;
   /** Doar `mode="client"`: jetonul dreptului de acces. */
   token?: string;
+  /** Un fișier (nu video) se deschide într-o filă nouă, nu în player. */
+  assetType?: "video" | "file";
   texts: DigitalPlayerTexts;
 }
 
 type Playing = { kind: "url" | "embed" | "link"; url: string };
 
-export function DigitalPlayer({ mode, assetId, token, texts }: Props) {
+export function DigitalPlayer({ mode, assetId, token, assetType = "video", texts }: Props) {
   const [state, setState] = useState<"idle" | "loading" | "playing" | "failed">("idle");
   const [message, setMessage] = useState("");
   const [playing, setPlaying] = useState<Playing | null>(null);
@@ -60,7 +62,7 @@ export function DigitalPlayer({ mode, assetId, token, texts }: Props) {
         setState("failed");
         return;
       }
-      if (body.kind === "link") {
+      if (body.kind === "link" || assetType === "file") {
         window.open(body.url, "_blank", "noopener,noreferrer");
         setState("idle");
         return;
