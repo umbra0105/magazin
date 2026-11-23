@@ -108,6 +108,8 @@ export interface DeliveryState {
   configured: boolean;
   /** Ce câmpuri au valoare salvată (doar «da/nu», niciodată valoarea). */
   saved: Record<string, boolean>;
+  /** Valorile câmpurilor NE-secrete (ID bibliotecă, adresă, bucket…); câmpurile secrete nu apar aici niciodată. */
+  values: Record<string, string>;
   isActive: boolean;
   verifiedInSandboxAt: Date | null;
   notes: readonly string[];
@@ -179,6 +181,11 @@ export class DeliveryConfigService {
       configured: missingDeliveryFields(code, row.credentials).length === 0,
       saved: Object.fromEntries(
         info.fields.map((field) => [field.key, (row.credentials?.[field.key] ?? "").trim() !== ""]),
+      ),
+      values: Object.fromEntries(
+        info.fields
+          .filter((field) => !field.secret)
+          .map((field) => [field.key, row.credentials?.[field.key] ?? ""]),
       ),
       isActive: row.isActive,
       verifiedInSandboxAt: row.verifiedInSandboxAt,

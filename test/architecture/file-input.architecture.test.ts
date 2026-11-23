@@ -97,6 +97,7 @@ describe('niciun <input type="file"> direct (sursa reală)', () => {
       "apps/web/src/components/admin/inventory/stock-activation-panel.tsx",
       "apps/web/src/components/admin/inventory/stock-import-panel.tsx",
       "apps/web/src/components/admin/media/upload-panel.tsx",
+      "apps/web/src/components/admin/products/digital-tab.tsx",
       "apps/web/src/components/admin/products/documents-tab.tsx",
       "apps/web/src/components/admin/products/product-import-wizard.tsx",
     ]);

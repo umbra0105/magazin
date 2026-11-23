@@ -34,6 +34,8 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
     "«Anunță-mă când revine»: public (fără sesiune), verifică originea cererii, are capcană pentru roboți, limită pe IP și plafoane în serviciu; fără fișiere",
   "apps/web/src/app/api/webhooks/payments/[provider]/route.ts":
     "webhook de plată (Faza 10): server-la-server, fără sesiune și fără origine de browser; singura autentificare e semnătura procesatorului, verificată în timp constant pe corpul brut (fără semnătură validă: respins, înregistrat fără conținut și fără niciun efect); corp limitat; fără fișiere. Păzit de testul de arhitectură `payments`",
+  "apps/web/src/app/api/cont/digital/acces/route.ts":
+    "linkuri de acces la produse digitale (Faza 14b), pentru CLIENTUL autentificat (nu admin): verifică originea, sesiunea clientului (`getCustomer`) și limita de cereri pe client; proprietatea dreptului se verifică în aceeași interogare care îl caută (`requestAccess`), nu printr-o permisiune de admin; fără fișiere, corp mic (două câmpuri)",
   "apps/web/src/app/api/internal/revalidate/route.ts":
     "invalidare de cache cerută de worker: nu are sesiune, ci semnătură HMAC cu marcă de timp (cheie derivată din APP_KEY) și etichete dintr-o listă strictă; fără fișiere",
 };

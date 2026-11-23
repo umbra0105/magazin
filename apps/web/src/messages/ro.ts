@@ -251,6 +251,8 @@ export const ro = {
       returns: "Retururi",
       companyData: "Datele firmei",
       invoicingSettings: "Facturare",
+      digitalAccess: "Acces digital",
+      digitalDelivery: "Livrare conținut digital",
     },
     /** Editorul de temă (Nivel 2): `/admin/setari/aspect`. */
     appearance: {

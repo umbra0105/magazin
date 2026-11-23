@@ -31,6 +31,8 @@ export interface AdminEntitlementDto {
   orderId: string;
   orderNumber: string;
   orderLineId: string;
+  /** Totalul liniei (bani): suma care se rambursează la «Rambursează linia». */
+  lineTotalMinor: number;
   productId: string;
   productTitle: string;
   customerEmail: string;
@@ -55,6 +57,7 @@ const entitlementSelect = {
   revokedAt: true,
   revokedReason: true,
   order: { select: { number: true } },
+  orderLine: { select: { lineTotalMinor: true } },
   customer: { select: { email: true } },
   product: { select: { title: true } },
   accessLogs: { orderBy: { createdAt: "desc" as const }, take: 1, select: { createdAt: true } },
@@ -72,6 +75,7 @@ type EntitlementRow = {
   revokedAt: Date | null;
   revokedReason: string | null;
   order: { number: string };
+  orderLine: { lineTotalMinor: number };
   customer: { email: string };
   product: { title: string };
   accessLogs: Array<{ createdAt: Date }>;
@@ -82,6 +86,7 @@ const toDto = (row: EntitlementRow): AdminEntitlementDto => ({
   orderId: row.orderId,
   orderNumber: row.order.number,
   orderLineId: row.orderLineId,
+  lineTotalMinor: row.orderLine.lineTotalMinor,
   productId: row.productId,
   productTitle: row.product.title,
   customerEmail: row.customer.email,
