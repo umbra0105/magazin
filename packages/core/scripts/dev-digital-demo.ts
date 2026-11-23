@@ -20,7 +20,7 @@
  */
 import { loadEnv } from "@ecom/config";
 import { buildMediaDelivery, createStorage } from "@ecom/integrations";
-import { getLogger, vatFromGross } from "@ecom/shared";
+import { getLogger, parseQuantity, vatFromGross } from "@ecom/shared";
 import { AuditService } from "../src/audit/audit-service";
 import { createPrismaAuditStore } from "../src/audit/prisma-store";
 import { ProductService } from "../src/catalog/product-service";
@@ -214,7 +214,7 @@ async function createOrder(input: {
       variantId: line.variantId,
       sku: line.sku,
       title: line.title,
-      quantity: 10_000n,
+      quantity: parseQuantity("1"),
       unitSymbol: "buc",
       unitDecimals: 0,
       unitPriceMinor: line.priceMinor,
