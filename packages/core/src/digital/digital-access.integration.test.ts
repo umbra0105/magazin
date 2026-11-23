@@ -294,6 +294,31 @@ describe("emiterea linkurilor de acces", () => {
     });
   });
 
+  it("retragerea apărută ÎNTRE verificare și contor (în timpul semnării) oprește cererea: fără descărcare, fără contor, fără jurnal", async () => {
+    await inRolledBackTransaction(db, async (tx) => {
+      const { f, ent } = await paid(tx);
+      const file = await createFile(tx, f.digitalProductIds[0] as string);
+      const provider = fakeProvider();
+      const racing: AccessDeps = {
+        ...deps(tx, provider),
+        // furnizorul se cere DUPĂ verificările inițiale și ÎNAINTE de UPDATE-ul contorului: aici apare retragerea
+        getProvider: async () => {
+          await tx.digitalEntitlement.update({
+            where: { id: ent.id },
+            data: { revokedAt: NOW, revokedReason: "Rambursat în timpul cererii" },
+          });
+          return provider;
+        },
+      };
+      await expect(
+        requestAccess(racing, { userId: f.userId, token: ent.accessToken, assetId: file.id }, meta),
+      ).rejects.toMatchObject({ code: "DIGITAL_REVOKED" });
+      const fresh = await tx.digitalEntitlement.findUniqueOrThrow({ where: { id: ent.id } });
+      expect(fresh.downloadCount).toBe(0);
+      expect(await tx.digitalAccessLog.count({ where: { entitlementId: ent.id } })).toBe(0);
+    });
+  });
+
   it("un modul al altui produs nu se poate cere cu dreptul acestui produs", async () => {
     await inRolledBackTransaction(db, async (tx) => {
       const { f, ent } = await paid(tx);
