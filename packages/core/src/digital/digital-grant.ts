@@ -44,6 +44,15 @@ export type EmitOrderEvent = (
   event: { type: string; message: string; data?: Prisma.InputJsonValue },
 ) => Promise<void>;
 
+/**
+ * Ce îi dă `addOrderEvent` acestui modul (fără import circular): scrierea unui eveniment și trecerea comenzii 100% digitale în
+ * «fulfilled» la acordarea accesului (singura cale de schimbare a stării de livrare e `transitionOrder`).
+ */
+export interface DigitalPorts {
+  emit: EmitOrderEvent;
+  fulfill: (tx: Db, orderId: string, now: Date) => Promise<void>;
+}
+
 export interface DigitalEvent {
   id: string;
   type: string;
@@ -109,11 +118,15 @@ async function loadFacts(tx: Db, orderId: string): Promise<DigitalOrderFacts | n
 export async function grantEntitlements(
   tx: Db,
   orderId: string,
-  facts: Pick<DigitalOrderFacts, "customerId" | "digitalLines">,
+  facts: Pick<
+    DigitalOrderFacts,
+    "customerId" | "digitalLines" | "physicalLineCount" | "fulfillmentStatus"
+  >,
   reason: GrantReason,
   now: Date,
-  emit: EmitOrderEvent,
+  ports: DigitalPorts,
 ): Promise<number> {
+  const { emit } = ports;
   if (!facts.customerId) {
     // fără cont nu există cui să-i acorzi accesul; checkout-ul nu poate produce o astfel de comandă digitală
     const already = await tx.orderEvent.count({
@@ -151,6 +164,11 @@ export async function grantEntitlements(
     select: { id: true },
   });
   if (created.length > 0) {
+    // comanda doar cu produse digitale nu are nimic de expediat: accesul acordat o încheie (fulfilled). Comenzile MIXTE nu se ating:
+    // starea lor de livrare e a părții fizice, iar digitalul se vede în panoul «Acces digital».
+    if (facts.physicalLineCount === 0 && facts.fulfillmentStatus === "unfulfilled") {
+      await ports.fulfill(tx, orderId, now);
+    }
     await emit(tx, orderId, {
       type: "digital.granted",
       message:
@@ -209,9 +227,10 @@ export async function scheduleDigitalAccess(
   tx: Db,
   orderId: string,
   event: DigitalEvent,
-  emit: EmitOrderEvent,
+  ports: DigitalPorts,
   now: Date = new Date(),
 ): Promise<void> {
+  const { emit } = ports;
   const isGrant = GRANT_TRIGGER_EVENT_TYPES.includes(event.type);
   const isRevoke = REVOKE_TRIGGER_EVENT_TYPES.includes(event.type);
   if (!isGrant && !isRevoke) return;
@@ -244,5 +263,5 @@ export async function scheduleDigitalAccess(
     hasDigital: true,
     hasPhysical: facts.physicalLineCount > 0,
   });
-  if (decision.grant) await grantEntitlements(tx, orderId, facts, decision.reason, now, emit);
+  if (decision.grant) await grantEntitlements(tx, orderId, facts, decision.reason, now, ports);
 }

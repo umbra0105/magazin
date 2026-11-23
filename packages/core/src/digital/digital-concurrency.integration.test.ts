@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
 import type { DeliveryAccessRequest, MediaDeliveryProvider } from "@ecom/shared";
-import { addOrderEvent, transitionOrder } from "../orders/order-service";
+import { DIGITAL_PORTS, addOrderEvent, transitionOrder } from "../orders/order-service";
 import type { TestTx } from "../test-utils/rollback";
 import { createFile, digitalFixture, type DigitalFixture } from "../test-utils/digital-fixtures";
 import { requestAccess, type AccessDeps } from "./digital-access";
@@ -176,15 +176,15 @@ describe("acordarea sub concurență", () => {
       where: { id: f.orderId },
       data: { status: "confirmed", paymentStatus: "paid" },
     });
-    const emit = (
-      tx: Parameters<typeof addOrderEvent>[0],
-      orderId: string,
-      event: { type: string; message: string },
-    ) => addOrderEvent(tx, orderId, event);
     await Promise.all(
       Array.from({ length: 6 }, (_, i) =>
         pool.$transaction((tx) =>
-          scheduleDigitalAccess(tx, f.orderId, { id: `ev-${i}`, type: "payment.confirmed" }, emit),
+          scheduleDigitalAccess(
+            tx,
+            f.orderId,
+            { id: `ev-${i}`, type: "payment.confirmed" },
+            DIGITAL_PORTS,
+          ),
         ),
       ),
     );

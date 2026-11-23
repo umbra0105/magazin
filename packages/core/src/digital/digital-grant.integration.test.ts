@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
-import { addOrderEvent, transitionOrder } from "../orders/order-service";
+import { DIGITAL_PORTS, addOrderEvent, transitionOrder } from "../orders/order-service";
 import { inRolledBackTransaction, type TestTx } from "../test-utils/rollback";
 import { digitalFixture, type DigitalFixture } from "../test-utils/digital-fixtures";
 import { DIGITAL_LINE_REFUND_KEY_PREFIX, scheduleDigitalAccess } from "./digital-grant";
@@ -123,6 +123,48 @@ describe("card și transfer bancar: acces la plata confirmată", () => {
   });
 });
 
+describe("starea de livrare a comenzii la acordarea accesului", () => {
+  it("comanda 100% digitală trece în «fulfilled» la acordare, cu evenimentul digital.fulfilled, o singură dată", async () => {
+    await inRolledBackTransaction(db, async (tx) => {
+      const f = await digitalFixture(tx, { digitalLines: 2 });
+      await pay(tx, f);
+      const order = await tx.order.findUniqueOrThrow({ where: { id: f.orderId } });
+      expect(order.fulfillmentStatus).toBe("fulfilled");
+      expect(await eventsOf(tx, f.orderId, "digital.fulfilled")).toBe(1);
+      await addOrderEvent(tx, f.orderId, { type: "payment.confirmed", message: "încă o dată" });
+      expect(await eventsOf(tx, f.orderId, "digital.fulfilled")).toBe(1);
+    });
+  });
+
+  it("comanda MIXTĂ cu card: starea de livrare rămâne «unfulfilled» (a părții fizice), fără partially_fulfilled", async () => {
+    await inRolledBackTransaction(db, async (tx) => {
+      const f = await digitalFixture(tx, { paymentMethod: "card", physicalLines: 1 });
+      await pay(tx, f);
+      expect(await entitlementsOf(tx, f.orderId)).toHaveLength(1);
+      const order = await tx.order.findUniqueOrThrow({ where: { id: f.orderId } });
+      expect(order.fulfillmentStatus).toBe("unfulfilled");
+      expect(await eventsOf(tx, f.orderId, "digital.fulfilled")).toBe(0);
+    });
+  });
+
+  it("la ramburs mixt, livrarea confirmată acordă accesul fără să schimbe starea de livrare setată de expediere", async () => {
+    await inRolledBackTransaction(db, async (tx) => {
+      const f = await digitalFixture(tx, { paymentMethod: "cod", physicalLines: 1 });
+      await transitionOrder(
+        tx,
+        f.orderId,
+        { status: "confirmed" },
+        { type: "order.confirmed", message: "confirmată" },
+        NOW,
+      );
+      await advanceTo(tx, f, "delivered");
+      const order = await tx.order.findUniqueOrThrow({ where: { id: f.orderId } });
+      expect(order.fulfillmentStatus).toBe("delivered");
+      expect(await eventsOf(tx, f.orderId, "digital.fulfilled")).toBe(0);
+    });
+  });
+});
+
 describe("ramburs în comandă mixtă: acces abia la livrare confirmată (decizia 1)", () => {
   it("nu la plasare, nu la confirmare, nu la expediere, nici la încasarea banilor; da la livrare", async () => {
     await inRolledBackTransaction(db, async (tx) => {
@@ -220,10 +262,18 @@ describe("idempotență și cazuri limită", () => {
     await inRolledBackTransaction(db, async (tx) => {
       const f = await digitalFixture(tx, { digitalLines: 2 });
       await pay(tx, f);
-      const emit = (t: TestTx, orderId: string, event: { type: string; message: string }) =>
-        addOrderEvent(t, orderId, event);
-      await scheduleDigitalAccess(tx, f.orderId, { id: "e1", type: "payment.confirmed" }, emit);
-      await scheduleDigitalAccess(tx, f.orderId, { id: "e1", type: "payment.confirmed" }, emit);
+      await scheduleDigitalAccess(
+        tx,
+        f.orderId,
+        { id: "e1", type: "payment.confirmed" },
+        DIGITAL_PORTS,
+      );
+      await scheduleDigitalAccess(
+        tx,
+        f.orderId,
+        { id: "e1", type: "payment.confirmed" },
+        DIGITAL_PORTS,
+      );
       expect(await entitlementsOf(tx, f.orderId)).toHaveLength(2);
       expect(await eventsOf(tx, f.orderId, "digital.granted")).toBe(1);
     });
