@@ -8,27 +8,28 @@ datasource db {
 }
 
 model User {
-  id                String                  @id
-  name              String
-  email             String
-  emailVerified     Boolean                 @default(false)
-  image             String?
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  sessions          Session[]
-  accounts          Account[]
-  roles             UserRole[]
-  mediaUploads      Media[]
-  productImports    ProductImport[]
-  cart              Cart?
-  savedOrderViews   OrderSavedView[]
-  notificationReads AdminNotificationRead[]
+  id                  String                  @id
+  name                String
+  email               String
+  emailVerified       Boolean                 @default(false)
+  image               String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  roles               UserRole[]
+  mediaUploads        Media[]
+  productImports      ProductImport[]
+  cart                Cart?
+  savedOrderViews     OrderSavedView[]
+  notificationReads   AdminNotificationRead[]
   /// Faza 14: anonimizarea contului (ștergere cerută de client); după ea contul nu mai poate fi folosit.
-  anonymizedAt      DateTime?
-  customerAddresses CustomerAddress[]
-  wishlistItems     WishlistItem[]
-  preference        CustomerPreference?
-  returnRequests    ReturnRequest[]
+  anonymizedAt        DateTime?
+  customerAddresses   CustomerAddress[]
+  wishlistItems       WishlistItem[]
+  preference          CustomerPreference?
+  returnRequests      ReturnRequest[]
+  digitalEntitlements DigitalEntitlement[]
 
   @@unique([email])
   @@map("user")
@@ -416,6 +417,9 @@ model Product {
   channelListings          ChannelListing[]
   partsDiagrams            PartsDiagramProduct[]
   hotspots                 PartsDiagramHotspot[]
+  /// Faza 14b: extensia 1:1 a produsului digital (conținutul, accesul) și drepturile de acces ale clienților.
+  digital                  DigitalProduct?
+  digitalEntitlements      DigitalEntitlement[]
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
 
@@ -1292,10 +1296,10 @@ model OrderCounter {
 /// Comanda (Faza 9: doar oaspete, `customerId` gol; plata: ramburs sau transfer bancar). Trei statusuri separate, cu tranziții
 /// validate de state machine (`packages/core/src/orders`); valorile sunt păzite de CHECK în migrație.
 model Order {
-  id                     String              @id @default(cuid())
-  number                 String              @unique
+  id                     String               @id @default(cuid())
+  number                 String               @unique
   channelId              String
-  channel                SalesChannel        @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  channel                SalesChannel         @relation(fields: [channelId], references: [id], onDelete: Restrict)
   externalId             String?
   /// JSON brut de la canalul extern (eMAG), pentru depanare; nul la comenzile web.
   externalData           Json?
@@ -1304,26 +1308,26 @@ model Order {
   customerId             String?
   email                  String
   phone                  String
-  currency               String              @default("RON")
+  currency               String               @default("RON")
   /// pending | confirmed | processing | completed | cancelled | returned | draft
-  status                 String              @default("pending")
+  status                 String               @default("pending")
   /// pending | authorized | paid | partially_refunded | refunded | failed | cancelled | chargeback
-  paymentStatus          String              @default("pending")
+  paymentStatus          String               @default("pending")
   /// unfulfilled | partially_fulfilled | fulfilled | in_transit | delivered | returned | cancelled
-  fulfillmentStatus      String              @default("unfulfilled")
+  fulfillmentStatus      String               @default("unfulfilled")
   subtotalMinor          Int
-  discountMinor          Int                 @default(0)
+  discountMinor          Int                  @default(0)
   shippingMinor          Int
-  codFeeMinor            Int                 @default(0)
+  codFeeMinor            Int                  @default(0)
   /// TVA extras din transport și din taxa de ramburs (sume cu TVA inclus, ca liniile; docs/09 §2).
-  shippingTaxMinor       Int                 @default(0)
-  codFeeTaxMinor         Int                 @default(0)
+  shippingTaxMinor       Int                  @default(0)
+  codFeeTaxMinor         Int                  @default(0)
   /// TVA total = suma TVA pe linii + shippingTaxMinor + codFeeTaxMinor (verificat în bază, la commit).
   taxMinor               Int
   totalMinor             Int
   /// Cota standard de TVA la plasare, în puncte de bază (2100 = 21%), ca snapshot.
   taxRateBps             Int
-  groupPricingType       String              @default("none")
+  groupPricingType       String               @default("none")
   /// Metoda de livrare aleasă: cod (courier | pickup | …) și snapshot-ul ofertei (curier, serviciu, preț, zile, sursa).
   shippingMethodCode     String
   shippingSnapshot       Json
@@ -1331,7 +1335,7 @@ model Order {
   paymentMethod          String
   customerNote           String?
   adminNote              String?
-  installationRequested  Boolean             @default(false)
+  installationRequested  Boolean              @default(false)
   installationNote       String?
   /// Starea de urmărire a cererii de instalare (docs/15 §4): requested | contacted | scheduled | done | declined; nulă dacă nu s-a
   /// cerut instalare (CHECK în migrație). Schimbările scriu OrderEvent și audit.
@@ -1348,9 +1352,9 @@ model Order {
   /// automat. Nul la ramburs și transfer.
   paymentRetryDeadlineAt DateTime?
   /// Cheia de idempotență a plasării (protecție la dublu-click): aceeași cheie întoarce aceeași comandă.
-  idempotencyKey         String              @unique
-  source                 String              @default("web")
-  placedAt               DateTime            @default(now())
+  idempotencyKey         String               @unique
+  source                 String               @default("web")
+  placedAt               DateTime             @default(now())
   confirmedAt            DateTime?
   cancelledAt            DateTime?
   /// Marcajul «La furnizor» (Faza 11, decizia 2026-11-19): NU e stare și nu atinge stocul, banii sau statusurile. Toate nule
@@ -1359,8 +1363,8 @@ model Order {
   supplierMarkedBy       String?
   supplierName           String?
   supplierNote           String?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
   lines                  OrderLine[]
   events                 OrderEvent[]
   payments               Payment[]
@@ -1375,6 +1379,12 @@ model Order {
   shipments              Shipment[]
   invoices               Invoice[]
   returns                ReturnRequest[]
+  digitalEntitlements    DigitalEntitlement[]
+  /// Faza 14b: bifa de renunțare la dreptul de retragere (doar la comenzile cu linii digitale): momentul, textul EXACT și versiunea
+  /// textului acceptat, separate de Termeni. Toate trei nule sau toate trei setate (CHECK în migrație).
+  digitalConsentAt       DateTime?
+  digitalConsentText     String?
+  digitalConsentVersion  String?
 
   @@index([status, paymentStatus])
   @@index([email])
@@ -1389,33 +1399,36 @@ model Order {
 /// O linie de comandă: snapshot imuabil (preț, TVA, cantitate). `productSnapshot` NU conține `costPrice`. `lineTotalMinor` e suma
 /// rotunjită O SINGURĂ DATĂ pe linie; `netMinor + taxMinor = lineTotalMinor` (CHECK).
 model OrderLine {
-  id              String          @id @default(cuid())
-  orderId         String
-  order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variantId       String?
-  variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
-  sku             String
-  title           String
-  variantTitle    String?
-  imageUrl        String?
+  id                 String              @id @default(cuid())
+  orderId            String
+  order              Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId          String?
+  variant            ProductVariant?     @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  sku                String
+  title              String
+  variantTitle       String?
+  imageUrl           String?
   /// Zecimi de miime de unitate (`Quantity`), > 0.
-  quantity        BigInt
-  unitSymbol      String
-  unitDecimals    Int
-  unitPriceMinor  Int
-  discountMinor   Int             @default(0)
-  lineTotalMinor  Int
-  netMinor        Int
-  taxMinor        Int
-  taxRateBps      Int
+  quantity           BigInt
+  unitSymbol         String
+  unitDecimals       Int
+  unitPriceMinor     Int
+  discountMinor      Int                 @default(0)
+  lineTotalMinor     Int
+  netMinor           Int
+  taxMinor           Int
+  taxRateBps         Int
   /// Starea de stoc la plasare: in_stock | limited | on_order (D6) și termenul, în zile, la «La comandă».
-  stockState      String
-  leadTimeDays    Int?
+  stockState         String
+  leadTimeDays       Int?
   /// Clasa de transport la plasare (standard | oversized | pallet), pentru reguli (easybox) și transport.
-  shippingClass   String
-  productSnapshot Json
-  createdAt       DateTime        @default(now())
-  returnItems     ReturnItem[]
+  shippingClass      String
+  productSnapshot    Json
+  /// Faza 14b: linia e un produs digital (fără transport, fără stoc, fără retur din cont); scris la plasare, imuabil în practică.
+  isDigital          Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  returnItems        ReturnItem[]
+  digitalEntitlement DigitalEntitlement?
 
   @@unique([orderId, variantId])
   @@index([variantId])
@@ -2146,4 +2159,115 @@ model ReturnEvent {
 
   @@index([returnId, createdAt])
   @@map("return_event")
+}
+
+// ---------------------------------------------------------------------------
+// Faza 14b: produse digitale (docs/11). Migrare ADITIVĂ. Cheile de stocare (`storageKey`) și secretele NU ies din server.
+// ---------------------------------------------------------------------------
+
+/// Extensia 1:1 a unui produs `digital`: cum se livrează, cât ține accesul, limita de descărcări. `accessType` = lifetime (decis:
+/// acces pe viață); `accessDays` rămâne în schemă, nefolosit. `requiresLogin` e mereu adevărat (CHECK). `maxDownloads` gol = nelimitat.
+model DigitalProduct {
+  productId     String         @id
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// download | stream | external_link (CHECK)
+  deliveryType  String         @default("download")
+  /// lifetime | limited_days (CHECK; doar lifetime se folosește)
+  accessType    String         @default("lifetime")
+  accessDays    Int?
+  maxDownloads  Int?
+  requiresLogin Boolean        @default(true)
+  /// Textele de pe pagina produsului: ce primești, cerințe, format.
+  whatYouGet    String?
+  requirements  String?
+  format        String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  assets        DigitalAsset[]
+
+  @@map("digital_product")
+}
+
+/// Un fișier, un videoclip sau o legătură a produsului digital (un «modul»). `provider`: unde stă conținutul (local | bunny | s3);
+/// `storageKey`: cheia din storage sau id-ul videoclipului la Bunny. ⚠️ DOAR pe server: niciodată în props, API, loguri sau export.
+model DigitalAsset {
+  id              String             @id @default(cuid())
+  productId       String
+  digital         DigitalProduct     @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  title           String
+  /// video | file | link (CHECK)
+  type            String
+  /// local | bunny | s3 (CHECK); nul la `link`
+  provider        String?
+  storageKey      String?
+  /// https, doar la `link`
+  externalUrl     String?
+  originalName    String?
+  mimeType        String?
+  fileSize        BigInt?
+  durationSeconds Int?
+  position        Int                @default(0)
+  /// Lecție de preview: se poate viziona gratuit, fără achiziție.
+  isPreview       Boolean            @default(false)
+  /// processing | ready | failed (la Bunny, transcodarea)
+  status          String             @default("ready")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  accessLogs      DigitalAccessLog[]
+
+  @@index([productId, position])
+  @@map("digital_asset")
+}
+
+/// Dreptul de acces al unui client la o linie digitală de comandă (unic pe linie). Creat DOAR la momentul din decizia 1 (card: plata
+/// confirmată; transfer: «Marchează plătit»; ramburs mixt: livrare confirmată), revocat la rambursarea liniei. `downloadCount` crește
+/// printr-un UPDATE condiționat (limita atomică); `accessToken` e identificatorul opac din adrese (nu id-ul intern).
+model DigitalEntitlement {
+  id            String             @id @default(cuid())
+  orderId       String
+  order         Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderLineId   String             @unique
+  orderLine     OrderLine          @relation(fields: [orderLineId], references: [id], onDelete: Cascade)
+  customerId    String
+  customer      User               @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  productId     String
+  product       Product            @relation(fields: [productId], references: [id], onDelete: Restrict)
+  accessToken   String             @unique
+  /// payment | delivery | admin: de ce s-a acordat accesul.
+  grantReason   String
+  grantedAt     DateTime           @default(now())
+  /// Nul = pe viață.
+  expiresAt     DateTime?
+  downloadCount Int                @default(0)
+  maxDownloads  Int?
+  revokedAt     DateTime?
+  revokedReason String?
+  revokedBy     String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  accessLogs    DigitalAccessLog[]
+
+  @@index([customerId, grantedAt])
+  @@index([orderId])
+  @@index([productId])
+  @@map("digital_entitlement")
+}
+
+/// Jurnalul accesărilor (audit și anti-piraterie). IP-ul și user-agent-ul se păstrează doar cât cere funcția (setarea
+/// `digital.accessLogRetentionDays`) și se anonimizează (devin nule) la ștergerea contului.
+model DigitalAccessLog {
+  id            String             @id @default(cuid())
+  entitlementId String
+  entitlement   DigitalEntitlement @relation(fields: [entitlementId], references: [id], onDelete: Cascade)
+  assetId       String?
+  asset         DigitalAsset?      @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  /// view | download (CHECK)
+  action        String
+  ip            String?
+  userAgent     String?
+  createdAt     DateTime           @default(now())
+
+  @@index([entitlementId, createdAt])
+  @@index([createdAt])
+  @@map("digital_access_log")
 }
