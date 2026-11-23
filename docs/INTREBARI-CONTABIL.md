@@ -151,3 +151,7 @@ poate să nu se returneze. Cum se înregistrează: cheltuială lunară pe baza e
 în aplicație de câmpuri pentru comision (suma netă virată) sau reconcilierea se face din extrasul procesatorului?
 
 Răspuns:
+
+**16. TVA la un storno total după stornouri parțiale în bucăți (adăugată în mini-faza `storno-total`, legată de #14).** Când o factură e stornată în mai multe documente (retururi parțiale, apoi stornoul restului), fiecare document storno are TVA-ul extras din brutul LUI (cum îl calculează și SmartBill), iar brutul tuturor stornourilor este totalul facturii, exact. Din cauza rotunjirii, suma TVA a stornourilor poate diferi cu 1 ban pe linie de TVA-ul liniei originale (exemplu: linie de 4 × 123,45 = 493,80 lei, TVA 85,70; retur de o bucată, TVA 21,43, apoi restul de 3 bucăți, 370,35 lei, TVA 64,28; suma TVA a stornourilor 85,71). Este acceptabilă o diferență de cel mult 1 ban pe linie, sau SmartBill / contabilul cer altă regulă (de exemplu TVA-ul ultimului storno «prin diferență», ceea ce SmartBill nu permite prin API, fiindcă își calculează singur TVA-ul din brut)? Același lucru la o linie cu cantitate zecimală, unde restul se trimite «1 × brutul rămas» ca documentul să nu difere cu 1 ban de ce a încasat magazinul.
+
+Răspuns:

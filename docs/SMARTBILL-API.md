@@ -14,7 +14,7 @@
 
 ## Presupuneri (nedocumentate, de verificat în sandbox)
 
-1. **Storno parțial** = factură cu cantități NEGATIVE, în aceeași serie (specificația spune că cantitățile negative sunt acceptate; nu spune că se leagă de factura originală).
+1. **Storno parțial** = factură cu cantități NEGATIVE, în aceeași serie (specificația spune că cantitățile negative sunt acceptate; nu spune că se leagă de factura originală). **La fel stornoul «total» după stornouri parțiale** (mini-faza `storno-total`): restul nestornat se emite ca factură cu cantități negative, nu prin `/invoice/reverse` (care stornează tot documentul); linia cu preț × cantitate ≠ brutul rămas pleacă «1 × brutul rămas».
 2. Liniile de servicii (transport, taxă de ramburs, `isService: true`) nu cer gestiune când `useStock` e adevărat.
 3. O factură din proformă (`useEstimateDetails` + `estimate`) păstrează liniile trimise de noi (identice cu cele ale proformei, comanda nu se editează).
 4. SmartBill calculează linia ca `round(preț × cantitate)` și TVA-ul din brutul liniei, iar totalul/TVA-ul facturii ca sumă pe linii (exact ce verifică pasul separat al rotunjirii, `docs/FACTURARE-VERIFICARE-ROTUNJIRE.md`).
