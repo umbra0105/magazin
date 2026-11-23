@@ -77,13 +77,13 @@ export class BunnyDeliveryProvider implements MediaDeliveryProvider {
       AccessKey: this.options.credentials.apiKey,
       Accept: "application/json",
     };
-    let payload: string | Uint8Array | undefined;
+    let payload: string | Blob | undefined;
     if (body?.json !== undefined) {
       headers["Content-Type"] = "application/json";
       payload = JSON.stringify(body.json);
     } else if (body?.bytes) {
       headers["Content-Type"] = "application/octet-stream";
-      payload = new Uint8Array(body.bytes);
+      payload = new Blob([new Uint8Array(body.bytes)]);
     }
     let response: Response;
     try {

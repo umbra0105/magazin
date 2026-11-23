@@ -6,6 +6,7 @@
 import { pluralRo } from "@ecom/shared/plural";
 import { adminEmailRo, adminOrdersRo } from "./admin-orders-ro";
 import { accountRo } from "./account-ro";
+import { digitalRo } from "./digital-ro";
 import { adminInvoicingRo } from "./admin-invoicing-ro";
 import { adminReturnsRo } from "./admin-returns-ro";
 import { adminShippingRo } from "./admin-shipping-ro";
@@ -22,6 +23,8 @@ const hotspoturi = (n: number): string => countOf(n, "hotspot", "hotspot-uri", "
 export const ro = {
   /** Contul clientului și retururile (Faza 14): textele stau în `account-ro.ts`. */
   account: accountRo,
+  /** Produsele digitale (Faza 14b): pagina produsului, biblioteca clientului, erorile accesului; textele stau în `digital-ro.ts`. */
+  digital: digitalRo,
   /** Stări comune ale paginilor: negăsit (404), eroare neprevăzută și încărcare (docs/17, Lotul 4). */
   states: {
     notFound: {

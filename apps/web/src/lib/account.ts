@@ -50,7 +50,7 @@ export async function isFlagOn(key: FeatureKey): Promise<boolean> {
   return getFeatureFlags().isEnabled(key);
 }
 
-export type AccountLimitScope = "export" | "delete" | "return" | "address" | "wishlist";
+export type AccountLimitScope = "export" | "delete" | "return" | "address" | "wishlist" | "digital";
 
 const LIMITS: Record<AccountLimitScope, { perWindow: number; windowSeconds: number }> = {
   export: { perWindow: 5, windowSeconds: 3600 },
@@ -58,6 +58,8 @@ const LIMITS: Record<AccountLimitScope, { perWindow: number; windowSeconds: numb
   return: { perWindow: 20, windowSeconds: 3600 },
   address: { perWindow: 60, windowSeconds: 3600 },
   wishlist: { perWindow: 240, windowSeconds: 3600 },
+  /** Linkuri de acces la produse digitale (fiecare descărcare consumă din limita produsului). */
+  digital: { perWindow: 240, windowSeconds: 3600 },
 };
 
 /** Limita de cereri pe CLIENT și pe tip de operație (export, ștergere, inițiere retur …); `false` = depășită. */

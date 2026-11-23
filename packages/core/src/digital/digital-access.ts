@@ -506,3 +506,86 @@ export async function requestPreview(
   );
   return { kind: grant.kind, url: grant.url, expiresAt: grant.expiresAt };
 }
+
+/** Clientul are cel puțin un produs digital (acordat sau așteptat)? Decide dacă «Produsele mele digitale» apare în meniul contului. */
+export async function hasDigitalProducts(db: Db, userId: string): Promise<boolean> {
+  const [granted, waiting] = await Promise.all([
+    db.digitalEntitlement.count({ where: { customerId: userId } }),
+    db.orderLine.count({
+      where: {
+        isDigital: true,
+        digitalEntitlement: { is: null },
+        order: {
+          customerId: userId,
+          status: { notIn: ["cancelled", "returned"] },
+          paymentStatus: { notIn: ["failed", "cancelled", "refunded", "chargeback"] },
+        },
+      },
+    }),
+  ]);
+  return granted + waiting > 0;
+}
+
+export interface StorefrontDigitalDto {
+  deliveryType: "download" | "stream" | "external_link";
+  maxDownloads: number | null;
+  whatYouGet: string | null;
+  requirements: string | null;
+  format: string | null;
+  assets: Array<{
+    id: string;
+    title: string;
+    type: "video" | "file" | "link";
+    durationSeconds: number | null;
+    fileSize: number | null;
+    isPreview: boolean;
+  }>;
+}
+
+/**
+ * Ce se arată pe pagina unui produs digital ACTIV: tipul de livrare, limita, textele («ce primești», cerințe, format) și modulele cu
+ * durată și mărime, cu lecția de preview marcată. Doar modulele gata. Fără cheie de stocare, fără furnizor, fără adrese de conținut.
+ */
+export async function getStorefrontDigital(
+  db: Db,
+  productId: string,
+): Promise<StorefrontDigitalDto | null> {
+  const row = await db.digitalProduct.findFirst({
+    where: { productId, product: { status: "active", deletedAt: null, type: "digital" } },
+    select: {
+      deliveryType: true,
+      maxDownloads: true,
+      whatYouGet: true,
+      requirements: true,
+      format: true,
+      assets: {
+        where: { status: "ready" },
+        orderBy: [{ position: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          durationSeconds: true,
+          fileSize: true,
+          isPreview: true,
+        },
+      },
+    },
+  });
+  if (!row) return null;
+  return {
+    deliveryType: row.deliveryType as StorefrontDigitalDto["deliveryType"],
+    maxDownloads: row.maxDownloads,
+    whatYouGet: row.whatYouGet,
+    requirements: row.requirements,
+    format: row.format,
+    assets: row.assets.map((asset) => ({
+      id: asset.id,
+      title: asset.title,
+      type: asset.type as "video" | "file" | "link",
+      durationSeconds: asset.durationSeconds,
+      fileSize: toNumber(asset.fileSize),
+      isPreview: asset.isPreview,
+    })),
+  };
+}

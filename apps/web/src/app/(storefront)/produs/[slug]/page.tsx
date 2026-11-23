@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { loadEnv } from "@ecom/config";
-import type { PageSaleInfo } from "@ecom/core";
+import { getStorefrontDigital, type PageSaleInfo } from "@ecom/core";
+import { getDb } from "@ecom/db";
 import { QUANTITY_FACTOR, formatQuantity, quantityFromTicks } from "@ecom/shared/quantity";
 import { Container, EnergyLabel, SectionHeading } from "@ecom/ui";
 import { RichTextView } from "@/components/rich-text/rich-text";
@@ -17,6 +18,7 @@ import { ProductTabs, type ProductTab } from "@/components/storefront/catalog/pr
 import { PurchasePanel } from "@/components/storefront/catalog/purchase-panel";
 import { SpecsTable } from "@/components/storefront/catalog/specs-table";
 import { DownloadsList, PartsTab } from "@/components/storefront/catalog/product-extras";
+import { DigitalProductSection } from "@/components/storefront/digital/digital-product-section";
 import { JsonLdScript } from "@/components/storefront/json-ld";
 import { getFeatureFlags } from "@/lib/services";
 import { breadcrumbList, productLd } from "@/lib/structured-data";
@@ -98,8 +100,19 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
     ? await renderDescriptionHtml(product.descriptionHtml)
     : "";
   const defaultVariant = product.variants.find((v) => v.isDefault) ?? product.variants[0];
+  // produsul digital: ce primești, modulele și lecția de preview; fără stoc și fără livrare (Faza 14b)
+  const digital = product.isDigital ? await getStorefrontDigital(getDb(), product.id) : null;
 
   const tabs: ProductTab[] = [
+    ...(digital
+      ? [
+          {
+            id: "continut-digital",
+            label: getMessages().digital.product.sectionTitle,
+            content: <DigitalProductSection digital={digital} />,
+          },
+        ]
+      : []),
     ...(descriptionHtml
       ? [
           {
@@ -241,8 +254,11 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
                 unitSymbol: v.sale.unitSymbol,
                 stepLabel: v.sale.stepLabel,
                 compareAtText: v.price.compareAt ? formatPrice(v.price.compareAt, format) : null,
-                availabilityLabel: availabilityLabel(v.availability.state),
-                availabilityDetail: availabilityDetail(v.availability),
+                // produsul digital nu are stoc și nu se livrează: eticheta e «acces imediat», fără termen de livrare
+                availabilityLabel: product.isDigital
+                  ? getMessages().digital.product.badgeInstant
+                  : availabilityLabel(v.availability.state),
+                availabilityDetail: product.isDigital ? null : availabilityDetail(v.availability),
                 tone: availabilityTone(v.availability.state),
                 purchasable: v.availability.purchasable,
                 warrantyText:
