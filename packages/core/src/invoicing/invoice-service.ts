@@ -19,6 +19,7 @@ import { addOrderEvent } from "../orders/order-service";
 import {
   InvoiceDraftError,
   buildInvoiceDraft,
+  collapseInexactLines,
   negateLines,
   toDocLines,
   type DraftLine,
@@ -338,9 +339,39 @@ export class InvoiceService {
     const ref: DocumentRef = { series: parent.series as string, number: parent.number as string };
     const issueDate = this.now();
 
+    // apărare în plus (mini-faza storno-total): suma tuturor stornourilor facturii, cu cel de față, nu depășește totalul ei; altfel
+    // documentul NU ajunge la furnizor, ci trece în «eșuat», cu alertă (comanda nu se blochează)
+    let alreadyReversedMinor = 0;
+    let hasPartials = false;
+    if (doc.docKey !== "storno:proforma") {
+      const others = await this.db.invoice.findMany({
+        where: {
+          orderId: doc.orderId,
+          kind: "storno",
+          parentId: parent.id,
+          docKey: { startsWith: "storno:" },
+          status: { not: "skipped" },
+          id: { not: doc.id },
+        },
+        select: { totalMinor: true, docKey: true },
+      });
+      alreadyReversedMinor = others.reduce((acc, o) => acc + o.totalMinor, 0);
+      hasPartials = others.some((o) => o.docKey !== "storno:total");
+      if (alreadyReversedMinor + doc.totalMinor > parent.totalMinor) {
+        throw new InvoiceServiceError(
+          "INVOICE_STORNO_EXCEEDS_TOTAL",
+          `Stornourile (${alreadyReversedMinor + doc.totalMinor} bani) ar depăși totalul facturii (${parent.totalMinor} bani): documentul nu se trimite furnizorului`,
+        );
+      }
+    }
+    const reversal = { invoiceTotalMinor: parent.totalMinor, alreadyReversedMinor };
+    // stornoul «total» pe tot documentul (fără stornouri parțiale) merge prin `reverseInvoice`; cu stornouri parțiale e restul pe
+    // linii, emis ca factură cu cantități negative, ca stornoul parțial
+    const wholeDocument = doc.docKey === "storno:total" && !hasPartials;
+
     // liniile stornoului total = liniile documentului de stornat (pentru afișare), păstrate o singură dată
     const own = await this.db.invoiceLine.count({ where: { invoiceId: doc.id } });
-    if (own === 0 && doc.docKey === "storno:total") {
+    if (own === 0 && wholeDocument) {
       await this.db.invoiceLine.createMany({
         data: parent.lines.map((l) => ({
           invoiceId: doc.id,
@@ -376,11 +407,11 @@ export class InvoiceService {
       };
       return this.finish(doc, provider, synthetic, {});
     }
-    if (doc.docKey === "storno:total") {
-      const issued = await provider.reverseInvoice(ref, issueDate);
+    if (wholeDocument) {
+      const issued = await provider.reverseInvoice(ref, issueDate, reversal);
       return this.finish(doc, provider, issued, {});
     }
-    // storno parțial: factură cu cantități negative (PRESUPUS pentru SmartBill: nedocumentat, vezi adaptorul)
+    // storno parțial sau restul facturii: factură cu cantități negative (PRESUPUS pentru SmartBill: nedocumentat, vezi adaptorul)
     const lines = await this.db.invoiceLine.findMany({
       where: { invoiceId: doc.id },
       orderBy: { position: "asc" },
@@ -393,9 +424,14 @@ export class InvoiceService {
       where: { id: doc.orderId },
       select: { number: true, email: true },
     });
-    const draftLines: DraftLine[] = lines.map(toDraftLine);
+    const stored: DraftLine[] = lines.map(toDraftLine);
+    // restul facturii: brutul liniei e cel rămas EXACT, deci preț × cantitate poate diferi cu 1 ban: linia pleacă «1 × brut»
+    const draftLines =
+      doc.docKey === "storno:total"
+        ? collapseInexactLines(stored, (await readInvoicingSettings(this.db)).serviceUnit)
+        : stored;
     const request: InvoiceRequest = {
-      orderNumber: `${order?.number ?? ""} (storno parțial)`,
+      orderNumber: `${order?.number ?? ""} (${doc.docKey === "storno:total" ? "storno rest" : "storno parțial"})`,
       client,
       lines: toDocLines(negateLines(draftLines)),
       currency: "RON",
@@ -404,6 +440,7 @@ export class InvoiceService {
       payment: null,
       fromProforma: null,
       sendEmail: false,
+      reversal,
     };
     const issued = await provider.issueInvoice(request);
     return this.finish(doc, provider, issued, { negative: true });
@@ -648,7 +685,10 @@ export class InvoiceService {
       return "failed";
     }
     if (error instanceof IntegrationError) {
-      if (error.code === "INVOICE_TOTAL_MISMATCH") {
+      if (
+        error.code === "INVOICE_TOTAL_MISMATCH" ||
+        error.code === "INVOICE_STORNO_EXCEEDS_TOTAL"
+      ) {
         await this.markFailed(doc.id, error.code, error.message, {
           fromStatus: "issuing",
           countAttempt: true,
