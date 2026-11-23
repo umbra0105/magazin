@@ -518,6 +518,7 @@ export class InvoiceService {
             taxMinor: l.taxMinor,
             taxRateBps: l.taxRateBps,
             dischargeable: l.variantId !== null && dischargeable.has(l.variantId),
+            digital: l.isDigital,
           })),
           discountMinor: order.discountMinor,
           shippingMinor: order.shippingMinor,
