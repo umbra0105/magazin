@@ -44,7 +44,15 @@ function Form({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const form = useTabForm(
-    { title: "", sku: "", price: "", brandId: "", categoryId: "", shippingClass: "standard" },
+    {
+      title: "",
+      sku: "",
+      price: "",
+      brandId: "",
+      categoryId: "",
+      shippingClass: "standard",
+      type: "physical",
+    },
     "create",
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -71,6 +79,7 @@ function Form({
         const result = await createProduct({
           title: values.title.trim(),
           shippingClass: values.shippingClass,
+          ...(values.type === "digital" && { type: "digital" as const }),
           ...(values.brandId && { brandId: values.brandId }),
           ...(values.categoryId && { categoryIds: [values.categoryId] }),
           variants: [{ sku: values.sku.trim(), price }],
@@ -110,6 +119,18 @@ function Form({
             required
             autoFocus
           />
+        )}
+      </Field>
+      <Field id="new-type" label={e.create.type} help={e.create.typeHelp}>
+        {(control) => (
+          <Select
+            {...control}
+            value={values.type}
+            onChange={(ev) => form.set("type", ev.target.value)}
+          >
+            <option value="physical">{e.create.typePhysical}</option>
+            <option value="digital">{e.create.typeDigital}</option>
+          </Select>
         )}
       </Field>
       <div className="grid gap-5 sm:grid-cols-2">

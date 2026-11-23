@@ -78,6 +78,8 @@ export interface ProductEditorProps {
   defaultTab: string;
   /** Panoul prețului de achiziție, randat pe server; `null` fără permisiunea de vizualizare. */
   purchaseSlot: ReactNode;
+  /** Tabul «Conținut digital» (Faza 14b): doar la produsele digitale și cu `digital.view`; altfel tabul nu există. */
+  digitalSlot?: ReactNode;
 }
 
 /**
@@ -116,6 +118,7 @@ function EditorBody({
   descriptionEditorHtml,
   defaultTab,
   purchaseSlot,
+  digitalSlot,
 }: ProductEditorProps) {
   const dirty = useDirtyKeys();
   const badge = (key: string) =>
@@ -252,6 +255,16 @@ function EditorBody({
         />
       ),
     },
+    ...(digitalSlot
+      ? [
+          {
+            id: "digital",
+            label: e.tabs.digital,
+            badge: undefined,
+            panel: digitalSlot,
+          },
+        ]
+      : []),
     {
       id: "conformitate",
       label: e.tabs.conformity,

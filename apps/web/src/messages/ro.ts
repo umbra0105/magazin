@@ -6,6 +6,7 @@
 import { pluralRo } from "@ecom/shared/plural";
 import { adminEmailRo, adminOrdersRo } from "./admin-orders-ro";
 import { accountRo } from "./account-ro";
+import { digitalAdminRo } from "./digital-admin-ro";
 import { digitalRo } from "./digital-ro";
 import { adminInvoicingRo } from "./admin-invoicing-ro";
 import { adminReturnsRo } from "./admin-returns-ro";
@@ -25,6 +26,8 @@ export const ro = {
   account: accountRo,
   /** Produsele digitale (Faza 14b): pagina produsului, biblioteca clientului, erorile accesului; textele stau în `digital-ro.ts`. */
   digital: digitalRo,
+  /** Produsele digitale în administrare (Faza 14b): tabul produsului, panoul din comandă, lista de acces și livrarea. */
+  digitalAdmin: digitalAdminRo,
   /** Stări comune ale paginilor: negăsit (404), eroare neprevăzută și încărcare (docs/17, Lotul 4). */
   states: {
     notFound: {
@@ -2223,6 +2226,7 @@ export const ro = {
           attributes: "Atribute",
           related: "Asociate",
           documents: "Documente",
+          digital: "Conținut digital",
           conformity: "Conformitate",
           spareParts: "Piese de schimb",
         },
@@ -2778,6 +2782,11 @@ export const ro = {
           needOptions: "Completează cel puțin o opțiune, cu nume și valori.",
         },
         create: {
+          type: "Tip de produs",
+          typeHelp:
+            "Produsul digital (curs, fișier) nu are stoc și nu se livrează: clientul îl primește în cont, după plată.",
+          typePhysical: "Produs fizic",
+          typeDigital: "Produs digital",
           title: "Titlu",
           sku: "SKU (cod intern)",
           price: "Preț (lei, cu TVA)",

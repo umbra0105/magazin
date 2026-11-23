@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getDb } from "@ecom/db";
 import {
   ADJUSTMENT_NOTE_MAX,
   ADJUSTMENT_REASONS,
@@ -7,6 +8,7 @@ import {
   ADJUSTMENT_SIGN_RULES,
   can,
   childrenOf,
+  getDigitalContent,
   hasCopySkuMarker,
   type CategoryNode,
   type ProductStockView,
@@ -28,7 +30,9 @@ import {
   getProductService,
 } from "@/lib/catalog";
 import { getMeasureUnitService, getStockOverviewService } from "@/lib/inventory";
+import { DigitalTab } from "@/components/admin/products/digital-tab";
 import { RichText } from "@/components/rich-text/rich-text-server";
+import { readDigitalGroup } from "@/lib/digital";
 import { renderDescriptionForEditor } from "@/lib/rich-text";
 import { getProductDocumentsService } from "@/lib/product-documents";
 import { getFeatureFlags, getSettings } from "@/lib/services";
@@ -52,6 +56,7 @@ const TAB_IDS = [
   "asociate",
   "piese",
   "documente",
+  "digital",
   "conformitate",
   "media",
   "seo",
@@ -215,6 +220,11 @@ export default async function ProductEditorPage({
   }));
 
   const tabParam = one(query["tab"]);
+  // tabul «Conținut digital»: doar produsele digitale, doar cu `digital.view` (Faza 14b)
+  const digitalVisible = product.type === "digital" && can(subject, "digital.view");
+  const [digitalContent, digitalSettings] = digitalVisible
+    ? await Promise.all([getDigitalContent(getDb(), product.id), readDigitalGroup()])
+    : [null, null];
   const defaultTab = (TAB_IDS as readonly string[]).includes(tabParam ?? "")
     ? (tabParam as string)
     : "general";
@@ -365,6 +375,20 @@ export default async function ProductEditorPage({
           />
         }
         defaultTab={defaultTab}
+        digitalSlot={
+          digitalContent ? (
+            <DigitalTab
+              productId={product.id}
+              initial={digitalContent}
+              canManage={can(subject, "digital.manage")}
+              maxUploadMb={digitalSettings?.maxUploadMb ?? 1}
+              providers={{
+                video: digitalSettings?.videoProvider ?? "local",
+                file: digitalSettings?.fileProvider ?? "local",
+              }}
+            />
+          ) : null
+        }
         purchaseSlot={
           <PurchasePanel
             subject={subject}
