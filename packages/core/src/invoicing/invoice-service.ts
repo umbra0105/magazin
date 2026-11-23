@@ -1,6 +1,5 @@
 import { Prisma, type PrismaClient } from "@ecom/db";
 import {
-  DomainError,
   IntegrationError,
   isSafeToRetryInvoiceError,
   type DocumentRef,
@@ -20,15 +19,13 @@ import { addOrderEvent } from "../orders/order-service";
 import {
   InvoiceDraftError,
   buildInvoiceDraft,
-  buildPartialStorno,
   negateLines,
   toDocLines,
   type DraftLine,
   type StornoRequestLine,
-  type StornoReturned,
-  type StornoSourceLine,
 } from "./invoice-draft";
 import { enqueueInvoiceAlertEmail } from "./invoice-alert";
+import { queuePartialStorno } from "./partial-storno";
 import { invoicePaymentType } from "./invoice-rules";
 import { readInvoicingSettings, type InvoicingSettings } from "./invoice-settings";
 import {
@@ -51,20 +48,8 @@ import {
  *  - către furnizor pleacă doar ce cere factura; în `lastError` și în jurnal nu intră date personale (mesajele adaptoarelor sunt
  *    fără corpul cererii), iar costul de achiziție nu apare nicăieri aici.
  */
-export const INVOICE_SERVICE_CODES = [
-  "INVOICE_NOT_FOUND",
-  "INVOICE_STATE_INVALID",
-  "INVOICE_NO_PROVIDER",
-  "INVOICE_ORDER_NOT_ELIGIBLE",
-  "INVOICE_OUTCOME_UNKNOWN",
-  "INVOICE_PARENT_UNRESOLVED",
-] as const;
-
-export class InvoiceServiceError extends DomainError {
-  constructor(code: (typeof INVOICE_SERVICE_CODES)[number], message: string, details?: unknown) {
-    super(code, message, details);
-  }
-}
+export { INVOICE_SERVICE_CODES, InvoiceServiceError } from "./invoice-service-error";
+import { InvoiceServiceError } from "./invoice-service-error";
 
 /** De unde vine furnizorul de facturare (configurat, cu chei decriptate și garda LIVE). */
 export interface InvoiceProviderSource {
@@ -943,9 +928,8 @@ export class InvoiceService {
   }
 
   /**
-   * Storno PARȚIAL pe produse (retur parțial; ecranele de retur vin în Faza 14). `reference` identifică returul (unic pe comandă:
-   * aceeași cerere repetată nu emite al doilea document). Transportul NU se stornează automat (decizia 2026-11-22; întrebarea #11 din
-   * INTREBARI-CONTABIL, 🟡).
+   * Storno PARȚIAL pe produse (retur parțial). Logica stă în `queuePartialStorno` (`partial-storno.ts`), apelabilă și din tranzacția
+   * rambursării unui retur (Faza 14).
    */
   async requestPartialStorno(
     orderId: string,
@@ -953,122 +937,7 @@ export class InvoiceService {
     returns: readonly StornoRequestLine[],
     actorLabel: string,
   ): Promise<string | null> {
-    if (!/^[A-Za-z0-9_-]{1,60}$/.test(reference)) {
-      throw new InvoiceServiceError("INVOICE_STATE_INVALID", "Referința returului nu e validă");
-    }
-    return inTx(this.db, async (tx) => {
-      await tx.$queryRaw`SELECT id FROM customer_order WHERE id = ${orderId} FOR UPDATE`;
-      const parent = await tx.invoice.findUnique({
-        where: { orderId_docKey: { orderId, docKey: "invoice" } },
-        include: { lines: true },
-      });
-      if (!parent || parent.status !== "issued") {
-        throw new InvoiceServiceError(
-          "INVOICE_STATE_INVALID",
-          "Comanda nu are o factură emisă de stornat",
-        );
-      }
-      const total = await tx.invoice.findUnique({
-        where: { orderId_docKey: { orderId, docKey: "storno:total" } },
-        select: { status: true },
-      });
-      if (total && total.status !== "skipped") {
-        throw new InvoiceServiceError(
-          "INVOICE_STATE_INVALID",
-          "Factura a fost deja stornată total",
-        );
-      }
-      const earlier = await tx.invoice.findMany({
-        where: {
-          orderId,
-          kind: "storno",
-          docKey: { startsWith: "storno:" },
-          parentId: parent.id,
-          status: { not: "skipped" },
-        },
-        include: { lines: true },
-      });
-      const returned = new Map<string, StornoReturned>();
-      for (const s of earlier) {
-        for (const l of s.lines) {
-          if (!l.orderLineId) continue;
-          const prev = returned.get(l.orderLineId) ?? {
-            quantityTicks: 0n,
-            lineTotalMinor: 0,
-            taxMinor: 0,
-          };
-          returned.set(l.orderLineId, {
-            quantityTicks: prev.quantityTicks + l.quantityTicks,
-            lineTotalMinor: prev.lineTotalMinor + l.lineTotalMinor,
-            taxMinor: prev.taxMinor + l.taxMinor,
-          });
-        }
-      }
-      const source: StornoSourceLine[] = parent.lines
-        .filter((l) => l.kind === "product" && l.orderLineId !== null)
-        .map((l) => ({
-          orderLineId: l.orderLineId as string,
-          sku: l.sku as string,
-          title: l.title,
-          unitName: l.unitName,
-          quantityTicks: l.quantityTicks,
-          unitPriceMinor: l.unitPriceMinor,
-          lineTotalMinor: l.lineTotalMinor,
-          taxMinor: l.taxMinor,
-          taxRateBps: l.taxRateBps,
-        }));
-      const storno = buildPartialStorno(source, returned, returns);
-      const created = await tx.invoice.createManyAndReturn({
-        data: [
-          {
-            orderId,
-            kind: "storno",
-            docKey: `storno:${reference}`,
-            parentId: parent.id,
-            totalMinor: storno.totalMinor,
-            taxMinor: storno.taxMinor,
-            requestedBy: actorLabel,
-          },
-        ],
-        skipDuplicates: true,
-        select: { id: true },
-      });
-      const id = created[0]?.id ?? null;
-      if (!id) return null;
-      await tx.invoiceLine.createMany({
-        data: storno.lines.map((l, index) => ({
-          invoiceId: id,
-          position: index + 1,
-          kind: l.kind,
-          orderLineId: l.orderLineId,
-          sku: l.sku,
-          title: l.title,
-          unitName: l.unitName,
-          quantityTicks: l.quantityTicks,
-          unitPriceMinor: l.unitPriceMinor,
-          lineTotalMinor: l.lineTotalMinor,
-          netMinor: l.netMinor,
-          taxMinor: l.taxMinor,
-          taxRateBps: l.taxRateBps,
-          dischargeStock: false,
-        })),
-      });
-      await tx.invoiceEvent.create({
-        data: {
-          invoiceId: id,
-          type: "queued",
-          message: "Stornoul parțial a fost pus în coadă",
-          data: { reference },
-        },
-      });
-      await addOrderEvent(tx, orderId, {
-        type: "invoice.partial_storno_requested",
-        message: `Stornoul parțial a fost cerut de ${actorLabel} (în coadă)`,
-        actorLabel,
-        data: { invoiceId: id, reference },
-      });
-      return id;
-    });
+    return queuePartialStorno(this.db, orderId, reference, returns, actorLabel);
   }
 
   /**

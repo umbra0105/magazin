@@ -79,6 +79,20 @@ const DESTINATIONS: readonly Destination[] = [
     page: "[id]/page.tsx",
     pagePermission: "orders.read",
   },
+  {
+    // cerere nouă de retur: duce la returul din admin
+    writer: "returns/return-customer.ts",
+    permission: "returns.view",
+    page: "retururi/[id]/page.tsx",
+    pagePermission: "returns.view",
+  },
+  {
+    // stornoul unui retur rambursat nu s-a putut pune în coadă: verificare fiscală, tot în ecranul returului
+    writer: "returns/return-settle.ts",
+    permission: "returns.manage",
+    page: "retururi/[id]/page.tsx",
+    pagePermission: "returns.view",
+  },
 ];
 
 function sourceFiles(dir: string): string[] {
@@ -127,6 +141,8 @@ describe("notificările din clopoțel: destinația", () => {
         "offer_stale",
         "payment_attention",
         "refund_manual",
+        "return_requested",
+        "return_storno_failed",
         "stock_sync_stale",
         "webhook_stuck",
       ].sort(),

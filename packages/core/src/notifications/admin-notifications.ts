@@ -18,6 +18,10 @@ export const NOTIFICATION_KINDS = [
   "offer_stale",
   /** O factură nu s-a putut emite (3 eșecuri, rezultat nesigur sau diferență de sumă): documentul fiscal lipsește sau e de verificat. */
   "invoice_failed",
+  /** Un client a cerut un retur (Faza 14): fără date personale, doar numărul comenzii și al returului. */
+  "return_requested",
+  /** Stornoul parțial al unui retur rambursat nu s-a putut emite sau nu coincide cu rambursarea: verificare fiscală. */
+  "return_storno_failed",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

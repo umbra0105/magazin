@@ -287,3 +287,13 @@ Răspuns:
 **10.3. Linkul personal.** Linkul conține un jeton secret și este valabil până la expirare; oricine îl deține poate plăti oferta, dar nu o poate modifica. Emailul cu link se păstrează o singură dată (nu se păstrează jetonul, doar amprenta lui). Este nevoie de o mențiune de confidențialitate suplimentară?
 
 Răspuns:
+
+## 11. Retururile din contul clientului (adăugată în Faza 14)
+
+**11.1. Transportul returului și transportul inițial, pentru produse paletizate.** Cine suportă transportul returului (clientul, magazinul sau în funcție de motiv) și ce se rambursează din transportul plătit la comandă când clientul se retrage, mai ales la produsele paletizate (transport de 350 lei, ridicare cu mijloace speciale). În aplicație, rambursarea unui retur acoperă DOAR produsele returnate; transportul se poate adăuga manual de admin, cu motiv, până la transportul plătit. Nu se blochează nimic pe baza «la comandă», «paletizat» sau «supradimensionat» (vezi 1.6).
+
+Răspuns:
+
+**11.2. Momentul de la care curge fereastra de retur, la livrările pe palet și la ridicarea personală.** Fereastra (implicit 14 zile, setare) curge de la livrarea consemnată: la curier, momentul «livrat» al expedierii; la ridicare personală, momentul în care adminul marchează comanda «ridicată». La livrările pe palet, unde nu există curier cu confirmare automată, adminul consemnează manual livrarea. De confirmat dacă acesta e momentul corect (livrarea efectivă) și dacă fereastra se prelungește când clientul nu a putut verifica produsul la livrare.
+
+Răspuns:

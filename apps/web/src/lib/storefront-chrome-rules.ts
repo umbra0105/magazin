@@ -10,7 +10,7 @@
  *  - `cart`: coșul (Faza 8);
  *  - `wishlist`: lista de favorite (după Faza 7; în spatele steagului `wishlist`).
  */
-export const STOREFRONT_READINESS = { search: true, cart: true, wishlist: false } as const;
+export const STOREFRONT_READINESS = { search: true, cart: true, wishlist: true } as const;
 
 export type SlotState = "active" | "disabled" | "hidden";
 

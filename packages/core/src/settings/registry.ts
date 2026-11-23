@@ -174,6 +174,20 @@ export const settingGroups = {
      */
     supportRefundLimit: z.number().int().min(0).max(1_000_000_000).default(50_000),
   },
+  returns: {
+    /**
+     * Fereastra de retur: zile de la livrare (sau de la momentul marcat ca ridicat, la ridicare personală), decizia 2026-11-22.
+     * O citește și loialitatea (Faza 15b). Nu blochează nimic pe baza «la comandă», «paletizat» sau «supradimensionat».
+     */
+    windowDays: z.number().int().min(1).max(365).default(14),
+  },
+  account: {
+    /**
+     * Cât se păstrează comenzile și facturile unui cont șters (anonimizat), în ani. Anonimizarea NU șterge comenzile (obligație
+     * fiscală); valoarea e de confirmat cu avocatul (INTREBARI-AVOCAT 3.3), de aceea e setare, nu constantă în cod.
+     */
+    orderRetentionYears: z.number().int().min(1).max(30).default(10),
+  },
   orders: {
     /** Cât e valabilă o ofertă de plată (link pentru client), în ore; după aceea expiră (job). */
     offerValidityHours: z.number().int().min(1).max(720).default(72),

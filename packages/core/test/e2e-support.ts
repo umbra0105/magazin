@@ -2678,6 +2678,22 @@ async function deleteE2eOrders(pattern: string): Promise<number> {
       `delete from invoice where "orderId" in (select id from customer_order where email like $1)`,
       [pattern],
     );
+    // retururile (Faza 14) refera comanda și clientul cu RESTRICT: se șterg ÎNAINTE de comandă, odată cu notificările lor (liniile și
+    // jurnalul pleacă în cascadă; jurnalul nu se poate șterge direct, dar cascada din retur e permisă). Wishlist-ul și adresele
+    // salvate ale conturilor de test pleacă odată cu contul (cascadă din `user`, vezi `cleanupE2eUsers`).
+    await db.query(
+      `delete from admin_notification n where (n."dedupKey" like 'return-requested:%' or n."dedupKey" like 'return-storno-failed:%') and exists (select 1 from return_request r where r."orderId" in (select id from customer_order where email like $1) and n."dedupKey" like concat('%:', r.id))`,
+      [pattern],
+    );
+    await db.query(
+      `delete from return_request where "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
+    // rambursările pornite pentru retururi (Faza 14) refera comanda cu RESTRICT: se șterg după retururile care le referă
+    await db.query(
+      `delete from refund where "orderId" in (select id from customer_order where email like $1)`,
+      [pattern],
+    );
     const removed = await db.query(`delete from customer_order where email like $1`, [pattern]);
     return removed.rowCount ?? 0;
   });
@@ -3203,5 +3219,162 @@ export async function setE2eInvoiceState(
         [orderNumber, docKey, state.code, state.message],
       );
     }
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------- cont client și retururi (Faza 14)
+
+export interface E2eAccountOrder {
+  orderId: string;
+  orderNumber: string;
+  lineId: string;
+  email: string;
+}
+
+/**
+ * O comandă LIVRATĂ și plătită (ramburs încasat), legată de contul clientului prin `customerId`, cu 3 bucăți dintr-un produs de test.
+ * Emailul comenzii poartă tag-ul (`…-<tag>@e2e-comanda.invalid`), deci o șterge `removeE2eOrders({ tag })`. Se scrie într-o singură
+ * tranzacție (baza cere cel puțin o linie și sume coerente la comitere). `deliveredDaysAgo` = `null`: fără livrare (returul nu se poate cere).
+ */
+export async function seedE2eAccountOrder(input: {
+  tag: string;
+  key: string;
+  customerEmail: string;
+  variantSku: string;
+  unitPriceMinor: number;
+  deliveredDaysAgo: number | null;
+  status?: string;
+}): Promise<E2eAccountOrder> {
+  assertE2eTag(input.tag);
+  const email = `cont-${input.key}-${input.tag}${E2E_ORDER_EMAIL_DOMAIN}`;
+  const number = `E2E-${input.tag}-${input.key}`.toUpperCase();
+  const quantity = 30_000; // 3 bucăți
+  const total = input.unitPriceMinor * 3;
+  const tax = Math.round((total * 21) / 121);
+  return withClient(async (db) => {
+    const user = await db.query(`select id from "user" where email = $1`, [input.customerEmail]);
+    const userId = user.rows[0]?.id as string | undefined;
+    if (!userId) throw new Error(`Clientul de test ${input.customerEmail} nu există`);
+    const channel = await db.query(`select id from sales_channel order by "createdAt" limit 1`);
+    const channelId = channel.rows[0]?.id as string | undefined;
+    if (!channelId) throw new Error("Nu există niciun canal de vânzare în baza de test");
+    const variant = await db.query(
+      `select v.id, p.title from product_variant v join product p on p.id = v."productId" where v.sku = $1`,
+      [input.variantSku],
+    );
+    const variantId = variant.rows[0]?.id as string | undefined;
+    if (!variantId) throw new Error(`Varianta ${input.variantSku} nu există`);
+    await db.query("begin");
+    try {
+      const order = await db.query(
+        `insert into customer_order (id, number, "channelId", "customerId", email, phone, status, "paymentStatus", "fulfillmentStatus",
+           "subtotalMinor", "shippingMinor", "taxMinor", "totalMinor", "taxRateBps", "shippingMethodCode", "shippingSnapshot", "paymentMethod",
+           "termsAcceptedAt", "termsConsentText", "termsConsentVersion", "idempotencyKey", "updatedAt")
+         values (gen_random_uuid()::text, $1, $2, $3, $4, '0722000000', $5, 'paid', $6, $7, 0, $8, $7, 2100, 'courier',
+           '{"kind":"courier"}'::jsonb, 'cod', now(), 'Sunt de acord', 't', gen_random_uuid()::text, now()) returning id`,
+        [
+          number,
+          channelId,
+          userId,
+          email,
+          input.status ?? "confirmed",
+          input.deliveredDaysAgo === null ? "unfulfilled" : "delivered",
+          total,
+          tax,
+        ],
+      );
+      const orderId = order.rows[0]?.id as string;
+      const line = await db.query(
+        `insert into order_line (id, "orderId", "variantId", sku, title, quantity, "unitSymbol", "unitDecimals", "unitPriceMinor",
+           "lineTotalMinor", "netMinor", "taxMinor", "taxRateBps", "stockState", "shippingClass", "productSnapshot")
+         values (gen_random_uuid()::text, $1, $2, $3, $4, $5, 'buc', 0, $6, $7, $8, $9, 2100, 'in_stock', 'standard', '{}'::jsonb) returning id`,
+        [
+          orderId,
+          variantId,
+          input.variantSku,
+          variant.rows[0]?.title as string,
+          quantity,
+          input.unitPriceMinor,
+          total,
+          total - tax,
+          tax,
+        ],
+      );
+      await db.query(
+        `insert into payment (id, "orderId", provider, method, "amountMinor", status, "capturedAt", "capturedAmountMinor", "capturedCurrency", "updatedAt")
+         values (gen_random_uuid()::text, $1, 'cod', 'cod', $2, 'paid', now(), $2, 'RON', now())`,
+        [orderId, total],
+      );
+      await db.query(
+        `insert into order_event (id, "orderId", type, message, "createdAt") values (gen_random_uuid()::text, $1, 'order.placed', 'Comanda a fost plasată', now() - interval '10 days')`,
+        [orderId],
+      );
+      if (input.deliveredDaysAgo !== null) {
+        await db.query(
+          `insert into order_event (id, "orderId", type, message, "createdAt")
+           values (gen_random_uuid()::text, $1, 'order.delivered', 'Livrată', now() - ($2::int * interval '1 day'))`,
+          [orderId, input.deliveredDaysAgo],
+        );
+      }
+      await db.query("commit");
+      return { orderId, orderNumber: number, lineId: line.rows[0]?.id as string, email };
+    } catch (error) {
+      await db.query("rollback");
+      throw error;
+    }
+  });
+}
+
+/** O notă internă pe comandă (nu trebuie să apară niciodată în contul clientului). */
+export async function setE2eOrderSecrets(
+  orderId: string,
+  secrets: { adminNote: string; supplierName: string },
+): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `update customer_order set "adminNote" = $2, "supplierName" = $3, "supplierMarkedAt" = now(), "supplierMarkedBy" = 'e2e' where id = $1`,
+      [orderId, secrets.adminNote, secrets.supplierName],
+    );
+  });
+}
+
+export interface E2eReturnState {
+  status: string;
+  refundProductsMinor: number | null;
+  stornoState: string | null;
+  itemCount: number;
+  restocked: number;
+}
+
+export async function readE2eReturn(returnId: string): Promise<E2eReturnState | null> {
+  return withClient(async (db) => {
+    const row = await db.query(
+      `select r.status, r."refundProductsMinor", r."stornoState",
+              (select count(*)::int from return_item i where i."returnId" = r.id) as items,
+              (select count(*)::int from return_item i where i."returnId" = r.id and i."restockedAt" is not null) as restocked
+       from return_request r where r.id = $1`,
+      [returnId],
+    );
+    const r = row.rows[0];
+    return r
+      ? {
+          status: r.status as string,
+          refundProductsMinor: (r.refundProductsMinor as number | null) ?? null,
+          stornoState: (r.stornoState as string | null) ?? null,
+          itemCount: r.items as number,
+          restocked: r.restocked as number,
+        }
+      : null;
+  });
+}
+
+/** Numărul de retururi ale unui client (după emailul contului) și ale unei comenzi. */
+export async function countE2eReturnsOfOrder(orderId: string): Promise<number> {
+  return withClient(async (db) => {
+    const row = await db.query(
+      `select count(*)::int as n from return_request where "orderId" = $1`,
+      [orderId],
+    );
+    return (row.rows[0]?.n as number) ?? 0;
   });
 }

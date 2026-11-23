@@ -23,6 +23,12 @@ model User {
   cart              Cart?
   savedOrderViews   OrderSavedView[]
   notificationReads AdminNotificationRead[]
+  /// Faza 14: anonimizarea contului (ștergere cerută de client); după ea contul nu mai poate fi folosit.
+  anonymizedAt      DateTime?
+  customerAddresses CustomerAddress[]
+  wishlistItems     WishlistItem[]
+  preference        CustomerPreference?
+  returnRequests    ReturnRequest[]
 
   @@unique([email])
   @@map("user")
@@ -488,6 +494,7 @@ model ProductVariant {
   backInStockAlerts      BackInStockAlert[]
   cartItems              CartItem[]
   orderLines             OrderLine[]
+  wishlistItems          WishlistItem[]
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   offerLines             OrderOfferLine[]
@@ -1250,20 +1257,22 @@ model CartItem {
 /// (nivel 3). Rândurile dispărute dintr-o versiune nouă se marchează `isActive = false`, nu se șterg (adresele păstrează codul).
 /// Numele e cel din registru (majuscule, diacritice normalizate, pentru căutare); numele de afișare se calculează la citire.
 model SirutaUnit {
-  code          Int          @id
-  countyCode    Int
-  name          String
-  parentCode    Int?
-  parent        SirutaUnit?  @relation("SirutaTree", fields: [parentCode], references: [code], onDelete: Restrict)
-  children      SirutaUnit[] @relation("SirutaTree")
-  tip           Int
-  level         Int
-  isActive      Boolean      @default(true)
-  sourceVersion String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  countyOf      Address[]    @relation("AddressCounty")
-  localityOf    Address[]    @relation("AddressLocality")
+  code                    Int               @id
+  countyCode              Int
+  name                    String
+  parentCode              Int?
+  parent                  SirutaUnit?       @relation("SirutaTree", fields: [parentCode], references: [code], onDelete: Restrict)
+  children                SirutaUnit[]      @relation("SirutaTree")
+  tip                     Int
+  level                   Int
+  isActive                Boolean           @default(true)
+  sourceVersion           String
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  countyOf                Address[]         @relation("AddressCounty")
+  localityOf              Address[]         @relation("AddressLocality")
+  customerAddressCounty   CustomerAddress[] @relation("CustomerAddressCounty")
+  customerAddressLocality CustomerAddress[] @relation("CustomerAddressLocality")
 
   @@index([countyCode, level])
   @@index([parentCode])
@@ -1365,6 +1374,7 @@ model Order {
   offer                  OrderOffer?
   shipments              Shipment[]
   invoices               Invoice[]
+  returns                ReturnRequest[]
 
   @@index([status, paymentStatus])
   @@index([email])
@@ -1405,6 +1415,7 @@ model OrderLine {
   shippingClass   String
   productSnapshot Json
   createdAt       DateTime        @default(now())
+  returnItems     ReturnItem[]
 
   @@unique([orderId, variantId])
   @@index([variantId])
@@ -1530,32 +1541,33 @@ model Payment {
 /// Rambursarea unei plăți (Faza 10). `status`: requested | confirmed | failed | manual_required. Idempotentă prin
 /// `idempotencyKey` (la rambursările automate derivată din plată: o singură rambursare per plată și motiv).
 model Refund {
-  id               String    @id @default(cuid())
+  id               String          @id @default(cuid())
   paymentId        String
-  payment          Payment   @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  payment          Payment         @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   orderId          String
-  order            Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  order            Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
   amountMinor      Int
   reason           String
   /// admin | auto_stock_lost | auto_late_payment
   kind             String
-  status           String    @default("requested")
+  status           String          @default("requested")
   providerRef      String?
-  idempotencyKey   String    @unique
+  idempotencyKey   String          @unique
   actorLabel       String?
   failureMessage   String?
   /// «Am rambursat manual»: referința din contul procesatorului.
   manualReference  String?
-  resolvedManually Boolean   @default(false)
+  resolvedManually Boolean         @default(false)
+  returnRequests   ReturnRequest[]
   /// Faza 11 (decizia 2026-11-19): rambursarea a fost cerută de un actor CU LIMITĂ (rolul Suport: `orders.refund` fără
   /// `payments.refund`). Limita se aplică pe suma acestor rambursări pe comandă, sub blocare.
-  limitedActor     Boolean   @default(false)
+  limitedActor     Boolean         @default(false)
   /// Momentul în care cererea a fost TRIMISĂ procesatorului. O cerere trimisă și rămasă fără rezultat nu se retrimite automat
   /// (risc de rambursare dublă): devine «manual_required».
   sentAt           DateTime?
   confirmedAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@index([paymentId])
   @@index([orderId])
@@ -1971,4 +1983,167 @@ model InvoiceEvent {
 
   @@index([invoiceId, createdAt])
   @@map("invoice_event")
+}
+
+// ---------------------------------------------------------------------------
+// Faza 14: contul clientului și retururile (migrația `20261123100000_account_returns`, aditivă)
+// ---------------------------------------------------------------------------
+
+/// Adresă salvată în agenda clientului. NU e `Address` (acela e snapshot-ul imuabil al comenzii): se poate modifica și șterge.
+/// Cel mult o adresă implicită de livrare și una de facturare pe client (indecși parțiali în migrație).
+model CustomerAddress {
+  id                 String     @id @default(cuid())
+  userId             String
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label              String?
+  fullName           String
+  company            String?
+  vatId              String?
+  vatIdVerification  String?
+  tradeRegisterNo    String?
+  phone              String
+  countySirutaCode   Int
+  county             SirutaUnit @relation("CustomerAddressCounty", fields: [countySirutaCode], references: [code], onDelete: Restrict)
+  countyName         String
+  localitySirutaCode Int
+  locality           SirutaUnit @relation("CustomerAddressLocality", fields: [localitySirutaCode], references: [code], onDelete: Restrict)
+  localityName       String
+  street             String
+  postalCode         String
+  country            String     @default("RO")
+  isDefaultShipping  Boolean    @default(false)
+  isDefaultBilling   Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([countySirutaCode])
+  @@index([localitySirutaCode])
+  @@map("customer_address")
+}
+
+/// Wishlist (Faza 14, în spatele flag-ului `wishlist`): o variantă o singură dată pe client.
+model WishlistItem {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+
+  @@unique([userId, variantId])
+  @@index([variantId])
+  @@map("wishlist_item")
+}
+
+/// Preferințele de comunicare ale clientului. Emailurile despre comenzi sunt de serviciu (nu se opresc, nu sunt aici). «Oferte și
+/// noutăți» e un consimțământ de marketing, implicit OPRIT; ultima decizie păstrează momentul și textul exact arătat. Faza 14 nu
+/// trimite nimic de marketing (îl va folosi Faza 17).
+model CustomerPreference {
+  userId                String    @id
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketingOptIn        Boolean   @default(false)
+  marketingDecisionAt   DateTime?
+  marketingDecisionText String?
+  /// Telefonul clientului (profil), normalizat `+40…`; nul dacă nu l-a completat. Se șterge la anonimizare.
+  phone                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("customer_preference")
+}
+
+/// Cererea de retur (Faza 14). `status`: requested | approved | awaiting_shipment | received | inspected | refunded | rejected |
+/// cancelled (state machine în `packages/core/src/returns`, păzit și de un trigger). Suma rambursată = DOAR produsele returnate (decizia
+/// 2026-11-22); transportul îl poate adăuga adminul manual, cu motiv. Rambursarea efectivă o face serviciul din Faza 10 (`refundId`).
+/// `adminNote` e INTERN și nu ajunge niciodată la client.
+model ReturnRequest {
+  id                   String        @id @default(cuid())
+  number               Int           @unique @default(autoincrement())
+  orderId              String
+  order                Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  /// Cheia de idempotență a inițierii (dublu-click): aceeași cheie întoarce același retur.
+  clientKey            String
+  status               String        @default("requested")
+  /// Motivul general, opțional, scris de client.
+  customerNote         String?
+  /// courier | drop_off: cum trimite clientul coletul.
+  sendMode             String        @default("courier")
+  returnCarrier        String?
+  returnAwb            String?
+  returnTrackingUrl    String?
+  returnAwbAt          DateTime?
+  /// Motivul respingerii, VIZIBIL clientului; nota internă nu.
+  rejectReason         String?
+  adminNote            String?
+  refundId             String?
+  refund               Refund?       @relation(fields: [refundId], references: [id], onDelete: Restrict)
+  refundProductsMinor  Int?
+  refundShippingMinor  Int           @default(0)
+  refundShippingReason String?
+  /// null | queued | covered_by_total | not_needed | failed: soarta stornoului parțial emis la rambursare.
+  stornoState          String?
+  stornoNote           String?
+  requestedAt          DateTime      @default(now())
+  approvedAt           DateTime?
+  receivedAt           DateTime?
+  inspectedAt          DateTime?
+  refundedAt           DateTime?
+  rejectedAt           DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  items                ReturnItem[]
+  events               ReturnEvent[]
+
+  @@unique([userId, clientKey])
+  @@index([orderId])
+  @@index([status, requestedAt])
+  @@index([refundId])
+  @@map("return_request")
+}
+
+/// O linie dintr-un retur. Cantitățile sunt `BIGINT` cu 4 zecimale (`Quantity`), multiplu exact al pasului de vânzare. Suma cantităților
+/// active ale unei linii de comandă nu depășește cantitatea comandată (trigger cu blocarea liniei, testat cu cereri simultane).
+model ReturnItem {
+  id              String        @id @default(cuid())
+  returnId        String
+  return          ReturnRequest @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderLineId     String
+  orderLine       OrderLine     @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+  requestedQty    BigInt
+  /// Stabilite la inspecție, toate trei odată: cantitatea acceptată, starea constatată și dacă produsul se poate revinde.
+  acceptedQty     BigInt?
+  /// as_new | opened | damaged | defective | wrong_item
+  condition       String?
+  resellable      Boolean?
+  /// Suma rambursată pentru linie (bani, cu TVA), calculată o singură dată la propunerea rambursării.
+  refundLineMinor Int?
+  reasonCode      String
+  reasonText      String?
+  /// Repunerea pe stoc: o singură dată (`restockedAt` + cheia mișcării de stoc).
+  restockedAt     DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@unique([returnId, orderLineId])
+  @@index([orderLineId])
+  @@map("return_item")
+}
+
+/// Jurnalul unui retur: doar se adaugă. `visibleToCustomer` = lista albă a timeline-ului din cont; notele interne nu sunt vizibile.
+model ReturnEvent {
+  id                String        @id @default(cuid())
+  returnId          String
+  return            ReturnRequest @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  type              String
+  message           String
+  visibleToCustomer Boolean       @default(false)
+  data              Json?
+  actorLabel        String?
+  createdAt         DateTime      @default(now())
+
+  @@index([returnId, createdAt])
+  @@map("return_event")
 }

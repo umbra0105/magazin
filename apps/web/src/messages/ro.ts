@@ -5,7 +5,9 @@
  */
 import { pluralRo } from "@ecom/shared/plural";
 import { adminEmailRo, adminOrdersRo } from "./admin-orders-ro";
+import { accountRo } from "./account-ro";
 import { adminInvoicingRo } from "./admin-invoicing-ro";
+import { adminReturnsRo } from "./admin-returns-ro";
 import { adminShippingRo } from "./admin-shipping-ro";
 
 /** Acord cu numărul în română (1 = singular, 0 și 2–19 = plural, 20+ cu «de»); funcția comună și testată din `@ecom/shared`. */
@@ -18,6 +20,8 @@ const fisiere = (n: number): string => countOf(n, "fișier", "fișiere", "de fi�
 const hotspoturi = (n: number): string => countOf(n, "hotspot", "hotspot-uri", "de hotspot-uri");
 
 export const ro = {
+  /** Contul clientului și retururile (Faza 14): textele stau în `account-ro.ts`. */
+  account: accountRo,
   /** Stări comune ale paginilor: negăsit (404), eroare neprevăzută și încărcare (docs/17, Lotul 4). */
   states: {
     notFound: {
@@ -144,6 +148,8 @@ export const ro = {
     shipping: adminShippingRo,
     /** Facturare (Faza 13): textele stau în `admin-invoicing-ro.ts`. */
     invoicing: adminInvoicingRo,
+    /** Retururile (Faza 14): textele stau în `admin-returns-ro.ts`. */
+    returns: adminReturnsRo,
     email: adminEmailRo,
     notifications: {
       title: "Notificări",
@@ -236,6 +242,7 @@ export const ro = {
       carrierSettings: "Curieri",
       invoices: "Facturi",
       uninvoiced: "Fără factură",
+      returns: "Retururi",
       companyData: "Datele firmei",
       invoicingSettings: "Facturare",
     },

@@ -29,6 +29,10 @@ export async function cleanupE2eUsers(databaseUrl: string | undefined): Promise<
     await client.query(
       `delete from media_folder f where f.name like 'Produse %' and not exists (select 1 from media m where m."folderId" = f.id) and not exists (select 1 from media_folder c where c."parentId" = f.id)`,
     );
+    // retururile clientului refera contul cu RESTRICT (Faza 14): se șterg înainte; wishlist-ul, adresele și preferințele pleacă în cascadă
+    await client.query(
+      `delete from return_request where "userId" in (select id from "user" where email like 'e2e-%@example.test')`,
+    );
     const result = await client.query(`delete from "user" where email like 'e2e-%@example.test'`);
     return result.rowCount ?? 0;
   } finally {

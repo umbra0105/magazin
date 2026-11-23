@@ -23,6 +23,8 @@ export const ORDER_ERROR_CODES = [
   /** Anularea unei comenzi plătite cere decizia explicită «NU se rambursează automat». */
   "ORDER_CANCEL_PAID_NEEDS_DECISION",
   "ORDER_PROCESSING_INVALID",
+  /** «Marchează ridicată»: comanda nu are ridicare personală sau starea ei nu permite ridicarea. */
+  "ORDER_PICKUP_INVALID",
   /** Corectarea contactului sau a adresei: date invalide sau comandă care nu se mai editează. */
   "ORDER_EDIT_INVALID",
   "ORDER_NOTE_INVALID",

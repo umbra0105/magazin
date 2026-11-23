@@ -136,6 +136,7 @@ describe("CSV-urile generate trec prin funcția comună (sursa reală)", () => {
     expect(users.map((f) => f.path).sort()).toEqual(
       [
         "apps/web/src/app/api/admin/order-exports/route.ts",
+        "apps/web/src/app/api/admin/retururi/motive/route.ts",
         "packages/core/src/catalog/export/export-handler.ts",
         "packages/core/src/catalog/import/import-handler.ts",
         "packages/core/src/catalog/import/import-template.ts",

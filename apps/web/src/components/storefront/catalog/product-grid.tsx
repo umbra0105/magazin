@@ -2,7 +2,9 @@ import { EnergyLabel, ProductCard, StoreImage } from "@ecom/ui";
 import type { CardLayout, ListedProduct } from "@ecom/core";
 import { formatPrice, type StorefrontFormat } from "@/lib/storefront-catalog";
 import { productHref } from "@/lib/storefront-urls";
+import { getStorefrontChrome } from "@/lib/storefront-chrome";
 import { getMessages } from "@/messages";
+import { WishlistButton } from "../account/wishlist-button";
 import { availabilityDetail, availabilityLabel, availabilityTone } from "./availability";
 
 const m = getMessages().storefront.catalog;
@@ -19,12 +21,15 @@ export function ProductCardView({
   layout,
   headingLevel = 3,
   priority = false,
+  wishlist = false,
 }: {
   product: ListedProduct;
   format: Format;
   layout: CardLayout;
   headingLevel?: 2 | 3;
   priority?: boolean;
+  /** Arată butonul «Favorite» (flag-ul `wishlist` pornit), pentru produsele cu o singură variantă. */
+  wishlist?: boolean;
 }) {
   const price = product.price;
   const amount = price ? formatPrice(price.amount, format) : m.card.noPrice;
@@ -62,6 +67,11 @@ export function ProductCardView({
           />
         ) : undefined
       }
+      action={
+        wishlist && product.variantId ? (
+          <WishlistButton variantId={product.variantId} name={product.title} />
+        ) : undefined
+      }
       headingLevel={headingLevel}
       layout={layout}
     />
@@ -69,7 +79,7 @@ export function ProductCardView({
 }
 
 /** Grila de carduri: o listă reală (`ul`), 2 coloane pe telefon, mai multe pe ecrane late. Primele două imagini se încarcă cu prioritate. */
-export function ProductGrid({
+export async function ProductGrid({
   products,
   format,
   layout,
@@ -85,6 +95,7 @@ export function ProductGrid({
   /** Lista stă lângă panoul de filtre (mai puține coloane). */
   narrow?: boolean;
 }) {
+  const wishlist = (await getStorefrontChrome()).slots.wishlist === "active";
   return (
     <ul
       aria-label={label}
@@ -104,6 +115,7 @@ export function ProductGrid({
             layout={layout}
             headingLevel={headingLevel}
             priority={index < 2}
+            wishlist={wishlist}
           />
         </li>
       ))}

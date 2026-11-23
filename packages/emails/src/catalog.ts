@@ -595,43 +595,115 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
         : [],
   },
   // --- șabloane înregistrate, declanșatorul vine în altă fază ---
+  // --- retururi (Faza 14): emailurile de la fiecare tranziție; fără date interne (nota internă a adminului nu intră niciodată) ---
   ...(
     [
       [
         "return.received",
-        "Retur primit",
+        "Retur: cerere primită",
         "Cererea ta de retur a fost primită",
-        "Am primit cererea ta de retur pentru comanda {{numar}}. Revenim cu un răspuns.",
-        "Faza 14 (retururi)",
+        "Am primit cererea ta de retur {{retur}} pentru comanda {{numar}}. Revenim cu un răspuns.",
       ],
       [
         "return.approved",
-        "Retur aprobat",
+        "Retur: aprobat, cu instrucțiuni",
         "Returul a fost aprobat",
-        "Returul pentru comanda {{numar}} a fost aprobat. Îți trimitem pașii următori.",
-        "Faza 14 (retururi)",
+        "Returul {{retur}} pentru comanda {{numar}} a fost aprobat. Mai jos găsești adresa la care trimiți produsele și pașii următori.",
+      ],
+      [
+        "return.awb",
+        "Retur: AWB de retur",
+        "Ai primit datele de trimitere pentru retur",
+        "Pentru returul {{retur}} (comanda {{numar}}) poți trimite coletul cu AWB-ul de mai jos.",
       ],
       [
         "return.rejected",
-        "Retur respins",
+        "Retur: respins",
         "Returul nu a putut fi aprobat",
-        "Returul pentru comanda {{numar}} nu a putut fi aprobat. Motivul îți este comunicat de echipa noastră.",
-        "Faza 14 (retururi)",
+        "Returul {{retur}} pentru comanda {{numar}} nu a putut fi aprobat. Motivul: {{motiv}}",
+      ],
+      [
+        "return.parcel_received",
+        "Retur: colet primit",
+        "Am primit coletul returnat",
+        "Am primit coletul pentru returul {{retur}} (comanda {{numar}}). Îl verificăm și revenim cu rezultatul inspecției.",
+      ],
+      [
+        "return.inspected",
+        "Retur: inspecție încheiată",
+        "Inspecția returului s-a încheiat",
+        "Am încheiat inspecția pentru returul {{retur}} (comanda {{numar}}). Urmează rambursarea produselor acceptate.",
+      ],
+      [
+        "return.refunded",
+        "Retur: rambursare făcută",
+        "Rambursarea returului a fost făcută",
+        "Am rambursat {{suma}} pentru returul {{retur}} (comanda {{numar}}), în aceeași modalitate de plată. Banii pot apărea în cont în câteva zile lucrătoare.",
+      ],
+      [
+        "return.cancelled",
+        "Retur: anulat",
+        "Returul a fost anulat",
+        "Returul {{retur}} pentru comanda {{numar}} a fost anulat.",
       ],
     ] as const
-  ).map(([key, label, heading, intro, phase]): TemplateDefinition => ({
+  ).map(([key, label, heading, intro]): TemplateDefinition => ({
     key,
     label,
-    description: `Șablon înregistrat; declanșatorul vine în ${phase}.`,
+    description:
+      "Trimis la tranziția corespunzătoare a returului (cerere, aprobare, AWB, respingere, recepție, inspecție, rambursare, anulare), către clientul care a cerut returul. Nu conține note interne.",
     audience: "customer",
-    wired: false,
-    phaseNote: `Declanșatorul se leagă în ${phase}.`,
-    variables: customerVars(),
+    wired: true,
+    phaseNote: null,
+    variables: customerVars(
+      v("retur", "Numărul returului", "R-12"),
+      v("motiv", "Motivul respingerii (vizibil clientului)", "Produsul a fost folosit"),
+      v("suma", "Suma rambursată", "199,00 RON"),
+      v("awb", "Numărul AWB de retur", "1234567890"),
+      v("curier", "Curierul pentru retur", "Curier Exemplu"),
+      v(
+        "linkUrmarire",
+        "Linkul de urmărire al AWB-ului de retur",
+        "https://curier.exemplu/awb/1234567890",
+      ),
+      v(
+        "adresaRetur",
+        "Adresa la care se trimite returul",
+        "Str. Exemplu 1, 100100 Ploiești, Prahova",
+      ),
+    ),
     defaultSubject: `${heading} – {{magazin}}`,
     heading,
     preview: heading,
     defaultIntro: intro,
-    build: (context) => trackButton(context, "Vezi comanda"),
+    build: (context) => {
+      const rows: { label: string; value: string }[] = [];
+      const vars = context.vars;
+      if (key === "return.approved" && vars["adresaRetur"]) {
+        rows.push({ label: "Trimite produsele la", value: vars["adresaRetur"] });
+      }
+      if ((key === "return.approved" || key === "return.awb") && vars["awb"]) {
+        rows.push({ label: "AWB de retur", value: vars["awb"] });
+        if (vars["curier"]) rows.push({ label: "Curier", value: vars["curier"] });
+        if (vars["linkUrmarire"]) rows.push({ label: "Urmărire", value: vars["linkUrmarire"] });
+      }
+      return [
+        ...(rows.length > 0
+          ? [{ type: "keyvalue", title: "Detalii pentru retur", rows } as EmailBlock]
+          : []),
+        ...(key === "return.approved"
+          ? [
+              para(
+                "Împachetează produsele în ambalajul original, dacă îl ai, și include o copie a facturii sau numărul comenzii.",
+                "muted",
+              ),
+            ]
+          : []),
+        ...(vars["link"]
+          ? [{ type: "button", label: "Vezi returul", link: vars["link"] } as EmailBlock]
+          : []),
+      ];
+    },
   })),
   {
     key: "account.welcome",

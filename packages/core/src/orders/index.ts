@@ -16,6 +16,7 @@ export * from "./order-saved-views";
 export * from "./order-installation";
 export * from "./order-actions";
 export * from "./order-edit";
+export * from "./order-pickup";
 export * from "./order-notes";
 export * from "./order-payments-admin";
 export * from "./order-totals";

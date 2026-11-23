@@ -62,9 +62,6 @@ describe("catalogul șabloanelor", () => {
         "marketing.abandoned_cart_3",
         "marketing.newsletter",
         "marketing.review_request",
-        "return.approved",
-        "return.received",
-        "return.rejected",
       ].sort(),
     );
     for (const d of unwired) expect(d.phaseNote, d.key).toMatch(/Faza 1[47]/);
