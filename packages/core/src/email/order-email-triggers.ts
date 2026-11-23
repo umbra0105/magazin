@@ -30,6 +30,8 @@ const CUSTOMER_RULES: Readonly<Record<string, readonly Rule[]>> = {
   "order.shipped": [{ template: "order.shipped" }],
   "order.delivered": [{ template: "order.delivered" }],
   "order.cancelled": [{ template: "order.cancelled" }],
+  // accesul la produsele digitale a fost acordat (Faza 14b): emailul trimite în cont, fără linkuri de conținut
+  "digital.granted": [{ template: "digital.ready" }],
   "order.auto_cancelled": [{ template: "order.cancelled" }],
 };
 

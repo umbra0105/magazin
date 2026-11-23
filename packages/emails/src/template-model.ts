@@ -55,7 +55,7 @@ export interface OrderEmailModel {
     note: string | null;
   };
   delivery: {
-    kind: "courier" | "pickup";
+    kind: "courier" | "pickup" | "digital";
     /** «Livrare la adresa» / «Ridicare personală de la». */
     heading: string;
     /** Adresa de livrare (localitatea) sau adresa MAGAZINULUI din snapshot, niciodată adresa clientului la ridicare. */
@@ -67,6 +67,14 @@ export interface OrderEmailModel {
   };
   /** Cel puțin o linie «La comandă»: se adaugă nota despre retragere. */
   hasOnOrderLines: boolean;
+  /**
+   * Produsele digitale ale comenzii (Faza 14b): textul EXACT al bifei de renunțare la dreptul de retragere, reluat în confirmare
+   * (dovada pe suport durabil), și regula accesului (după plată, sau după livrarea confirmată la ramburs mixt).
+   */
+  digital?: {
+    consentText: string | null;
+    accessRule: "after_payment" | "after_delivery";
+  } | null;
 }
 
 export interface TemplateContext {
@@ -94,6 +102,7 @@ export const TEMPLATE_KEYS = [
   "order.delivered",
   "order.cancelled",
   "order.refunded",
+  "digital.ready",
   "order.stock_lost",
   "offer.payment_link",
   "internal.order_new",

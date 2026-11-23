@@ -166,10 +166,32 @@ function confirmationLegalBlocks(context: TemplateContext, order: OrderEmailMode
   return blocks;
 }
 
+/** Produsele digitale: regula accesului și bifa legală reluată (dovada acordului, pe suport durabil). Fără link de conținut. */
+function digitalBlocks(order: OrderEmailModel): EmailBlock[] {
+  const digital = order.digital;
+  if (!digital) return [];
+  const rule =
+    digital.accessRule === "after_delivery"
+      ? "Plata se face la livrare: accesul la produsele digitale se activează după livrarea confirmată a coletului, nu la plata către curier. Te anunțăm printr-un email când accesul e gata."
+      : "Accesul la produsele digitale se activează după confirmarea plății. Te anunțăm printr-un email când e gata; îl găsești în contul tău, la «Produsele mele digitale».";
+  return [
+    {
+      type: "section",
+      title: "Produse digitale",
+      paragraphs: [
+        rule,
+        ...(digital.consentText
+          ? [`Ai acceptat, separat de termeni: «${digital.consentText}»`]
+          : []),
+      ],
+    },
+  ];
+}
+
 function orderBody(context: TemplateContext): EmailBlock[] {
   const { order } = context;
   if (!order) return [];
-  return [linesBlock(order), paymentDeliveryBlock(order)];
+  return [linesBlock(order), paymentDeliveryBlock(order), ...digitalBlocks(order)];
 }
 
 const customerVars = (...extra: TemplateVariable[]): TemplateVariable[] => [
@@ -351,6 +373,22 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
     defaultIntro:
       "Comanda {{numar}} a fost livrată. Îți mulțumim că ai cumpărat de la {{magazin}}!",
     build: (context) => [...trackButton(context, "Vezi comanda")],
+  },
+  {
+    key: "digital.ready",
+    label: "Produsul digital e gata",
+    description:
+      "Trimis o singură dată pe eveniment, când accesul la produsele digitale ale comenzii a fost acordat (după plata confirmată, sau la livrarea confirmată, la ramburs mixt). Nu conține linkuri de conținut: trimite în cont.",
+    audience: "customer",
+    wired: true,
+    phaseNote: null,
+    variables: customerVars(v("produse", "Produsele digitale acordate", "Cursul tău de exemplu")),
+    defaultSubject: "Produsul tău digital din comanda {{numar}} e gata – {{magazin}}",
+    heading: "Produsul tău e gata",
+    preview: "Accesul la produsul digital din comanda {{numar}} e activ.",
+    defaultIntro:
+      "Accesul la {{produse}} (comanda {{numar}}) e activ. Intră în contul tău, la «Produsele mele digitale», ca să vizionezi sau să descarci. Din motive de siguranță, linkurile de acces se creează la fiecare deschidere și expiră repede; nu trimitem linkuri de conținut pe email.",
+    build: (context) => [...trackButton(context, "Deschide produsele mele digitale")],
   },
   {
     key: "order.cancelled",
