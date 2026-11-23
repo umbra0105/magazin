@@ -27,6 +27,7 @@ export const PHASE_MODES: Readonly<Record<string, Mode>> = {
   "10": "B",
   "13": "B",
   "14b": "B",
+  "14c": "B",
   "15": "B",
   "15b": "B",
   "6": "C",

@@ -26,7 +26,7 @@ const MODE_A = [
   "e2e-curatare-comenzi",
   "storno-total",
 ];
-const MODE_B = ["8", "9", "10", "13", "14b", "15", "15b"];
+const MODE_B = ["8", "9", "10", "13", "14b", "14c", "15", "15b"];
 const MODE_C = ["6", "7", "18", "22"];
 
 describe("modurile fazelor (docs/20 §3)", () => {
@@ -187,6 +187,26 @@ describe("faza e2e-curatare-comenzi (mini-fază, modul A)", () => {
     });
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain("abc1234");
+  });
+});
+
+describe("faza 14c (checkout pentru produse digitale, modul B)", () => {
+  it("modul B (aprobarea utilizatorului); ramura faza-14c, etichetele pre-faza-14c și faza-14c-completa", () => {
+    expect(modeOf("14c")).toBe("B");
+    expect(branchOf("14c")).toBe("faza-14c");
+    expect(tagsOf("14c")).toEqual({ pre: "pre-faza-14c", done: "faza-14c-completa" });
+    expect(isValidPhaseId("14c")).toBe(true);
+  });
+
+  it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
+    expect(isPhaseBranch(branchOf("14c"))).toBe(true);
+    const problems = approvalsGuardProblems({
+      branch: branchOf("14c"),
+      baseAvailable: true,
+      ci: false,
+      touchingCommits: ["def5678"],
+    });
+    expect(problems).toHaveLength(1);
   });
 });
 
