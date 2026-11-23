@@ -376,7 +376,8 @@ Decizii ale utilizatorului, **2026-11-23** (nu se rediscută; orice abatere = �
 - [x] Date personale (D9): anonimizarea IP și user-agent la ștergerea contului, termen de păstrare ca setare cu job zilnic, export GDPR cu achizițiile digitale
 - [x] Script de dezvoltare `npm run dev:digital-demo -- --email=…` (comandă DEMO digitală plătită și comandă mixtă cu ramburs, curățare cu `--remove`), pentru verificarea în browser fără checkout
 - [ ] **Checkout pentru produse digitale: MUTAT în Faza 14c** (decizia utilizatorului, 2026-11-23): cont obligatoriu, bifa legală, coș 100% digital, ramburs ascuns, prag de transport doar pe fizic. `ORDER_DIGITAL_NOT_SUPPORTED` și comportamentul de azi rămân neschimbate în 14b
-- [ ] Teste: concurență și proprietate scrise; mutanți (≥ 4) pe regulile critice; E2E; `verify:full` o singură dată pe codul final, push pe `faza-14b`, PR DRAFT, CI verde, `gate:merge --dry-run` (singura condiție nerespectată: aprobarea); poarta reală abia după «am verificat, continuă» ȘI aprobarea în `docs/AUTONOM-APROBARI.md`
+- [x] Teste: concurență (6, date comise) și proprietate scrise odată cu codul; 10 mutanți manuali pe regulile critice, toți uciși (+1 ucis din sesiunea anterioară cu un test de cursă); E2E `e2e/digital.spec.ts` (9)
+- [ ] `verify:full` o singură dată pe codul final, push pe `faza-14b`, PR DRAFT, CI verde, `gate:merge --dry-run` (singura condiție nerespectată: aprobarea); poarta reală abia după «am verificat, continuă» ȘI aprobarea în `docs/AUTONOM-APROBARI.md`
 
 
 ## FAZA 14c — Checkout pentru produse digitale (mod B)
