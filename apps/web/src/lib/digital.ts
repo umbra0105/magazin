@@ -1,13 +1,19 @@
 import { loadEnv } from "@ecom/config";
 import {
+  CATALOG_TAG,
   DeliveryConfigService,
+  MediaUploadGuard,
   type AccessDeps,
   type ContentDeps,
   type DigitalSettings,
+  type DigitalUploadDeps,
 } from "@ecom/core";
 import { getDb } from "@ecom/db";
+import { revalidateTag } from "next/cache";
+import { getAudit } from "./admin-writes";
 import { getStorage } from "./media";
-import { getSettings } from "./services";
+import { getCounterStore, getSettings } from "./services";
+import { getCurrentSubject } from "./session";
 
 /**
  * Produsele digitale pe partea de aplicație (Faza 14b): configurarea livrării (chei criptate, garda «confirmat de Owner»), setările
@@ -48,4 +54,27 @@ export function getDigitalAccessDeps(): AccessDeps {
 /** Dependențele editării conținutului din admin (încărcare, ștergere, stare). */
 export function getDigitalContentDeps(): ContentDeps {
   return { db: getDb(), getProvider: (code) => getDeliveryConfig().provider(code) };
+}
+
+/** Dependențele rutei de încărcare a modulelor digitale, legate la serviciile reale (contoare cu spațiu de nume propriu). */
+export function getDigitalUploadDeps(): DigitalUploadDeps {
+  return {
+    getSubject: getCurrentSubject,
+    getSettings: async () => {
+      const settings = getSettings();
+      const [digital, documents, auth] = await Promise.all([
+        readDigitalGroup(),
+        settings.getGroup("documents"),
+        settings.getGroup("auth"),
+      ]);
+      return { digital, documents, trustedProxyHops: auth.trustedProxyHops };
+    },
+    appUrl: loadEnv().APP_URL,
+    createGuard: (documents) => new MediaUploadGuard(getCounterStore(), documents, "digital"),
+    content: getDigitalContentDeps(),
+    audit: getAudit(),
+    invalidate: () => {
+      revalidateTag(CATALOG_TAG);
+    },
+  };
 }

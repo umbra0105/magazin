@@ -7,3 +7,5 @@ export * from "./digital-grant";
 export * from "./digital-privacy";
 export * from "./digital-rules";
 export * from "./digital-settings";
+export * from "./digital-upload-handler";
+export * from "./digital-refund";
