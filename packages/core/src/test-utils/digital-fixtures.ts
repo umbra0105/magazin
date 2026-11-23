@@ -70,7 +70,7 @@ export async function createFile(
     isPreview: boolean;
     status: string;
     position: number;
-    type: "file" | "video";
+    type: "video" | "file";
     provider: string;
   }> = {},
 ) {

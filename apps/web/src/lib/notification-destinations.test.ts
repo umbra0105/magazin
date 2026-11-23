@@ -150,6 +150,7 @@ describe("notificările din clopoțel: destinația", () => {
   it("toate tipurile de notificare sunt cunoscute (plată, rambursare, notificare blocată, email, ofertă, factură)", () => {
     expect([...NOTIFICATION_KINDS].sort()).toEqual(
       [
+        "digital_ip_anomaly",
         "email_failed",
         "invoice_failed",
         "offer_stale",
