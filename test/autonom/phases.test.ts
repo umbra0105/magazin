@@ -24,6 +24,7 @@ const MODE_A = [
   "ci-joburi",
   "ci-e2e-paralel",
   "e2e-curatare-comenzi",
+  "storno-total",
 ];
 const MODE_B = ["8", "9", "10", "13", "14b", "15", "15b"];
 const MODE_C = ["6", "7", "18", "22"];
@@ -177,6 +178,31 @@ describe("faza e2e-curatare-comenzi (mini-fază, modul A)", () => {
 
   it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
     const branch = branchOf("e2e-curatare-comenzi");
+    expect(isPhaseBranch(branch)).toBe(true);
+    const problems = approvalsGuardProblems({
+      branch,
+      baseAvailable: true,
+      ci: false,
+      touchingCommits: ["abc1234"],
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("abc1234");
+  });
+});
+
+describe("faza storno-total (mini-fază, modul A)", () => {
+  it("modul A; ramura faza-storno-total, etichetele pre-faza-storno-total și faza-storno-total-completa", () => {
+    expect(modeOf("storno-total")).toBe("A");
+    expect(branchOf("storno-total")).toBe("faza-storno-total");
+    expect(tagsOf("storno-total")).toEqual({
+      pre: "pre-faza-storno-total",
+      done: "faza-storno-total-completa",
+    });
+    expect(isValidPhaseId("storno-total")).toBe(true);
+  });
+
+  it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
+    const branch = branchOf("storno-total");
     expect(isPhaseBranch(branch)).toBe(true);
     const problems = approvalsGuardProblems({
       branch,
