@@ -10,6 +10,7 @@ import {
   INITIAL_MEASURE_UNITS,
 } from "../inventory/constants";
 import { getSettingSchema, listSettingKeys } from "../settings/registry";
+import { SYSTEM_GROUP_NAME, SYSTEM_GROUP_SLUG } from "../customers/constants";
 
 /** Delegatul de DB al seed-ului: un PrismaClient sau clientul unei tranzacții. */
 export type SeedDb = Omit<
@@ -26,6 +27,7 @@ export interface BaseSeedResult {
   salesChannels: number;
   warehouses: number;
   measureUnits: number;
+  customerGroups: number;
   brandingCreated: boolean;
 }
 
@@ -35,8 +37,8 @@ export interface BaseSeedResult {
  * (setări, flag-uri, branding). Roluri: se adaugă doar permisiunile lipsă, niciodată nu se scot.
  *
  * Nu creează utilizatori și nu conține parole: contul de administrator vine cu autentificarea
- * (Promptul 3). Grupurile de clienți nu sunt aici (tabela vine în Faza 15, iar grupurile
- * specifice magazinului stau în `seed-store.ts`).
+ * (Promptul 3). Din grupurile de clienți are doar «Client standard» (grupul de sistem, `none`, neștergibil); grupurile
+ * specifice magazinului (Fidel, VIP, Partener 1/2/3) stau în `seed-store.ts`.
  *
  * Primește un client (sau tranzacție) deja deschis; nu deschide conexiuni și nu atinge Redis.
  */
@@ -119,6 +121,25 @@ export async function runBaseSeed(db: SeedDb): Promise<BaseSeedResult> {
     skipDuplicates: true,
   });
 
+  // «Client standard»: grupul de sistem (prețul public). Se creează doar dacă nu există niciun grup de sistem, deci o redenumire
+  // făcută din admin nu se suprascrie și rularea repetată nu face nimic.
+  const hasSystemGroup =
+    (await db.customerGroup.findFirst({ where: { isSystem: true }, select: { id: true } })) !==
+    null;
+  if (!hasSystemGroup) {
+    await db.customerGroup.upsert({
+      where: { slug: SYSTEM_GROUP_SLUG },
+      create: {
+        slug: SYSTEM_GROUP_SLUG,
+        name: SYSTEM_GROUP_NAME,
+        pricingType: "none",
+        isSystem: true,
+        sortOrder: 0,
+      },
+      update: {},
+    });
+  }
+
   let brandingCreated = false;
   if (!(await db.branding.findUnique({ where: { id: "default" } }))) {
     const config = brandingConfigSchema.parse(configFromPreset(DEFAULT_PRESET));
@@ -147,6 +168,7 @@ export async function runBaseSeed(db: SeedDb): Promise<BaseSeedResult> {
     salesChannels: salesChannels.count,
     warehouses: hasDefaultWarehouse ? 0 : 1,
     measureUnits: measureUnits.count,
+    customerGroups: hasSystemGroup ? 0 : 1,
     brandingCreated,
   };
 }
