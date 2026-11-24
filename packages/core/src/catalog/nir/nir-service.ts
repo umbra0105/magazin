@@ -84,7 +84,7 @@ export class NirImportService {
   }
 
   /** Confirmă o previzualizare: importul trece în coadă (sau rulează pe loc fără coadă). */
-  async confirm(subject: PermissionSubject | null, id: string): Promise<NirImportView> {
+  async confirmImport(subject: PermissionSubject | null, id: string): Promise<NirImportView> {
     assertImportAndView(subject);
     const existing = await this.deps.store.get(id);
     if (!existing) throw NOT_FOUND();
@@ -206,6 +206,29 @@ export class NirImportService {
       });
     }
   }
+}
+
+/**
+ * Importul pentru INTERFAȚĂ: fără costuri. Ecranul arată coduri, date și numere de rânduri; prețurile stau doar în raportul CSV
+ * (descărcat cu `products.cost.view`) și nu ajung în JavaScript-ul clientului.
+ */
+export function nirViewForClient(view: NirImportView): NirImportView {
+  const strip = <T extends { costMinor: number }>(
+    rows: readonly T[],
+  ): Array<Omit<T, "costMinor">> =>
+    rows.map((row) => {
+      const copy: Partial<T> = { ...row };
+      delete copy.costMinor;
+      return copy as Omit<T, "costMinor">;
+    });
+  return {
+    ...view,
+    report: {
+      ...view.report,
+      updated: strip(view.report.updated) as unknown as NirReport["updated"],
+      unchanged: strip(view.report.unchanged) as unknown as NirReport["unchanged"],
+    },
+  };
 }
 
 /** Importul fără plan (planul poartă costurile fiecărei variante și rămâne în nucleu). */

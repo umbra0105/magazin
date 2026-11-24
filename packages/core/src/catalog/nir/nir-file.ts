@@ -13,7 +13,7 @@ import { NirFileError, type NirGridRow } from "./nir-parse";
  * Fișierul de import al prețurilor NIR → grilă de celule. Același mecanism de citire ca la importul «Stoc la zi» pentru
  * `.xls` / `.xlsx` (`readSpreadsheetGrid`, singurul loc care atinge parserul de registre; fără bibliotecă nouă) și aceeași citire
  * de CSV ca la celelalte importuri: UTF-16LE cu BOM și TAB (formatul aplicației și «Unicode Text» din Excel), UTF-8 cu sau fără
- * BOM, Windows-1250 din Excel, linia `sep=` a fișierelor străine; delimitatorul `;` `,` sau TAB se detectează.
+ * BOM, Windows-1250 din Excel, linia de separator a fișierelor străine; delimitatorul `;` `,` sau TAB se detectează.
  * Mesajele de eroare nu conțin valori din fișier.
  */
 
@@ -89,7 +89,7 @@ export async function readNirFile(bytes: Uint8Array): Promise<NirFile> {
       ...DEFAULT_IMPORT_LIMITS,
       maxRows: NIR_FILE_MAX_ROWS,
     });
-    // linia «sep=» scoasă nu mai e în înregistrări, dar în fișier ocupă rândul 1
+    // linia de separator scoasă nu mai e în înregistrări, dar în fișier ocupă rândul 1
     const offset = sep.delimiter ? 1 : 0;
     const grid = records.map((record, index): NirGridRow => ({
       rowNumber: index + 1 + offset,

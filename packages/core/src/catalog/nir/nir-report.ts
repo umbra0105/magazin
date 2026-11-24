@@ -1,7 +1,7 @@
 import type { NirReport } from "./nir-plan";
 
 /**
- * Raportul și șablonul importului NIR ca rânduri pentru `toCsv` / `csvResponse` (UTF-16LE cu BOM, TAB, fără `sep=`, antet în română;
+ * Raportul și șablonul importului NIR ca rânduri pentru `toCsv` / `csvResponse` (UTF-16LE cu BOM, TAB, fără linia de separator, antet în română;
  * singurul loc care scrie CSV e funcția comună, testul `csv-generation` păzește asta). ⚠️ Raportul conține prețuri de achiziție:
  * se descarcă DOAR cu `products.cost.view` (verificat de ruta de descărcare).
  */

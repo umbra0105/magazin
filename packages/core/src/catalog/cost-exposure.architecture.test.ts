@@ -64,8 +64,11 @@ const ALLOWED_EXACT = new Set([
 ]);
 
 const ALLOWED_PREFIXES = [
-  // motorul de prețuri (Faza 8) citește costul pentru prețul de partener și întoarce doar prețuri
+  // motorul de prețuri (Faza 8) citește costul pentru prețul de partener și întoarce doar prețuri; tot aici stau încărcarea costului
+  // pentru grupurile `cost_plus` (`customer-pricing.ts`) și prețul de grup din vitrină (`group-display.ts`, care întoarce doar sume)
   "packages/core/src/pricing/",
+  // importul prețurilor de achiziție (NIR, Faza 15): scrie costul și istoricul; raportul și planul se văd doar cu products.cost.view
+  "packages/core/src/catalog/nir/",
   // zona de admin: componente de server și rute de admin (componentele client sunt excluse separat)
   "apps/web/src/app/(admin)/",
   "apps/web/src/app/api/admin/",

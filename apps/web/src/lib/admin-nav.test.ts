@@ -212,6 +212,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
       "attributes",
       "measureUnits",
       "partsDiagrams",
+      "nirImport",
       "inventory",
       "warehouses",
     ]);
@@ -222,6 +223,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
       "/admin/produse/atribute",
       "/admin/produse/unitati-de-masura",
       "/admin/produse/fise-explodate",
+      "/admin/produse/import-nir",
       "/admin/produse/stoc",
       "/admin/produse/depozite",
     ]);
@@ -234,12 +236,15 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
 
   it("Owner, Admin, Manager și Depozit văd toate elementele (Fișele explodate doar cu flag-ul pornit)", () => {
     for (const role of ["owner", "admin", "manager", "warehouse"]) {
+      // importul prețurilor NIR cere `products.cost.import`: doar Owner și Admin îl văd (Faza 15)
+      const nir = role === "owner" || role === "admin" ? ["nirImport"] : [];
       expect(itemIdsFor(role), role).toEqual([
         "allProducts",
         "categories",
         "brands",
         "attributes",
         "measureUnits",
+        ...nir,
         "inventory",
       ]);
       expect(itemIdsFor(role, ["partsDiagrams"]), role).toEqual([
@@ -249,6 +254,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
         "attributes",
         "measureUnits",
         "partsDiagrams",
+        ...nir,
         "inventory",
       ]);
     }
@@ -312,6 +318,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
       "brands",
       "attributes",
       "measureUnits",
+      "nirImport",
       "inventory",
     ]);
     // un rol doar cu inventory.read: grupul apare, cu un singur element (Stoc)

@@ -60,6 +60,7 @@ export type AdminNavItemId =
   | "invoicingSettings"
   | "digitalAccess"
   | "digitalDelivery"
+  | "nirImport"
   | "customerList"
   | "customerGroups";
 
@@ -112,6 +113,8 @@ export const CATALOG_ITEMS: readonly AdminNavItem[] = [
     permission: "products.read",
     feature: "partsDiagrams",
   },
+  // importul prețurilor de achiziție (NIR) din SmartBill: conține costuri, deci cere `products.cost.import` (și `products.cost.view`)
+  { id: "nirImport", href: "/admin/produse/import-nir", permission: "products.cost.import" },
   { id: "inventory", href: "/admin/produse/stoc", permission: "inventory.read", keepParams: ["q"] },
   // doar cu steagul «Multi-depozit» pornit (oprit: nici elementul, nici ruta, nici acțiunile)
   {

@@ -188,7 +188,7 @@ describe("confirmarea aplică exact ce a arătat previzualizarea", () => {
           { code: b.sku, date: ago(2), cost: "123,4550" }, // 12345,5 → 12346
         ]),
       });
-      const done = await service.confirm(owner, preview.id);
+      const done = await service.confirmImport(owner, preview.id);
       expect(done.status).toBe("completed");
       expect(done.processedItems).toBe(2);
       expect(await costOf(tx, a.id)).toEqual({
@@ -212,11 +212,14 @@ describe("confirmarea aplică exact ce a arătat previzualizarea", () => {
       const a = await variant(tx, `A-${uid()}`);
       const { service } = await world(tx);
       const bytes = xls([{ code: a.sku, date: ago(3), cost: 10 }]);
-      await service.confirm(owner, (await service.preview(owner, { name: "m.xls", bytes })).id);
+      await service.confirmImport(
+        owner,
+        (await service.preview(owner, { name: "m.xls", bytes })).id,
+      );
       const before = await history(tx, a.id);
       const again = await service.preview(owner, { name: "m.xls", bytes });
       expect(again.report.counters).toMatchObject({ updated: 0, unchanged: 1 });
-      const second = await service.confirm(owner, again.id);
+      const second = await service.confirmImport(owner, again.id);
       expect(second.status).toBe("completed");
       expect(second.report.counters).toMatchObject({ updated: 0, unchanged: 1 });
       expect(await history(tx, a.id)).toHaveLength(before.length);
@@ -232,7 +235,7 @@ describe("confirmarea aplică exact ce a arătat previzualizarea", () => {
       });
       const { service } = await world(tx);
       const run = async (lines: Line[]) =>
-        service.confirm(
+        service.confirmImport(
           owner,
           (await service.preview(owner, { name: "m.xls", bytes: xls(lines) })).id,
         );
@@ -266,7 +269,7 @@ describe("confirmarea aplică exact ce a arătat previzualizarea", () => {
         ]),
       });
       expect(preview.report.counters.multiSameDay).toBe(1);
-      await service.confirm(owner, preview.id);
+      await service.confirmImport(owner, preview.id);
       expect((await costOf(tx, a.id)).costPrice).toBe(3_100);
       expect(await history(tx, a.id)).toHaveLength(1);
     });
@@ -364,8 +367,8 @@ describe("permisiuni (verificate pe server)", () => {
       expect(await codeOf(service.preview(importOnly, file))).toBe("AUTH_FORBIDDEN");
       expect(await codeOf(service.preview(null, file))).toBe("AUTH_UNAUTHENTICATED");
       const view = await service.preview(owner, file);
-      expect(await codeOf(service.confirm(manager, view.id))).toBe("AUTH_FORBIDDEN");
-      expect(await codeOf(service.confirm(importOnly, view.id))).toBe("AUTH_FORBIDDEN");
+      expect(await codeOf(service.confirmImport(manager, view.id))).toBe("AUTH_FORBIDDEN");
+      expect(await codeOf(service.confirmImport(importOnly, view.id))).toBe("AUTH_FORBIDDEN");
       expect((await tx.nirImport.findUniqueOrThrow({ where: { id: view.id } })).status).toBe(
         "previewed",
       );
@@ -414,15 +417,15 @@ describe("ciclul de viață al importului", () => {
         where: { id: view.id },
         data: { expiresAt: new Date(NOW.getTime() - 1) },
       });
-      expect(await codeOf(service.confirm(owner, view.id))).toBe("NIR_IMPORT_EXPIRED");
+      expect(await codeOf(service.confirmImport(owner, view.id))).toBe("NIR_IMPORT_EXPIRED");
 
       const fresh = await service.preview(owner, {
         name: "m.xls",
         bytes: xls([{ code: a.sku, date: ago(3) }]),
       });
-      await service.confirm(owner, fresh.id);
-      expect(await codeOf(service.confirm(owner, fresh.id))).toBe("NIR_IMPORT_STATE");
-      expect(await codeOf(service.confirm(owner, "nu-exista"))).toBe("NIR_IMPORT_NOT_FOUND");
+      await service.confirmImport(owner, fresh.id);
+      expect(await codeOf(service.confirmImport(owner, fresh.id))).toBe("NIR_IMPORT_STATE");
+      expect(await codeOf(service.confirmImport(owner, "nu-exista"))).toBe("NIR_IMPORT_NOT_FOUND");
       expect(await history(tx, a.id)).toHaveLength(1);
     });
   });
@@ -436,7 +439,7 @@ describe("ciclul de viață al importului", () => {
         name: "m.xls",
         bytes: xls([{ code: a.sku, date: ago(3), cost: 10 }]),
       });
-      const after = await service.confirm(owner, view.id);
+      const after = await service.confirmImport(owner, view.id);
       expect(after.status).toBe("queued");
       expect(queued).toEqual([view.id]);
       expect(await costOf(tx, a.id)).toEqual({ costPrice: null, costPriceDate: null });
@@ -458,7 +461,9 @@ describe("ciclul de viață al importului", () => {
         name: "m.xls",
         bytes: xls([{ code: a.sku, date: ago(3) }]),
       });
-      expect(await codeOf(service.confirm(owner, view.id))).toBe("NIR_IMPORT_QUEUE_UNAVAILABLE");
+      expect(await codeOf(service.confirmImport(owner, view.id))).toBe(
+        "NIR_IMPORT_QUEUE_UNAVAILABLE",
+      );
       const stored = await service.get(owner, view.id);
       expect(stored.status).toBe("failed");
       expect(stored.errorMessage).not.toContain("redis");

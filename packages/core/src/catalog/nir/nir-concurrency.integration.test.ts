@@ -111,8 +111,8 @@ describe("importuri simultane", () => {
       const bytes = file(variants.map((v) => ({ sku: v.sku, date: ago(2), cost: 10 })));
       const [a, b] = [await preview(bytes), await preview(bytes)];
       const outcomes = await Promise.all([
-        service().confirm(owner, a),
-        service().confirm(owner, b),
+        service().confirmImport(owner, a),
+        service().confirmImport(owner, b),
       ]);
       expect(outcomes.map((o) => o.status)).toEqual(["completed", "completed"]);
       for (const variant of variants) {
@@ -140,7 +140,7 @@ describe("importuri simultane", () => {
       );
       // ordinea de pornire alternează între runde
       const order = round % 2 === 0 ? [older, newer] : [newer, older];
-      await Promise.all(order.map((id) => service().confirm(owner, id)));
+      await Promise.all(order.map((id) => service().confirmImport(owner, id)));
       for (const variant of variants) {
         const stored = await db.productVariant.findUniqueOrThrow({ where: { id: variant.id } });
         expect(stored.costPrice).toBe(2_500);
