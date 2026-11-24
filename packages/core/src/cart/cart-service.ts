@@ -89,6 +89,7 @@ const MESSAGES: Record<CartRejection["reason"], string> = {
   not_sellable: "Produsul nu mai poate fi comandat.",
   invalid_quantity: "Cantitatea nu este validă pentru acest produs.",
   unavailable: "Produsul este indisponibil.",
+  digital_single: "Un produs digital se cumpără o singură dată: cantitatea poate fi cel mult 1.",
   exceeds_available: "Cantitatea cerută depășește stocul disponibil.",
   exceeds_limit: "Cantitatea depășește limita pe linie.",
   too_many_lines: "Coșul a atins numărul maxim de produse.",
@@ -119,6 +120,8 @@ export interface CartLineView {
   sku: string;
   image: { src: string; width: number; height: number; alt: string } | null;
   energyClass: string | null;
+  /** Produs digital (Faza 14c): fără stoc și transport, maxim o bucată, eticheta de disponibilitate «Disponibil». */
+  isDigital?: boolean;
   /** Cantitatea în zecimi de miime, ca șir (bigint nu trece prin JSON). */
   quantityTicks: string;
   stepTicks: string;
@@ -206,6 +209,7 @@ const LINE_SELECT = {
       id: true,
       slug: true,
       title: true,
+      type: true,
       status: true,
       deletedAt: true,
       priceBasis: true,
@@ -473,6 +477,7 @@ export class CartService {
         minSteps: variant.minSteps,
         availability: variant.availability,
         limits,
+        digital: variant.digital,
       });
       if (!check.ok) throw new CartError(check.rejection);
       this.assertPriceable(variant.lineInput, quantity, settings);
@@ -705,6 +710,7 @@ export class CartService {
       minSteps: source.minSteps,
       availability,
       sellable: isSellable(product),
+      digital: product.type === "digital",
       lineInput,
       unitPriceMinor,
     };
@@ -758,6 +764,7 @@ export class CartService {
         minSteps: source.minSteps,
         sellable: isSellable(product),
         availability,
+        digital: product.type === "digital",
         ackedUnitPriceMinor: item.ackedUnitPriceMinor,
         currentUnitPriceMinor: current.unitPriceMinor,
       });
@@ -775,6 +782,7 @@ export class CartService {
           sku: source.sku,
           image: this.imageOf(row),
           energyClass: product.energyClass,
+          isDigital: product.type === "digital",
           quantityTicks: quantity.toString(),
           stepTicks: step.toString(),
           minSteps: source.minSteps,

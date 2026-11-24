@@ -7,11 +7,7 @@ import { QUANTITY_FACTOR, formatQuantity, quantityFromTicks } from "@ecom/shared
 import { Container, EnergyLabel, SectionHeading } from "@ecom/ui";
 import { RichTextView } from "@/components/rich-text/rich-text";
 import { Breadcrumbs } from "@/components/storefront/catalog/breadcrumbs";
-import {
-  availabilityDetail,
-  availabilityLabel,
-  availabilityTone,
-} from "@/components/storefront/catalog/availability";
+import { availabilityText } from "@/components/storefront/catalog/availability";
 import { ProductGallery } from "@/components/storefront/catalog/product-gallery";
 import { ProductGrid } from "@/components/storefront/catalog/product-grid";
 import { ProductTabs, type ProductTab } from "@/components/storefront/catalog/product-tabs";
@@ -254,12 +250,11 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
                 unitSymbol: v.sale.unitSymbol,
                 stepLabel: v.sale.stepLabel,
                 compareAtText: v.price.compareAt ? formatPrice(v.price.compareAt, format) : null,
-                // produsul digital nu are stoc și nu se livrează: eticheta e «acces imediat», fără termen de livrare
-                availabilityLabel: product.isDigital
-                  ? getMessages().digital.product.badgeInstant
-                  : availabilityLabel(v.availability.state),
-                availabilityDetail: product.isDigital ? null : availabilityDetail(v.availability),
-                tone: availabilityTone(v.availability.state),
+                // eticheta vine din locul comun (Faza 14c): produsul digital e «Disponibil» sau «Indisponibil», fără stoc și termen
+                availabilityLabel: availabilityText(v.availability).label,
+                availabilityDetail: availabilityText(v.availability).detail,
+                tone: availabilityText(v.availability).tone,
+                digital: product.isDigital,
                 purchasable: v.availability.purchasable,
                 warrantyText:
                   v.warrantyMonths !== null ? m.product.warranty(v.warrantyMonths) : null,

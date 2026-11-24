@@ -3666,6 +3666,11 @@ export const ro = {
       issueExceeds: (available: string) => `Sunt disponibile doar ${available}.`,
       issueAdjust: (available: string) => `Ajustează la ${available}`,
       issueInvalid: "Cantitatea nu mai este potrivită pentru acest produs. Alege altă cantitate.",
+      /** Produs digital în coș cu cantitate peste 1 (Faza 14c, decizia 1): clientul decide. */
+      issueDigitalQuantity:
+        "Un produs digital se cumpără o singură dată. Păstrează o singură bucată.",
+      issueDigitalKeepOne: "Păstrează 1 bucată",
+      digitalOnce: "Produs digital: se cumpără o singură dată.",
       issuePriceChanged: (from: string, to: string) =>
         `Prețul s-a schimbat: de la ${from} la ${to}.`,
       issueAcknowledge: "Am înțeles",
@@ -3684,6 +3689,8 @@ export const ro = {
         unavailable: "Produsul este indisponibil.",
         exceeds_available: "Cantitatea cerută depășește stocul disponibil.",
         exceeds_limit: "Cantitatea cerută depășește limita pe linie.",
+        digital_single:
+          "Un produs digital se cumpără o singură dată: cantitatea poate fi cel mult 1.",
         too_many_lines: "Coșul a atins numărul maxim de produse.",
         line_too_expensive: "Valoarea liniei depășește maximul permis.",
         not_in_cart: "Produsul nu mai este în coș.",
@@ -4277,6 +4284,8 @@ export const ro = {
         in_stock: "În stoc",
         limited: "Stoc limitat",
         limitedCount: (n: number) => `Mai sunt ${n}`,
+        /** Produsele digitale nu au stoc (Faza 14c, decizia 3): «Disponibil» sau «Indisponibil», niciodată stările de stoc. */
+        digitalAvailable: "Disponibil",
         on_order: "La comandă",
         onOrderDays: (days: number) =>
           days === 0
@@ -4349,6 +4358,8 @@ export const ro = {
         quantityHint: (step: string, unit: string, label: string | null) =>
           label ? `${label} de ${step} ${unit}` : `multipli de ${step} ${unit}`,
         quantityTotal: (total: string, unit: string) => `În total: ${total} ${unit}`,
+        /** Produs digital (Faza 14c, decizia 1): fără selector de cantitate. */
+        digitalOnce: "Produs digital: se cumpără o singură dată (o bucată).",
         perUnit: (unit: string) => `/ ${unit}`,
         perStep: (label: string | null, step: string, unit: string) =>
           label ? `/ ${label} de ${step} ${unit}` : `/ ${step} ${unit}`,

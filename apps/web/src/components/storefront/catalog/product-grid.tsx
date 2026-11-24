@@ -5,7 +5,7 @@ import { productHref } from "@/lib/storefront-urls";
 import { getStorefrontChrome } from "@/lib/storefront-chrome";
 import { getMessages } from "@/messages";
 import { WishlistButton } from "../account/wishlist-button";
-import { availabilityDetail, availabilityLabel, availabilityTone } from "./availability";
+import { availabilityText } from "./availability";
 
 const m = getMessages().storefront.catalog;
 
@@ -33,8 +33,7 @@ export function ProductCardView({
 }) {
   const price = product.price;
   const amount = price ? formatPrice(price.amount, format) : m.card.noPrice;
-  const detail = availabilityDetail(product.availability);
-  const label = availabilityLabel(product.availability.state);
+  const { label, detail, tone } = availabilityText(product.availability);
   return (
     <ProductCard
       href={productHref(product.slug)}
@@ -57,7 +56,7 @@ export function ProductCardView({
       status={{
         label,
         ...(detail ? { detail } : {}),
-        tone: availabilityTone(product.availability.state),
+        tone,
       }}
       badge={
         product.energyClass ? (

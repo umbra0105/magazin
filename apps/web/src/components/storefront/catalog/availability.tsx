@@ -1,37 +1,23 @@
-import type { PublicAvailability, VisibleStockState } from "@ecom/core";
-import { StorePill, type StorePillTone } from "@ecom/ui";
-import { getMessages } from "@/messages";
+import type { PublicAvailability } from "@ecom/core";
+import { StorePill } from "@ecom/ui";
+import { describeAvailability, type AvailabilityText } from "@/lib/availability-text";
 
-const m = getMessages().storefront.catalog.availability;
-
-const TONE: Record<VisibleStockState, StorePillTone> = {
-  in_stock: "success",
-  limited: "warning",
-  on_order: "info",
-  unavailable: "problem",
-};
-
-/** Eticheta stării vizibile (D6): «În stoc», «Stoc limitat», «La comandă», «Indisponibil». */
-export function availabilityLabel(state: VisibleStockState): string {
-  return m[state];
-}
-
-export function availabilityTone(state: VisibleStockState): StorePillTone {
-  return TONE[state];
-}
-
-/** Detaliul de lângă etichetă: «Mai sunt N» la stoc limitat, termenul în zile la «La comandă». */
-export function availabilityDetail(availability: PublicAvailability): string | null {
-  if (availability.state === "limited" && availability.remainingSteps !== null) {
-    return m.limitedCount(availability.remainingSteps);
-  }
-  if (availability.state === "on_order" && availability.leadTimeDays !== null) {
-    return m.onOrderDays(availability.leadTimeDays);
-  }
-  return null;
+/**
+ * Disponibilitatea unui produs din vitrină, pe un singur drum: `describeAvailability` (`lib/availability-text.ts`). Produsele
+ * fizice au stările D6 («În stoc», «Stoc limitat», «La comandă», «Indisponibil»); produsul digital arată doar «Disponibil» sau
+ * «Indisponibil» (Faza 14c, decizia 3).
+ */
+export function availabilityText(availability: PublicAvailability): AvailabilityText {
+  return describeAvailability({
+    state: availability.state,
+    purchasable: availability.purchasable,
+    remainingSteps: availability.remainingSteps,
+    leadTimeDays: availability.leadTimeDays,
+    ...(availability.isDigital === true ? { isDigital: true } : {}),
+  });
 }
 
 export function AvailabilityPill({ availability }: { availability: PublicAvailability }) {
-  const label = availabilityLabel(availability.state);
-  return <StorePill tone={TONE[availability.state]}>{label}</StorePill>;
+  const text = availabilityText(availability);
+  return <StorePill tone={text.tone}>{text.label}</StorePill>;
 }
