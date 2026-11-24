@@ -422,3 +422,4 @@ export { classifyHref, type ClassifiedHref } from "./rich-text/href";
 export * from "./slug-redirect";
 export * from "./price-points";
 export * from "./price-snapshot";
+export * from "./nir";

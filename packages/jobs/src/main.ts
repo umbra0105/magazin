@@ -7,6 +7,7 @@ import { startAuthRetentionFromEnv } from "./auth-retention";
 import { startImageImportWorkerFromEnv } from "./image-import-runtime";
 import { startImportWorkerFromEnv } from "./import-runtime";
 import { startMediaWorkerFromEnv } from "./media-runtime";
+import { startNirImportWorkerFromEnv } from "./nir-runtime";
 import { startEmailWorkerFromEnv } from "./runtime";
 import { startPriceJobsFromEnv } from "./price-jobs";
 import { startStockJobsFromEnv } from "./stock-jobs";
@@ -29,6 +30,7 @@ const logger = getLogger();
 const email = startEmailWorkerFromEnv();
 const media = startMediaWorkerFromEnv();
 const imports = startImportWorkerFromEnv();
+const nirImports = startNirImportWorkerFromEnv();
 const importImages = startImageImportWorkerFromEnv();
 const authRetention = startAuthRetentionFromEnv();
 const stockJobs = startStockJobsFromEnv();
@@ -47,6 +49,7 @@ logger.info(
       "emails",
       "media",
       "product-import",
+      "nir-import",
       "product-import-images",
       "payment-events",
       "invoices",
@@ -72,7 +75,13 @@ async function shutdown(signal: string): Promise<void> {
     await paymentJobs.close();
     await invoiceJobs.close();
     await orderEmailJobs.close();
-    await Promise.all([email.close(), media.close(), imports.close(), importImages.close()]);
+    await Promise.all([
+      email.close(),
+      media.close(),
+      imports.close(),
+      nirImports.close(),
+      importImages.close(),
+    ]);
   } finally {
     process.exit(0);
   }
