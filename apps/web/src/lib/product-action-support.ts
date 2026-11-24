@@ -98,6 +98,16 @@ const DOMAIN_CODES = new Set([
   "MEASURE_UNIT_CODE_IMMUTABLE",
   "MEASURE_UNIT_DEFAULT_PROTECTED",
   "MEASURE_UNIT_DECIMALS_IN_USE",
+  // grupurile de clienți (Faza 15): mesajele din nucleu sunt în română și se arată ca atare
+  "CUSTOMER_GROUP_INVALID",
+  "CUSTOMER_GROUP_NOT_FOUND",
+  "CUSTOMER_GROUP_SYSTEM",
+  "CUSTOMER_GROUP_HAS_MEMBERS",
+  "CUSTOMER_GROUP_IN_USE",
+  "CUSTOMER_GROUP_INACTIVE",
+  "CUSTOMER_NOT_FOUND",
+  "CUSTOMER_ASSIGN_EMPTY",
+  "CUSTOMER_ASSIGN_TOO_MANY",
   // stocul (ajustări): mesajele din nucleu sunt în română și se arată ca atare
   "STOCK_ADJUSTMENT_INVALID_REASON",
   "STOCK_ADJUSTMENT_NOTE_REQUIRED",

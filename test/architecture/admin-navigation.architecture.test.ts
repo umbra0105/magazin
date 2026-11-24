@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_NAV,
   CATALOG_ITEMS,
+  CUSTOMERS_ITEMS,
   ORDERS_ITEMS,
   SETTINGS_ITEMS,
   activeItemId,
@@ -107,6 +108,7 @@ describe("grupul «Catalog» din meniu", () => {
     expect(ADMIN_NAV.filter((e) => e.children).map((e) => e.id)).toEqual([
       "orders",
       "catalog",
+      "customers",
       "settings",
     ]);
     const hrefs = ADMIN_NAV.map((e) => e.href);
@@ -117,6 +119,46 @@ describe("grupul «Catalog» din meniu", () => {
     for (const item of CATALOG_ITEMS) {
       expect(pathInGroup(item.href, group?.href ?? ""), item.href).toBe(true);
     }
+  });
+});
+
+describe("grupul «Clienți» din meniu (Faza 15, același model ca «Catalog»)", () => {
+  const group = ADMIN_NAV.find((entry) => entry.id === "customers");
+  const pages = adminPages();
+
+  it("fiecare element are o pagină care există, sub adresa grupului; niciun element nu e și intrare separată", () => {
+    const urls = new Set(pages.map((p) => p.url));
+    expect(urls.has(group?.href ?? "/nu-exista")).toBe(true);
+    for (const item of CUSTOMERS_ITEMS) {
+      expect(urls.has(item.href), item.href).toBe(true);
+      expect(pathInGroup(item.href, group?.href ?? ""), item.href).toBe(true);
+    }
+    for (const item of CUSTOMERS_ITEMS.filter((i) => i.href !== group?.href)) {
+      expect(
+        ADMIN_NAV.map((e) => e.href),
+        item.href,
+      ).not.toContain(item.href);
+    }
+  });
+
+  it("fiecare pagină de sub adresa grupului are un element evidențiat; grupurile nu țin evidențiată lista", () => {
+    const underGroup = pages.filter((p) => pathInGroup(p.url, group?.href ?? "/nu-exista"));
+    expect(underGroup.length).toBeGreaterThanOrEqual(CUSTOMERS_ITEMS.length);
+    for (const page of underGroup) {
+      expect(
+        activeItemId(page.url.replace(/[[^]]+]/g, "x"), CUSTOMERS_ITEMS),
+        page.file,
+      ).toBeDefined();
+    }
+    expect(activeItemId("/admin/clienti", CUSTOMERS_ITEMS)).toBe("customerList");
+    expect(activeItemId("/admin/clienti/grupuri", CUSTOMERS_ITEMS)).toBe("customerGroups");
+  });
+
+  it("elementele cer permisiunea ecranului lor (meniul nu e securitate; paginile și acțiunile o verifică oricum)", () => {
+    expect(Object.fromEntries(CUSTOMERS_ITEMS.map((item) => [item.id, item.permission]))).toEqual({
+      customerList: "customers.read",
+      customerGroups: "customers.read",
+    });
   });
 });
 

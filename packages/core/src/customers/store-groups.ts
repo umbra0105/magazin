@@ -37,7 +37,7 @@ export const STORE_GROUPS: readonly StoreGroupSeed[] = [
     discountBps: 700,
     markupBps: null,
     earnsLoyaltyPoints: true,
-    tone: "accent",
+    tone: "info",
     sortOrder: 20,
   },
   {
@@ -47,7 +47,7 @@ export const STORE_GROUPS: readonly StoreGroupSeed[] = [
     discountBps: null,
     markupBps: 1200,
     earnsLoyaltyPoints: false,
-    tone: "info",
+    tone: "warning",
     sortOrder: 30,
   },
   {
@@ -57,7 +57,7 @@ export const STORE_GROUPS: readonly StoreGroupSeed[] = [
     discountBps: null,
     markupBps: 1700,
     earnsLoyaltyPoints: false,
-    tone: "info",
+    tone: "warning",
     sortOrder: 40,
   },
   {
@@ -67,7 +67,7 @@ export const STORE_GROUPS: readonly StoreGroupSeed[] = [
     discountBps: null,
     markupBps: 2100,
     earnsLoyaltyPoints: false,
-    tone: "info",
+    tone: "warning",
     sortOrder: 50,
   },
 ];

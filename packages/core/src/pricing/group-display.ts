@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "@ecom/db";
-import { percentToBasisPoints, quantityFromTicks } from "@ecom/shared";
+import { QUANTITY_FACTOR, percentToBasisPoints, quantityFromTicks } from "@ecom/shared";
 import { toPublicGroupView, type PublicGroupView } from "../customers/group-rules";
 import { loadCustomerPricing, loadPartnerInputs, withPartnerInput } from "./customer-pricing";
 import {
@@ -53,7 +53,7 @@ export interface GroupDisplaySettings {
 /** Cel mult atâtea variante sau produse într-o cerere (protecție la cereri uriașe). */
 export const GROUP_DISPLAY_MAX_IDS = 120;
 
-const ONE = quantityFromTicks(10_000n);
+const ONE = quantityFromTicks(QUANTITY_FACTOR);
 
 const VARIANT_SELECT = {
   id: true,
