@@ -6,7 +6,16 @@ export const ORDER_ERROR_CODES = [
   "ORDER_CART_NOT_READY",
   "ORDER_CART_CHANGED",
   "ORDER_TOTAL_CHANGED",
+  /** Rămâne pentru ofertele de plată (`OFFER_DIGITAL_NOT_SUPPORTED`); checkout-ul nu îl mai întoarce din Faza 14c. */
   "ORDER_DIGITAL_NOT_SUPPORTED",
+  /** Faza 14c: coșul are produse digitale, iar cumpărătorul nu e autentificat (oaspetele merge la autentificare, coșul se păstrează). */
+  "ORDER_LOGIN_REQUIRED",
+  /** Faza 14c: cont cu emailul neverificat; produsele digitale se comandă doar cu un cont verificat. */
+  "ORDER_EMAIL_NOT_VERIFIED",
+  /** Faza 14c: bifa de renunțare la dreptul de retragere lipsește sau are o versiune veche a textului. */
+  "ORDER_DIGITAL_CONSENT_REQUIRED",
+  /** Faza 14c: o linie digitală cu cantitate peste 1 (un produs digital se cumpără o singură dată). */
+  "ORDER_DIGITAL_QUANTITY",
   "ORDER_COUNTRY_NOT_ALLOWED",
   "ORDER_OFFER_UNAVAILABLE",
   "ORDER_QUANTITY_INVALID",
