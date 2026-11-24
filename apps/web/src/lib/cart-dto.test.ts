@@ -284,3 +284,54 @@ describe("TVA afișat în coș = TVA din motor (coș cu 3 linii, cu fracțiuni d
     expect(dto.totals?.vatText).toContain("1.819,15");
   });
 });
+
+describe("linia informativă a prețului de grup (Faza 15)", () => {
+  const withGroup = (group: CartView["group"], advantageMinor: number): CartView =>
+    view([line()], {
+      group,
+      totals: {
+        ...EMPTY_CART_VIEW.totals,
+        totalMinor: 18_905,
+        groupAdvantageMinor: advantageMinor,
+      },
+    });
+
+  it("Fidel/VIP: «Reducere client fidel (−5%)», cu suma, inclusă în preț", () => {
+    const dto = toCartDto(
+      withGroup({ name: "Client fidel", pricingType: "discount", discountBps: 500 }, 995),
+      FORMAT,
+    );
+    expect(dto.groupLineText).toBe(
+      `Reducere client fidel (−5%), inclusă în preț: −${formatMoney(995, FORMAT.currency, FORMAT.locale)}`,
+    );
+  });
+
+  it("reducere cu zecimale: 5,5%", () => {
+    const dto = toCartDto(
+      withGroup({ name: "Client VIP", pricingType: "discount", discountBps: 550 }, 100),
+      FORMAT,
+    );
+    expect(dto.groupLineText).toContain("(−5,5%)");
+  });
+
+  it("Partener: «Avantaj partener», fără nicio mențiune de adaos sau cost", () => {
+    const dto = toCartDto(
+      withGroup({ name: "Partener 1", pricingType: "cost_plus", discountBps: null }, 2_100),
+      FORMAT,
+    );
+    expect(dto.groupLineText).toBe(
+      `Avantaj partener, inclus în preț: −${formatMoney(2_100, FORMAT.currency, FORMAT.locale)}`,
+    );
+    expect(JSON.stringify(dto)).not.toMatch(/adaos|cost|markup/i);
+  });
+
+  it("fără grup sau fără avantaj: nicio linie", () => {
+    expect(toCartDto(withGroup(null, 0), FORMAT).groupLineText).toBeNull();
+    expect(
+      toCartDto(
+        withGroup({ name: "Client fidel", pricingType: "discount", discountBps: 500 }, 0),
+        FORMAT,
+      ).groupLineText,
+    ).toBeNull();
+  });
+});

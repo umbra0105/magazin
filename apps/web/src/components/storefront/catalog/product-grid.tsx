@@ -6,6 +6,7 @@ import { getStorefrontChrome } from "@/lib/storefront-chrome";
 import { getMessages } from "@/messages";
 import { WishlistButton } from "../account/wishlist-button";
 import { availabilityText } from "./availability";
+import { CardPrice, CardPriceExtra } from "./group-price";
 
 const m = getMessages().storefront.catalog;
 
@@ -51,8 +52,18 @@ export function ProductCardView({
           />
         ) : null
       }
-      price={price?.isRange ? m.card.from(amount) : amount}
+      price={
+        price ? (
+          <CardPrice
+            productId={product.id}
+            fallback={price.isRange ? m.card.from(amount) : amount}
+          />
+        ) : (
+          amount
+        )
+      }
       oldPrice={price?.compareAt ? formatPrice(price.compareAt, format) : undefined}
+      priceExtra={price ? <CardPriceExtra productId={product.id} /> : undefined}
       status={{
         label,
         ...(detail ? { detail } : {}),

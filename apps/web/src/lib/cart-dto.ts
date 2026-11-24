@@ -70,6 +70,11 @@ export interface CartDto {
   lines: CartLineDto[];
   count: number;
   totals: { productsText: string; vatText: string; totalText: string } | null;
+  /**
+   * Prețul de grup (Faza 15): «Reducere client fidel (−5%)» sau «Avantaj partener», cu suma. Informativ: reducerea e deja în prețurile
+   * liniilor. `null` fără grup cu preț special sau când produsele din coș nu au avantaj.
+   */
+  groupLineText: string | null;
   leadTimeText: string | null;
   freeShipping: { text: string; percent: number; reached: boolean } | null;
   /** Coșul poate trece la finalizare (are linii și nicio problemă care cere o decizie). */
@@ -199,6 +204,19 @@ function lineDto(line: CartLineView, format: CartFormat): CartLineDto {
   };
 }
 
+/** Linia informativă a prețului de grup: doar cu grup cu preț special și un avantaj real (> 0). Fără adaos sau cost. */
+function groupLineText(view: CartView, money: (minor: number) => string): string | null {
+  const group = view.group;
+  const advantage = view.totals.groupAdvantageMinor;
+  if (!group || advantage <= 0) return null;
+  const text = m();
+  if (group.pricingType === "discount" && group.discountBps !== null) {
+    const percent = (group.discountBps / 100).toLocaleString("ro-RO", { maximumFractionDigits: 2 });
+    return text.groupDiscount(group.name, percent, money(advantage));
+  }
+  return text.groupPartner(money(advantage));
+}
+
 export function toCartDto(view: CartView, format: CartFormat): CartDto {
   const text = m();
   const money = (minor: number) => formatMoney(minor, format.currency, format.locale);
@@ -207,6 +225,7 @@ export function toCartDto(view: CartView, format: CartFormat): CartDto {
   return {
     lines: view.lines.map((line) => lineDto(line, format)),
     count: view.lines.length,
+    groupLineText: groupLineText(view, money),
     totals: priced
       ? {
           productsText: money(view.totals.totalMinor),

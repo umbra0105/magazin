@@ -1272,6 +1272,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
               {totals?.productsText ?? props.cart.totals?.productsText}
             </dd>
           </div>
+          {props.cart.groupLineText ? (
+            <p className="text-ink-secondary" data-group-line>
+              {props.cart.groupLineText}
+            </p>
+          ) : null}
           {props.digital.only ? null : (
             <div className="flex justify-between gap-4">
               <dt className="text-ink-secondary">{m.shipping}</dt>

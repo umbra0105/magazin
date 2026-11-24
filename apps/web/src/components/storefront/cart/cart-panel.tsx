@@ -196,6 +196,11 @@ export function OrderSummary({ cart }: { cart: CartDto }) {
             <dt className="text-ink-secondary">{m.products}</dt>
             <dd className="tabular-nums">{totals.productsText}</dd>
           </div>
+          {cart.groupLineText ? (
+            <p className="text-ink-secondary" data-group-line>
+              {cart.groupLineText}
+            </p>
+          ) : null}
           <div className="flex justify-between gap-4">
             <dt className="text-ink-secondary">{m.shipping}</dt>
             <dd>{m.shippingLater}</dd>

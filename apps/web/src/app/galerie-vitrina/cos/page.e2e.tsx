@@ -103,6 +103,7 @@ const lineTotal = (key: string) => money(ENGINE.lines.find((l) => l.key === key)
 
 const SAMPLE: CartDto = {
   count: 5,
+  groupLineText: null,
   lines: [
     line({
       variantId: "1",

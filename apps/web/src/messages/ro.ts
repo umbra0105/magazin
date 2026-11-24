@@ -3643,6 +3643,10 @@ export const ro = {
       shippingNote: "Transportul se calculează la finalizarea comenzii",
       linesLabel: "Produsele din coș",
       summaryTitle: "Sumar",
+      /** Prețul de grup (Faza 15): linie informativă, reducerea sau avantajul sunt DEJA incluse în prețurile de mai sus. */
+      groupDiscount: (name: string, percent: string, amount: string) =>
+        `Reducere ${name.toLocaleLowerCase("ro-RO")} (−${percent}%), inclusă în preț: −${amount}`,
+      groupPartner: (amount: string) => `Avantaj partener, inclus în preț: −${amount}`,
       products: "Produse",
       vatIncluded: (vat: string) => `din care TVA: ${vat}`,
       shipping: "Transport",
@@ -4302,6 +4306,13 @@ export const ro = {
         action: "Vezi toate produsele",
       },
       card: { from: (price: string) => `de la ${price}`, noPrice: "Fără preț" },
+      /** Prețul de grup (Faza 15): «Preț standard» tăiat și eticheta grupului, identic pe card și pe pagina produsului. */
+      groupPrice: {
+        standard: (price: string) => `Preț standard ${price}`,
+        badgeDiscount: (name: string, percent: string) =>
+          `Preț ${name.toLocaleLowerCase("ro-RO")} −${percent}%`,
+        badgePartner: "Preț partener",
+      },
       availability: {
         in_stock: "În stoc",
         limited: "Stoc limitat",
