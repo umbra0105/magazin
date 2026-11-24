@@ -454,6 +454,31 @@ describe("coș mixt (fizic + digital)", () => {
     },
   );
 
+  it("un produs digital cu clasă de transport neeligibilă (supradimensionat) nu strică scutirea de transport a liniei fizice", async () => {
+    await harness(
+      async (h) => {
+        const physical = await h.product({ price: 50_000 });
+        const d = await h.product({
+          type: "digital",
+          manageStock: false,
+          price: 10_000,
+          shippingClass: "oversized",
+        });
+        const world = await userWorld(h);
+        await addTo(world, [{ variantId: physical.variantId }, { variantId: d.variantId }]);
+        const preview = await h.checkout.preview({
+          owner: world.owner,
+          destination: destination(h),
+          offerCode: "demo:courier",
+          paymentMethod: "bank_transfer",
+        });
+        expect(preview.shipping?.freeShipping).toEqual({ eligible: true });
+        expect(preview.totals?.shippingMinor).toBe(0);
+      },
+      { shipping: { freeShippingThresholdMinor: 50_000 } },
+    );
+  });
+
   it("un curs scump nu face gratuit transportul unei șurubelnițe ieftine (transportul rămâne plătit)", async () => {
     await harness(
       async (h) => {
