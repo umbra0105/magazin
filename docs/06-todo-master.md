@@ -375,9 +375,9 @@ Decizii ale utilizatorului, **2026-11-23** (nu se rediscută; orice abatere = �
 - [x] Facturare: liniile digitale intră pe factură fără descărcare de gestiune (D8); retururi: clientul nu are retur pe liniile digitale (D6)
 - [x] Date personale (D9): anonimizarea IP și user-agent la ștergerea contului, termen de păstrare ca setare cu job zilnic, export GDPR cu achizițiile digitale
 - [x] Script de dezvoltare `npm run dev:digital-demo -- --email=…` (comandă DEMO digitală plătită și comandă mixtă cu ramburs, curățare cu `--remove`), pentru verificarea în browser fără checkout
-- [ ] **Checkout pentru produse digitale: MUTAT în Faza 14c** (decizia utilizatorului, 2026-11-23): cont obligatoriu, bifa legală, coș 100% digital, ramburs ascuns, prag de transport doar pe fizic. `ORDER_DIGITAL_NOT_SUPPORTED` și comportamentul de azi rămân neschimbate în 14b
+- [ ] **Checkout pentru produse digitale → Faza 14c** (checkout mixt, bifa legală; MUTAT în Faza 14c, decizia utilizatorului, 2026-11-23): cont obligatoriu, bifa legală, coș 100% digital, ramburs ascuns, prag de transport doar pe fizic. `ORDER_DIGITAL_NOT_SUPPORTED` și comportamentul de azi rămân neschimbate în 14b
 - [x] Teste: concurență (6, date comise) și proprietate scrise odată cu codul; 10 mutanți manuali pe regulile critice, toți uciși (+1 ucis din sesiunea anterioară cu un test de cursă); E2E `e2e/digital.spec.ts` (9)
-- [ ] `verify:full` o singură dată pe codul final, push pe `faza-14b`, PR DRAFT, CI verde, `gate:merge --dry-run` (singura condiție nerespectată: aprobarea); poarta reală abia după «am verificat, continuă» ȘI aprobarea în `docs/AUTONOM-APROBARI.md`
+- [x] `verify:full` pe codul final (`e5b293a`: 4681 unitare, 2013 integrare pe `ecom_test` + 2013 pe baza doar migrată, 623 E2E, fără picate; prima rulare, pe `00a9c8f`, picase la 2 teste de arhitectură, reparate), push pe `faza-14b`, PR DRAFT (#26), CI verde (16/16), `gate:merge --dry-run`; poarta reală după «am verificat, continuă» ȘI aprobarea din `docs/AUTONOM-APROBARI.md` (PR #27): îmbinat PRIN POARTĂ la `96609ea` (2026-11-24), etichetele `pre-faza-14b` și `faza-14b-completa` puse
 
 
 ## FAZA 14c — Checkout pentru produse digitale (mod B)
