@@ -121,7 +121,7 @@ Nu mai sunt decizii de luat. Astea sunt verificări externe — nu ține de cod,
 | 6 | **Suport pentru plăți recurente / tokenizare card** — cere-l explicit în contract, chiar dacă abonamentele vin în Val 2 | Netopia / EuPlătesc | La semnarea contractului |
 | 7 | **VPS cu IP fix** — obligatoriu pentru whitelist-ul eMAG | Furnizor VPS | Înainte de Faza 21 |
 | 9 | **Acces API SmartBill.** Verifică cu SmartBill că abonamentul tău include acces API (fără el, nu putem emite facturi din magazin); citim documentația curentă înainte de implementare | Utilizator, cu SmartBill | Înainte de Faza 13 |
-| 10 | **Fișier exemplu de export SmartBill** („lista de mișcări produse"), pentru formatul importului de prețuri NIR (coloane, format dată, preț cu/fără TVA, mai multe intrări în aceeași zi) | Utilizator | Înainte de Faza 15 |
+| 10 | ✅ **Fișier exemplu de export SmartBill** („lista de mișcări produse"), pentru formatul importului de prețuri NIR (coloane, format dată, preț cu/fără TVA, mai multe intrări în aceeași zi). **Răspuns (2026-11-24):** fișier primit (`local-data/smartbill-miscari-produse.xls`, doar de referință). Coloane: Gestiune, Produs, Cod, Data, Tip document, Document, U.M., Intrari, Iesiri, Cost unitar, Intrari (valoare), Iesiri (valoare); data e text `zz/ll/aaaa`; «Cost unitar» e FĂRĂ TVA, cu 4 zecimale; contează doar rândurile cu Intrari > 0 (recepții); la mai multe intrări câștigă data cea mai recentă, iar la aceeași dată ultimul rând din fișier. Regulile complete: `06` Faza 15 | Utilizator | Înainte de Faza 15 |
 | 8 | **Documentația API eMAG curentă** — se schimbă, nu te baza pe memorie | eMAG | La Faza 22b |
 
 # PARTEA III — Cele 14 întrebări pentru contabil
