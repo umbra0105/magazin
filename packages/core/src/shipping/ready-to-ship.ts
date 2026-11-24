@@ -3,8 +3,8 @@ import type { Db } from "../db-tx";
 
 /**
  * Comenzile de expediat în masă (Faza 12): confirmate (plătite sau cu ramburs), încă neexpediate, cu livrare la adresă prin curier.
- * NU intră: ridicarea personală (fără AWB), transportul paletizat (AWB manual, din detaliul comenzii) și comenzile care au deja o
- * expediere activă. Cele mai vechi întâi. Fără date personale în afară de localitate și județ (destinația).
+ * NU intră: ridicarea personală (fără AWB), comenzile 100% digitale (`digital`: nu se expediază niciodată, Faza 14c), transportul
+ * paletizat (AWB manual, din detaliul comenzii) și comenzile care au deja o expediere activă. Cele mai vechi întâi. Fără date personale în afară de localitate și județ (destinația).
  */
 export interface ReadyToShipRow {
   orderId: string;
@@ -24,7 +24,7 @@ export async function listOrdersReadyToShip(
   const where: Prisma.OrderWhereInput = {
     status: { in: ["confirmed", "processing"] },
     fulfillmentStatus: "unfulfilled",
-    shippingMethodCode: { notIn: ["pickup", "pallet"] },
+    shippingMethodCode: { notIn: ["pickup", "pallet", "digital"] },
     externalId: null,
     shipments: { none: { kind: "outbound", status: { not: "cancelled" } } },
   };

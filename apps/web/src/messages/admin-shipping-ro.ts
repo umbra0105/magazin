@@ -163,6 +163,8 @@ export const adminShippingRo = {
       SHIPMENT_ORDER_STATE:
         "Comanda nu poate fi expediată acum (neconfirmată, anulată sau deja expediată).",
       SHIPMENT_PICKUP: "Comanda cu ridicare personală nu primește AWB.",
+      SHIPMENT_DIGITAL_ONLY:
+        "Comanda conține doar produse digitale: nu se expediază și nu primește AWB.",
       SHIPMENT_EXISTS: "Există deja o expediere activă.",
       SHIPMENT_INVALID: "Verifică transportatorul, numărul AWB și linkul de urmărire.",
       SHIPMENT_PALLET_MANUAL_ONLY: "Transportul paletizat se expediază manual.",

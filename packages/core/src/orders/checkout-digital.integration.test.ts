@@ -1,12 +1,20 @@
-import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
-import type { CartOwner } from "../cart/cart-service";
 import {
   DIGITAL_CONSENT_DEFAULT_TEXT,
   DIGITAL_CONSENT_DEFAULT_VERSION,
 } from "../digital/digital-rules";
-import { createUser } from "../test-utils/digital-fixtures";
+import {
+  DEMO_CARD,
+  addTo,
+  billingAddress,
+  destination,
+  digitalOnlyInput,
+  digitalProduct,
+  mixedInput,
+  userWorld,
+  type World,
+} from "../test-utils/digital-checkout";
 import { NOW, codeOf, harness, orderOf, q, type Harness } from "../test-utils/checkout-fixtures";
 import { CHECKOUT_TERMS_CONSENT } from "./consent";
 
@@ -18,73 +26,6 @@ import { CHECKOUT_TERMS_CONSENT } from "./consent";
  */
 const db = getDb();
 afterAll(() => db.$disconnect());
-
-const DEMO_CARD = { code: "demo", mode: "demo" } as const;
-
-interface World {
-  h: Harness;
-  userId: string;
-  owner: CartOwner;
-}
-
-const billingAddress = (h: Harness) => ({
-  fullName: "Ion Popescu",
-  phone: "0722123456",
-  countyCode: h.geo.countyCode,
-  localityCode: h.geo.localityCode,
-  street: "Str. Facturii 1",
-  postalCode: "123456",
-});
-
-async function userWorld(h: Harness, verified = true): Promise<World> {
-  const user = await createUser(h.tx, verified);
-  return { h, userId: user.id, owner: { kind: "user", userId: user.id } };
-}
-
-async function addTo(world: World, items: Array<{ variantId: string; quantity?: string }>) {
-  for (const item of items) {
-    await world.h.cart.add(world.owner, {
-      variantId: item.variantId,
-      quantity: item.quantity ? q(item.quantity) : "minimum",
-    });
-  }
-}
-
-const digitalProduct = (h: Harness, price = 30_000) =>
-  h.product({ type: "digital", manageStock: false, price });
-
-const destination = (h: Harness) => ({
-  countyCode: h.geo.countyCode,
-  localityCode: h.geo.localityCode,
-  postalCode: "123456",
-});
-
-/** Intrarea unei comenzi 100% digitale: fără adresă și ofertă de livrare, cu adresa de facturare proprie și bifa legală. */
-async function digitalOnlyInput(world: World, over: Record<string, unknown> = {}) {
-  const { h, owner } = world;
-  const method = (over["paymentMethod"] as "cod" | "bank_transfer" | "card" | undefined) ?? "card";
-  const preview = await h.checkout.preview({ owner, destination: null, paymentMethod: method });
-  return {
-    idempotencyKey: randomUUID(),
-    contact: { email: "client@exemplu.ro", phone: "0722 123 456" },
-    billing: { sameAsShipping: false, address: billingAddress(h) },
-    company: null,
-    paymentMethod: method,
-    consent: { accepted: true, version: CHECKOUT_TERMS_CONSENT.version },
-    digitalConsent: { accepted: true, version: DIGITAL_CONSENT_DEFAULT_VERSION },
-    expectedTotalMinor: preview.totals?.totalMinor ?? 1,
-    ...over,
-  };
-}
-
-/** Intrarea unei comenzi MIXTE: ca la o comandă fizică (adresă și ofertă de livrare), plus bifa legală. */
-async function mixedInput(world: World, over: Record<string, unknown> = {}) {
-  const { h, owner } = world;
-  return h.input(owner, {
-    digitalConsent: { accepted: true, version: DIGITAL_CONSENT_DEFAULT_VERSION },
-    ...over,
-  });
-}
 
 const orderCount = (h: Harness) => h.tx.order.count();
 

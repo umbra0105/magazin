@@ -36,6 +36,8 @@ export const SHIPMENT_ERROR_CODES = [
   "SHIPMENT_NOT_FOUND",
   "SHIPMENT_ORDER_STATE",
   "SHIPMENT_PICKUP",
+  /** Faza 14c: comandă 100% digitală; nu se expediază și nu primește AWB. */
+  "SHIPMENT_DIGITAL_ONLY",
   "SHIPMENT_EXISTS",
   "SHIPMENT_INVALID",
   "SHIPMENT_PALLET_MANUAL_ONLY",
@@ -226,6 +228,13 @@ async function loadOrderForShipping(db: Db, orderId: string): Promise<OrderForSh
 }
 
 function assertShippable(order: OrderForShipping): void {
+  // comanda 100% digitală nu are livrare (nici adresă): refuzul vine înaintea oricărei alte verificări, cu un mesaj clar
+  if (order.snapshotKind === "digital" || order.snapshotCode === "digital") {
+    throw new ShipmentError(
+      "SHIPMENT_DIGITAL_ONLY",
+      "Comanda conține doar produse digitale: nu se expediază și nu primește AWB",
+    );
+  }
   if (order.snapshotKind === "pickup") {
     throw new ShipmentError(
       "SHIPMENT_PICKUP",
