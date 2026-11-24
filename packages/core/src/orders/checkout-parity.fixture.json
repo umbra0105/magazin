@@ -1,0 +1,5049 @@
+{
+  "cantitate zecimală, pas de 0,05 (3,65 × 99,99)": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 36496,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 36496,
+          "netMinor": 30162,
+          "vatMinor": 6334
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "36500",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 9999,
+              "totalMinor": 36496,
+              "netMinor": 30162,
+              "vatMinor": 6334,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 3700,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 36496,
+        "shippingMinor": 3700,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 642,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 7063,
+        "totalMinor": 40696
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 36496,
+        "discountMinor": 0,
+        "shippingMinor": 3700,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 642,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 7063,
+        "totalMinor": 40696,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 3700,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "36500",
+          "unitSymbol": "u",
+          "unitDecimals": 4,
+          "unitPriceMinor": 9999,
+          "discountMinor": 0,
+          "lineTotalMinor": 36496,
+          "netMinor": 30162,
+          "taxMinor": 6334,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 40696,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "36500",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "36500",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "cantitate zecimală, pas de 0,3 (6,3 × 123,45)": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 77774,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 77774,
+          "netMinor": 64276,
+          "vatMinor": 13498
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "63000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 12345,
+              "totalMinor": 77774,
+              "netMinor": 64276,
+              "vatMinor": 13498,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 5700,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 77774,
+        "shippingMinor": 5700,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 989,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 14574,
+        "totalMinor": 83974
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 77774,
+        "discountMinor": 0,
+        "shippingMinor": 5700,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 989,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 14574,
+        "totalMinor": 83974,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 5700,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "63000",
+          "unitSymbol": "u",
+          "unitDecimals": 4,
+          "unitPriceMinor": 12345,
+          "discountMinor": 0,
+          "lineTotalMinor": 77774,
+          "netMinor": 64276,
+          "taxMinor": 13498,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 83974,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "63000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "63000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "card, curier": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 19900,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 19900,
+          "netMinor": 16446,
+          "vatMinor": 3454
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 19900,
+              "totalMinor": 19900,
+              "netMinor": 16446,
+              "vatMinor": 3454,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "card",
+          "available": true
+        },
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 19900,
+        "shippingMinor": 2500,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 3888,
+        "totalMinor": 22400
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": true,
+      "order": {
+        "status": "pending",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 19900,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 3888,
+        "totalMinor": 22400,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "card",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": 900000,
+        "retryDeadlineOffsetMs": 86400000,
+        "confirmedOffsetMs": null
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 19900,
+          "discountMinor": 0,
+          "lineTotalMinor": 19900,
+          "netMinor": 16446,
+          "taxMinor": 3454,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "demo",
+          "method": "card",
+          "status": "pending",
+          "amountMinor": 22400,
+          "attemptNo": 1,
+          "mode": "demo"
+        }
+      ],
+      "events": ["order.placed", "stock.reserved"],
+      "commitments": [],
+      "reservations": [
+        {
+          "quantity": "10000",
+          "status": "active",
+          "expiresOffsetMs": 900000
+        }
+      ],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "0",
+          "reserved": "10000"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "card, ridicare personală": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 19900,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 19900,
+          "netMinor": 16446,
+          "vatMinor": 3454
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 19900,
+              "totalMinor": 19900,
+              "netMinor": 16446,
+              "vatMinor": 3454,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "pickup",
+      "methods": [
+        {
+          "method": "card",
+          "available": true
+        },
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 19900,
+        "shippingMinor": 0,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 3454,
+        "totalMinor": 19900
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": true,
+      "order": {
+        "status": "pending",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 19900,
+        "discountMinor": 0,
+        "shippingMinor": 0,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 3454,
+        "totalMinor": 19900,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "pickup",
+        "shippingSnapshot": {
+          "code": "pickup",
+          "demo": false,
+          "kind": "pickup",
+          "source": "pickup",
+          "carrier": "Ridicare personală",
+          "service": "de la sediu",
+          "priceMinor": 0,
+          "codFeeMinor": 0,
+          "freeShipping": false,
+          "estimatedDays": 0,
+          "pickupAddress": {
+            "city": "Alba Iulia",
+            "text": "Strada Magazinului 7, 510000 Alba Iulia, Alba",
+            "county": "Alba",
+            "street": "Strada Magazinului 7",
+            "country": "RO",
+            "postalCode": "510000"
+          }
+        },
+        "paymentMethod": "card",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": 900000,
+        "retryDeadlineOffsetMs": 86400000,
+        "confirmedOffsetMs": null
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 19900,
+          "discountMinor": 0,
+          "lineTotalMinor": 19900,
+          "netMinor": 16446,
+          "taxMinor": 3454,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "demo",
+          "method": "card",
+          "status": "pending",
+          "amountMinor": 19900,
+          "attemptNo": 1,
+          "mode": "demo"
+        }
+      ],
+      "events": ["order.placed", "stock.reserved"],
+      "commitments": [],
+      "reservations": [
+        {
+          "quantity": "10000",
+          "status": "active",
+          "expiresOffsetMs": 900000
+        }
+      ],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "0",
+          "reserved": "10000"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "indicatorul pragului de transport din coș": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 80000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 80000,
+          "netMinor": 66116,
+          "vatMinor": 13884
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": {
+          "thresholdMinor": 100000,
+          "remainingMinor": 20000,
+          "reached": false
+        },
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 80000,
+              "totalMinor": 80000,
+              "netMinor": 66116,
+              "vatMinor": 13884,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 80000,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 14405,
+        "totalMinor": 83000
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 80000,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 14405,
+        "totalMinor": 83000,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 80000,
+          "discountMinor": 0,
+          "lineTotalMinor": 80000,
+          "netMinor": 66116,
+          "taxMinor": 13884,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 83000,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "persoană juridică, peste limita de ramburs pentru firme (refuzat)": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 520000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 520000,
+          "netMinor": 429752,
+          "vatMinor": 90248
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 520000,
+              "totalMinor": 520000,
+              "netMinor": 429752,
+              "vatMinor": 90248,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": false,
+          "reason": "over_limit_company"
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 520000,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 90769,
+        "totalMinor": 523000
+      }
+    },
+    "placed": {
+      "kind": "refused",
+      "code": "ORDER_PAYMENT_METHOD_UNAVAILABLE"
+    }
+  },
+  "persoană juridică, sub limita de ramburs pentru firme": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 450000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 450000,
+          "netMinor": 371901,
+          "vatMinor": 78099
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 450000,
+              "totalMinor": 450000,
+              "netMinor": 371901,
+              "vatMinor": 78099,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 450000,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 78620,
+        "totalMinor": 453000
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 450000,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 78620,
+        "totalMinor": 453000,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 450000,
+          "discountMinor": 0,
+          "lineTotalMinor": 450000,
+          "netMinor": 371901,
+          "taxMinor": 78099,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 453000,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "peste limita de ramburs pentru persoane fizice (refuzat)": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 1100000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 1100000,
+          "netMinor": 909091,
+          "vatMinor": 190909
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 1100000,
+              "totalMinor": 1100000,
+              "netMinor": 909091,
+              "vatMinor": 190909,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": false,
+          "reason": "over_limit_individual"
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 1100000,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 191430,
+        "totalMinor": 1103000
+      }
+    },
+    "placed": {
+      "kind": "refused",
+      "code": "ORDER_PAYMENT_METHOD_UNAVAILABLE"
+    }
+  },
+  "prag atins, dar clasa supradimensionată nu e scutită": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 89900,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 89900,
+          "netMinor": 74298,
+          "vatMinor": 15602
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 89900,
+              "totalMinor": 89900,
+              "netMinor": 74298,
+              "vatMinor": 15602,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:freight",
+            "kind": "courier",
+            "priceMinor": 18750,
+            "codFeeMinor": 1500,
+            "estimatedDays": 4,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "class_excluded"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:freight",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 89900,
+        "shippingMinor": 18750,
+        "codFeeMinor": 1500,
+        "shippingTaxMinor": 3254,
+        "codFeeTaxMinor": 260,
+        "taxMinor": 19116,
+        "totalMinor": 110150
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 89900,
+        "discountMinor": 0,
+        "shippingMinor": 18750,
+        "codFeeMinor": 1500,
+        "shippingTaxMinor": 3254,
+        "codFeeTaxMinor": 260,
+        "taxMinor": 19116,
+        "totalMinor": 110150,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:freight",
+        "shippingSnapshot": {
+          "code": "demo:freight",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Marfă DEMO",
+          "service": "Transport marfă (DEMO)",
+          "priceMinor": 18750,
+          "codFeeMinor": 1500,
+          "freeShipping": false,
+          "estimatedDays": 4
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 89900,
+          "discountMinor": 0,
+          "lineTotalMinor": 89900,
+          "netMinor": 74298,
+          "taxMinor": 15602,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "oversized",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 110150,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "prag de transport gratuit atins, cu taxă de ramburs": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 50000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 50000,
+          "netMinor": 41322,
+          "vatMinor": 8678
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 30000,
+              "totalMinor": 30000,
+              "netMinor": 24793,
+              "vatMinor": 5207,
+              "taxRateBps": 2100
+            }
+          },
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 20000,
+              "totalMinor": 20000,
+              "netMinor": 16529,
+              "vatMinor": 3471,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 0,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": true,
+            "source": "provider"
+          },
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": true
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 50000,
+        "shippingMinor": 0,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 8765,
+        "totalMinor": 50500
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 50000,
+        "discountMinor": 0,
+        "shippingMinor": 0,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 8765,
+        "totalMinor": 50500,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 0,
+          "codFeeMinor": 500,
+          "freeShipping": true,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 30000,
+          "discountMinor": 0,
+          "lineTotalMinor": 30000,
+          "netMinor": 24793,
+          "taxMinor": 5207,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        },
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 20000,
+          "discountMinor": 0,
+          "lineTotalMinor": 20000,
+          "netMinor": 16529,
+          "taxMinor": 3471,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 50500,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        },
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        },
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "prag de transport gratuit: cu 1 ban peste prag": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 50001,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 50001,
+          "netMinor": 41323,
+          "vatMinor": 8678
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 50001,
+              "totalMinor": 50001,
+              "netMinor": 41323,
+              "vatMinor": 8678,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 0,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": true,
+            "source": "provider"
+          },
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": true
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 50001,
+        "shippingMinor": 0,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 8765,
+        "totalMinor": 50501
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 50001,
+        "discountMinor": 0,
+        "shippingMinor": 0,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 8765,
+        "totalMinor": 50501,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 0,
+          "codFeeMinor": 500,
+          "freeShipping": true,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 50001,
+          "discountMinor": 0,
+          "lineTotalMinor": 50001,
+          "netMinor": 41323,
+          "taxMinor": 8678,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 50501,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "prag de transport gratuit: cu 1 ban sub prag": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 49999,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 49999,
+          "netMinor": 41321,
+          "vatMinor": 8678
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 49999,
+              "totalMinor": 49999,
+              "netMinor": 41321,
+              "vatMinor": 8678,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "below_threshold"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 49999,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 9199,
+        "totalMinor": 52999
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 49999,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 9199,
+        "totalMinor": 52999,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 49999,
+          "discountMinor": 0,
+          "lineTotalMinor": 49999,
+          "netMinor": 41321,
+          "taxMinor": 8678,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 52999,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "prag de transport gratuit: exact la prag": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 50000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 50000,
+          "netMinor": 41322,
+          "vatMinor": 8678
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 50000,
+              "totalMinor": 50000,
+              "netMinor": 41322,
+              "vatMinor": 8678,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 0,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": true,
+            "source": "provider"
+          },
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": true
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 50000,
+        "shippingMinor": 0,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 8765,
+        "totalMinor": 50500
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 50000,
+        "discountMinor": 0,
+        "shippingMinor": 0,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 8765,
+        "totalMinor": 50500,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 0,
+          "codFeeMinor": 500,
+          "freeShipping": true,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 50000,
+          "discountMinor": 0,
+          "lineTotalMinor": 50000,
+          "netMinor": 41322,
+          "taxMinor": 8678,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 50500,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "produs «La comandă» cu ramburs (refuzat)": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 25000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 25000,
+          "netMinor": 20661,
+          "vatMinor": 4339
+        },
+        "canCheckout": true,
+        "leadTime": {
+          "days": 14
+        },
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "on_order",
+            "leadTimeDays": 14,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 25000,
+              "totalMinor": 25000,
+              "netMinor": 20661,
+              "vatMinor": 4339,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": false,
+          "reason": "has_on_order_line"
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 25000,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 4860,
+        "totalMinor": 28000
+      }
+    },
+    "placed": {
+      "kind": "refused",
+      "code": "ORDER_PAYMENT_METHOD_UNAVAILABLE"
+    }
+  },
+  "produs «La comandă» cu transfer bancar": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 25000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 25000,
+          "netMinor": 20661,
+          "vatMinor": 4339
+        },
+        "canCheckout": true,
+        "leadTime": {
+          "days": 14
+        },
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "on_order",
+            "leadTimeDays": 14,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 25000,
+              "totalMinor": 25000,
+              "netMinor": 20661,
+              "vatMinor": 4339,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": false,
+          "reason": "has_on_order_line"
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 25000,
+        "shippingMinor": 2500,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 4773,
+        "totalMinor": 27500
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "pending",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 25000,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 4773,
+        "totalMinor": 27500,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "bank_transfer",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": 377999999,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": null
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 25000,
+          "discountMinor": 0,
+          "lineTotalMinor": 25000,
+          "netMinor": 20661,
+          "taxMinor": 4339,
+          "taxRateBps": 2100,
+          "stockState": "on_order",
+          "leadTimeDays": 14,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "bank_transfer",
+          "method": "bank_transfer",
+          "status": "pending",
+          "amountMinor": 27500,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "stock.reserved"],
+      "commitments": [],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "0",
+          "committed": "0",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "promoție activă, afișată": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 9950,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 9950,
+          "netMinor": 8223,
+          "vatMinor": 1727
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 9950,
+              "totalMinor": 9950,
+              "netMinor": 8223,
+              "vatMinor": 1727,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 9950,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 2248,
+        "totalMinor": 12950
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 9950,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 2248,
+        "totalMinor": 12950,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 9950,
+          "discountMinor": 0,
+          "lineTotalMinor": 9950,
+          "netMinor": 8223,
+          "taxMinor": 1727,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 12950,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "promoție activă, dar afișarea ei e oprită": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 19900,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 19900,
+          "netMinor": 16446,
+          "vatMinor": 3454
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 19900,
+              "totalMinor": 19900,
+              "netMinor": 16446,
+              "vatMinor": 3454,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 19900,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 3975,
+        "totalMinor": 22900
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 19900,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 3975,
+        "totalMinor": 22900,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 19900,
+          "discountMinor": 0,
+          "lineTotalMinor": 19900,
+          "netMinor": 16446,
+          "taxMinor": 3454,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 22900,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "ramburs, curier, două produse cu cantități": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 35050,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 35050,
+          "netMinor": 28967,
+          "vatMinor": 6083
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 19900,
+              "totalMinor": 19900,
+              "netMinor": 16446,
+              "vatMinor": 3454,
+              "taxRateBps": 2100
+            }
+          },
+          {
+            "quantityTicks": "30000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 5050,
+              "totalMinor": 15150,
+              "netMinor": 12521,
+              "vatMinor": 2629,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 3700,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 35050,
+        "shippingMinor": 3700,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 642,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 6812,
+        "totalMinor": 39250
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 35050,
+        "discountMinor": 0,
+        "shippingMinor": 3700,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 642,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 6812,
+        "totalMinor": 39250,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 3700,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 19900,
+          "discountMinor": 0,
+          "lineTotalMinor": 19900,
+          "netMinor": 16446,
+          "taxMinor": 3454,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        },
+        {
+          "quantity": "30000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 5050,
+          "discountMinor": 0,
+          "lineTotalMinor": 15150,
+          "netMinor": 12521,
+          "taxMinor": 2629,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 39250,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        },
+        {
+          "quantity": "30000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        },
+        {
+          "physical": "1000000",
+          "committed": "30000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "ramburs, curier, greutate mare (tarif pe kilogram în plus)": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 19800,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 19800,
+          "netMinor": 16364,
+          "vatMinor": 3436
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "20000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 9900,
+              "totalMinor": 19800,
+              "netMinor": 16364,
+              "vatMinor": 3436,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 14900,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 19800,
+        "shippingMinor": 14900,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 2586,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 6109,
+        "totalMinor": 35200
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 19800,
+        "discountMinor": 0,
+        "shippingMinor": 14900,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 2586,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 6109,
+        "totalMinor": 35200,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 14900,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "20000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 9900,
+          "discountMinor": 0,
+          "lineTotalMinor": 19800,
+          "netMinor": 16364,
+          "taxMinor": 3436,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 35200,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "20000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "20000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "ramburs, curier, rotunjirea TVA pe linie (12345 × 7)": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 86415,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 86415,
+          "netMinor": 71417,
+          "vatMinor": 14998
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "70000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 12345,
+              "totalMinor": 86415,
+              "netMinor": 71417,
+              "vatMinor": 14998,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 6100,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 86415,
+        "shippingMinor": 6100,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 1059,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 16144,
+        "totalMinor": 93015
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 86415,
+        "discountMinor": 0,
+        "shippingMinor": 6100,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 1059,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 16144,
+        "totalMinor": 93015,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 6100,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "70000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 12345,
+          "discountMinor": 0,
+          "lineTotalMinor": 86415,
+          "netMinor": 71417,
+          "taxMinor": 14998,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 93015,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "70000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "70000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "ramburs, curier, un produs": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 19900,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 19900,
+          "netMinor": 16446,
+          "vatMinor": 3454
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 19900,
+              "totalMinor": 19900,
+              "netMinor": 16446,
+              "vatMinor": 3454,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 19900,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 3975,
+        "totalMinor": 22900
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 19900,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 3975,
+        "totalMinor": 22900,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 19900,
+          "discountMinor": 0,
+          "lineTotalMinor": 19900,
+          "netMinor": 16446,
+          "taxMinor": 3454,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 22900,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "ramburs, palet împreună cu un produs standard": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 139700,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 139700,
+          "netMinor": 115454,
+          "vatMinor": 24246
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 129900,
+              "totalMinor": 129900,
+              "netMinor": 107355,
+              "vatMinor": 22545,
+              "taxRateBps": 2100
+            }
+          },
+          {
+            "quantityTicks": "20000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 4900,
+              "totalMinor": 9800,
+              "netMinor": 8099,
+              "vatMinor": 1701,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "pallet",
+            "kind": "pallet",
+            "priceMinor": 35000,
+            "codFeeMinor": 0,
+            "estimatedDays": null,
+            "freeShipping": false,
+            "source": "pallet"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "pallet_only",
+          "pallets": 1
+        }
+      },
+      "selectedOffer": "pallet",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 139700,
+        "shippingMinor": 35000,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 6074,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 30320,
+        "totalMinor": 174700
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 139700,
+        "discountMinor": 0,
+        "shippingMinor": 35000,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 6074,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 30320,
+        "totalMinor": 174700,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "pallet",
+        "shippingSnapshot": {
+          "code": "pallet",
+          "demo": false,
+          "kind": "pallet",
+          "source": "pallet",
+          "carrier": "Transport paletizat",
+          "service": "marfă grea sau voluminoasă",
+          "priceMinor": 35000,
+          "codFeeMinor": 0,
+          "freeShipping": false,
+          "estimatedDays": null
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 129900,
+          "discountMinor": 0,
+          "lineTotalMinor": 129900,
+          "netMinor": 107355,
+          "taxMinor": 22545,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "pallet",
+          "isDigital": false
+        },
+        {
+          "quantity": "20000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 4900,
+          "discountMinor": 0,
+          "lineTotalMinor": 9800,
+          "netMinor": 8099,
+          "taxMinor": 1701,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 174700,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        },
+        {
+          "quantity": "20000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        },
+        {
+          "physical": "1000000",
+          "committed": "20000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "ramburs, produs supradimensionat": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 89900,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 89900,
+          "netMinor": 74298,
+          "vatMinor": 15602
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 89900,
+              "totalMinor": 89900,
+              "netMinor": 74298,
+              "vatMinor": 15602,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:freight",
+            "kind": "courier",
+            "priceMinor": 18750,
+            "codFeeMinor": 1500,
+            "estimatedDays": 4,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:freight",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 89900,
+        "shippingMinor": 18750,
+        "codFeeMinor": 1500,
+        "shippingTaxMinor": 3254,
+        "codFeeTaxMinor": 260,
+        "taxMinor": 19116,
+        "totalMinor": 110150
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 89900,
+        "discountMinor": 0,
+        "shippingMinor": 18750,
+        "codFeeMinor": 1500,
+        "shippingTaxMinor": 3254,
+        "codFeeTaxMinor": 260,
+        "taxMinor": 19116,
+        "totalMinor": 110150,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:freight",
+        "shippingSnapshot": {
+          "code": "demo:freight",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Marfă DEMO",
+          "service": "Transport marfă (DEMO)",
+          "priceMinor": 18750,
+          "codFeeMinor": 1500,
+          "freeShipping": false,
+          "estimatedDays": 4
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 89900,
+          "discountMinor": 0,
+          "lineTotalMinor": 89900,
+          "netMinor": 74298,
+          "taxMinor": 15602,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "oversized",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 110150,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "ramburs, ridicare personală (fără taxă de ramburs)": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 19900,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 19900,
+          "netMinor": 16446,
+          "vatMinor": 3454
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 19900,
+              "totalMinor": 19900,
+              "netMinor": 16446,
+              "vatMinor": 3454,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "pickup",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 19900,
+        "shippingMinor": 0,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 3454,
+        "totalMinor": 19900
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 19900,
+        "discountMinor": 0,
+        "shippingMinor": 0,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 3454,
+        "totalMinor": 19900,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "pickup",
+        "shippingSnapshot": {
+          "code": "pickup",
+          "demo": false,
+          "kind": "pickup",
+          "source": "pickup",
+          "carrier": "Ridicare personală",
+          "service": "de la sediu",
+          "priceMinor": 0,
+          "codFeeMinor": 0,
+          "freeShipping": false,
+          "estimatedDays": 0,
+          "pickupAddress": {
+            "city": "Alba Iulia",
+            "text": "Strada Magazinului 7, 510000 Alba Iulia, Alba",
+            "county": "Alba",
+            "street": "Strada Magazinului 7",
+            "country": "RO",
+            "postalCode": "510000"
+          }
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 19900,
+          "discountMinor": 0,
+          "lineTotalMinor": 19900,
+          "netMinor": 16446,
+          "taxMinor": 3454,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 19900,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "ramburs, un produs pe palet": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 129900,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 129900,
+          "netMinor": 107355,
+          "vatMinor": 22545
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 129900,
+              "totalMinor": 129900,
+              "netMinor": 107355,
+              "vatMinor": 22545,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "pallet",
+            "kind": "pallet",
+            "priceMinor": 35000,
+            "codFeeMinor": 0,
+            "estimatedDays": null,
+            "freeShipping": false,
+            "source": "pallet"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "pallet_only",
+          "pallets": 1
+        }
+      },
+      "selectedOffer": "pallet",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 129900,
+        "shippingMinor": 35000,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 6074,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 28619,
+        "totalMinor": 164900
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 129900,
+        "discountMinor": 0,
+        "shippingMinor": 35000,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 6074,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 28619,
+        "totalMinor": 164900,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "pallet",
+        "shippingSnapshot": {
+          "code": "pallet",
+          "demo": false,
+          "kind": "pallet",
+          "source": "pallet",
+          "carrier": "Transport paletizat",
+          "service": "marfă grea sau voluminoasă",
+          "priceMinor": 35000,
+          "codFeeMinor": 0,
+          "freeShipping": false,
+          "estimatedDays": null
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 129900,
+          "discountMinor": 0,
+          "lineTotalMinor": 129900,
+          "netMinor": 107355,
+          "taxMinor": 22545,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "pallet",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 164900,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "stoc limitat, ramburs": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 15000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 15000,
+          "netMinor": 12397,
+          "vatMinor": 2603
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "limited",
+            "leadTimeDays": null,
+            "remainingSteps": 2,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 15000,
+              "totalMinor": 15000,
+              "netMinor": 12397,
+              "vatMinor": 2603,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 15000,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 3124,
+        "totalMinor": 18000
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 15000,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 3124,
+        "totalMinor": 18000,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 15000,
+          "discountMinor": 0,
+          "lineTotalMinor": 15000,
+          "netMinor": 12397,
+          "taxMinor": 2603,
+          "taxRateBps": 2100,
+          "stockState": "limited",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 18000,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [
+        {
+          "quantity": "10000",
+          "status": "open"
+        }
+      ],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "20000",
+          "committed": "10000",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "stoc negestionat, ramburs": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 15000,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 15000,
+          "netMinor": 12397,
+          "vatMinor": 2603
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 15000,
+              "totalMinor": 15000,
+              "netMinor": 12397,
+              "vatMinor": 2603,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 15000,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 3124,
+        "totalMinor": 18000
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "confirmed",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 15000,
+        "discountMinor": 0,
+        "shippingMinor": 2500,
+        "codFeeMinor": 500,
+        "shippingTaxMinor": 434,
+        "codFeeTaxMinor": 87,
+        "taxMinor": 3124,
+        "totalMinor": 18000,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2500,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "cod",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": null,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": 0
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 15000,
+          "discountMinor": 0,
+          "lineTotalMinor": 15000,
+          "netMinor": 12397,
+          "taxMinor": 2603,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "cod",
+          "method": "cod",
+          "status": "pending",
+          "amountMinor": 18000,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "order.confirmed"],
+      "commitments": [],
+      "reservations": [],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "0",
+          "reserved": "0"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "transfer bancar, curier (rezervare de 3 zile lucrătoare)": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 35454,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 35454,
+          "netMinor": 29301,
+          "vatMinor": 6153
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 19900,
+              "totalMinor": 19900,
+              "netMinor": 16446,
+              "vatMinor": 3454,
+              "taxRateBps": 2100
+            }
+          },
+          {
+            "quantityTicks": "20000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 7777,
+              "totalMinor": 15554,
+              "netMinor": 12855,
+              "vatMinor": 2699,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2900,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "demo:courier",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 35454,
+        "shippingMinor": 2900,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 503,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 6656,
+        "totalMinor": 38354
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "pending",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 35454,
+        "discountMinor": 0,
+        "shippingMinor": 2900,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 503,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 6656,
+        "totalMinor": 38354,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "demo:courier",
+        "shippingSnapshot": {
+          "code": "demo:courier",
+          "demo": true,
+          "kind": "courier",
+          "source": "provider",
+          "carrier": "Curier DEMO",
+          "service": "Standard (DEMO)",
+          "priceMinor": 2900,
+          "codFeeMinor": 500,
+          "freeShipping": false,
+          "estimatedDays": 2
+        },
+        "paymentMethod": "bank_transfer",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": 377999999,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": null
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 19900,
+          "discountMinor": 0,
+          "lineTotalMinor": 19900,
+          "netMinor": 16446,
+          "taxMinor": 3454,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        },
+        {
+          "quantity": "20000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 7777,
+          "discountMinor": 0,
+          "lineTotalMinor": 15554,
+          "netMinor": 12855,
+          "taxMinor": 2699,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "bank_transfer",
+          "method": "bank_transfer",
+          "status": "pending",
+          "amountMinor": 38354,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "stock.reserved"],
+      "commitments": [],
+      "reservations": [
+        {
+          "quantity": "10000",
+          "status": "active",
+          "expiresOffsetMs": 377999999
+        },
+        {
+          "quantity": "20000",
+          "status": "active",
+          "expiresOffsetMs": 377999999
+        }
+      ],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "0",
+          "reserved": "10000"
+        },
+        {
+          "physical": "1000000",
+          "committed": "0",
+          "reserved": "20000"
+        }
+      ],
+      "cartAfter": 0
+    }
+  },
+  "transfer bancar, ridicare personală": {
+    "preview": {
+      "blocked": null,
+      "taxRateBps": 2100,
+      "cart": {
+        "totals": {
+          "subtotalMinor": 19900,
+          "couponMinor": 0,
+          "groupAdvantageMinor": 0,
+          "totalMinor": 19900,
+          "netMinor": 16446,
+          "vatMinor": 3454
+        },
+        "canCheckout": true,
+        "leadTime": null,
+        "freeShipping": null,
+        "lines": [
+          {
+            "quantityTicks": "10000",
+            "state": "in_stock",
+            "leadTimeDays": null,
+            "remainingSteps": null,
+            "issues": [],
+            "included": true,
+            "pricing": {
+              "unitPriceMinor": 19900,
+              "totalMinor": 19900,
+              "netMinor": 16446,
+              "vatMinor": 3454,
+              "taxRateBps": 2100
+            }
+          }
+        ]
+      },
+      "shipping": {
+        "offers": [
+          {
+            "code": "pickup",
+            "kind": "pickup",
+            "priceMinor": 0,
+            "codFeeMinor": 0,
+            "estimatedDays": 0,
+            "freeShipping": false,
+            "source": "pickup"
+          },
+          {
+            "code": "demo:courier",
+            "kind": "courier",
+            "priceMinor": 2500,
+            "codFeeMinor": 500,
+            "estimatedDays": 2,
+            "freeShipping": false,
+            "source": "provider"
+          }
+        ],
+        "fallbackUsed": false,
+        "providerProblem": null,
+        "freeShipping": {
+          "eligible": false,
+          "reason": "disabled"
+        },
+        "incomplete": false,
+        "transport": {
+          "mode": "courier",
+          "pallets": null
+        }
+      },
+      "selectedOffer": "pickup",
+      "methods": [
+        {
+          "method": "cod",
+          "available": true
+        },
+        {
+          "method": "bank_transfer",
+          "available": true
+        }
+      ],
+      "totals": {
+        "subtotalMinor": 19900,
+        "shippingMinor": 0,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 3454,
+        "totalMinor": 19900
+      }
+    },
+    "placed": {
+      "kind": "placed",
+      "replayed": false,
+      "hasPaymentId": false,
+      "order": {
+        "status": "pending",
+        "paymentStatus": "pending",
+        "fulfillmentStatus": "unfulfilled",
+        "subtotalMinor": 19900,
+        "discountMinor": 0,
+        "shippingMinor": 0,
+        "codFeeMinor": 0,
+        "shippingTaxMinor": 0,
+        "codFeeTaxMinor": 0,
+        "taxMinor": 3454,
+        "totalMinor": 19900,
+        "taxRateBps": 2100,
+        "groupPricingType": "none",
+        "currency": "RON",
+        "shippingMethodCode": "pickup",
+        "shippingSnapshot": {
+          "code": "pickup",
+          "demo": false,
+          "kind": "pickup",
+          "source": "pickup",
+          "carrier": "Ridicare personală",
+          "service": "de la sediu",
+          "priceMinor": 0,
+          "codFeeMinor": 0,
+          "freeShipping": false,
+          "estimatedDays": 0,
+          "pickupAddress": {
+            "city": "Alba Iulia",
+            "text": "Strada Magazinului 7, 510000 Alba Iulia, Alba",
+            "county": "Alba",
+            "street": "Strada Magazinului 7",
+            "country": "RO",
+            "postalCode": "510000"
+          }
+        },
+        "paymentMethod": "bank_transfer",
+        "installationRequested": false,
+        "customerId": null,
+        "digitalConsentAt": null,
+        "digitalConsentText": null,
+        "digitalConsentVersion": null,
+        "reservationOffsetMs": 377999999,
+        "retryDeadlineOffsetMs": null,
+        "confirmedOffsetMs": null
+      },
+      "lines": [
+        {
+          "quantity": "10000",
+          "unitSymbol": "buc",
+          "unitDecimals": 0,
+          "unitPriceMinor": 19900,
+          "discountMinor": 0,
+          "lineTotalMinor": 19900,
+          "netMinor": 16446,
+          "taxMinor": 3454,
+          "taxRateBps": 2100,
+          "stockState": "in_stock",
+          "leadTimeDays": null,
+          "shippingClass": "standard",
+          "isDigital": false
+        }
+      ],
+      "addressKinds": ["billing", "shipping"],
+      "payments": [
+        {
+          "provider": "bank_transfer",
+          "method": "bank_transfer",
+          "status": "pending",
+          "amountMinor": 19900,
+          "attemptNo": 1,
+          "mode": null
+        }
+      ],
+      "events": ["order.placed", "stock.reserved"],
+      "commitments": [],
+      "reservations": [
+        {
+          "quantity": "10000",
+          "status": "active",
+          "expiresOffsetMs": 377999999
+        }
+      ],
+      "inventory": [
+        {
+          "physical": "1000000",
+          "committed": "0",
+          "reserved": "10000"
+        }
+      ],
+      "cartAfter": 0
+    }
+  }
+}

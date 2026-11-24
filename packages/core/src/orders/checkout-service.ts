@@ -9,6 +9,8 @@ import {
 } from "@ecom/shared";
 import type { CartOwner, CartService, CartView, CartLineView } from "../cart/cart-service";
 import { inTx, type Db } from "../db-tx";
+import { consentSnapshot } from "../digital/digital-rules";
+import { readDigitalSettings } from "../digital/digital-settings";
 import { reservationExpiresAt } from "../inventory/workdays";
 import { ORDER_REF_TYPE } from "../inventory/constants";
 import { StockService } from "../inventory/stock-service";
@@ -100,6 +102,11 @@ export interface CheckoutPreview {
   methods: PaymentMethodAvailability[] | null;
   totals: OrderTotals | null;
   taxRateBps: number;
+  /**
+   * Faza 14c: coșul are produse digitale (`present`) sau DOAR produse digitale (`only`: fără pas de livrare, fără adresă de
+   * livrare, fără ramburs). Interfața ascunde livrarea și cere bifa legală după aceste indicatoare.
+   */
+  digital?: { present: boolean; only: boolean };
 }
 
 export interface PlaceOrderResult {
@@ -192,7 +199,31 @@ interface Context {
   sources: Map<string, ParcelSource>;
   parcels: Parcel[];
   taxRateBps: number;
+  /** Cel puțin o linie digitală (Faza 14c). */
+  hasDigital: boolean;
+  /** TOATE liniile sunt digitale: fără livrare, fără transport, fără ramburs. */
+  digitalOnly: boolean;
+  /** Contul cumpărătorului (doar când coșul are linii digitale și proprietarul e un utilizator autentificat). */
+  account: { userId: string; emailVerified: boolean } | null;
 }
+
+/** Fără transport și fără taxă de ramburs: valorile coșului 100% digital (nu există ofertă de curier). */
+const NO_SHIPPING = { priceMinor: 0, codFeeMinor: 0 } as const;
+
+/** Codul metodei de livrare a unei comenzi 100% digitale; nu există curier, ofertă sau adresă de livrare. */
+const DIGITAL_SHIPPING_CODE = "digital";
+const DIGITAL_SHIPPING_SNAPSHOT = {
+  code: DIGITAL_SHIPPING_CODE,
+  kind: "digital",
+  carrier: null,
+  service: null,
+  priceMinor: 0,
+  estimatedDays: null,
+  codFeeMinor: 0,
+  source: "digital",
+  demo: false,
+  freeShipping: false,
+} as const;
 
 export class CheckoutService {
   private readonly now: () => Date;
@@ -226,22 +257,63 @@ export class CheckoutService {
         }),
       ];
     });
+    const digitalFlags = view.lines.map((line) => sources.get(line.variantId)?.isDigital === true);
+    const hasDigital = digitalFlags.some(Boolean);
+    let account: Context["account"] = null;
+    if (hasDigital && owner.kind === "user") {
+      const user = await this.deps.db.user.findUnique({
+        where: { id: owner.userId },
+        select: { id: true, emailVerified: true },
+      });
+      account = user ? { userId: user.id, emailVerified: user.emailVerified } : null;
+    }
     return {
       settings,
       view,
       sources,
       parcels,
       taxRateBps: percentToBasisPoints(settings.taxStandardRate),
+      hasDigital,
+      digitalOnly: hasDigital && digitalFlags.every(Boolean),
+      account,
     };
   }
 
   /** Motivul pentru care coșul nu poate fi plasat ca comandă (verificat și la afișare, și la plasare). */
   private blockReason(ctx: Context): { code: string; message: string } | null {
-    if (!ctx.settings.guestCheckoutEnabled) {
+    // comenzile cu produse digitale sunt mereu pe cont verificat: setarea «comenzi fără cont» nu le privește
+    if (!ctx.settings.guestCheckoutEnabled && !ctx.hasDigital) {
       return {
         code: "ORDER_GUEST_CHECKOUT_DISABLED",
         message: "Comenzile fără cont nu sunt activate în acest magazin.",
       };
+    }
+    if (ctx.hasDigital) {
+      if (!ctx.account) {
+        return {
+          code: "ORDER_LOGIN_REQUIRED",
+          message:
+            "Pentru produsele digitale ai nevoie de un cont. Autentifică-te sau creează un cont; coșul se păstrează.",
+        };
+      }
+      if (!ctx.account.emailVerified) {
+        return {
+          code: "ORDER_EMAIL_NOT_VERIFIED",
+          message: "Verifică adresa de email a contului ca să poți comanda produse digitale.",
+        };
+      }
+      // maxim o bucată pe linie digitală (regula e și în coș; aici e verificată din nou, la afișare și la plasare)
+      for (const line of ctx.view.lines) {
+        if (
+          ctx.sources.get(line.variantId)?.isDigital &&
+          BigInt(line.quantityTicks) > BigInt(line.stepTicks)
+        ) {
+          return {
+            code: "ORDER_DIGITAL_QUANTITY",
+            message: "Un produs digital se cumpără o singură dată: păstrează o bucată în coș.",
+          };
+        }
+      }
     }
     if (!ctx.view.canCheckout) {
       return {
@@ -250,12 +322,6 @@ export class CheckoutService {
       };
     }
     for (const line of ctx.view.lines) {
-      if (ctx.sources.get(line.variantId)?.isDigital) {
-        return {
-          code: "ORDER_DIGITAL_NOT_SUPPORTED",
-          message: "Produsele digitale nu se pot comanda încă.",
-        };
-      }
       try {
         assertOrderQuantity(quantityFromTicks(BigInt(line.quantityTicks)), {
           step: quantityFromTicks(BigInt(line.stepTicks)),
@@ -271,11 +337,27 @@ export class CheckoutService {
     return null;
   }
 
+  /** Liniile FIZICE ale coșului (pentru transport și pragul de transport gratuit); cele digitale nu intră niciodată aici. */
   private physicalLines(ctx: Context): Array<{ productId: string; shippingClass: ShippingClass }> {
     return ctx.view.lines.flatMap((line) => {
       const source = ctx.sources.get(line.variantId);
-      return source ? [{ productId: source.productId, shippingClass: source.shippingClass }] : [];
+      return source && !source.isDigital
+        ? [{ productId: source.productId, shippingClass: source.shippingClass }]
+        : [];
     });
+  }
+
+  /**
+   * Valoarea produselor FIZICE, pentru pragul de transport gratuit (Faza 14c): liniile digitale nu o influențează. Fără linii
+   * digitale e chiar totalul coșului (aceeași valoare ca înainte); cu ele, suma totalurilor liniilor fizice (rotunjite pe linie).
+   */
+  private physicalSubtotalMinor(ctx: Context): number {
+    if (!ctx.hasDigital) return ctx.view.totals.totalMinor;
+    return ctx.view.lines.reduce(
+      (sum, line) =>
+        ctx.sources.get(line.variantId)?.isDigital ? sum : sum + (line.pricing?.totalMinor ?? 0),
+      0,
+    );
   }
 
   private async destinationOf(ctx: Context, input: CheckoutDestinationInput) {
@@ -300,7 +382,7 @@ export class CheckoutService {
 
   private methodsFor(
     ctx: Context,
-    offer: RateOffer,
+    offer: { priceMinor: number; codFeeMinor: number },
     isCompany: boolean,
   ): PaymentMethodAvailability[] {
     const payable = ctx.view.totals.totalMinor + offer.priceMinor + offer.codFeeMinor;
@@ -311,6 +393,7 @@ export class CheckoutService {
       codMaxIndividualMinor: ctx.settings.codMaxIndividualMinor,
       codMaxCompanyMinor: ctx.settings.codMaxCompanyMinor,
       cardAvailable: ctx.settings.cardProvider !== null,
+      ...(ctx.digitalOnly ? { digitalOnly: true } : {}),
     });
     return methods;
   }
@@ -329,14 +412,34 @@ export class CheckoutService {
       methods: null,
       totals: null,
       taxRateBps: ctx.taxRateBps,
+      digital: { present: ctx.hasDigital, only: ctx.digitalOnly },
     } satisfies CheckoutPreview;
-    if (blocked || !input.destination) return empty;
+    if (blocked) return empty;
+
+    // coș 100% digital: nu există destinație, tarife de livrare sau ofertă; totalul e al produselor, fără transport și fără ramburs
+    if (ctx.digitalOnly) {
+      const isCompany = isCompanyBuyer({ vatId: input.vatId ?? null, groupPricingType: "none" });
+      return {
+        ...empty,
+        methods: this.methodsFor(ctx, NO_SHIPPING, isCompany),
+        totals: input.paymentMethod
+          ? computeOrderTotals({
+              cart: ctx.view.totals,
+              shippingMinor: NO_SHIPPING.priceMinor,
+              codFeeMinor: NO_SHIPPING.codFeeMinor,
+              paymentMethod: input.paymentMethod,
+              taxRateBps: ctx.taxRateBps,
+            })
+          : null,
+      };
+    }
+    if (!input.destination) return empty;
 
     const destination = await this.destinationOf(ctx, input.destination);
     const shipping = await this.deps.shipping.quote({
       parcels: ctx.parcels,
       lines: this.physicalLines(ctx),
-      subtotalMinor: ctx.view.totals.totalMinor,
+      subtotalMinor: this.physicalSubtotalMinor(ctx),
       destination: {
         county: destination.county,
         locality: destination.locality,
@@ -437,10 +540,60 @@ export class CheckoutService {
     if (blocked) throw new OrderError(blocked.code as never, blocked.message);
 
     const { settings } = ctx;
-    const shippingCountry = input.shipping.country;
-    const billingAddress = input.billing.sameAsShipping ? input.shipping : input.billing.address;
-    for (const country of [shippingCountry, billingAddress.country]) {
-      if (!settings.allowedCountries.includes(country)) {
+
+    // bifa legală (Faza 14c): separată de Termeni, obligatorie pe server când coșul are linii digitale; textul vine de pe server
+    let digitalConsent: ReturnType<typeof consentSnapshot> | null = null;
+    if (ctx.hasDigital) {
+      const snapshot = consentSnapshot((await readDigitalSettings(this.deps.db)).consentText);
+      if (
+        input.digitalConsent?.accepted !== true ||
+        input.digitalConsent.version !== snapshot.version
+      ) {
+        throw new OrderError(
+          "ORDER_DIGITAL_CONSENT_REQUIRED",
+          "Bifează solicitarea de livrare imediată a conținutului digital (și renunțarea la dreptul de retragere) ca să poți comanda.",
+          { field: "digitalConsent" },
+        );
+      }
+      digitalConsent = snapshot;
+    }
+
+    // adresa de livrare: doar la comenzile cu linii fizice (coșul 100% digital nu are livrare, doar facturare)
+    let shippingInput: AddressInput | null = null;
+    let shippingOfferCode: string | null = null;
+    if (ctx.digitalOnly) {
+      // fără livrare, facturarea nu poate fi «aceeași cu livrarea»; adresa și oferta de livrare trimise se ignoră
+      if (input.billing.sameAsShipping) {
+        throw new ValidationError("Datele comenzii nu sunt valide", {
+          issues: [
+            { path: "billing", message: "Adresa de facturare e obligatorie: nu există livrare" },
+          ],
+        });
+      }
+    } else {
+      if (!input.shipping || !input.shippingOfferCode) {
+        throw new ValidationError("Datele comenzii nu sunt valide", {
+          issues: [
+            ...(input.shipping
+              ? []
+              : [{ path: "shipping", message: "Adresa de livrare lipsește" }]),
+            ...(input.shippingOfferCode
+              ? []
+              : [{ path: "shippingOfferCode", message: "Alege metoda de livrare" }]),
+          ],
+        });
+      }
+      shippingInput = input.shipping;
+      shippingOfferCode = input.shippingOfferCode;
+    }
+    const billingAddress = input.billing.sameAsShipping ? shippingInput : input.billing.address;
+    if (!billingAddress) {
+      throw new ValidationError("Datele comenzii nu sunt valide", {
+        issues: [{ path: "billing", message: "Adresa de facturare lipsește" }],
+      });
+    }
+    for (const country of [shippingInput?.country, billingAddress.country]) {
+      if (country !== undefined && !settings.allowedCountries.includes(country)) {
         throw new OrderError(
           "ORDER_COUNTRY_NOT_ALLOWED",
           "Vindem doar în țările permise de magazin; adresa aleasă nu este permisă.",
@@ -450,13 +603,13 @@ export class CheckoutService {
     }
 
     const geo = new GeoService(this.deps.db);
-    const shippingNames = await geo.resolveLocation(
-      input.shipping.countyCode,
-      input.shipping.localityCode,
-    );
-    const billingNames = input.billing.sameAsShipping
-      ? shippingNames
-      : await geo.resolveLocation(billingAddress.countyCode, billingAddress.localityCode);
+    const shippingNames = shippingInput
+      ? await geo.resolveLocation(shippingInput.countyCode, shippingInput.localityCode)
+      : null;
+    const billingNames =
+      input.billing.sameAsShipping && shippingNames
+        ? shippingNames
+        : await geo.resolveLocation(billingAddress.countyCode, billingAddress.localityCode);
 
     const now = this.now();
     let company: {
@@ -485,43 +638,50 @@ export class CheckoutService {
       };
     }
 
-    const shipping = await this.deps.shipping.quote({
-      parcels: ctx.parcels,
-      lines: this.physicalLines(ctx),
-      subtotalMinor: ctx.view.totals.totalMinor,
-      destination: {
-        county: { code: input.shipping.countyCode, name: shippingNames.countyName },
-        locality: { code: input.shipping.localityCode, name: shippingNames.localityName },
-        postalCode: input.shipping.postalCode,
-      },
-    });
-    const offer = shipping.offers.find((candidate) => candidate.code === input.shippingOfferCode);
-    if (!offer) {
-      throw new OrderError(
-        "ORDER_OFFER_UNAVAILABLE",
-        "Metoda de livrare aleasă nu mai este disponibilă",
-        { offer: input.shippingOfferCode },
-      );
-    }
+    // coșul 100% digital nu are livrare: fără apel de tarife, fără ofertă (transport 0, fără taxă de ramburs)
+    let offer: RateOffer | null = null;
+    if (shippingInput && shippingNames) {
+      const shipping = await this.deps.shipping.quote({
+        parcels: ctx.parcels,
+        lines: this.physicalLines(ctx),
+        subtotalMinor: this.physicalSubtotalMinor(ctx),
+        destination: {
+          county: { code: shippingInput.countyCode, name: shippingNames.countyName },
+          locality: { code: shippingInput.localityCode, name: shippingNames.localityName },
+          postalCode: shippingInput.postalCode,
+        },
+      });
+      offer = shipping.offers.find((candidate) => candidate.code === shippingOfferCode) ?? null;
+      if (!offer) {
+        throw new OrderError(
+          "ORDER_OFFER_UNAVAILABLE",
+          "Metoda de livrare aleasă nu mai este disponibilă",
+          { offer: shippingOfferCode },
+        );
+      }
 
-    // ridicarea personală e doar de la adresa magazinului: fără ea comanda nu se plasează (regulă pe server, nu doar în interfață)
-    if (offer.kind === "pickup" && !offer.pickupAddress) {
-      throw new OrderError(
-        "ORDER_OFFER_UNAVAILABLE",
-        "Ridicarea personală nu este disponibilă: magazinul nu are adresa completată",
-        { offer: input.shippingOfferCode },
-      );
+      // ridicarea personală e doar de la adresa magazinului: fără ea comanda nu se plasează (regulă pe server, nu doar în interfață)
+      if (offer.kind === "pickup" && !offer.pickupAddress) {
+        throw new OrderError(
+          "ORDER_OFFER_UNAVAILABLE",
+          "Ridicarea personală nu este disponibilă: magazinul nu are adresa completată",
+          { offer: shippingOfferCode },
+        );
+      }
     }
+    const charged = offer ?? NO_SHIPPING;
 
     const isCompany = isCompanyBuyer({ vatId: company?.vatId ?? null, groupPricingType: "none" });
     assertPaymentMethodAllowed(
       {
         lines: ctx.view.lines.map((line) => ({ stockState: this.stateOf(line) })),
-        payableOnDeliveryMinor: ctx.view.totals.totalMinor + offer.priceMinor + offer.codFeeMinor,
+        payableOnDeliveryMinor:
+          ctx.view.totals.totalMinor + charged.priceMinor + charged.codFeeMinor,
         isCompany,
         codMaxIndividualMinor: settings.codMaxIndividualMinor,
         codMaxCompanyMinor: settings.codMaxCompanyMinor,
         cardAvailable: settings.cardProvider !== null,
+        ...(ctx.digitalOnly ? { digitalOnly: true } : {}),
       },
       input.paymentMethod,
     );
@@ -534,8 +694,8 @@ export class CheckoutService {
 
     const totals = computeOrderTotals({
       cart: ctx.view.totals,
-      shippingMinor: offer.priceMinor,
-      codFeeMinor: offer.codFeeMinor,
+      shippingMinor: charged.priceMinor,
+      codFeeMinor: charged.codFeeMinor,
       paymentMethod: input.paymentMethod,
       taxRateBps: ctx.taxRateBps,
     });
@@ -551,9 +711,11 @@ export class CheckoutService {
       offer,
       totals,
       company,
+      shippingInput,
       shippingNames,
       billingNames,
       billingAddress,
+      digitalConsent,
       signature: viewSignature(ctx.view),
     };
   }
@@ -609,6 +771,11 @@ export class CheckoutService {
       if (!channel)
         throw new DomainError("ORDER_CHANNEL_MISSING", "Canalul de vânzare «web» lipsește");
 
+      // digitalul nu are stoc, rezervări sau mișcări (Faza 14c): stocul privește doar liniile fizice
+      const stockViewLines = view.lines.filter(
+        (line) => !ctx.sources.get(line.variantId)?.isDigital,
+      );
+
       const isTransfer = input.paymentMethod === "bank_transfer";
       const isCard = input.paymentMethod === "card";
       const cardProvider = settings.cardProvider;
@@ -644,33 +811,44 @@ export class CheckoutService {
           taxMinor: totals.taxMinor,
           totalMinor: totals.totalMinor,
           taxRateBps: ctx.taxRateBps,
-          shippingMethodCode: offer.code,
-          shippingSnapshot: {
-            code: offer.code,
-            kind: offer.kind,
-            carrier: offer.carrier,
-            service: offer.service,
-            priceMinor: offer.priceMinor,
-            estimatedDays: offer.estimatedDays,
-            codFeeMinor: offer.codFeeMinor,
-            source: offer.source,
-            demo: offer.demo,
-            freeShipping: offer.freeShipping,
-            // ridicare: adresa MAGAZINULUI de la momentul comenzii (snapshot imuabil); adresa clientului nu intră aici
-            ...(offer.kind === "pickup" && offer.pickupAddress
-              ? {
-                  pickupAddress: {
-                    street: offer.pickupAddress.street,
-                    city: offer.pickupAddress.city,
-                    county: offer.pickupAddress.county,
-                    postalCode: offer.pickupAddress.postalCode,
-                    country: offer.pickupAddress.country,
-                    text: offer.pickupAddress.text,
-                  },
-                }
-              : {}),
-          },
+          shippingMethodCode: offer ? offer.code : DIGITAL_SHIPPING_CODE,
+          shippingSnapshot: offer
+            ? {
+                code: offer.code,
+                kind: offer.kind,
+                carrier: offer.carrier,
+                service: offer.service,
+                priceMinor: offer.priceMinor,
+                estimatedDays: offer.estimatedDays,
+                codFeeMinor: offer.codFeeMinor,
+                source: offer.source,
+                demo: offer.demo,
+                freeShipping: offer.freeShipping,
+                // ridicare: adresa MAGAZINULUI de la momentul comenzii (snapshot imuabil); adresa clientului nu intră aici
+                ...(offer.kind === "pickup" && offer.pickupAddress
+                  ? {
+                      pickupAddress: {
+                        street: offer.pickupAddress.street,
+                        city: offer.pickupAddress.city,
+                        county: offer.pickupAddress.county,
+                        postalCode: offer.pickupAddress.postalCode,
+                        country: offer.pickupAddress.country,
+                        text: offer.pickupAddress.text,
+                      },
+                    }
+                  : {}),
+              }
+            : DIGITAL_SHIPPING_SNAPSHOT,
           paymentMethod: input.paymentMethod,
+          // comanda cu produse digitale e legată de contul cumpărătorului și poartă bifa legală (text, versiune, moment): ca DATE
+          ...(ctx.hasDigital && ctx.account && prepared.digitalConsent
+            ? {
+                customerId: ctx.account.userId,
+                digitalConsentAt: now,
+                digitalConsentText: prepared.digitalConsent.text,
+                digitalConsentVersion: prepared.digitalConsent.version,
+              }
+            : {}),
           ...(input.customerNote ? { customerNote: input.customerNote } : {}),
           installationRequested: input.installation.requested,
           ...(input.installation.requested
@@ -720,9 +898,12 @@ export class CheckoutService {
             }
           : {}),
       });
-      await tx.address.create({
-        data: addressData("shipping", input.shipping, prepared.shippingNames, false),
-      });
+      // coșul 100% digital are doar adresa de facturare
+      if (prepared.shippingInput && prepared.shippingNames) {
+        await tx.address.create({
+          data: addressData("shipping", prepared.shippingInput, prepared.shippingNames, false),
+        });
+      }
       await tx.address.create({
         data: addressData("billing", prepared.billingAddress, prepared.billingNames, true),
       });
@@ -753,6 +934,7 @@ export class CheckoutService {
             stockState: state,
             leadTimeDays: state === "on_order" ? (line.leadTimeDays ?? 0) : null,
             shippingClass: source.shippingClass,
+            isDigital: source.isDigital,
             // ⚠️ fără date de achiziție: instantaneul conține doar ce vede și clientul
             productSnapshot: {
               productId: line.productId,
@@ -773,14 +955,16 @@ export class CheckoutService {
       // stocul: ramburs angajează direct; transferul rezervă până la termen. Fără stoc negativ (CHECK + comandă condiționată).
       const stock = new StockService({ db: tx, now: () => now });
       const ref = { refType: ORDER_REF_TYPE, refId: order.id };
-      const stockLines = view.lines.map((line) => ({
+      const stockLines = stockViewLines.map((line) => ({
         variantId: line.variantId,
         ...(this.deps.warehouseId ? { warehouseId: this.deps.warehouseId } : {}),
         quantity: quantityFromTicks(BigInt(line.quantityTicks)),
       }));
-      if ((isTransfer || isCard) && reservationEnd) {
-        await stock.reserve(ref, stockLines, reservationEnd);
-      } else await stock.commitDirect(ref, stockLines);
+      if (stockLines.length > 0) {
+        if ((isTransfer || isCard) && reservationEnd) {
+          await stock.reserve(ref, stockLines, reservationEnd);
+        } else await stock.commitDirect(ref, stockLines);
+      }
 
       const payment = await tx.payment.create({
         select: { id: true },
@@ -803,7 +987,7 @@ export class CheckoutService {
         message: "Comanda a fost plasată",
         data: {
           paymentMethod: input.paymentMethod,
-          shippingOffer: offer.code,
+          shippingOffer: offer ? offer.code : DIGITAL_SHIPPING_CODE,
           totalMinor: totals.totalMinor,
         },
       });
@@ -818,7 +1002,7 @@ export class CheckoutService {
           },
           now,
         );
-      } else if (reservationEnd) {
+      } else if (reservationEnd && stockLines.length > 0) {
         await addOrderEvent(tx, order.id, {
           type: "stock.reserved",
           message: isCard

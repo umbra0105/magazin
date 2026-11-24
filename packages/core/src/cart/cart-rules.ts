@@ -56,6 +56,8 @@ export type CartRejection =
   | { reason: "not_sellable" }
   | { reason: "invalid_quantity"; detail: QuantityProblem; message: string }
   | { reason: "unavailable" }
+  /** Faza 14c: un produs digital se cumpără o singură dată (maxim o bucată pe linie). */
+  | { reason: "digital_single" }
   | { reason: "exceeds_available"; maxSteps: bigint }
   | { reason: "exceeds_limit"; maxSteps: bigint }
   | { reason: "too_many_lines"; maxLines: number }
@@ -80,6 +82,8 @@ export interface QuantityCheckInput {
   minSteps: number | null;
   availability: Availability;
   limits: CartLimits;
+  /** Linia e un produs digital (Faza 14c): cantitatea ei e cel mult 1. */
+  digital?: boolean;
 }
 
 /**
@@ -100,6 +104,9 @@ export function checkCartQuantity(
       };
     }
     throw error;
+  }
+  if (input.digital === true && steps > 1n) {
+    return { ok: false, rejection: { reason: "digital_single" } };
   }
   const orderable = checkOrderable(input.availability, steps);
   if (!orderable.ok) {
@@ -139,6 +146,8 @@ export type CartIssue =
   | { type: "unavailable" }
   | { type: "exceeds_available"; maxSteps: number }
   | { type: "invalid_quantity"; detail: QuantityProblem }
+  /** Faza 14c: linie digitală cu cantitate peste 1 (coș vechi): clientul decide, coșul nu se modifică în tăcere. */
+  | { type: "digital_quantity" }
   | { type: "price_changed"; fromMinor: number; toMinor: number }
   | { type: "line_too_expensive" };
 
@@ -149,6 +158,8 @@ export interface LineIssueInput {
   /** Produsul e activ și nesters (`isSellable`). */
   sellable: boolean;
   availability: Availability;
+  /** Linia e un produs digital (Faza 14c): cantitatea ei trebuie să fie cel mult 1. */
+  digital?: boolean;
   /** Prețul unitar efectiv pe care l-a confirmat clientul; `null` = linie nouă, nimic de comparat. */
   ackedUnitPriceMinor: number | null;
   currentUnitPriceMinor: number;
@@ -170,6 +181,7 @@ export function lineIssues(input: LineIssueInput): CartIssue[] {
     if (!orderable.ok && orderable.reason === "exceeds_available") {
       issues.push({ type: "exceeds_available", maxSteps: Number(orderable.maxSteps) });
     }
+    if (input.digital === true && steps > 1n) issues.push({ type: "digital_quantity" });
   } catch (error) {
     if (!(error instanceof QuantityError)) throw error;
     issues.push({ type: "invalid_quantity", detail: problemOf(error) });

@@ -620,15 +620,17 @@ describe("totalul și erorile: o plasare eșuată nu lasă nimic și nu consumă
     });
   });
 
-  it("produsele digitale nu se pot comanda în Faza 9", async () => {
+  // Faza 14c: checkout-ul nu mai refuză produsele digitale (ORDER_DIGITAL_NOT_SUPPORTED rămâne doar la oferte); un oaspete cu un
+  // produs digital în coș e trimis la autentificare. Singurul test existent schimbat în Faza 14c (comportamentul din §4 al fazei).
+  it("produsele digitale cer un cont: oaspetele e refuzat cu ORDER_LOGIN_REQUIRED (Faza 14c)", async () => {
     await harness(async (h) => {
       const d = await h.product({ type: "digital", manageStock: false });
       const owner = await h.fill([{ variantId: d.variantId }]);
       const preview = await h.checkout.preview({ owner, destination: null });
-      expect(preview.blocked?.code).toBe("ORDER_DIGITAL_NOT_SUPPORTED");
+      expect(preview.blocked?.code).toBe("ORDER_LOGIN_REQUIRED");
       expect(
         await codeOf(h.checkout.place(owner, await h.input(owner, { expectedTotalMinor: 5 }))),
-      ).toBe("ORDER_DIGITAL_NOT_SUPPORTED");
+      ).toBe("ORDER_LOGIN_REQUIRED");
     });
   });
 

@@ -165,6 +165,8 @@ export async function harness<T>(
   over: {
     settings?: Partial<CheckoutSettings>;
     shipping?: Partial<ShippingRuntimeSettings>;
+    /** Setările coșului (de exemplu promoția activă sau pragul de transport gratuit), peste cele implicite. */
+    cart?: Partial<CartRuntimeSettings>;
     provider?: ShippingRateProvider;
     cui?: (cui: string) => Promise<unknown>;
   } = {},
@@ -179,7 +181,7 @@ export async function harness<T>(
       new CartService({
         db: client,
         storage,
-        readSettings: async () => CART_SETTINGS,
+        readSettings: async () => ({ ...CART_SETTINGS, ...over.cart }),
         now: () => NOW,
         warehouseId: ctx.warehouseId,
       });

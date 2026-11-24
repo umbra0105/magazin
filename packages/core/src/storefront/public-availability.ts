@@ -14,14 +14,22 @@ export interface PublicAvailability {
   leadTimeDays: number | null;
   /** «Mai sunt N», doar la «Stoc limitat». */
   remainingSteps: number | null;
+  /**
+   * Produs digital (Faza 14c, decizia 3): fără stoc, deci vitrina arată doar «Disponibil» sau «Indisponibil», niciodată «În stoc»,
+   * «Stoc limitat» sau «La comandă». Prezent (cu valoarea `true`) doar la produsele digitale; regulile de disponibilitate nu se schimbă.
+   */
+  isDigital?: boolean;
 }
 
 export function publicAvailabilityOfRow(row: {
   state: VisibleStockState;
   leadTimeDays: number | null;
   availableSteps: bigint | null;
+  /** Genul rândului de stoc (`digital` | `managed` | `unmanaged`), din `buildStockOverviewRow`. */
+  kind?: string;
 }): PublicAvailability {
   return {
+    ...(row.kind === "digital" ? { isDigital: true } : {}),
     state: row.state,
     purchasable: row.state !== "unavailable",
     leadTimeDays: row.state === "on_order" ? row.leadTimeDays : null,

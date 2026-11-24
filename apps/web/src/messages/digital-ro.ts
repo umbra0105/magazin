@@ -97,4 +97,29 @@ export const digitalRo = {
     codNote:
       "La comenzile mixte cu plata la livrare, accesul digital se activează după livrarea confirmată a produselor fizice.",
   },
+  /** Finalizarea comenzii cu produse digitale (Faza 14c). Textul bifei legale vine din setare sau din textul implicit din `@ecom/core`. */
+  checkout: {
+    accountNote: (email: string) =>
+      `Comanzi cu contul ${email}. Produsele digitale apar în contul tău, la «Produsele mele digitale».`,
+    onlyDigitalNote:
+      "Comanda are doar produse digitale: nu se livrează nimic și nu e nevoie de adresă de livrare.",
+    billingLede: "Completează datele de facturare. Nu există livrare, deci nu ți-o cerem.",
+    consentTitle: "Livrare imediată a conținutului digital",
+    consentRequired:
+      "Bifează solicitarea de livrare imediată ca să poți plasa o comandă cu produse digitale.",
+    accessCard:
+      "Accesul la produsele digitale se activează imediat ce plata cu cardul e confirmată.",
+    accessTransfer:
+      "Accesul la produsele digitale se activează după ce confirmăm plata prin transfer bancar.",
+    accessCod:
+      "Plata la livrare: produsele digitale se activează abia după livrarea confirmată a produselor fizice, nu la plata către curier.",
+    summaryDigital: "Produse digitale: acces în cont, fără livrare",
+    verifyTitle: "Confirmă adresa de email",
+    verifyLede:
+      "Produsele digitale se comandă doar cu un cont cu emailul confirmat. Ți-am trimis un mesaj cu linkul de confirmare; după ce îl deschizi, revino aici.",
+    verifyResend: "Trimite din nou emailul de confirmare",
+    verifyResent: "Am trimis din nou emailul de confirmare.",
+    verifyFailed: "Nu am putut trimite emailul acum. Încearcă din nou peste puțin timp.",
+    verifyReload: "Am confirmat emailul",
+  },
 } as const;

@@ -272,6 +272,21 @@ export class OfferService {
     }
   }
 
+  /**
+   * Faza 14c: ofertele de plată NU includ produse digitale (acestea cer cont verificat și bifa legală, deci se comandă doar prin
+   * checkout). Verificarea e a ofertelor, înainte de orice calcul: checkout-ul nu mai refuză produsele digitale, deci refuzul nu
+   * mai poate veni din el.
+   */
+  private async hasDigitalLine(
+    lines: ReadonlyArray<{ variantId: string; quantity: string }>,
+  ): Promise<boolean> {
+    if (lines.length === 0) return false;
+    const digital = await this.deps.db.productVariant.count({
+      where: { id: { in: lines.map((line) => line.variantId) }, product: { type: "digital" } },
+    });
+    return digital > 0;
+  }
+
   private checkLines(lines: ReadonlyArray<{ variantId: string; quantity: string }>): void {
     if (lines.length === 0) {
       throw new OfferError("OFFER_INVALID", "Oferta trebuie să aibă cel puțin un produs");
@@ -315,15 +330,15 @@ export class OfferService {
     },
     use: (quote: Quote, owner: CartOwner) => Promise<T>,
   ): Promise<T> {
+    if (await this.hasDigitalLine(draft.lines)) {
+      throw new OfferError(
+        "OFFER_DIGITAL_NOT_SUPPORTED",
+        "Produsele digitale nu se pot include într-o ofertă de plată.",
+      );
+    }
     return this.withCart(draft.lines, async (owner) => {
       const preview = await this.evaluate(owner, draft);
       if (preview.blocked) {
-        if (preview.blocked.code === "ORDER_DIGITAL_NOT_SUPPORTED") {
-          throw new OfferError(
-            "OFFER_DIGITAL_NOT_SUPPORTED",
-            "Produsele digitale nu se pot include într-o ofertă de plată.",
-          );
-        }
         throw new OfferError("OFFER_NOT_PAYABLE", preview.blocked.message, { reason: "product" });
       }
       const selected = preview.selectedOffer;
@@ -382,6 +397,21 @@ export class OfferService {
     vatId?: string | null;
   }): Promise<OfferPreview> {
     this.checkLines(input.lines);
+    if (await this.hasDigitalLine(input.lines)) {
+      return {
+        lines: [],
+        offers: [],
+        selected: null,
+        totals: null,
+        taxRateBps: 0,
+        destination: { countyName: "", localityName: "" },
+        cardAvailable: false,
+        blocked: {
+          code: "ORDER_DIGITAL_NOT_SUPPORTED",
+          message: "Produsele digitale nu se pot include într-o ofertă de plată.",
+        },
+      };
+    }
     return this.withCart(input.lines, async (owner) => {
       const preview = await this.evaluate(owner, {
         destination: input.destination,

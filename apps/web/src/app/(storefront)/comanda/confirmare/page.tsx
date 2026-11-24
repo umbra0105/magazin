@@ -92,7 +92,13 @@ export default async function OrderConfirmationPage() {
           <p>{summary.paymentNotice === "stock_lost" ? m.stockLostNotice : m.nextCardPaid}</p>
         ) : (
           <>
-            <p>{deadline ? m.nextTransfer(deadline) : null}</p>
+            <p>
+              {deadline
+                ? summary.shipping.kind === "digital"
+                  ? m.nextTransferDigital(deadline)
+                  : m.nextTransfer(deadline)
+                : null}
+            </p>
             {bank ? (
               <dl className="grid gap-1 text-sm" data-bank-details>
                 <div className="flex gap-2">

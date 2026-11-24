@@ -44,6 +44,7 @@ function IssueRow({
   const action = issue.action;
   return (
     <div
+      data-cart-issue={issue.type}
       className={cn(
         "flex flex-col gap-2 rounded-card px-3 py-2 text-sm",
         issue.type === "unavailable"
@@ -124,7 +125,7 @@ function CartLine({ line, busy }: { line: CartLineDto; busy: boolean }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {unavailable ? null : (
+        {unavailable || line.isDigital ? null : (
           <QuantityStepper
             steps={line.steps}
             minSteps={line.minSteps}
@@ -138,6 +139,11 @@ function CartLine({ line, busy }: { line: CartLineDto; busy: boolean }) {
         <p className="text-sm tabular-nums" data-line-quantity>
           {line.quantityText}
         </p>
+        {line.isDigital ? (
+          <p className="text-sm text-ink-secondary" data-digital-once>
+            {m.digitalOnce}
+          </p>
+        ) : null}
         <button
           type="button"
           disabled={busy}

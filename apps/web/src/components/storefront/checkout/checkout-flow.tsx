@@ -22,9 +22,19 @@ import { getMessages } from "@/messages";
 import { FIELD, Field, TEXTAREA } from "./fields";
 
 const m = getMessages().storefront.checkout;
+const md = getMessages().digital.checkout;
 
 type StepId = "contact" | "delivery" | "shipping" | "billing" | "payment" | "review";
-const STEPS: StepId[] = ["contact", "delivery", "shipping", "billing", "payment", "review"];
+const PHYSICAL_STEPS: StepId[] = [
+  "contact",
+  "delivery",
+  "shipping",
+  "billing",
+  "payment",
+  "review",
+];
+/** Coș 100% digital (Faza 14c): fără adresă și fără metodă de livrare; pașii se renumerotează. */
+const DIGITAL_ONLY_STEPS: StepId[] = ["contact", "billing", "payment", "review"];
 
 interface Option {
   code: number;
@@ -57,6 +67,8 @@ interface Values {
   installRequested: boolean;
   installNote: string;
   consent: boolean;
+  /** Bifa de renunțare la dreptul de retragere (doar cu produse digitale în coș); separată de Termeni, nepre-bifată. */
+  digitalConsent: boolean;
 }
 
 const EMPTY: Values = {
@@ -79,6 +91,7 @@ const EMPTY: Values = {
   installRequested: false,
   installNote: "",
   consent: false,
+  digitalConsent: false,
 };
 
 const DRAFT_KEY = "ecom.checkout.v1";
@@ -91,6 +104,12 @@ export interface CheckoutFlowProps {
   bank: { holder: string; bankName: string; iban: string } | null;
   transferDeadline: string;
   groundNotice: string;
+  /** Faza 14c: coșul are produse digitale (`present`) sau doar digitale (`only`: fără livrare, fără ramburs). */
+  digital: { present: boolean; only: boolean };
+  /** Textul și versiunea bifei legale, doar cu produse digitale în coș. */
+  digitalConsent: { text: string; version: string } | null;
+  /** Emailul contului autentificat (cumpărător cu produse digitale), pentru completarea contactului. */
+  accountEmail: string | null;
 }
 
 type CuiState =
@@ -111,6 +130,7 @@ function readDraft(): Values | null {
       ...parsed,
       billing: { ...EMPTY.billing, ...parsed.billing },
       consent: false,
+      digitalConsent: false,
       paymentMethod: "",
       offerCode: "",
     };
@@ -147,6 +167,7 @@ function useLocalities() {
 
 export function CheckoutFlow(props: CheckoutFlowProps) {
   const router = useRouter();
+  const STEPS = props.digital.only ? DIGITAL_ONLY_STEPS : PHYSICAL_STEPS;
   const base = useId();
   const [values, setValues] = useState<Values>(EMPTY);
   const [hydrated, setHydrated] = useState(false);
@@ -172,6 +193,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
       setValues(draft);
       void localities.load(draft.countyCode);
       void localities.load(draft.billing.countyCode);
+    }
+    // cumpărătorul cu cont: contactul pornește de la emailul contului (poate fi schimbat)
+    const accountEmail = props.accountEmail;
+    if (accountEmail) {
+      setValues((previous) => ({ ...previous, email: previous.email || accountEmail }));
     }
     setHydrated(true);
   }, []);
@@ -254,12 +280,20 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
     if (id === "shipping") return values.offerCode ? {} : { offerCode: m.errors.offer };
     if (id === "billing") {
       return {
-        ...(values.billingSame ? {} : addressErrors(values.billing, "billing")),
+        // coșul 100% digital nu are livrare: adresa de facturare e mereu proprie și obligatorie
+        ...(values.billingSame && !props.digital.only
+          ? {}
+          : addressErrors(values.billing, "billing")),
         ...(values.isCompany ? companyErrors(values) : {}),
       };
     }
     if (id === "payment") return values.paymentMethod ? {} : { paymentMethod: m.errors.method };
-    return values.consent ? {} : { consent: m.consentRequired };
+    return {
+      ...(values.consent ? {} : { consent: m.consentRequired }),
+      ...(props.digital.present && !values.digitalConsent
+        ? { digitalConsent: md.consentRequired }
+        : {}),
+    };
   };
 
   const focusFirst = (found: FieldErrors) => {
@@ -334,7 +368,8 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
       return;
     }
     const data = preview ?? (await refresh());
-    if (!data?.totals || !values.offerCode || !values.paymentMethod) {
+    const digitalOnly = props.digital.only;
+    if (!data?.totals || (!digitalOnly && !values.offerCode) || !values.paymentMethod) {
       setProblem(m.errors.failed);
       return;
     }
@@ -359,10 +394,12 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
         idempotencyKey: keyRef.current,
         expectedTotalMinor: data.totals.totalMinor,
         contact: { email: values.email.trim(), phone: values.phone.trim() },
-        shipping: address(values),
-        billing: values.billingSame
-          ? { sameAsShipping: true }
-          : { sameAsShipping: false, address: address(values.billing) },
+        // coșul 100% digital: fără adresă și fără ofertă de livrare (facturarea are adresă proprie)
+        ...(digitalOnly ? {} : { shipping: address(values), shippingOfferCode: values.offerCode }),
+        billing:
+          values.billingSame && !digitalOnly
+            ? { sameAsShipping: true }
+            : { sameAsShipping: false, address: address(values.billing) },
         company: values.isCompany
           ? {
               name: values.companyName.trim(),
@@ -372,7 +409,6 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
                 : {}),
             }
           : null,
-        shippingOfferCode: values.offerCode,
         paymentMethod: values.paymentMethod,
         ...(values.note.trim() ? { customerNote: values.note.trim() } : {}),
         installation: {
@@ -382,6 +418,9 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
             : {}),
         },
         consent: { accepted: true, version: props.consent.version },
+        ...(props.digital.present && props.digitalConsent
+          ? { digitalConsent: { accepted: true, version: props.digitalConsent.version } }
+          : {}),
       });
       if (result.ok) {
         try {
@@ -698,147 +737,169 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
                 )}
               </Field>
             </div>
-            <p className="text-sm text-ink-secondary">{m.guestNote}</p>
+            <p
+              className="text-sm text-ink-secondary"
+              data-account-note={props.accountEmail ? "" : undefined}
+            >
+              {props.digital.present && props.accountEmail
+                ? md.accountNote(props.accountEmail)
+                : m.guestNote}
+            </p>
+            {props.digital.only ? (
+              <p className="text-sm text-ink-secondary" data-digital-only-note>
+                {md.onlyDigitalNote}
+              </p>
+            ) : null}
             {continueButton("contact")}
           </>,
         )}
-        {stepShell(
-          "delivery",
-          <>
-            {addressFields(values, (patch) => set(patch), "delivery", "")}
-            {continueButton("delivery")}
-          </>,
-        )}
-        {stepShell(
-          "shipping",
-          <>
-            <p className="text-ink-secondary">{m.shippingLede}</p>
-            {previewing && !preview ? <p role="status">{m.shippingLoading}</p> : null}
-            {previewProblem ? (
-              <p role="alert" className="text-tone-problem-fg">
-                {previewProblem}
-              </p>
-            ) : null}
-            {preview?.fallbackUsed ? (
-              <p
-                className="rounded-card bg-tone-info-bg px-4 py-3 text-sm text-tone-info-fg"
-                data-shipping-fallback
-              >
-                {m.shippingFallback}
-              </p>
-            ) : null}
-            {preview?.incomplete ? (
-              <p className="text-sm text-ink-secondary">{m.shippingIncomplete}</p>
-            ) : null}
-            <fieldset
-              className="flex flex-col gap-3"
-              aria-describedby={errors["offerCode"] ? `${base}-offerCode-error` : undefined}
-            >
-              <legend className="sr-only">{m.steps.shipping}</legend>
-              {preview?.offers.map((offer, index) => (
-                <label
-                  key={offer.code}
-                  data-offer={offer.code}
-                  className={cn(
-                    "flex min-h-14 cursor-pointer items-start gap-4 rounded-card border px-4 py-3",
-                    values.offerCode === offer.code
-                      ? "border-brand bg-card"
-                      : "border-line-control",
-                  )}
-                >
-                  <input
-                    id={index === 0 ? `${base}-offerCode` : undefined}
-                    type="radio"
-                    name="shippingOffer"
-                    value={offer.code}
-                    checked={values.offerCode === offer.code}
-                    onChange={() => {
-                      set({ offerCode: offer.code });
-                      void refresh({ offerCode: offer.code });
-                    }}
-                    className="mt-1 size-5 shrink-0 accent-brand"
-                  />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="flex flex-wrap items-center gap-2 font-semibold">
-                      {offer.label}
-                      {offer.demo ? <StorePill tone="warning">{m.demoBadge}</StorePill> : null}
-                    </span>
-                    {offer.daysText ? (
-                      <span className="text-sm text-ink-secondary">{offer.daysText}</span>
-                    ) : null}
-                    {offer.addressLine ? (
-                      <span className="text-sm" data-offer-address>
-                        {offer.addressLine}
-                      </span>
-                    ) : null}
-                    {offer.hoursLine ? (
-                      <span className="text-sm" data-offer-hours>
-                        {offer.hoursLine}
-                      </span>
-                    ) : null}
-                    {offer.demo ? (
-                      <span className="text-sm text-ink-secondary">{m.demoNote}</span>
-                    ) : null}
-                  </span>
-                  <span
-                    className={cn(
-                      "shrink-0 font-semibold tabular-nums",
-                      offer.free && "text-tone-success-fg",
-                    )}
-                  >
-                    {offer.priceText}
-                  </span>
-                </label>
-              ))}
-            </fieldset>
-            {errors["offerCode"] ? (
-              <p
-                id={`${base}-offerCode-error`}
-                role="alert"
-                className="text-sm text-tone-problem-fg"
-              >
-                {errors["offerCode"]}
-              </p>
-            ) : null}
-            {preview?.leadTimeText ? (
-              <p className="text-sm font-medium">{preview.leadTimeText}</p>
-            ) : null}
-            {isPickup ? null : (
-              // «la nivelul solului» e un mesaj despre livrare: nu se arată la ridicarea personală
-              <p className="text-sm text-ink-secondary" data-ground-notice>
-                {chosenOffer?.kind === "pallet" ? m.palletNotice : props.groundNotice}
-              </p>
+        {props.digital.only
+          ? null
+          : stepShell(
+              "delivery",
+              <>
+                {addressFields(values, (patch) => set(patch), "delivery", "")}
+                {continueButton("delivery")}
+              </>,
             )}
-            {continueButton("shipping")}
-          </>,
-        )}
+        {props.digital.only
+          ? null
+          : stepShell(
+              "shipping",
+              <>
+                <p className="text-ink-secondary">{m.shippingLede}</p>
+                {previewing && !preview ? <p role="status">{m.shippingLoading}</p> : null}
+                {previewProblem ? (
+                  <p role="alert" className="text-tone-problem-fg">
+                    {previewProblem}
+                  </p>
+                ) : null}
+                {preview?.fallbackUsed ? (
+                  <p
+                    className="rounded-card bg-tone-info-bg px-4 py-3 text-sm text-tone-info-fg"
+                    data-shipping-fallback
+                  >
+                    {m.shippingFallback}
+                  </p>
+                ) : null}
+                {preview?.incomplete ? (
+                  <p className="text-sm text-ink-secondary">{m.shippingIncomplete}</p>
+                ) : null}
+                <fieldset
+                  className="flex flex-col gap-3"
+                  aria-describedby={errors["offerCode"] ? `${base}-offerCode-error` : undefined}
+                >
+                  <legend className="sr-only">{m.steps.shipping}</legend>
+                  {preview?.offers.map((offer, index) => (
+                    <label
+                      key={offer.code}
+                      data-offer={offer.code}
+                      className={cn(
+                        "flex min-h-14 cursor-pointer items-start gap-4 rounded-card border px-4 py-3",
+                        values.offerCode === offer.code
+                          ? "border-brand bg-card"
+                          : "border-line-control",
+                      )}
+                    >
+                      <input
+                        id={index === 0 ? `${base}-offerCode` : undefined}
+                        type="radio"
+                        name="shippingOffer"
+                        value={offer.code}
+                        checked={values.offerCode === offer.code}
+                        onChange={() => {
+                          set({ offerCode: offer.code });
+                          void refresh({ offerCode: offer.code });
+                        }}
+                        className="mt-1 size-5 shrink-0 accent-brand"
+                      />
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="flex flex-wrap items-center gap-2 font-semibold">
+                          {offer.label}
+                          {offer.demo ? <StorePill tone="warning">{m.demoBadge}</StorePill> : null}
+                        </span>
+                        {offer.daysText ? (
+                          <span className="text-sm text-ink-secondary">{offer.daysText}</span>
+                        ) : null}
+                        {offer.addressLine ? (
+                          <span className="text-sm" data-offer-address>
+                            {offer.addressLine}
+                          </span>
+                        ) : null}
+                        {offer.hoursLine ? (
+                          <span className="text-sm" data-offer-hours>
+                            {offer.hoursLine}
+                          </span>
+                        ) : null}
+                        {offer.demo ? (
+                          <span className="text-sm text-ink-secondary">{m.demoNote}</span>
+                        ) : null}
+                      </span>
+                      <span
+                        className={cn(
+                          "shrink-0 font-semibold tabular-nums",
+                          offer.free && "text-tone-success-fg",
+                        )}
+                      >
+                        {offer.priceText}
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+                {errors["offerCode"] ? (
+                  <p
+                    id={`${base}-offerCode-error`}
+                    role="alert"
+                    className="text-sm text-tone-problem-fg"
+                  >
+                    {errors["offerCode"]}
+                  </p>
+                ) : null}
+                {preview?.leadTimeText ? (
+                  <p className="text-sm font-medium">{preview.leadTimeText}</p>
+                ) : null}
+                {isPickup ? null : (
+                  // «la nivelul solului» e un mesaj despre livrare: nu se arată la ridicarea personală
+                  <p className="text-sm text-ink-secondary" data-ground-notice>
+                    {chosenOffer?.kind === "pallet" ? m.palletNotice : props.groundNotice}
+                  </p>
+                )}
+                {continueButton("shipping")}
+              </>,
+            )}
         {stepShell(
           "billing",
           <>
-            <fieldset className="flex min-w-0 flex-col gap-3">
-              <legend className="sr-only">{m.steps.billing}</legend>
-              <label className="flex min-h-11 items-center gap-3">
-                <input
-                  type="radio"
-                  name="billing"
-                  checked={values.billingSame}
-                  onChange={() => set({ billingSame: true })}
-                  className="size-5 accent-brand"
-                />
-                {isPickup ? m.billingSamePickup : m.billingSame}
-              </label>
-              <label className="flex min-h-11 items-center gap-3">
-                <input
-                  type="radio"
-                  name="billing"
-                  checked={!values.billingSame}
-                  onChange={() => set({ billingSame: false })}
-                  className="size-5 accent-brand"
-                />
-                {m.billingOther}
-              </label>
-            </fieldset>
-            {values.billingSame
+            {props.digital.only ? (
+              <p className="text-ink-secondary" data-digital-billing-lede>
+                {md.billingLede}
+              </p>
+            ) : (
+              <fieldset className="flex min-w-0 flex-col gap-3">
+                <legend className="sr-only">{m.steps.billing}</legend>
+                <label className="flex min-h-11 items-center gap-3">
+                  <input
+                    type="radio"
+                    name="billing"
+                    checked={values.billingSame}
+                    onChange={() => set({ billingSame: true })}
+                    className="size-5 accent-brand"
+                  />
+                  {isPickup ? m.billingSamePickup : m.billingSame}
+                </label>
+                <label className="flex min-h-11 items-center gap-3">
+                  <input
+                    type="radio"
+                    name="billing"
+                    checked={!values.billingSame}
+                    onChange={() => set({ billingSame: false })}
+                    className="size-5 accent-brand"
+                  />
+                  {m.billingOther}
+                </label>
+              </fieldset>
+            )}
+            {values.billingSame && !props.digital.only
               ? null
               : addressFields(values.billing, setBilling, "billing", "billing")}
             <label className="flex min-h-11 items-center gap-3">
@@ -997,6 +1058,18 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
                 {errors["paymentMethod"]}
               </p>
             ) : null}
+            {props.digital.present && values.paymentMethod ? (
+              <p
+                className="text-sm text-ink-secondary"
+                data-digital-access-note={values.paymentMethod}
+              >
+                {values.paymentMethod === "cod"
+                  ? md.accessCod
+                  : values.paymentMethod === "bank_transfer"
+                    ? md.accessTransfer
+                    : md.accessCard}
+              </p>
+            ) : null}
             {values.paymentMethod === "bank_transfer" ? (
               <div className="rounded-card bg-card p-4 text-sm" data-bank-details>
                 <p className="font-semibold">{m.bankTitle}</p>
@@ -1046,35 +1119,66 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
                 />
               )}
             </Field>
-            <div className="flex flex-col gap-2">
-              <label className="flex min-h-11 items-start gap-3">
-                <input
-                  type="checkbox"
-                  name="installRequested"
-                  checked={values.installRequested}
-                  onChange={(e) => set({ installRequested: e.target.checked })}
-                  className="mt-1 size-5 shrink-0 accent-brand"
-                />
-                <span>
-                  <span className="block font-medium">{m.installLabel}</span>
-                  <span className="block text-sm text-ink-secondary">{m.installHelp}</span>
-                </span>
-              </label>
-              {values.installRequested ? (
-                <Field id={`${base}-installNote`} label={m.fields.installNote}>
-                  {(a) => (
-                    <textarea
-                      {...a}
-                      name="installNote"
-                      maxLength={1000}
-                      value={values.installNote}
-                      onChange={(e) => set({ installNote: e.target.value })}
-                      className={TEXTAREA}
-                    />
-                  )}
-                </Field>
-              ) : null}
-            </div>
+            {props.digital.only ? null : (
+              <div className="flex flex-col gap-2">
+                <label className="flex min-h-11 items-start gap-3">
+                  <input
+                    type="checkbox"
+                    name="installRequested"
+                    checked={values.installRequested}
+                    onChange={(e) => set({ installRequested: e.target.checked })}
+                    className="mt-1 size-5 shrink-0 accent-brand"
+                  />
+                  <span>
+                    <span className="block font-medium">{m.installLabel}</span>
+                    <span className="block text-sm text-ink-secondary">{m.installHelp}</span>
+                  </span>
+                </label>
+                {values.installRequested ? (
+                  <Field id={`${base}-installNote`} label={m.fields.installNote}>
+                    {(a) => (
+                      <textarea
+                        {...a}
+                        name="installNote"
+                        maxLength={1000}
+                        value={values.installNote}
+                        onChange={(e) => set({ installNote: e.target.value })}
+                        className={TEXTAREA}
+                      />
+                    )}
+                  </Field>
+                ) : null}
+              </div>
+            )}
+            {props.digital.present && props.digitalConsent ? (
+              <div className="flex flex-col gap-2" data-digital-consent>
+                <p className="font-medium">{md.consentTitle}</p>
+                <label className="flex min-h-11 items-start gap-3">
+                  <input
+                    id={`${base}-digitalConsent`}
+                    type="checkbox"
+                    name="digitalConsent"
+                    checked={values.digitalConsent}
+                    aria-invalid={errors["digitalConsent"] ? true : undefined}
+                    aria-describedby={
+                      errors["digitalConsent"] ? `${base}-digitalConsent-error` : undefined
+                    }
+                    onChange={(e) => set({ digitalConsent: e.target.checked })}
+                    className="mt-1 size-5 shrink-0 accent-brand"
+                  />
+                  <span data-digital-consent-text>{props.digitalConsent.text}</span>
+                </label>
+                {errors["digitalConsent"] ? (
+                  <p
+                    id={`${base}-digitalConsent-error`}
+                    role="alert"
+                    className="text-sm text-tone-problem-fg"
+                  >
+                    {errors["digitalConsent"]}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="flex flex-col gap-2">
               <label className="flex min-h-11 items-start gap-3">
                 <input
@@ -1168,12 +1272,14 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
               {totals?.productsText ?? props.cart.totals?.productsText}
             </dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-secondary">{m.shipping}</dt>
-            <dd className="tabular-nums" data-summary-shipping>
-              {totals ? totals.shippingText : "—"}
-            </dd>
-          </div>
+          {props.digital.only ? null : (
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-secondary">{m.shipping}</dt>
+              <dd className="tabular-nums" data-summary-shipping>
+                {totals ? totals.shippingText : "—"}
+              </dd>
+            </div>
+          )}
           {totals?.codFeeText ? (
             <div className="flex justify-between gap-4">
               <dt className="text-ink-secondary">{m.codFee}</dt>

@@ -57,7 +57,11 @@ export const placeOrderInputSchema = z.object({
     email: z.string().trim().toLowerCase().email("Adresa de email nu este validă").max(254),
     phone,
   }),
-  shipping: addressInputSchema,
+  /**
+   * Adresa de livrare: obligatorie (verificat în serviciu) la orice comandă cu cel puțin o linie FIZICĂ; absentă la coșul 100%
+   * digital (Faza 14c), unde nu există livrare și facturarea are adresă proprie.
+   */
+  shipping: addressInputSchema.optional(),
   /** Facturare: aceeași adresă, sau una proprie. */
   billing: z.discriminatedUnion("sameAsShipping", [
     z.object({ sameAsShipping: z.literal(true) }),
@@ -65,7 +69,8 @@ export const placeOrderInputSchema = z.object({
   ]),
   /** Persoană juridică: CUI la facturare. */
   company: companyInputSchema.nullable().default(null),
-  shippingOfferCode: z.string().min(1).max(100),
+  /** Oferta de livrare aleasă: obligatorie la comenzile cu linii fizice; absentă la coșul 100% digital. */
+  shippingOfferCode: z.string().min(1).max(100).optional(),
   paymentMethod: z.enum(PAYMENT_METHODS),
   customerNote: z.string().trim().max(1000).optional(),
   installation: z
@@ -73,5 +78,12 @@ export const placeOrderInputSchema = z.object({
     .default({ requested: false }),
   /** Acceptarea Termenilor: trebuie să fie `true`, pentru versiunea textului afișat. */
   consent: z.object({ accepted: z.literal(true), version: z.string().min(1).max(50) }),
+  /**
+   * Bifa de renunțare la dreptul de retragere (Faza 14c): SEPARATĂ de Termeni, nepre-bifată; cerută pe server doar când coșul are
+   * linii digitale (altfel se ignoră). Textul și versiunea vin tot de pe server; clientul trimite doar versiunea văzută.
+   */
+  digitalConsent: z
+    .object({ accepted: z.boolean(), version: z.string().min(1).max(50) })
+    .optional(),
 });
 export type PlaceOrderInput = z.infer<typeof placeOrderInputSchema>;

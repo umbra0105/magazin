@@ -27,6 +27,8 @@ export interface PanelVariant {
   stepLabel: string | null;
   availabilityLabel: string;
   availabilityDetail: string | null;
+  /** Produs digital (Faza 14c): se cumpără o singură dată, deci nu există selector de cantitate. */
+  digital?: boolean;
   tone: StorePillTone;
   purchasable: boolean;
   warrantyText: string | null;
@@ -219,34 +221,40 @@ export function PurchasePanel({
 
       {selected.purchasable ? (
         <div className="flex flex-col gap-4" data-add-to-cart>
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold">{m.quantity}</p>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <QuantityStepper
-                steps={steps}
-                minSteps={selected.minSteps}
-                label={m.quantity}
-                disabled={busy}
-                onChange={setSteps}
-              />
-              <p className="text-sm tabular-nums text-ink-secondary" data-quantity-total>
-                {m.quantityTotal(
-                  formatQuantity(quantityFromTicks(totalTicks)),
-                  selected.unitSymbol,
-                )}
-              </p>
+          {selected.digital ? (
+            <p className="text-sm text-ink-secondary" data-digital-once>
+              {m.digitalOnce}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-semibold">{m.quantity}</p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <QuantityStepper
+                  steps={steps}
+                  minSteps={selected.minSteps}
+                  label={m.quantity}
+                  disabled={busy}
+                  onChange={setSteps}
+                />
+                <p className="text-sm tabular-nums text-ink-secondary" data-quantity-total>
+                  {m.quantityTotal(
+                    formatQuantity(quantityFromTicks(totalTicks)),
+                    selected.unitSymbol,
+                  )}
+                </p>
+              </div>
+              {oneUnit ? null : (
+                <p className="text-sm text-ink-secondary" data-step-hint>
+                  {steps === 1 ? "1" : steps} ×{" "}
+                  {m.quantityHint(
+                    formatQuantity(stepQuantity),
+                    selected.unitSymbol,
+                    selected.stepLabel,
+                  )}
+                </p>
+              )}
             </div>
-            {oneUnit ? null : (
-              <p className="text-sm text-ink-secondary" data-step-hint>
-                {steps === 1 ? "1" : steps} ×{" "}
-                {m.quantityHint(
-                  formatQuantity(stepQuantity),
-                  selected.unitSymbol,
-                  selected.stepLabel,
-                )}
-              </p>
-            )}
-          </div>
+          )}
           <StoreButton size="lg" disabled={busy} onClick={() => void add()} data-add-button>
             {busy ? m.adding : m.addToCart}
           </StoreButton>

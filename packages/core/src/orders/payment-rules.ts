@@ -35,6 +35,11 @@ export interface PaymentRuleInput {
    * Cardul NU are limită de valoare și NU are regula «La comandă» (plata se face integral în avans).
    */
   cardAvailable?: boolean;
+  /**
+   * Coș 100% digital (Faza 14c): nu există livrare, deci nici ramburs. Rambursul e ASCUNS (nu apare în listă), la afișare și la
+   * plasare. Lipsa indicatorului (sau `false`) înseamnă comportamentul de până acum.
+   */
+  digitalOnly?: boolean;
 }
 
 export type PaymentMethodAvailability =
@@ -69,7 +74,7 @@ function codAvailability(input: PaymentRuleInput): PaymentMethodAvailability {
 export function availablePaymentMethods(input: PaymentRuleInput): PaymentMethodAvailability[] {
   return [
     ...(input.cardAvailable ? [{ method: "card" as const, available: true as const }] : []),
-    codAvailability(input),
+    ...(input.digitalOnly === true ? [] : [codAvailability(input)]),
     { method: "bank_transfer", available: true },
   ];
 }

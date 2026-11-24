@@ -9,6 +9,7 @@ import {
   type Quantity,
 } from "@ecom/shared";
 import { getMessages } from "@/messages";
+import { describeAvailability } from "./availability-text";
 import { formatMoney } from "./money-input";
 import { productHref } from "./storefront-urls";
 
@@ -21,7 +22,6 @@ import { productHref } from "./storefront-urls";
 
 const m = () => getMessages().storefront.cart;
 const product = () => getMessages().storefront.catalog.product;
-const availability = () => getMessages().storefront.catalog.availability;
 
 export interface CartFormat {
   currency: string;
@@ -62,6 +62,8 @@ export interface CartLineDto {
   stateDetail: string | null;
   issues: CartIssueDto[];
   included: boolean;
+  /** Produs digital (Faza 14c): fără selector de cantitate (maxim o bucată). */
+  isDigital?: boolean;
 }
 
 export interface CartDto {
@@ -77,13 +79,6 @@ export interface CartDto {
   checkoutBlockedNote: string;
   shippingNote: string;
 }
-
-const TONE = {
-  in_stock: "success",
-  limited: "warning",
-  on_order: "info",
-  unavailable: "problem",
-} as const;
 
 function unitPriceText(line: CartLineView, format: CartFormat): string | null {
   if (!line.pricing) return null;
@@ -131,6 +126,16 @@ function issueOf(line: CartLineView, issue: CartIssue, format: CartFormat): Cart
         },
       };
     }
+    case "digital_quantity":
+      return {
+        type: issue.type,
+        message: text.issueDigitalQuantity,
+        action: {
+          kind: "adjust",
+          quantityTicks: step.toString(),
+          label: text.issueDigitalKeepOne,
+        },
+      };
     case "price_changed":
       return {
         type: issue.type,
@@ -154,12 +159,15 @@ function lineDto(line: CartLineView, format: CartFormat): CartLineDto {
   const oneUnit = BigInt(step) === QUANTITY_FACTOR;
   const stepsCount = quantity / step;
   const minSteps = line.minSteps ?? 1;
-  const detail =
-    line.state === "limited" && line.remainingSteps !== null
-      ? availability().limitedCount(line.remainingSteps)
-      : line.state === "on_order" && line.leadTimeDays !== null
-        ? availability().onOrderDays(line.leadTimeDays)
-        : null;
+  // eticheta de disponibilitate vine din locul comun (Faza 14c, decizia 3); un produs digital e «Disponibil» doar cât linia e comandabilă
+  const orderable = line.included && !line.issues.some((issue) => issue.type === "unavailable");
+  const stateText = describeAvailability({
+    state: line.state,
+    remainingSteps: line.remainingSteps,
+    leadTimeDays: line.leadTimeDays,
+    purchasable: orderable,
+    ...(line.isDigital === true ? { isDigital: true } : {}),
+  });
   return {
     variantId: line.variantId,
     href: productHref(line.productSlug),
@@ -182,11 +190,12 @@ function lineDto(line: CartLineView, format: CartFormat): CartLineDto {
     totalText: line.pricing
       ? formatMoney(line.pricing.totalMinor, format.currency, format.locale)
       : null,
-    stateLabel: availability()[line.state],
-    stateTone: TONE[line.state],
-    stateDetail: detail,
+    stateLabel: stateText.label,
+    stateTone: stateText.tone,
+    stateDetail: stateText.detail,
     issues: line.issues.map((issue) => issueOf(line, issue, format)),
     included: line.included,
+    isDigital: line.isDigital === true,
   };
 }
 
