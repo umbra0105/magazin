@@ -7,7 +7,6 @@ import {
   removeE2eCarts,
   removeE2eCustomerGroups,
   removeE2eGroupsByName,
-  removeE2eOrders,
   removeE2eProducts,
   seedE2eCartProduct,
   seedE2eCheckoutSettings,
@@ -77,7 +76,6 @@ test.beforeAll(async ({ request, baseURL }) => {
 });
 
 test.afterAll(async () => {
-  await removeE2eOrders({ tag });
   await removeE2eCarts();
   await removeE2eProducts();
   await removeE2eGroupsByName(tag);

@@ -89,7 +89,8 @@ async function openGroup(page: Page) {
 
 test.describe("meniul «Catalog», pe roluri", () => {
   for (const [role, label, items] of [
-    ["owner", "Owner", [...CATALOG_ITEMS, "Stoc"]],
+    // importul prețurilor NIR cere `products.cost.import` (Faza 15): doar Owner și Admin îl văd
+    ["owner", "Owner", [...CATALOG_ITEMS, "Import prețuri NIR", "Stoc"]],
     ["manager", "Manager", [...CATALOG_ITEMS, "Stoc"]],
     // cu drepturile actuale Depozitul are products.read și inventory.read: vede aceleași ecrane ca Managerul
     ["warehouse", "Depozit", [...CATALOG_ITEMS, "Stoc"]],
@@ -147,8 +148,8 @@ test.describe("meniul «Catalog», pe roluri", () => {
       await login(page, account, "/admin");
       await expect(sidebar(page).getByRole("link", { name: "Panou", exact: true })).toBeVisible();
       await expect(groupButton(page)).toHaveCount(0);
-      // Suport și Contabil au acces doar la grupul «Comenzi» (orders.read), nu și la «Catalog»
-      await expect(sidebar(page).locator("[data-nav-group]")).toHaveCount(1);
+      // Suport și Contabil au acces la «Comenzi» (orders.read) și la «Clienți» (customers.read / reports.read), nu și la «Catalog»
+      await expect(sidebar(page).locator("[data-nav-group]")).toHaveCount(2);
       await expect(sidebar(page).locator('[data-nav-group="catalog"]')).toHaveCount(0);
       for (const url of ["/admin/produse", "/admin/produse/categorii", "/admin/produse/stoc"]) {
         await page.goto(url);
