@@ -297,8 +297,9 @@ test("coș mixt cu ramburs: pas de livrare și «la nivelul solului» pentru par
   await fillAddress(page, "delivery");
   await next(page, "delivery");
   await expect(step(page, "shipping").locator('[data-offer="demo:courier"]')).toBeVisible();
-  await expect(step(page, "shipping").locator("[data-ground-notice]")).toBeVisible();
+  // ridicarea personală (dacă e activă și mai ieftină) se alege implicit, iar mesajul despre sol nu se arată la ridicare: alegem curierul
   await step(page, "shipping").locator('[data-offer="demo:courier"] input').check();
+  await expect(step(page, "shipping").locator("[data-ground-notice]")).toBeVisible();
   // transportul DEMO al unui colet de 1 kg, nu al cursului digital
   await expect(step(page, "shipping").locator('[data-offer="demo:courier"]')).toContainText(
     "25,00",
