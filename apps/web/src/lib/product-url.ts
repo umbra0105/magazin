@@ -25,6 +25,7 @@ export function productsHref(
   if (query.status) params.set("status", query.status);
   if (query.shippingClass) params.set("shipping", query.shippingClass);
   if (query.stock) params.set("stock", query.stock);
+  if (query.missingNir) params.set("nir", "lipsa");
   if (query.sort !== DEFAULT_SORT) params.set("sort", query.sort);
   if (pageSize !== DEFAULT_PAGE_SIZE) params.set("size", String(pageSize));
   if (page > 1) params.set("page", String(page));

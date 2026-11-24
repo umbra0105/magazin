@@ -158,6 +158,7 @@ describe("grupul «Clienți» din meniu (Faza 15, același model ca «Catalog»)
     expect(Object.fromEntries(CUSTOMERS_ITEMS.map((item) => [item.id, item.permission]))).toEqual({
       customerList: "customers.read",
       customerGroups: "customers.read",
+      customerSales: "reports.read",
     });
   });
 });

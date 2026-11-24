@@ -62,7 +62,8 @@ export type AdminNavItemId =
   | "digitalDelivery"
   | "nirImport"
   | "customerList"
-  | "customerGroups";
+  | "customerGroups"
+  | "customerSales";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -158,6 +159,8 @@ export const ORDERS_ITEMS: readonly AdminNavItem[] = [
 export const CUSTOMERS_ITEMS: readonly AdminNavItem[] = [
   { id: "customerList", href: "/admin/clienti", permission: "customers.read", keepParams: ["q"] },
   { id: "customerGroups", href: "/admin/clienti/grupuri", permission: "customers.read" },
+  // raportul vânzărilor per grup și al avantajului acordat (fără costuri): cere `reports.read`
+  { id: "customerSales", href: "/admin/clienti/vanzari", permission: "reports.read" },
 ];
 
 /** Destinația unui element, cu parametrii păstrați din ecranul curent (vezi `keepParams`). */

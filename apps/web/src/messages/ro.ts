@@ -217,6 +217,7 @@ export const ro = {
       nirImport: "Import prețuri NIR",
       customerList: "Lista clienților",
       customerGroups: "Grupuri de clienți",
+      customerSales: "Vânzări per grup",
       discounts: "Reduceri",
       reviews: "Recenzii",
       blog: "Blog",
@@ -1303,6 +1304,26 @@ export const ro = {
         AUTH_FORBIDDEN: "Nu ai dreptul să schimbi grupul clienților.",
       } as Record<string, string>,
     },
+    /** Raportul vânzărilor per grup de clienți și al avantajului acordat (Faza 15). */
+    customerSales: {
+      title: "Vânzări per grup",
+      description:
+        "Câte comenzi și ce valoare au avut grupurile de clienți într-o perioadă, și ce avantaj li s-a acordat (diferența dintre prețul public curent și ce au plătit). Comenzile anulate nu se numără. Raportul nu conține prețuri de achiziție.",
+      from: "De la",
+      to: "Până la (inclusiv)",
+      apply: "Arată raportul",
+      invalidRange: "Perioada nu e validă: alege date zz/ll/aaaa, cu «de la» înainte de «până la».",
+      empty: "Nu există comenzi în perioada aleasă.",
+      noGroup: "Fără grup (oaspeți și clienți fără grup)",
+      columns: {
+        group: "Grup",
+        orders: "Comenzi",
+        total: "Valoare comenzi",
+        advantage: "Avantaj acordat",
+      },
+      total: "Total",
+      note: "Avantajul unui client din «Fidel» sau «VIP» e reducerea primită; al unui partener e diferența față de prețul public la acea comandă.",
+    },
     customerGroups: {
       title: "Grupuri de clienți",
       description:
@@ -2270,12 +2291,19 @@ export const ro = {
         search: "Căutare",
         remove: (what: string) => `Elimină filtrul ${what}`,
       },
+      /** Indicatorul «produse fără preț NIR» (Faza 15; doar cu `products.cost.view`). */
+      nirMissing: {
+        note: (n: number) =>
+          `${n === 1 ? "1 produs nu are" : `${n} produse nu au`} preț NIR pe toate variantele: partenerii îl cumpără la prețul public.`,
+        action: "Arată-le",
+      },
       filters: {
         category: "Categorie",
         brand: "Brand",
         status: "Stare",
         shipping: "Clasă de livrare",
         stock: "Stoc",
+        missingNir: "Fără preț NIR",
         sort: "Sortare",
         perPage: "Pe pagină",
         all: "Toate",

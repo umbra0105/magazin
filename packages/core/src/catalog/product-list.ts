@@ -1,7 +1,8 @@
 import type { Prisma, PrismaClient } from "@ecom/db";
 import type { StorageDriver } from "@ecom/integrations";
 import { buildMediaUrls } from "../media/urls";
-import { assertCan, type PermissionSubject } from "../rbac/can";
+import { assertCan, can, type PermissionSubject } from "../rbac/can";
+import { missingNirWhere } from "./nir/missing-nir";
 import {
   PRODUCT_STATUSES,
   SHIPPING_CLASSES,
@@ -45,6 +46,8 @@ export interface ProductListQuery {
   status: ProductStatus | null;
   shippingClass: ShippingClass | null;
   stock: StockStatus | null;
+  /** Doar produsele fără preț NIR (`?nir=lipsa`); se aplică doar cu `products.cost.view` (vezi `ProductListService.list`). */
+  missingNir: boolean;
   page: number;
   pageSize: number;
   sort: ProductListSort;
@@ -73,6 +76,7 @@ export function parseProductListQuery(params: RawParams): ProductListQuery {
     status: oneOf(one(params["status"]), PRODUCT_STATUSES),
     shippingClass: oneOf(one(params["shipping"]), SHIPPING_CLASSES),
     stock: oneOf(one(params["stock"]), STOCK_STATUSES),
+    missingNir: one(params["nir"]) === "lipsa",
     page: Number.isFinite(page) && page > 0 ? Math.min(page, 100_000) : 1,
     pageSize: (PRODUCT_LIST_PAGE_SIZES as readonly number[]).includes(size)
       ? size
@@ -203,6 +207,7 @@ export async function buildProductListWhere(
   if (query.status) and.push({ status: query.status });
   if (query.shippingClass) and.push({ shippingClass: query.shippingClass });
   if (query.stock) and.push({ stockStatus: query.stock });
+  if (query.missingNir) and.push(missingNirWhere());
 
   return { AND: and };
 }
@@ -359,7 +364,12 @@ export class ProductListService {
     params: RawParams,
   ): Promise<{ query: ProductListQuery; page: ProductListPage }> {
     assertCan(subject, "products.read");
-    const query = parseProductListQuery(params);
+    const parsed = parseProductListQuery(params);
+    // filtrul «fără preț NIR» arată ce are și ce nu are cost: doar pentru cine vede costul
+    const query =
+      parsed.missingNir && !can(subject, "products.cost.view")
+        ? { ...parsed, missingNir: false }
+        : parsed;
     const { rows, total } = await this.deps.store.list(query);
     const pageCount = Math.max(Math.ceil(total / query.pageSize), 1);
     return {
