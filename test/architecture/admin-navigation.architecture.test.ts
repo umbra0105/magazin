@@ -166,6 +166,7 @@ describe("grupul «Comenzi» din meniu (același model ca «Catalog»)", () => {
       invoices: "invoices.read",
       uninvoiced: "invoices.read",
       returns: "returns.view",
+      digitalAccess: "digital.view",
       offers: "orders.offers",
       emailTemplates: "email.read",
       installRequests: "orders.read",

@@ -46,6 +46,11 @@ este același cu codul de produs din SmartBill.
   - 🟡 **11 (transportul la retur parțial):** storno parțial doar pe produse; transportul NU se stornează automat.
   - **13 (card confirmat după reîncercare):** o singură factură pe comandă (unicitate pe comandă și tip), emisă când plata reușită se confirmă; data facturii e ziua emiterii.
   - 🟡 **14 (rambursare parțială):** o rambursare parțială de bani nu emite niciun document; stornoul parțial se cere explicit, pe produse. De decis cu contabilul.
+**2026-11-23** (de la contabil, transmise de proprietar):
+
+- **Întrebarea 16 (TVA la stornourile în bucăți):** ACCEPTAT. Diferența de 1 ban de TVA pe linie se reglează manual în contabilitate; facturile nu trebuie să aibă diferențe de BRUT (totalul stornourilor = totalul facturii, exact). Rămâne regula din mini-faza `storno-total`: TVA-ul fiecărui storno din brutul lui, brutul restului exact.
+- **Întrebarea 11 (transportul la retur parțial):** depinde de motivul returului: la defecte, transportul returului e suportat de magazin; la alte motive, de cumpărător. Se tratează individual, fără regulă strictă; pot exista excepții. Sistemul actual rămâne: stornoul parțial doar pe produse, iar transportul se adaugă manual de admin, cu motiv, până la transportul plătit.
+- **Întrebarea 14 (rambursare parțială):** se emite STORNO PARȚIAL pe factură. Azi o rambursare parțială de bani din ecranul plăților (Faza 10) NU stornează nimic: se face în mini-faza «storno la rambursare parțială» (`docs/06`), înainte de activarea LIVE a SmartBill, nu în Faza 14b.
 - Consecințele pentru cod sunt trecute în TODO, Faza 13 (factura fără descărcare pentru «La comandă» sau fără stoc; cel mult 2 zecimale pe factură). Nu sunt rezolvate încă.
 
 ---
@@ -132,7 +137,7 @@ Răspuns:
 
 **11. Transportul la retur parțial.** La storno parțial pentru produse, transportul plătit de client se returnează, se păstrează sau depinde de motiv?
 
-Răspuns:
+Răspuns (2026-11-23, contabil): depinde de motivul returului. La defecte, transportul returului e suportat de magazin; la alte motive, de cumpărător. Se tratează individual, fără regulă strictă; pot exista excepții. (Sistemul actual, cu transportul adăugat manual de admin, rămâne.)
 
 **13. Momentul facturii la plata cu cardul confirmată după reîncercare (adăugată în Faza 10).** Cardul: factura se emite la plata confirmată
 (Faza 13). Dacă prima încercare a eșuat și clientul a plătit la a doua (sau a treia), factura se emite o singură dată, la confirmarea plății
@@ -144,7 +149,7 @@ Răspuns:
 deteriorat, sau o diferență) cere storno parțial al facturii, notă de credit sau doar rambursarea banilor fără alt document? Cum se tratează
 transportul în rambursările care nu sunt retururi? (Rambursarea din Faza 10 face doar banii; documentul fiscal vine în Faza 13.)
 
-Răspuns:
+Răspuns (2026-11-23, contabil): se emite STORNO PARȚIAL pe factură. (Implementarea: mini-faza «storno la rambursare parțială», înainte de LIVE.)
 
 **15. Comisionul procesatorului (adăugată în Faza 10).** Procesatorii rețin un comision din fiecare încasare, iar la rambursare comisionul
 poate să nu se returneze. Cum se înregistrează: cheltuială lunară pe baza extrasului procesatorului, sau pe fiecare tranzacție? Avem nevoie
@@ -154,4 +159,4 @@ Răspuns:
 
 **16. TVA la un storno total după stornouri parțiale în bucăți (adăugată în mini-faza `storno-total`, legată de #14).** Când o factură e stornată în mai multe documente (retururi parțiale, apoi stornoul restului), fiecare document storno are TVA-ul extras din brutul LUI (cum îl calculează și SmartBill), iar brutul tuturor stornourilor este totalul facturii, exact. Din cauza rotunjirii, suma TVA a stornourilor poate diferi cu 1 ban pe linie de TVA-ul liniei originale (exemplu: linie de 4 × 123,45 = 493,80 lei, TVA 85,70; retur de o bucată, TVA 21,43, apoi restul de 3 bucăți, 370,35 lei, TVA 64,28; suma TVA a stornourilor 85,71). Este acceptabilă o diferență de cel mult 1 ban pe linie, sau SmartBill / contabilul cer altă regulă (de exemplu TVA-ul ultimului storno «prin diferență», ceea ce SmartBill nu permite prin API, fiindcă își calculează singur TVA-ul din brut)? Același lucru la o linie cu cantitate zecimală, unde restul se trimite «1 × brutul rămas» ca documentul să nu difere cu 1 ban de ce a încasat magazinul.
 
-Răspuns:
+Răspuns (2026-11-23, contabil): acceptat. Diferența de 1 ban de TVA pe linie se reglează manual în contabilitate; facturile nu trebuie să aibă diferențe de brut.

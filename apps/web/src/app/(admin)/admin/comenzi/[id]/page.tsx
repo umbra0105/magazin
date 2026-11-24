@@ -5,6 +5,8 @@ import {
   can,
   getAdminOrderDetail,
   INSTALLATION_STATUSES,
+  listAccessLog,
+  listEntitlementsForOrder,
   listOrderInvoices,
   listOrderReturns,
   listOrderShipments,
@@ -20,6 +22,7 @@ import {
 } from "@/components/admin/orders/order-panels";
 import { CrumbLabel } from "@/components/admin/crumb-labels";
 import { InvoicePanel } from "@/components/admin/invoicing/invoice-panel";
+import { DigitalPanel, type DigitalPanelItem } from "@/components/admin/orders/digital-panel";
 import { PickupButton } from "@/components/admin/returns/pickup-button";
 import { ShipmentPanel, type ShipmentDto } from "@/components/admin/shipping/shipment-panel";
 import { OrderActions } from "@/components/admin/orders/order-actions";
@@ -78,6 +81,33 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     ? (await listOrderInvoices(db, id)).map((doc) => toInvoiceDocDto(doc, invoiceFormat))
     : [];
   const invoicingProvider = (await getSettings().getGroup("invoicing")).provider;
+
+  // accesul digital (Faza 14b): drepturile liniilor digitale, jurnalul lor și dacă mai așteaptă ceva (plată sau livrare)
+  const digitalLineCount = can(subject, "digital.view")
+    ? await db.orderLine.count({ where: { orderId: id, isDigital: true } })
+    : 0;
+  const digitalRows = digitalLineCount > 0 ? await listEntitlementsForOrder(db, id) : [];
+  const digitalItems: DigitalPanelItem[] = await Promise.all(
+    digitalRows.map(async (row) => ({
+      id: row.id,
+      productTitle: row.productTitle,
+      grantReason: row.grantReason,
+      grantedText: when(row.grantedAt),
+      downloadCount: row.downloadCount,
+      maxDownloads: row.maxDownloads,
+      revoked: row.revokedAt !== null,
+      revokedReason: row.revokedReason,
+      lastAccessText: row.lastAccessAt ? when(row.lastAccessAt) : null,
+      lineTotalText: money(row.lineTotalMinor),
+      log: (await listAccessLog(db, row.id, 15)).map((entry) => ({
+        id: entry.id,
+        whenText: when(entry.at),
+        action: entry.action,
+        module: entry.assetTitle,
+        ip: entry.ip,
+      })),
+    })),
+  );
 
   // limita rolului Suport: ce mai poate rambursa pe această comandă (serverul o aplică oricum, sub blocare)
   const unlimited = can(subject, "payments.refund");
@@ -464,6 +494,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 (d) => d.kind === "storno" && d.docKey === "storno:total" && d.status !== "skipped",
               )
             }
+          />
+        </Section>
+      ) : null}
+
+      {digitalLineCount > 0 ? (
+        <Section id="digital-access" title={getMessages().digitalAdmin.order.title}>
+          <DigitalPanel
+            items={digitalItems}
+            awaiting={digitalItems.length < digitalLineCount}
+            canManage={can(subject, "digital.manage")}
+            canRefund={can(subject, "digital.manage") && can(subject, "orders.refund")}
           />
         </Section>
       ) : null}

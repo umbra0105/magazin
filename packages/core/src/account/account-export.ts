@@ -1,5 +1,6 @@
 import { formatQuantity, quantityFromTicks } from "@ecom/shared";
 import type { Db } from "../db-tx";
+import { buildDigitalExport } from "../digital/digital-privacy";
 import { ownedOrdersWhere, type AccountUser } from "./order-ownership";
 
 /**
@@ -141,6 +142,7 @@ export async function buildAccountExport(
       },
     },
   });
+  const digital = await buildDigitalExport(db, user.id);
   const qty = (ticks: bigint | null): string | null =>
     ticks === null ? null : formatQuantity(quantityFromTicks(ticks));
   return {
@@ -229,5 +231,7 @@ export async function buildAccountExport(
         condition: i.condition,
       })),
     })),
+    // achizițiile digitale și accesările proprii (Faza 14b): fără cheie de stocare, jeton, IP sau user-agent
+    digitalPurchases: digital.purchases,
   };
 }

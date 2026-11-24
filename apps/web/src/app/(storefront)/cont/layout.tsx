@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { hasDigitalProducts } from "@ecom/core";
+import { getDb } from "@ecom/db";
 import { Container } from "@ecom/ui";
 import { AccountNav, type AccountNavItem } from "@/components/storefront/account/account-nav";
 import { AccountSignOut } from "@/components/storefront/account/account-sign-out";
@@ -21,11 +23,17 @@ export const dynamic = "force-dynamic";
  * «Favorite» apare doar cu flag-ul `wishlist` pornit; «Recenziile mele» vin în Faza 17 și nu au intrare (fără pagină goală).
  */
 export default async function AccountLayout({ children }: { children: ReactNode }) {
-  await requireCustomer("/cont");
-  const wishlist = await isFlagOn("wishlist");
+  const { user } = await requireCustomer("/cont");
+  const [wishlist, digital] = await Promise.all([
+    isFlagOn("wishlist"),
+    hasDigitalProducts(getDb(), user.id),
+  ]);
   const items: AccountNavItem[] = [
     { href: "/cont", label: m.nav.dashboard },
     { href: "/cont/comenzi", label: m.nav.orders },
+    ...(digital
+      ? [{ href: "/cont/produsele-mele", label: getMessages().digital.library.navLabel }]
+      : []),
     { href: "/cont/retururi", label: m.nav.returns },
     { href: "/cont/adrese", label: m.nav.addresses },
     ...(wishlist ? [{ href: "/cont/favorite", label: m.nav.favorites }] : []),

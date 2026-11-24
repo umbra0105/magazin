@@ -1,5 +1,6 @@
 import type { Prisma } from "@ecom/db";
 import type { Db } from "../db-tx";
+import { scheduleDigitalAccess, type DigitalPorts } from "../digital/digital-grant";
 import { scheduleOrderEmails } from "../email/order-email-triggers";
 import { scheduleOrderInvoices } from "../invoicing/invoice-schedule";
 import { settleReturnOnRefund } from "../returns/return-settle";
@@ -115,6 +116,26 @@ export async function updateOrderAnnotations(
   await tx.order.update({ where: { id: orderId }, data: fields });
 }
 
+/**
+ * Ce primește modulul produselor digitale de la comandă: scrierea evenimentelor și închiderea comenzii 100% digitale la acordarea
+ * accesului. Evaluat leneș (funcțiile `addOrderEvent` și `transitionOrder` sunt definite în acest fișier).
+ */
+export const DIGITAL_PORTS: DigitalPorts = {
+  emit: (tx, orderId, event) => addOrderEvent(tx, orderId, event),
+  fulfill: async (tx, orderId, now) => {
+    await transitionOrder(
+      tx,
+      orderId,
+      { fulfillmentStatus: "fulfilled" },
+      {
+        type: "digital.fulfilled",
+        message: "Comanda digitală a fost livrată în contul clientului",
+      },
+      now,
+    );
+  },
+};
+
 /** Adaugă o intrare în jurnalul comenzii (timeline); intrările nu se modifică și nu se șterg. */
 export async function addOrderEvent(
   tx: Db,
@@ -136,4 +157,11 @@ export async function addOrderEvent(
   await scheduleOrderInvoices(tx, orderId, { id: created.id, type: event.type });
   // rambursarea unui retur, confirmată: returul se încheie și stornoul parțial se pune în coadă (Faza 14)
   await settleReturnOnRefund(tx, orderId, { type: event.type, data: event.data });
+  // accesul digital se acordă sau se retrage la evenimentele de plată, livrare, anulare și rambursare (Faza 14b)
+  await scheduleDigitalAccess(
+    tx,
+    orderId,
+    { id: created.id, type: event.type, data: event.data },
+    DIGITAL_PORTS,
+  );
 }

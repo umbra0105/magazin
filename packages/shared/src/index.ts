@@ -18,3 +18,4 @@ export { pluralRo } from "./plural";
 export * from "./payment-provider";
 export * from "./shipping-provider";
 export * from "./invoice-provider";
+export * from "./media-delivery-provider";

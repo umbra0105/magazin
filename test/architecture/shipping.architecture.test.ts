@@ -174,7 +174,12 @@ describe("livrarea respectă regulile (codul real)", () => {
     const scripts = readdirSync(join(root, "packages/core/scripts"))
       .filter((n) => n.endsWith(".ts"))
       .map((n) => readFileSync(join(root, "packages/core/scripts", n), "utf8"));
-    for (const content of scripts) expect(content).not.toMatch(/'shipping'|"shipping"/);
+    // singura folosire admisă a cuvântului într-un script: tipul adresei comenzii (`["shipping", "billing"]`, scriptul DEMO digital);
+    // tipul de integrare «shipping» (curierii) rămâne interzis în scripturi
+    const addressKinds = /\["shipping", "billing"\] as const/g;
+    for (const content of scripts) {
+      expect(content.replace(addressKinds, "")).not.toMatch(/'shipping'|"shipping"/);
+    }
   });
 
   it("`CheckoutService` nu cunoaște paletizatul sau curierii", () => {

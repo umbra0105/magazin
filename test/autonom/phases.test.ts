@@ -190,6 +190,26 @@ describe("faza e2e-curatare-comenzi (mini-fază, modul A)", () => {
   });
 });
 
+describe("faza 14c (checkout pentru produse digitale, modul B)", () => {
+  it("modul B (aprobarea utilizatorului); ramura faza-14c, etichetele pre-faza-14c și faza-14c-completa", () => {
+    expect(modeOf("14c")).toBe("B");
+    expect(branchOf("14c")).toBe("faza-14c");
+    expect(tagsOf("14c")).toEqual({ pre: "pre-faza-14c", done: "faza-14c-completa" });
+    expect(isValidPhaseId("14c")).toBe(true);
+  });
+
+  it("garda de aprobări îi tratează ramura ca pe o ramură de fază (nu are voie să atingă AUTONOM-APROBARI.md)", () => {
+    expect(isPhaseBranch(branchOf("14c"))).toBe(true);
+    const problems = approvalsGuardProblems({
+      branch: branchOf("14c"),
+      baseAvailable: true,
+      ci: false,
+      touchingCommits: ["def5678"],
+    });
+    expect(problems).toHaveLength(1);
+  });
+});
+
 describe("faza storno-total (mini-fază, modul A)", () => {
   it("modul A; ramura faza-storno-total, etichetele pre-faza-storno-total și faza-storno-total-completa", () => {
     expect(modeOf("storno-total")).toBe("A");

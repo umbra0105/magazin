@@ -56,6 +56,12 @@ export const PERMISSIONS = {
   "invoices.write": "Emite și stornează facturi",
   "invoices.configure":
     "Configurează furnizorul de facturare (chei, mod test/live, activare); doar Owner, ca la cheile de integrare",
+  "digital.view":
+    "Vede conținutul digital al produselor, drepturile de acces ale clienților, jurnalul de accesări și alertele",
+  "digital.manage":
+    "Editează conținutul digital (module, fișiere, previzualizare), resetează contorul de descărcări, prelungește, revocă sau restabilește accesul",
+  "digital.configure":
+    "Configurează livrarea conținutului digital (chei Bunny Stream și S3, confirmarea testului cu cont real); doar Owner, ca la cheile de integrare",
   "reports.read": "Vede rapoartele operaționale",
   "reports.financial": "Vede rapoartele financiare",
   "settings.read": "Vede setările",
@@ -96,6 +102,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
         p !== "integrations.write" &&
         p !== "payments.configure" &&
         p !== "invoices.configure" &&
+        p !== "digital.configure" &&
         p !== "email.configure",
     ),
   },
@@ -119,6 +126,8 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "payments.refund",
       "invoices.read",
       "invoices.write",
+      "digital.view",
+      "digital.manage",
       "products.read",
       "products.write",
       "products.content.write",
@@ -163,6 +172,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "orders.refund",
       "returns.view",
       "returns.manage",
+      "digital.view",
       "customers.read",
       "customers.read_pii",
     ],

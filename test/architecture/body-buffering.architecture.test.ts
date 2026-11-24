@@ -20,6 +20,7 @@ export const UPLOAD_ROUTES = [
   "/api/admin/stock-imports",
   "/api/admin/stock-activations",
   "/api/admin/products/abc123/documents",
+  "/api/admin/products/abc123/digital",
 ] as const;
 
 /** Rute obișnuite, care trec prin middleware (au nevoie de requestId, de redirectul de autentificare). */

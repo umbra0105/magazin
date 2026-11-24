@@ -57,7 +57,9 @@ export type AdminNavItemId =
   | "uninvoiced"
   | "returns"
   | "companyData"
-  | "invoicingSettings";
+  | "invoicingSettings"
+  | "digitalAccess"
+  | "digitalDelivery";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -131,6 +133,8 @@ export const ORDERS_ITEMS: readonly AdminNavItem[] = [
   { id: "invoices", href: "/admin/comenzi/facturi", permission: "invoices.read" },
   { id: "uninvoiced", href: "/admin/comenzi/fara-factura", permission: "invoices.read" },
   { id: "returns", href: "/admin/comenzi/retururi", permission: "returns.view" },
+  // drepturile de acces ale clienților la produsele digitale (Faza 14b), cu căutare după comandă sau email
+  { id: "digitalAccess", href: "/admin/comenzi/digital", permission: "digital.view" },
   { id: "offers", href: "/admin/comenzi/oferte", permission: "orders.offers" },
   { id: "emailTemplates", href: "/admin/comenzi/sabloane-email", permission: "email.read" },
   {
@@ -170,6 +174,8 @@ export const SETTINGS_ITEMS: readonly AdminNavItem[] = [
   { id: "carrierSettings", href: "/admin/setari/curieri", permission: "integrations.write" },
   // cheile furnizorului de facturare (criptate): doar cu `invoices.configure` (Owner), ca la integrări
   { id: "invoicingSettings", href: "/admin/setari/facturare", permission: "invoices.configure" },
+  // livrarea conținutului digital: setările cu `settings.read`/`settings.write`, cheile (Bunny, S3) doar cu `digital.configure` (Owner)
+  { id: "digitalDelivery", href: "/admin/setari/livrare-digitala", permission: "settings.read" },
   // cheile furnizorilor de plată: doar cu `payments.configure` (Owner), ca la integrări
   { id: "paymentSettings", href: "/admin/setari/plati", permission: "payments.configure" },
   // serverul SMTP (parola criptată): doar cu `email.configure` (Owner), ca la integrări

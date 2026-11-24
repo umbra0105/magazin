@@ -48,6 +48,15 @@ export interface OrderSummary {
   reservationExpiresAt: Date | null;
   /** Termenul cel mai lung dintre liniile «La comandă» (livrare toată odată). */
   longestLeadTimeDays: number | null;
+  /**
+   * Produsele digitale ale comenzii (Faza 14b): câte linii sunt, textul EXACT al bifei de renunțare la dreptul de retragere, salvat
+   * pe comandă, și când se acordă accesul (după plată, sau — la ramburs mixt — după livrarea confirmată). `null` fără linii digitale.
+   */
+  digital: {
+    lineCount: number;
+    consentText: string | null;
+    accessRule: "after_payment" | "after_delivery";
+  } | null;
   lines: OrderSummaryLine[];
   totals: {
     subtotalMinor: number;
@@ -79,6 +88,7 @@ const SELECT = {
   taxMinor: true,
   totalMinor: true,
   installationRequested: true,
+  digitalConsentText: true,
   events: { where: { type: "payment.stock_lost" }, select: { id: true }, take: 1 },
   lines: {
     orderBy: { createdAt: "asc" },
@@ -92,6 +102,7 @@ const SELECT = {
       lineTotalMinor: true,
       stockState: true,
       leadTimeDays: true,
+      isDigital: true,
     },
   },
   addresses: { where: { kind: "shipping" }, select: { countyName: true, localityName: true } },
@@ -136,6 +147,13 @@ function toSummary(row: Row): OrderSummary {
         : null,
     reservationExpiresAt: row.reservationExpiresAt,
     longestLeadTimeDays: lead.length > 0 ? Math.max(...lead) : null,
+    digital: row.lines.some((line) => line.isDigital)
+      ? {
+          lineCount: row.lines.filter((line) => line.isDigital).length,
+          consentText: row.digitalConsentText,
+          accessRule: row.paymentMethod === "cod" ? "after_delivery" : "after_payment",
+        }
+      : null,
     lines: row.lines.map((line) => ({
       title: line.title,
       variantTitle: line.variantTitle,

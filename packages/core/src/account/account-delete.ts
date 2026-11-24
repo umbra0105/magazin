@@ -1,4 +1,5 @@
 import { inTx, type Db } from "../db-tx";
+import { anonymizeAccessLogs } from "../digital/digital-privacy";
 import { OPEN_RETURN_STATUSES } from "../returns/return-constants";
 import { AccountError } from "./account-errors";
 import { ownedOrdersWhere, type AccountUser } from "./order-ownership";
@@ -67,6 +68,8 @@ export async function anonymizeAccount(db: Db, user: AccountUser, now: Date): Pr
         { ...blockers },
       );
     }
+    // IP-ul și user-agent-ul din jurnalul accesărilor digitale nu rămân după ștergerea contului (Faza 14b)
+    await anonymizeAccessLogs(tx, user.id);
     await tx.session.deleteMany({ where: { userId: user.id } });
     await tx.account.deleteMany({ where: { userId: user.id } });
     await tx.customerAddress.deleteMany({ where: { userId: user.id } });

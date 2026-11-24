@@ -22,6 +22,33 @@ afterAll(async () => {
 });
 
 const uid = (): string => randomUUID().slice(0, 8);
+
+/**
+ * Garda «costul de achiziție nu apare în audit»: caută NUMELE câmpurilor de cost (`costPrice`, `costPriceDate`, `costNet`,
+ * `costNetMinor` și forma din bază, `cost_price`…) în chei și în valorile text din `before`/`after`, fără câmpurile de
+ * identificare. NU caută șirul «cost»: un id generat la întâmplare îl poate conține (cazul din CI, rularea #228).
+ */
+const COST_FIELD_NAMES = ["costprice", "costpricedate", "costnet", "costnetminor"];
+const flatten = (text: string): string => text.toLowerCase().replace(/[^a-z0-9]/g, "");
+const isIdKey = (key: string): boolean => /(^id$|Ids?$|_ids?$)/.test(key);
+const namesCost = (text: string): boolean =>
+  COST_FIELD_NAMES.some((name) => flatten(text).includes(name));
+
+function costFieldPaths(value: unknown, path = "$", key = ""): string[] {
+  if (typeof value === "string") {
+    return !isIdKey(key) && namesCost(value) ? [path] : [];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => costFieldPaths(item, `${path}[${index}]`, key));
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.entries(value).flatMap(([k, v]) => [
+      ...(namesCost(k) ? [`${path}.${k}`] : []),
+      ...costFieldPaths(v, `${path}.${k}`, k),
+    ]);
+  }
+  return [];
+}
 const storage = { publicUrl: (key: string) => `/media/${key}` } as unknown as StorageDriver;
 
 async function withServices<T>(
@@ -195,7 +222,24 @@ describe("categorii și imagini pe produs, pe baza reală", () => {
       const actions = rows.map((r) => `${r.action}:${r.outcome}`);
       expect(actions).toContain("product.update:denied");
       expect(actions).toContain("product.media.update:success");
-      expect(JSON.stringify(rows).toLowerCase()).not.toContain("cost");
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.flatMap((r) => costFieldPaths({ before: r.before, after: r.after }))).toEqual([]);
     });
+  });
+
+  it("garda de cost găsește un câmp de cost în before/after, dar nu un id care conține «cost»", () => {
+    expect(costFieldPaths({ before: null, after: { costPrice: 1200 } })).toEqual([
+      "$.after.costPrice",
+    ]);
+    expect(costFieldPaths({ before: { cost_price_date: null }, after: {} })).toEqual([
+      "$.before.cost_price_date",
+    ]);
+    expect(costFieldPaths({ after: { rows: [{ field: "costNetMinor" }] } })).toEqual([
+      "$.after.rows[0].field",
+    ]);
+    // ids generate la întâmplare nu declanșează garda, oricum ar arăta
+    expect(
+      costFieldPaths({ after: { mediaIds: ["cmhcostrkx1", "costprice"], productId: "xcostnetx" } }),
+    ).toEqual([]);
   });
 });

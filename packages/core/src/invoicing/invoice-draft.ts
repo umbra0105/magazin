@@ -49,6 +49,11 @@ export interface DraftOrderLine {
   taxRateBps: number;
   /** Linia are stoc gestionat (angajare la comandă): se poate descărca din gestiune la furnizor. */
   dischargeable: boolean;
+  /**
+   * Produs digital (Faza 14b): intră pe factură ca orice linie, dar NICIODATĂ cu descărcare de gestiune, și nu oprește descărcarea
+   * celorlalte linii (are un singur `useStock` pe factură, iar o linie digitală nu are stoc de descărcat).
+   */
+  digital?: boolean;
 }
 
 export interface DraftOrder {
@@ -178,7 +183,7 @@ export function buildInvoiceDraft(order: DraftOrder, options: BuildDraftOptions)
         netMinor: line.netMinor,
         taxMinor: line.taxMinor,
         taxRateBps: line.taxRateBps,
-        dischargeStock: line.dischargeable,
+        dischargeStock: line.dischargeable && line.digital !== true,
       });
     } else {
       // prețul unitar rotunjit × cantitatea nu dă totalul încasat (preț de grup fracționar sau cupon): linia se emite cu
@@ -240,11 +245,16 @@ export function buildInvoiceDraft(order: DraftOrder, options: BuildDraftOptions)
     );
   }
   const products = lines.filter((l) => l.kind === "product");
+  // liniile digitale nu au stoc de descărcat: nu influențează bifa, dar nici nu o pot cere singure
+  const digitalIds = new Set(order.lines.filter((l) => l.digital === true).map((l) => l.id));
+  const stocked = products.filter(
+    (l) => !(l.orderLineId !== null && digitalIds.has(l.orderLineId)),
+  );
   return {
     lines,
     totalMinor,
     taxMinor,
-    useStock: products.length > 0 && products.every((l) => l.dischargeStock),
+    useStock: stocked.length > 0 && stocked.every((l) => l.dischargeStock),
     collapsedPositions: collapsed,
   };
 }

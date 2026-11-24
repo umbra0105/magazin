@@ -115,6 +115,8 @@ function orderModelOf(summary: OrderSummary, store: StoreEmailSettings): OrderEm
     ["cod", "bank_transfer", "card"].includes(summary.paymentMethod) ? summary.paymentMethod : "cod"
   ) as "cod" | "bank_transfer" | "card";
   const hasOnOrder = summary.lines.some((line) => line.stockState === "on_order");
+  // comandă doar cu produse digitale: fără livrare și fără adresă de livrare (Faza 14b)
+  const digitalOnly = summary.shipping.kind === "digital";
   const term = summary.longestLeadTimeDays;
   const estimated = summary.shipping.estimatedDays;
   return {
@@ -152,30 +154,40 @@ function orderModelOf(summary: OrderSummary, store: StoreEmailSettings): OrderEm
               : "Plătești curierului la primirea coletului"
           : null,
     },
-    delivery: pickup
+    delivery: digitalOnly
       ? {
-          kind: "pickup",
-          heading: "Ridicare personală de la",
-          // adresa MAGAZINULUI din snapshot; fără ea, doar eticheta (niciodată adresa clientului)
-          text: summary.shipping.pickupAddressText ?? "adresa magazinului",
+          kind: "digital",
+          heading: "Livrare",
+          text: "Produsele digitale se primesc în contul tău, fără transport",
           termText: null,
-          // programul de ridicare, doar când e completat în setări (se citește la trimitere, nu din snapshot)
-          pickupHoursText: summary.shipping.pickupHoursText,
         }
-      : {
-          kind: "courier",
-          heading: "Livrare în",
-          text: summary.destination
-            ? `${summary.destination.localityName}, ${summary.destination.countyName}`
-            : "adresa indicată de tine",
-          termText:
-            term !== null
-              ? `aproximativ ${daysText(term)} (toată comanda odată, cel mai lung termen)`
-              : estimated !== null && estimated > 0
-                ? `aproximativ ${daysText(estimated)}`
-                : null,
-        },
+      : pickup
+        ? {
+            kind: "pickup",
+            heading: "Ridicare personală de la",
+            // adresa MAGAZINULUI din snapshot; fără ea, doar eticheta (niciodată adresa clientului)
+            text: summary.shipping.pickupAddressText ?? "adresa magazinului",
+            termText: null,
+            // programul de ridicare, doar când e completat în setări (se citește la trimitere, nu din snapshot)
+            pickupHoursText: summary.shipping.pickupHoursText,
+          }
+        : {
+            kind: "courier",
+            heading: "Livrare în",
+            text: summary.destination
+              ? `${summary.destination.localityName}, ${summary.destination.countyName}`
+              : "adresa indicată de tine",
+            termText:
+              term !== null
+                ? `aproximativ ${daysText(term)} (toată comanda odată, cel mai lung termen)`
+                : estimated !== null && estimated > 0
+                  ? `aproximativ ${daysText(estimated)}`
+                  : null,
+          },
     hasOnOrderLines: hasOnOrder,
+    digital: summary.digital
+      ? { consentText: summary.digital.consentText, accessRule: summary.digital.accessRule }
+      : null,
   };
 }
 
@@ -272,6 +284,17 @@ export async function buildOrderEmailContext(
   };
 
   switch (dispatch.template) {
+    case "digital.ready": {
+      // doar numele produselor (niciodată jetoane sau chei); linkul duce în cont, nu la conținut
+      const granted = await env.db.digitalEntitlement.findMany({
+        where: { orderId: order.id, revokedAt: null },
+        orderBy: { grantedAt: "asc" },
+        select: { product: { select: { title: true } } },
+      });
+      vars["produse"] = granted.map((g) => g.product.title).join(", ");
+      vars["link"] = `${base}/cont/produsele-mele`;
+      break;
+    }
     case "order.proforma":
       vars["termen"] = order.reservationExpiresAt
         ? formatDateTime(order.reservationExpiresAt, store.locale, store.timeZone)

@@ -118,6 +118,10 @@ politica de cookie-uri** (durata, scopul, dacă trebuie menționat separat de co
 
 Răspuns:
 
+**3.5. Jurnalul de accesări la produsele digitale (adăugată în Faza 14b).** Pentru fiecare vizionare sau descărcare a unui produs digital păstrăm momentul, modulul, adresa IP și user-agent-ul, ca să putem opri abuzul (același cont folosit de multe adrese). IP-ul și user-agent-ul se păstrează un număr de zile setabil (implicit 180) și apoi devin nule; la ștergerea contului devin nule imediat. Care e termenul acceptabil, pe ce temei legal ne bazăm (interes legitim?) și ce scriem în politica de confidențialitate?
+
+Răspuns:
+
 ---
 
 ## 4. Vânzarea la metru, pe suprafață și în ambalaje (adăugată de Claude)
@@ -295,5 +299,11 @@ Răspuns:
 Răspuns:
 
 **11.2. Momentul de la care curge fereastra de retur, la livrările pe palet și la ridicarea personală.** Fereastra (implicit 14 zile, setare) curge de la livrarea consemnată: la curier, momentul «livrat» al expedierii; la ridicare personală, momentul în care adminul marchează comanda «ridicată». La livrările pe palet, unde nu există curier cu confirmare automată, adminul consemnează manual livrarea. De confirmat dacă acesta e momentul corect (livrarea efectivă) și dacă fereastra se prelungește când clientul nu a putut verifica produsul la livrare.
+
+Răspuns:
+
+## 12. Produse digitale în comenzi mixte cu ramburs (adăugată în Faza 14b)
+
+**12.1. Textul bifei de renunțare la dreptul de retragere pentru comenzi mixte cu plata la livrare.** La comenzile cu produse fizice și digitale plătite la livrare, accesul digital se activează abia după livrarea confirmată a coletului (nu la plasare și nu la plata către curier). Bifa separată («Solicit livrarea imediată a conținutului digital și confirm că îmi pierd dreptul de retragere de 14 zile după începerea livrării.») rămâne corectă când livrarea conținutului începe mai târziu, la livrarea coletului? Ce text recomandați pentru acest caz, și cum explicăm clientului, înainte de comandă, momentul începerii livrării? Produsele fizice din aceeași comandă își păstrează returul de 14 zile.
 
 Răspuns:

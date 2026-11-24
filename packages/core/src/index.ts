@@ -27,3 +27,4 @@ export * from "./offers";
 export * from "./invoicing";
 export * from "./account";
 export * from "./returns";
+export * from "./digital";
