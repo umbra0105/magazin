@@ -347,10 +347,11 @@ async function runScenario(scenario: Scenario): Promise<unknown> {
           },
           lines: order.lines
             .slice()
+            // ordine DETERMINISTĂ după conținut (liniile unei comenzi pot avea același `createdAt` la milisecundă): preț unitar descrescător, apoi cantitate
             .sort(
               (a, b) =>
-                a.createdAt.getTime() - b.createdAt.getTime() ||
-                a.unitPriceMinor - b.unitPriceMinor,
+                b.unitPriceMinor - a.unitPriceMinor ||
+                Number(BigInt(a.quantity) - BigInt(b.quantity)),
             )
             .map((line) => ({
               quantity: line.quantity,
