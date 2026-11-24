@@ -29,7 +29,7 @@ Modul B:
 - Faza 10: aprobat, 2026-11-19, plăți verificate cu DEMO
 - Faza 13: aprobat, 2026-11-22, facturare verificată
 - Faza 14b: aprobat, 2026-11-24, produse digitale verificate
-- Faza 14c: în așteptare
+- Faza 14c: aprobat, 2026-11-24, checkout digital verificat
 - Faza 15: în așteptare
 - Faza 15b: în așteptare
 
