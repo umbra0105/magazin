@@ -30,9 +30,41 @@ model User {
   preference          CustomerPreference?
   returnRequests      ReturnRequest[]
   digitalEntitlements DigitalEntitlement[]
+  /// Faza 15: grupul de clienți (prețuri de grup). Nul = «Client standard» (prețul public). Atribuit MANUAL, de admin.
+  customerGroupId     String?
+  customerGroup       CustomerGroup?          @relation(fields: [customerGroupId], references: [id], onDelete: Restrict)
 
   @@unique([email])
+  @@index([customerGroupId])
   @@map("user")
+}
+
+/// Grupurile de clienți (Faza 15, docs/09 §1). `pricingType`: none (prețul public) | discount (prețul public minus `discountBps`) |
+/// cost_plus (prețul de achiziție + `markupBps` + TVA, plafonat la prețul public curent). Procentele sunt întregi în puncte de
+/// bază, niciodată float. «Client standard» (`isSystem`, `none`) există din instalare și nu se șterge; celelalte sunt un seed
+/// specific magazinului, editabile din admin. `tone` = cheia tonului badge-ului din tokenii adminului (nu o culoare).
+model CustomerGroup {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  pricingType         String   @default("none")
+  discountBps         Int?
+  markupBps           Int?
+  /// Doar la `discount`: reducerea de grup se aplică peste prețul promoțional (altfel se ia cel mai mic dintre cele două).
+  stacksWithSalePrice Boolean  @default(false)
+  /// Fals la Partener 1/2/3 (loialitatea e în Faza 15b; coloana există de acum).
+  earnsLoyaltyPoints  Boolean  @default(true)
+  tone                String   @default("neutral")
+  isSystem            Boolean  @default(false)
+  isActive            Boolean  @default(true)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  users               User[]
+  orders              Order[]
+
+  @@index([sortOrder])
+  @@map("customer_group")
 }
 
 model Session {
@@ -1328,6 +1360,13 @@ model Order {
   /// Cota standard de TVA la plasare, în puncte de bază (2100 = 21%), ca snapshot.
   taxRateBps             Int
   groupPricingType       String               @default("none")
+  /// Faza 15: grupul clientului la plasare (snapshot): id-ul, procentul și avantajul acordat (prețul public curent minus ce a plătit,
+  /// în bani). Avantajul e calculat de motor și NU conține costul. Nu se recalculează după plasare.
+  customerGroupId        String?
+  customerGroup          CustomerGroup?       @relation(fields: [customerGroupId], references: [id], onDelete: Restrict)
+  groupDiscountBps       Int?
+  groupMarkupBps         Int?
+  groupAdvantageMinor    Int                  @default(0)
   /// Metoda de livrare aleasă: cod (courier | pickup | …) și snapshot-ul ofertei (curier, serviciu, preț, zile, sursa).
   shippingMethodCode     String
   shippingSnapshot       Json
