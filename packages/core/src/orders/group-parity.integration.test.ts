@@ -35,8 +35,15 @@ const DAY_MS = 86_400_000;
 
 type ProductOpts = NonNullable<Parameters<Harness["product"]>[0]>;
 type OfferWish = "cheapest" | "pickup" | "pallet" | "courier";
-type Variant = "guest" | "user";
-const VARIANTS: readonly Variant[] = ["guest", "user"];
+type Variant = "guest" | "user" | "standard";
+const VARIANTS: readonly Variant[] = ["guest", "user", "standard"];
+/** Fixture-ul înregistrat pe `main` are doar «guest» și «user»; clientul din «Client standard» se compară cu «user». */
+const FIXTURE_OF: Record<Variant, "guest" | "user"> = {
+  guest: "guest",
+  user: "user",
+  standard: "user",
+};
+const RECORDED: readonly ("guest" | "user")[] = ["guest", "user"];
 
 interface ScenarioProduct {
   opts?: ProductOpts;
@@ -283,6 +290,15 @@ async function fillFor(
     return { owner, userId: null };
   }
   const user = await createUser(h.tx, true);
+  if (variant === "standard") {
+    // grupul de sistem «Client standard» (nu presupun seed: îl creez dacă lipsește) atribuit clientului
+    const system =
+      (await h.tx.customerGroup.findFirst({ where: { isSystem: true } })) ??
+      (await h.tx.customerGroup.create({
+        data: { name: "Client standard", slug: "client-standard", isSystem: true },
+      }));
+    await h.tx.user.update({ where: { id: user.id }, data: { customerGroupId: system.id } });
+  }
   const owner: CartOwner = { kind: "user", userId: user.id };
   for (const item of items) {
     await h.cart.add(owner, {
@@ -529,12 +545,13 @@ describe("paritatea cu `main` pentru coșuri fără grup (Faza 15)", () => {
       it(`[${variant}] ${scenario.name}`, async () => {
         const actual = await runScenario(scenario, variant);
         if (RECORD) {
-          (recorded[variant] ??= {})[scenario.name] = actual;
+          if (variant !== "standard") (recorded[variant] ??= {})[scenario.name] = actual;
           return;
         }
         const fixture = readFixture();
-        expect(fixture[variant]?.[scenario.name], "scenariul lipsește din fixture").toBeDefined();
-        expect(actual).toEqual(fixture[variant]?.[scenario.name]);
+        const frozen = fixture[FIXTURE_OF[variant]]?.[scenario.name];
+        expect(frozen, "scenariul lipsește din fixture").toBeDefined();
+        expect(actual).toEqual(frozen);
       });
     }
   }
@@ -542,8 +559,8 @@ describe("paritatea cu `main` pentru coșuri fără grup (Faza 15)", () => {
   it("fixture-ul are exact variantele și scenariile din test", () => {
     if (RECORD) return;
     const fixture = readFixture();
-    expect(Object.keys(fixture).sort()).toEqual([...VARIANTS].sort());
-    for (const variant of VARIANTS) {
+    expect(Object.keys(fixture).sort()).toEqual([...RECORDED].sort());
+    for (const variant of RECORDED) {
       expect(Object.keys(fixture[variant] ?? {}).sort()).toEqual(
         SCENARIOS.map((scenario) => scenario.name).sort(),
       );
@@ -553,7 +570,7 @@ describe("paritatea cu `main` pentru coșuri fără grup (Faza 15)", () => {
   it("fixture-ul nu e gol: comenzi plasate și refuzate, cu și fără promoție", () => {
     if (RECORD) return;
     const fixture = readFixture();
-    for (const variant of VARIANTS) {
+    for (const variant of RECORDED) {
       const entries = Object.values(fixture[variant] ?? {}) as Array<{ placed: { kind: string } }>;
       expect(
         entries.filter((entry) => entry.placed.kind === "placed").length,

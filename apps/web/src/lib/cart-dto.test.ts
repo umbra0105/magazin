@@ -57,6 +57,7 @@ function view(lines: CartLineView[], over: Partial<CartView> = {}): CartView {
     leadTime: null,
     freeShipping: null,
     canCheckout: true,
+    group: null,
     ...over,
   };
 }
@@ -259,6 +260,7 @@ describe("TVA afișat în coș = TVA din motor (coș cu 3 linii, cu fracțiuni d
     leadTime: null,
     freeShipping: null,
     canCheckout: true,
+    group: null,
   });
   const money = (minor: number) => formatMoney(minor, FORMAT.currency, FORMAT.locale);
 
