@@ -454,6 +454,7 @@ describe("specurile E2E reale", () => {
       [
         "e2e/account.spec.ts",
         "e2e/card-payments.spec.ts",
+        "e2e/checkout-digital.spec.ts",
         "e2e/checkout-pickup.spec.ts",
         "e2e/checkout.spec.ts",
         "e2e/digital.spec.ts",

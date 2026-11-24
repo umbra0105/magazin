@@ -1,6 +1,7 @@
 import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared/quantity";
 import type { OrderSummary } from "@ecom/core";
-import { StorePill } from "@ecom/ui";
+import Link from "next/link";
+import { StorePill, storeButtonVariants } from "@ecom/ui";
 import { formatDateTime } from "@/lib/format-date";
 import { formatMoney } from "@/lib/money-input";
 import { getMessages } from "@/messages";
@@ -24,6 +25,13 @@ export function OrderSummaryView({
   const statusLabel = m.statuses[order.status] ?? order.status;
   const payLabel = m.paymentStatuses[order.paymentStatus] ?? order.paymentStatus;
   const fulfilLabel = m.fulfillmentStatuses[order.fulfillmentStatus] ?? order.fulfillmentStatus;
+  const digitalOnly = order.shipping.kind === "digital";
+  // accesul digital e activ după plată (card, transfer) sau după livrarea confirmată (ramburs mixt)
+  const digitalActive =
+    order.digital !== null &&
+    (order.digital.accessRule === "after_payment"
+      ? order.paymentStatus === "paid"
+      : order.fulfillmentStatus === "delivered");
   return (
     <div className="flex flex-col gap-8" data-order-summary-view>
       {order.paymentNotice === "stock_lost" ? (
@@ -65,7 +73,9 @@ export function OrderSummaryView({
             {order.shipping.kind === "pickup" ? m.pickupLabel : m.delivery}
           </dt>
           <dd className="mt-1 font-medium">
-            {order.shipping.kind === "pickup" ? (
+            {digitalOnly ? (
+              m.deliveryDigital
+            ) : order.shipping.kind === "pickup" ? (
               // ridicare: adresa MAGAZINULUI salvată pe comandă; adresa clientului nu apare ca destinație
               order.shipping.pickupAddressText ? (
                 <span data-pickup-address>
@@ -99,6 +109,39 @@ export function OrderSummaryView({
         </div>
       </dl>
 
+      {order.digital ? (
+        <section
+          aria-label={m.digitalAccess.title}
+          className="flex flex-col gap-2 rounded-card bg-card p-5"
+          data-digital-access={digitalActive ? "active" : "pending"}
+        >
+          <h2 className="text-lg font-semibold">{m.digitalAccess.title}</h2>
+          <p>
+            {digitalActive
+              ? m.digitalAccess.activeNow
+              : order.digital.accessRule === "after_delivery"
+                ? m.digitalAccess.afterDelivery
+                : m.digitalAccess.afterPayment}{" "}
+            {m.digitalAccess.where}
+          </p>
+          {order.digital.consentText ? (
+            <p className="text-sm text-ink-secondary" data-digital-consent-saved>
+              <span className="font-medium">{m.digitalAccess.consentHeading}:</span>{" "}
+              {order.digital.consentText}
+            </p>
+          ) : null}
+          <p>
+            <Link
+              href="/cont/produsele-mele"
+              className={storeButtonVariants({ variant: "secondary" })}
+              data-digital-library-link
+            >
+              {m.digitalAccess.open}
+            </Link>
+          </p>
+        </section>
+      ) : null}
+
       {order.longestLeadTimeDays !== null ? (
         <p className="text-sm font-medium">{m.leadTime(order.longestLeadTimeDays)}</p>
       ) : null}
@@ -130,14 +173,16 @@ export function OrderSummaryView({
             <dt className="text-ink-secondary">{getMessages().storefront.checkout.products}</dt>
             <dd className="tabular-nums">{money(order.totals.subtotalMinor)}</dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-secondary">{getMessages().storefront.checkout.shipping}</dt>
-            <dd className="tabular-nums">
-              {order.totals.shippingMinor === 0
-                ? getMessages().storefront.checkout.free
-                : money(order.totals.shippingMinor)}
-            </dd>
-          </div>
+          {digitalOnly ? null : (
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-secondary">{getMessages().storefront.checkout.shipping}</dt>
+              <dd className="tabular-nums">
+                {order.totals.shippingMinor === 0
+                  ? getMessages().storefront.checkout.free
+                  : money(order.totals.shippingMinor)}
+              </dd>
+            </div>
+          )}
           {order.totals.codFeeMinor > 0 ? (
             <div className="flex justify-between gap-4">
               <dt className="text-ink-secondary">{getMessages().storefront.checkout.codFee}</dt>

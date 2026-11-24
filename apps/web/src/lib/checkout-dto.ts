@@ -44,6 +44,8 @@ export interface CheckoutMethodDto {
 
 export interface CheckoutPreviewDto {
   blocked: { code: string; message: string } | null;
+  /** Faza 14c: coșul are produse digitale / doar produse digitale (fără pas de livrare, fără ramburs). */
+  digital: { present: boolean; only: boolean };
   destination: { countyName: string; localityName: string } | null;
   offers: CheckoutOfferDto[];
   selectedOfferCode: string | null;
@@ -174,6 +176,7 @@ export function toCheckoutPreviewDto(
   const reference = preview.selectedOffer ?? preview.shipping?.offers[0] ?? null;
   return {
     blocked: preview.blocked,
+    digital: preview.digital ?? { present: false, only: false },
     destination: preview.destination,
     offers,
     selectedOfferCode: preview.selectedOffer?.code ?? null,

@@ -44,6 +44,7 @@ function IssueRow({
   const action = issue.action;
   return (
     <div
+      data-cart-issue={issue.type}
       className={cn(
         "flex flex-col gap-2 rounded-card px-3 py-2 text-sm",
         issue.type === "unavailable"

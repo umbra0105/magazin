@@ -3864,7 +3864,15 @@ export const ro = {
         ORDER_CARD_UNAVAILABLE: "Plata cu cardul nu este disponibilă acum. Alege altă metodă.",
         ORDER_COUNTRY_NOT_ALLOWED: "Livrăm doar în România.",
         ORDER_CUI_INVALID: "CUI-ul nu este valid.",
-        ORDER_DIGITAL_NOT_SUPPORTED: "Produsele digitale nu se pot comanda încă.",
+        ORDER_DIGITAL_NOT_SUPPORTED: "Produsele digitale nu se pot include într-o ofertă de plată.",
+        ORDER_LOGIN_REQUIRED:
+          "Pentru produsele digitale ai nevoie de un cont. Autentifică-te; coșul se păstrează.",
+        ORDER_EMAIL_NOT_VERIFIED:
+          "Confirmă adresa de email a contului ca să poți comanda produse digitale.",
+        ORDER_DIGITAL_CONSENT_REQUIRED:
+          "Bifează solicitarea de livrare imediată a conținutului digital ca să poți plasa comanda.",
+        ORDER_DIGITAL_QUANTITY:
+          "Un produs digital se cumpără o singură dată. Revino în coș și păstrează o bucată.",
         ORDER_GUEST_CHECKOUT_DISABLED: "Comenzile fără cont nu sunt activate în acest magazin.",
         ORDER_QUANTITY_INVALID: "Cantitatea unui produs nu este valabilă. Revino în coș.",
         STOCK_INSUFFICIENT:
@@ -4017,8 +4025,22 @@ export const ro = {
         "Plata a ajuns după expirarea rezervării, iar produsele nu mai sunt în stoc. Comanda a fost anulată, iar suma plătită va fi returnată.",
       nextTransfer: (deadline: string) =>
         `Plătește prin transfer bancar până la ${deadline}. Rezervăm produsele până atunci; după termen comanda se anulează automat.`,
+      // comandă 100% digitală cu transfer bancar (Faza 14c): nu există stoc rezervat, accesul vine după confirmarea plății
+      nextTransferDigital: (deadline: string) =>
+        `Plătește prin transfer bancar până la ${deadline}; după termen comanda se anulează automat. Accesul la produsele digitale se activează după ce confirmăm plata.`,
       nextEmail:
         "Emailul de confirmare nu se trimite încă; păstrează această pagină sau numărul comenzii.",
+      deliveryDigital: "Acces digital în cont (fără livrare)",
+      digitalAccess: {
+        title: "Produse digitale",
+        where: "Le găsești în contul tău, la «Produsele mele digitale».",
+        open: "Deschide «Produsele mele digitale»",
+        activeNow: "Accesul este activ.",
+        afterPayment: "Accesul se activează imediat ce plata e confirmată.",
+        afterDelivery:
+          "Plata se face la livrare: accesul se activează după livrarea confirmată a produselor fizice, nu la plata către curier.",
+        consentHeading: "Solicitarea ta de livrare imediată",
+      },
       delivery: "Livrare",
       deliveryTo: "Livrare în",
       pickupLabel: "Ridicare",

@@ -2718,6 +2718,10 @@ export interface E2eOrderSnapshot {
   customerNote: string | null;
   termsConsentText: string;
   termsConsentVersion: string;
+  /** Faza 14c: bifa de renunțare la dreptul de retragere (doar la comenzile cu linii digitale). */
+  digitalConsentAt: Date | null;
+  digitalConsentText: string | null;
+  digitalConsentVersion: string | null;
   reservationExpiresAt: Date | null;
   lines: Array<{
     sku: string;
@@ -2725,6 +2729,7 @@ export interface E2eOrderSnapshot {
     leadTimeDays: number | null;
     lineTotalMinor: number;
     taxMinor: number;
+    isDigital: boolean;
   }>;
   addresses: Array<{
     kind: string;
@@ -2746,7 +2751,8 @@ export async function readE2eOrder(number: string): Promise<E2eOrderSnapshot | n
     const found = await db.query(
       `select id, number, status, "paymentStatus", "fulfillmentStatus", "paymentMethod", "shippingMethodCode", "subtotalMinor",
               "shippingMinor", "codFeeMinor", "taxMinor", "totalMinor", "customerId", "installationRequested", "installationNote",
-              "customerNote", "termsConsentText", "termsConsentVersion", "reservationExpiresAt"
+              "customerNote", "termsConsentText", "termsConsentVersion", "reservationExpiresAt",
+              "digitalConsentAt", "digitalConsentText", "digitalConsentVersion"
          from customer_order where number = $1`,
       [number],
     );
@@ -2754,7 +2760,7 @@ export async function readE2eOrder(number: string): Promise<E2eOrderSnapshot | n
     if (!order) return null;
     const [lines, addresses, events, payments, commitments, reservations] = await Promise.all([
       db.query(
-        `select sku, "stockState", "leadTimeDays", "lineTotalMinor", "taxMinor" from order_line where "orderId" = $1 order by "createdAt"`,
+        `select sku, "stockState", "leadTimeDays", "lineTotalMinor", "taxMinor", "isDigital" from order_line where "orderId" = $1 order by "createdAt", sku`,
         [order.id],
       ),
       db.query(
@@ -2779,6 +2785,33 @@ export async function readE2eOrder(number: string): Promise<E2eOrderSnapshot | n
       stockCommitments: commitments.rows[0]?.n ?? 0,
       stockReservations: reservations.rows[0]?.n ?? 0,
     } as E2eOrderSnapshot;
+  });
+}
+
+/**
+ * Schimbă starea «email verificat» a unui cont de test (`promoteE2eUser` îl marchează mereu verificat; produsele digitale se comandă
+ * doar cu un cont verificat, deci testul «email neverificat» îl scoate după autentificare).
+ */
+export async function setE2eUserVerified(email: string, verified: boolean): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`update "user" set "emailVerified" = $2 where email = $1`, [email, verified]);
+  });
+}
+
+/** Scrie direct cantitatea unei linii din coșul unui cont (un coș vechi, de dinainte de regula «maxim o bucată» pe produs digital). */
+export async function setE2eCartQuantity(
+  email: string,
+  variantId: string,
+  quantityTicks: bigint,
+): Promise<number> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `update cart_item set quantity = $3
+         where "variantId" = $2
+           and "cartId" in (select c.id from cart c join "user" u on u.id = c."userId" where u.email = $1)`,
+      [email, variantId, quantityTicks.toString()],
+    );
+    return result.rowCount ?? 0;
   });
 }
 

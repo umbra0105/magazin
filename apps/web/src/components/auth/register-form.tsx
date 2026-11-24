@@ -7,6 +7,8 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button, Input, PasswordInput } from "@ecom/ui";
+import { mergeGuestCartAction } from "@/app/(storefront)/cos/actions";
+import { resetCart } from "@/components/storefront/cart/cart-store";
 import { authErrorMessage, authPost } from "@/lib/auth-client";
 import { getMessages } from "@/messages";
 import { AuthField, describedBy } from "./auth-field";
@@ -66,6 +68,14 @@ export function RegisterForm({
       setCheckEmail(true);
       return;
     }
+    // contul e deja autentificat (fără confirmare de email): coșul de oaspete se îmbină ca la autentificare, ca să ajungă cu produsele
+    // lui la `next` (de exemplu `/checkout`); o eroare aici nu oprește înregistrarea
+    try {
+      await mergeGuestCartAction();
+    } catch {
+      // se reia la prima operație pe coș
+    }
+    resetCart();
     router.replace(nextPath ?? "/cont");
     router.refresh();
   }

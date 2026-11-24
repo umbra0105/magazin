@@ -106,7 +106,7 @@ export interface CheckoutPreview {
    * Faza 14c: coșul are produse digitale (`present`) sau DOAR produse digitale (`only`: fără pas de livrare, fără adresă de
    * livrare, fără ramburs). Interfața ascunde livrarea și cere bifa legală după aceste indicatoare.
    */
-  digital: { present: boolean; only: boolean };
+  digital?: { present: boolean; only: boolean };
 }
 
 export interface PlaceOrderResult {
