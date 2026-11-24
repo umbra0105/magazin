@@ -10,7 +10,7 @@ import { inRolledBackTransaction, type TestTx } from "../../test-utils/rollback"
 import { toCsv } from "../import/import-csv";
 import { NIR_TEMPLATE_HEADER } from "./nir-report";
 import { createPrismaNirStore } from "./nir-store";
-import { NirImportService, type NirJobQueue } from "./nir-service";
+import { NirImportService, nirViewForClient, type NirJobQueue } from "./nir-service";
 
 /**
  * Importul prețurilor NIR pe Postgres real, în tranzacție anulată, cu fișiere SINTETICE (coduri, produse și costuri inventate;
@@ -400,6 +400,35 @@ describe("permisiuni (verificate pe server)", () => {
       expect((await service.reportRows(manager, view.id)).length).toBeGreaterThan(1);
       expect(service.templateRows(manager)[0]).toEqual([...NIR_TEMPLATE_HEADER]);
       expect((await service.list(subjectFor("accountant"))).map((r) => r.id)).toContain(view.id);
+    });
+  });
+});
+
+describe("ce ajunge la interfață nu conține prețuri de achiziție", () => {
+  it("nirViewForClient scoate costurile din liste; raportul CSV le păstrează pentru cine vede costul", async () => {
+    await inRolledBackTransaction(db, async (tx) => {
+      const a = await variant(tx, `A-${uid()}`);
+      const { service } = await world(tx);
+      const view = await service.preview(owner, {
+        name: "m.xls",
+        bytes: xls([{ code: a.sku, date: ago(3), cost: 12.3456 }]),
+      });
+      expect(view.report.updated[0]?.costMinor).toBe(1235);
+      const client = nirViewForClient(view);
+      const keys: string[] = [];
+      const walk = (value: unknown): void => {
+        if (Array.isArray(value)) value.forEach(walk);
+        else if (value !== null && typeof value === "object" && !(value instanceof Date)) {
+          for (const [key, inner] of Object.entries(value)) {
+            keys.push(key);
+            walk(inner);
+          }
+        }
+      };
+      walk(client);
+      expect(keys.filter((key) => /cost/i.test(key))).toEqual([]);
+      expect(JSON.stringify(client)).not.toContain("1235");
+      expect((await service.reportRows(owner, view.id)).flat().join("|")).toContain("12,35");
     });
   });
 });

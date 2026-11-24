@@ -3576,3 +3576,187 @@ export async function readE2eDigitalAssets(
     return rows.rows as Array<{ id: string; title: string; type: string; isPreview: boolean }>;
   });
 }
+
+// ───────────────────────── Faza 15: grupuri de clienți și prețuri NIR ─────────────────────────
+
+export interface E2eGroup {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+const E2E_GROUP_PREFIX = "e2e-grup-";
+
+/** Un grup de clienți al testului (slug `e2e-grup-<tag>-<cheie>`). Se șterge cu `removeE2eCustomerGroups(tag)`. */
+export async function seedE2eCustomerGroup(
+  tag: string,
+  key: string,
+  spec: {
+    name?: string;
+    pricingType: "none" | "discount" | "cost_plus";
+    discountBps?: number;
+    markupBps?: number;
+    stacksWithSalePrice?: boolean;
+    earnsLoyaltyPoints?: boolean;
+    tone?: "neutral" | "info" | "success" | "warning" | "danger";
+  },
+): Promise<E2eGroup> {
+  assertE2eTag(tag);
+  const slug = `${E2E_GROUP_PREFIX}${tag}-${key}`;
+  const name = spec.name ?? `Grup ${key} ${tag}`;
+  return withClient(async (db) => {
+    const row = await db.query(
+      `insert into customer_group (id, name, slug, "pricingType", "discountBps", "markupBps", "stacksWithSalePrice",
+                                   "earnsLoyaltyPoints", tone, "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, 900, now()) returning id`,
+      [
+        name,
+        slug,
+        spec.pricingType,
+        spec.discountBps ?? null,
+        spec.markupBps ?? null,
+        spec.stacksWithSalePrice ?? false,
+        spec.earnsLoyaltyPoints ?? true,
+        spec.tone ?? "neutral",
+      ],
+    );
+    return { id: row.rows[0]?.id as string, slug, name };
+  });
+}
+
+/** Asigură grupul de sistem «Client standard» (baza E2E poate fi doar migrată, fără seed). */
+export async function ensureE2eSystemGroup(): Promise<void> {
+  await withClient(async (db) => {
+    const found = await db.query(`select id from customer_group where "isSystem" = true`);
+    if (found.rows.length > 0) return;
+    await db.query(
+      `insert into customer_group (id, name, slug, "pricingType", "isSystem", "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, 'Client standard', 'client-standard', 'none', true, 0, now())
+       on conflict (slug) do nothing`,
+    );
+  });
+}
+
+/** Mută un client (după email) în grup, direct în bază (fără UI). `null` = fără grup. */
+export async function setE2eUserGroup(email: string, groupId: string | null): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(`update "user" set "customerGroupId" = $2 where email = $1`, [email, groupId]);
+  });
+}
+
+export async function readE2eUserGroup(email: string): Promise<string | null> {
+  return withClient(async (db) => {
+    const row = await db.query(`select "customerGroupId" from "user" where email = $1`, [email]);
+    return (row.rows[0]?.customerGroupId as string | null | undefined) ?? null;
+  });
+}
+
+/** Numărul de rânduri de audit ale acțiunii pe entitate, pentru verificarea «fără date personale» în conținutul lor. */
+export async function readE2eGroupAudit(action: string): Promise<string[]> {
+  return withClient(async (db) => {
+    const rows = await db.query(
+      `select coalesce("before"::text, '') || ' ' || coalesce("after"::text, '') as dump from audit_log
+        where action = $1 order by "createdAt" desc limit 20`,
+      [action],
+    );
+    return rows.rows.map((row) => row.dump as string);
+  });
+}
+
+/**
+ * Scoate grupurile testului: mută clienții din ele în «fără grup» și șterge grupurile. Comenzile care le folosesc se șterg ÎNAINTE
+ * (`removeE2eOrders({ tag })`), pentru că o comandă blochează ștergerea grupului.
+ */
+export async function removeE2eCustomerGroups(tag: string): Promise<void> {
+  assertE2eTag(tag);
+  const pattern = `${E2E_GROUP_PREFIX}${tag}-%`;
+  await withClient(async (db) => {
+    await db.query(
+      `update "user" set "customerGroupId" = null
+        where "customerGroupId" in (select id from customer_group where slug like $1)`,
+      [pattern],
+    );
+    await db.query(`delete from customer_group where slug like $1`, [pattern]);
+  });
+}
+
+/** Grupurile create din interfață de un test (nume cu tag): se curăță după nume. */
+export async function removeE2eGroupsByName(tag: string): Promise<void> {
+  assertE2eTag(tag);
+  await withClient(async (db) => {
+    await db.query(
+      `update "user" set "customerGroupId" = null
+        where "customerGroupId" in (select id from customer_group where name like $1 and not "isSystem")`,
+      [`%${tag}%`],
+    );
+    await db.query(`delete from customer_group where name like $1 and not "isSystem"`, [
+      `%${tag}%`,
+    ]);
+  });
+}
+
+/** Prețul de achiziție al unei variante (după SKU), direct în bază: DOAR pentru pregătirea testelor. */
+export async function setE2eVariantCost(
+  sku: string,
+  cost: { minor: number; day: string } | null,
+): Promise<void> {
+  await withClient(async (db) => {
+    await db.query(
+      `update product_variant set "costPrice" = $2, "costPriceDate" = $3::date where sku = $1`,
+      [sku, cost?.minor ?? null, cost?.day ?? null],
+    );
+  });
+}
+
+export async function readE2eVariantCost(sku: string): Promise<{
+  costPrice: number | null;
+  costDay: string | null;
+  history: number;
+  importIds: string[];
+}> {
+  return withClient(async (db) => {
+    const row = await db.query(
+      `select id, "costPrice", to_char("costPriceDate", 'YYYY-MM-DD') as day from product_variant where sku = $1`,
+      [sku],
+    );
+    const found = row.rows[0] as
+      { id: string; costPrice: number | null; day: string | null } | undefined;
+    if (!found) return { costPrice: null, costDay: null, history: 0, importIds: [] };
+    const history = await db.query(
+      `select "importId" from cost_price_history where "variantId" = $1 order by "createdAt"`,
+      [found.id],
+    );
+    return {
+      costPrice: found.costPrice,
+      costDay: found.day,
+      history: history.rows.length,
+      importIds: history.rows.map((r) => r.importId as string),
+    };
+  });
+}
+
+/** Importurile NIR ale unui test (numele fișierului începe cu `e2e-<tag>`) și rândurile lor de istoric. */
+export async function removeE2eNirImports(tag: string): Promise<void> {
+  assertE2eTag(tag);
+  await withClient(async (db) => {
+    await db.query(`delete from nir_import where "fileName" like $1`, [`e2e-${tag}%`]);
+  });
+}
+
+/** Un produs ACTIV cu variantă, pentru NIR (fără cost). Întoarce SKU-ul. */
+export async function readE2eNirImportRow(fileNamePrefix: string): Promise<{
+  status: string;
+  itemCount: number;
+  processedItems: number;
+} | null> {
+  return withClient(async (db) => {
+    const row = await db.query(
+      `select status, "itemCount", "processedItems" from nir_import where "fileName" like $1 order by "createdAt" desc limit 1`,
+      [`${fileNamePrefix}%`],
+    );
+    return (
+      (row.rows[0] as { status: string; itemCount: number; processedItems: number } | undefined) ??
+      null
+    );
+  });
+}

@@ -1,4 +1,5 @@
-import { Prisma, type PrismaClient } from "@ecom/db";
+import type { Prisma } from "@ecom/db";
+import { type PrismaClient } from "@ecom/db";
 import { DEFAULT_MEASURE_UNIT_CODE } from "../../inventory/constants";
 import { effectiveMeasureUnit } from "../../inventory/units";
 import type { NirCatalog, NirPlanItem, NirReport, NirVariant } from "./nir-plan";
@@ -155,7 +156,7 @@ export function createPrismaNirStore(db: Db): NirStore {
         const chunk = unique.slice(i, i + CODE_CHUNK);
         const found = await db.$queryRaw<Array<{ id: string }>>`
           SELECT v.id FROM product_variant v
-          WHERE v.sku IN (${Prisma.join(chunk)}) OR lower(v.sku) IN (${Prisma.join(chunk.map((c) => c.toLowerCase()))})`;
+          WHERE v.sku = ANY(${chunk}::text[]) OR lower(v.sku) = ANY(${chunk.map((c) => c.toLowerCase())}::text[])`;
         if (found.length === 0) continue;
         const rows = await db.productVariant.findMany({
           where: { id: { in: found.map((row) => row.id) }, product: { deletedAt: null } },
@@ -229,7 +230,7 @@ export function createPrismaNirStore(db: Db): NirStore {
       return transact(async (tx) => {
         const ids = sorted.map((item) => item.variantId);
         // blocare în ordinea identificatorilor: două importuri nu se blochează încrucișat
-        await tx.$queryRaw`SELECT id FROM product_variant WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM product_variant WHERE id = ANY(${ids}::text[]) ORDER BY id FOR UPDATE`;
         const rows = await tx.$queryRaw<Array<{ variantId: string }>>`
           WITH input(id, amount, entry_date) AS (
             SELECT * FROM unnest(

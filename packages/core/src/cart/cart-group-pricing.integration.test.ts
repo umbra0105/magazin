@@ -329,6 +329,15 @@ describe("Parteneri (cost_plus)", () => {
     });
   });
 
+  it("preț NIR zero (date greșite): prețul public, niciodată un partener care plătește 0", async () => {
+    await harness(async (h) => {
+      const group = await groupWith(h, { pricingType: "cost_plus", markupBps: 1200 });
+      const p = await product(h, { cost: 0 });
+      const { pricing } = await lineOf(h, await buyer(h, group.id), p.variantId);
+      expect(pricing).toMatchObject({ totalMinor: 19_900, groupAdvantageMinor: 0 });
+    });
+  });
+
   it("produs exclus: prețul public chiar dacă are preț NIR", async () => {
     await harness(async (h) => {
       const group = await groupWith(h, { pricingType: "cost_plus", markupBps: 1200 });

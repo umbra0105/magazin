@@ -1,4 +1,5 @@
-import { Prisma, type PrismaClient } from "@ecom/db";
+import type { Prisma } from "@ecom/db";
+import { type PrismaClient } from "@ecom/db";
 import type { PricingType } from "./constants";
 import type { CustomerGroupFields, CustomerGroupRecord } from "./group-rules";
 
@@ -233,7 +234,7 @@ export function createPrismaCustomerGroupStore(db: Db): CustomerGroupStore {
         const ids = [...new Set(userIds)].sort();
         const moved = await tx.$queryRaw<Array<{ userId: string; previousGroupId: string | null }>>`
           WITH locked AS (
-            SELECT id, "customerGroupId" FROM "user" WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE
+            SELECT id, "customerGroupId" FROM "user" WHERE id = ANY(${ids}::text[]) ORDER BY id FOR UPDATE
           ), changed AS (
             UPDATE "user" u SET "customerGroupId" = ${groupId}, "updatedAt" = now()
             FROM locked l WHERE u.id = l.id
