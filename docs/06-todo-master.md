@@ -417,18 +417,18 @@ Propunerea exactă (din 🛑 al Fazei 14b), cu fișierul și rândurile de azi (
 - Atribuirea grupului rămâne MANUALĂ; promovarea automată NU se face.
 - [ ] **Din Faza 5 (punctul 14): poza de stoc prin API** în locul fișierului «Stoc la zi»: când integrarea SmartBill cu API-ul există, sincronizarea periodică (ținta: câteva minute, minim zilnic) aplică aceeași `applySnapshot` ca importul din fișier; fișierul rămâne ca soluție de rezervă. Citește documentația API SmartBill (gestiune la factură, unități, zecimale) înainte. _Amânat până la acces API SmartBill (decizia utilizatorului, 2026-11-24)_
 - [x] **Înainte de a începe:** primești de la utilizator un fișier exemplu de export SmartBill (`10` Partea II #10) _(primit 2026-11-24: `local-data/smartbill-miscari-produse.xls`, doar de referință)_
-- [ ] Schema: `CustomerGroup` cu `pricingType` (`none` | `discount` | `cost_plus`), `discountBps`, `markupBps` (întregi în puncte de bază) + `Customer.groupId` + `excludeFromGroupDiscount` pe produs și categorie (se aplică ambelor tipuri)
-- [ ] Snapshot pe comandă: `customerGroupId`, `groupPricingType`, `groupDiscountBps` / `groupMarkupBps`, `groupAdvantageAmount`
-- [ ] Extinderea motorului de prețuri cu cele trei tipuri (teste scrise întâi, `09` §7): `discount` = prețul public minus procentul; `cost_plus` = `costNet × (1 + adaos) × (1 + TVA)`, **plafonat la prețul public curent**; fără preț NIR → preț public
-- [ ] Regula de cumulare cu promoțiile pentru `discount`, controlată de `stacksWithSalePrice` (implicit nu se cumulează)
-- [ ] Afișare în storefront: prețul de grup + „Preț standard" tăiat + badge, identic pe PLP și PDP; prețul de partener se calculează dinamic, în afara cache-ului ISR
-- [ ] Coș și checkout: linie de reducere (Fidel/VIP) sau linie informativă „Avantaj partener"; pe factură doar prețul unitar încasat
-- [ ] Admin: CRUD grupuri (selector de tip + procent), grupul „Client standard" neștergibil, badge și filtru în lista de clienți
-- [ ] **Seed specific magazinului** (nu default de pachet): Client fidel 5%, Client VIP 7%, Partener 1/2/3 la 12% / 17% / 21%; Partenerii cu `earnsLoyaltyPoints = false`
-- [ ] Atribuire de grup în masă + audit log
-- [ ] **Import prețuri NIR din SmartBill** (`09` §4): upload, dry-run, potrivire pe SKU, cea mai recentă dată per produs, actualizare doar dacă data e mai nouă, istoric în `CostPriceHistory`, raport cu coduri necunoscute, repetabil fără dubluri, `auditLog()`
-- [ ] Indicator și filtru „produse fără preț NIR" în admin
-- [ ] Raport: vânzări per grup, total avantaj acordat
+- [x] Schema: `CustomerGroup` cu `pricingType` (`none` | `discount` | `cost_plus`), `discountBps`, `markupBps` (întregi în puncte de bază) + `Customer.groupId` + `excludeFromGroupDiscount` pe produs și categorie (se aplică ambelor tipuri) _(Faza 15: `User.customerGroupId` în loc de `Customer.groupId`; migrația `20261124160000_customer_groups`, aditivă, de aplicat de utilizator)_
+- [x] Snapshot pe comandă: `customerGroupId`, `groupPricingType`, `groupDiscountBps` / `groupMarkupBps`, `groupAdvantageAmount` _(`groupAdvantageMinor` = «groupAdvantageAmount» din docs/09)_
+- [x] Extinderea motorului de prețuri cu cele trei tipuri (teste scrise întâi, `09` §7): `discount` = prețul public minus procentul; `cost_plus` = `costNet × (1 + adaos) × (1 + TVA)`, **plafonat la prețul public curent**; fără preț NIR → preț public _(motorul avea deja cele trei tipuri ca funcții pure; Faza 15 le leagă de coș, checkout și vitrină; teste cu cifre de mână)_
+- [x] Regula de cumulare cu promoțiile pentru `discount`, controlată de `stacksWithSalePrice` (implicit nu se cumulează)
+- [x] Afișare în storefront: prețul de grup + „Preț standard" tăiat + badge, identic pe PLP și PDP; prețul de partener se calculează dinamic, în afara cache-ului ISR _(acțiune de server fără cache, peste pagina publică; verificat în E2E)_
+- [x] Coș și checkout: linie de reducere (Fidel/VIP) sau linie informativă „Avantaj partener"; pe factură doar prețul unitar încasat
+- [x] Admin: CRUD grupuri (selector de tip + procent), grupul „Client standard" neștergibil, badge și filtru în lista de clienți _(sub-elemente ale grupului de meniu «Clienți»)_
+- [x] **Seed specific magazinului** (nu default de pachet): Client fidel 5%, Client VIP 7%, Partener 1/2/3 la 12% / 17% / 21%; Partenerii cu `earnsLoyaltyPoints = false` _(`npm.cmd run db:seed:store`, de rulat de utilizator; «Client standard» vine din `db:seed`)_
+- [x] Atribuire de grup în masă + audit log
+- [x] **Import prețuri NIR din SmartBill** (`09` §4): upload, dry-run, potrivire pe SKU, cea mai recentă dată per produs, actualizare doar dacă data e mai nouă, istoric în `CostPriceHistory`, raport cu coduri necunoscute, repetabil fără dubluri, `auditLog()` _(testat pe fișiere sintetice; fișierul real SmartBill îl încearcă utilizatorul)_
+- [x] Indicator și filtru „produse fără preț NIR" în admin _(bannerul din editor și indicatorul din panou: S3 în FINISAJE)_
+- [x] Raport: vânzări per grup, total avantaj acordat
 - [ ] (opțional) Promovare automată în „Client fidel" după X lei sau N comenzi _(nu se face: atribuirea grupului rămâne manuală, decizia utilizatorului, 2026-11-24)_
 
 ## FAZA 15b — Puncte de loialitate și vouchere
