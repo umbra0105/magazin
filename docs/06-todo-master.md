@@ -18,7 +18,7 @@ Bifează pe măsură ce termini. Acest fișier e memoria proiectului între sesi
 - [x] Definește grupurile de clienți și procentele: Client standard (`none`), Client fidel 5% și Client VIP 7% (`discount`), Partener 1/2/3 cu adaos 12% / 17% / 21% (`cost_plus`). Valori inițiale, editabile din admin
 - [ ] Deschide conturi de test: Netopia, EuPlătesc, **wootPRO**, Sameday, **SmartBill** _(necesare pe parcurs: Netopia + EuPlătesc în Faza 10; wootPRO + Sameday în Faza 12; SmartBill în Faza 13)_
 - [ ] **Verifică cu SmartBill că abonamentul tău include acces API** _(necesar înainte de Faza 13; fără acces API nu putem emite facturi din magazin)_
-- [ ] **Furnizează un fișier exemplu de export SmartBill** („lista de mișcări produse", cu preț și dată de intrare) _(necesar înainte de Faza 15, pentru formatul importului de prețuri NIR)_
+- [x] **Furnizează un fișier exemplu de export SmartBill** („lista de mișcări produse", cu preț și dată de intrare) _(primit 2026-11-24: `local-data/smartbill-miscari-produse.xls`, doar de referință; importul din Faza 15 a fost testat pe fișiere sintetice, nu cu fișierul real)_
 - [ ] Creează cont Bunny Stream pentru tutoriale video (poți amâna — driverul `local` funcționează pe localhost) _(necesar în Faza 14b; doar pentru producție)_
 - [ ] **Cere VPS cu IP fix** — obligatoriu pentru whitelist-ul eMAG _(necesar înainte de Faza 21; whitelist-ul eMAG se folosește în Faza 22b)_
 - [x] Întrebările pentru contabil din `10-decizii-deschise.md` Partea III (acum 14): răspunsurile primite sunt în `10`. **Rămân 🟡 deschise** #8 (voucher), #9 (TVA pe puncte) și valabilitatea voucherelor, de rezolvat până la Faza 15b; decizia despre digitalul din comanda mixtă cu ramburs e LUATĂ (2026-11-23: acces la livrare confirmată, Faza 14b)
@@ -402,6 +402,7 @@ Propunerea exactă (din 🛑 al Fazei 14b), cu fișierul și rândurile de azi (
 - [x] `verify:full` o singură dată pe codul final, PR draft, CI verde, `gate:merge --dry-run`; poarta reală abia după «am verificat, continuă» și aprobare (dovedit: `verify:full` verde pe `0ec2e2a`: unitare 4690, integrare 2093 + 2093, E2E 628; PR #28 îmbinat PRIN POARTĂ la `884137b` pe 2026-11-24, după aprobarea din PR #29; etichetele `pre-faza-14c` / `faza-14c-completa`)
 
 ## FAZA 15 — Grupuri de clienți, prețuri de partener și prețuri NIR (mod B, ramura `faza-15`)
+_Închisă: PR #30 îmbinat prin poartă la `ed762cb` (2026-11-25), aprobarea utilizatorului prin PR #31; `verify:full` pe `ad870e7`: 4835 / 2358×2 / 637, 0 picate; CI 16/16; etichetele `pre-faza-15` și `faza-15-completa`. Vezi `docs/PROGRESS.md`._
 **Decizii ale utilizatorului, 2026-11-24 (nu se rediscută; orice abatere = 🛑):**
 - Sincronizarea stocului prin API SmartBill se amână până există acces API: nu se implementează și nu se scheletizează în Faza 15; importul «Stoc la zi» din fișier rămâne neschimbat.
 - Fișierul exemplu `local-data/smartbill-miscari-produse.xls` e doar de referință (date de probă; catalogul din `ecom` nu are aceleași coduri): nu se importă, nu se comite, nu se copiază în teste.
@@ -413,7 +414,7 @@ Propunerea exactă (din 🛑 al Fazei 14b), cu fișierul și rândurile de azi (
 - Unități: dacă varianta are `smartbillMode` ≠ «aceeași unitate» sau unitatea din fișier nu corespunde, rândul se SARE și apare la «unitate diferită, de verificat manual».
 - Permisiune dedicată pentru import (verificată pe server) + `auditLog()` pe fiecare import (fără date personale); raportul și șablonul se descarcă DOAR cu `products.cost.view`.
 - Seed specific magazinului: «Client standard» (de sistem, neștergibil, `none`), «Client fidel» 500 bps, «Client VIP» 700 bps, «Partener 1/2/3» cost_plus 1200/1700/2100 bps; Partenerii cu `earnsLoyaltyPoints = false`, restul `true`. Coloana `earnsLoyaltyPoints` se creează aici; loialitatea rămâne în 15b.
-- Cupoane: regula `notForDiscountedGroups` e în motor; se leagă de cupon DOAR dacă cuponul există în cod (azi există doar în motor): restul, S3 în `docs/FINISAJE.md`.
+- Cupoane: regula `notForDiscountedGroups` e în motor; se leagă de cupon DOAR dacă cuponul există în cod (azi există doar în motor): restul, S3 în `docs/FINISAJE.md` (de legat în 15b, împreună cu cuponul propriu-zis).
 - Atribuirea grupului rămâne MANUALĂ; promovarea automată NU se face.
 - [ ] **Din Faza 5 (punctul 14): poza de stoc prin API** în locul fișierului «Stoc la zi»: când integrarea SmartBill cu API-ul există, sincronizarea periodică (ținta: câteva minute, minim zilnic) aplică aceeași `applySnapshot` ca importul din fișier; fișierul rămâne ca soluție de rezervă. Citește documentația API SmartBill (gestiune la factură, unități, zecimale) înainte. _Amânat până la acces API SmartBill (decizia utilizatorului, 2026-11-24)_
 - [x] **Înainte de a începe:** primești de la utilizator un fișier exemplu de export SmartBill (`10` Partea II #10) _(primit 2026-11-24: `local-data/smartbill-miscari-produse.xls`, doar de referință)_
