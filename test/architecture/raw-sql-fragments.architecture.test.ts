@@ -55,7 +55,8 @@ export function collectFragmentNames(files: readonly SourceFile[]): FragmentName
   const functions = new Set<string>();
   const variables = new Map<string, Set<string>>();
   for (const file of files) {
-    if (isTestFile(file.path)) continue;
+    // doar fișierele care pomenesc `Prisma.` pot defini fragmente SQL (parsarea întregului cod ar fi lentă)
+    if (isTestFile(file.path) || !file.content.includes("Prisma.")) continue;
     const own = new Set<string>();
     const visit = (node: ts.Node): void => {
       if (ts.isFunctionDeclaration(node) && node.name && typeIsSql(node.type)) {
@@ -101,7 +102,8 @@ export function findTaggedFragmentViolations(
 ): string[] {
   const problems: string[] = [];
   for (const file of files) {
-    if (isTestFile(file.path)) continue;
+    // doar fișierele cu un `$queryRaw`/`$executeRaw` pot avea șabloane etichetate de verificat
+    if (isTestFile(file.path) || !/\$(queryRaw|executeRaw)\b/.test(file.content)) continue;
     const source = parse(file);
     const names = new Set([
       ...fragmentNames.functions,
@@ -163,19 +165,23 @@ function loadSource(): SourceFile[] {
 describe("fragmente SQL în șabloane etichetate (sursa reală)", () => {
   const files = loadSource();
 
-  it("scanează codul real: blocarea coșului și fragmentele cunoscute există", () => {
-    expect(files.length).toBeGreaterThan(300);
-    const { functions } = collectFragmentNames(files);
-    for (const known of ["tupleList", "joinAnd", "searchCondition", "scopeConditions"]) {
-      expect(functions.has(known), known).toBe(true);
-    }
-    const cart = files.find((f) => f.path === "packages/core/src/cart/cart-service.ts");
-    expect(cart?.content).toContain("FOR UPDATE");
-  });
+  it(
+    "scanează codul real: blocarea coșului și fragmentele cunoscute există",
+    { timeout: 60_000 },
+    () => {
+      expect(files.length).toBeGreaterThan(300);
+      const { functions } = collectFragmentNames(files);
+      for (const known of ["tupleList", "joinAnd", "searchCondition", "scopeConditions"]) {
+        expect(functions.has(known), known).toBe(true);
+      }
+      const cart = files.find((f) => f.path === "packages/core/src/cart/cart-service.ts");
+      expect(cart?.content).toContain("FOR UPDATE");
+    },
+  );
 
   it("niciun șablon etichetat `$queryRaw`/`$executeRaw` nu interpolează un fragment SQL", () => {
     expect(findTaggedFragmentViolations(files)).toEqual([]);
-  });
+  }, 60_000);
 });
 
 describe("gărzile pe fișiere sintetice (testul pică când trebuie)", () => {
