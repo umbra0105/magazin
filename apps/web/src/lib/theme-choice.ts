@@ -65,6 +65,20 @@ export function applyThemeChoice(choice: ThemeChoice, doc: Document = document):
 }
 
 /**
+ * Aplică pe documentul curent alegerea salvată (sau «sistem», fără alegere, cu stocare indisponibilă sau cu valoare necunoscută).
+ * Scriptul inline din layout rulează doar la o încărcare COMPLETĂ a paginii; după autentificare, adminul se afișează printr-o navigare
+ * pe client, iar scriptul nu mai rulează: `ThemeSync` cheamă această funcție la montarea layout-ului adminului. Nu aruncă niciodată.
+ */
+export function syncThemeFromStorage(
+  storage: StorageLike | null = defaultStorage(),
+  doc: Document = document,
+): ThemeChoice {
+  const choice = readThemeChoice(storage);
+  applyThemeChoice(choice, doc);
+  return choice;
+}
+
+/**
  * Script inline pus în layout-ul de admin, înaintea conținutului (blochează randarea: nu există un cadru cu tema greșită): aplică tema și starea barei laterale salvate
  * înainte de primul paint (fără flash). Autonom: nu depinde de bundle. Fiecare citire e în propriul try/catch, ca o alegere
  * ilizibilă să n-o împiedice pe cealaltă. Singura injectare de HTML brut permisă în aplicație, alături de `RichText` (testul `description-writes` o păzește).

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   SIDEBAR_ATTRIBUTE,
@@ -12,6 +13,7 @@ import {
   applyThemeChoice,
   isThemeChoice,
   readThemeChoice,
+  syncThemeFromStorage,
   writeThemeChoice,
 } from "./theme-choice";
 
@@ -86,6 +88,70 @@ describe("applyThemeChoice (tema se comută prin color-scheme: tokenii folosesc 
     expect(doc.documentElement.style.colorScheme).toBe("light");
     applyThemeChoice("system", doc as unknown as Document);
     expect(doc.documentElement.style.colorScheme).toBe("");
+  });
+});
+
+describe("syncThemeFromStorage (alegerea salvată se aplică și la navigarea pe client, unde scriptul inline nu rulează)", () => {
+  const asDoc = (doc: unknown) => doc as Document;
+
+  it("aplică alegerea salvată și o întoarce", () => {
+    const { doc } = fakeDocument();
+    expect(syncThemeFromStorage(memoryStorage({ [THEME_STORAGE_KEY]: "light" }), asDoc(doc))).toBe(
+      "light",
+    );
+    expect(doc.documentElement.style.colorScheme).toBe("light");
+    expect(syncThemeFromStorage(memoryStorage({ [THEME_STORAGE_KEY]: "dark" }), asDoc(doc))).toBe(
+      "dark",
+    );
+    expect(doc.documentElement.style.colorScheme).toBe("dark");
+  });
+
+  it("«sistem», lipsa alegerii sau o valoare necunoscută curăță schema (browserul urmează sistemul), nu o forțează luminoasă", () => {
+    for (const storage of [
+      memoryStorage({ [THEME_STORAGE_KEY]: "system" }),
+      memoryStorage(),
+      memoryStorage({ [THEME_STORAGE_KEY]: "violet" }),
+    ]) {
+      const { doc } = fakeDocument();
+      doc.documentElement.style.colorScheme = "dark"; // rămas de la o alegere anterioară
+      expect(syncThemeFromStorage(storage, asDoc(doc))).toBe("system");
+      expect(doc.documentElement.style.colorScheme).toBe("");
+    }
+  });
+
+  it("stocare indisponibilă (aruncă sau lipsește): nu aruncă și trece pe «sistem»", () => {
+    for (const storage of [throwingStorage, null]) {
+      const { doc } = fakeDocument();
+      expect(syncThemeFromStorage(storage, asDoc(doc))).toBe("system");
+      expect(doc.documentElement.style.colorScheme).toBe("");
+    }
+  });
+
+  it("un document care aruncă la scrierea stilului nu strică pagina", () => {
+    const broken = {
+      documentElement: {
+        get style(): never {
+          throw new Error("stil indisponibil");
+        },
+      },
+    };
+    expect(() =>
+      syncThemeFromStorage(memoryStorage({ [THEME_STORAGE_KEY]: "dark" }), asDoc(broken)),
+    ).not.toThrow();
+  });
+
+  it("layout-ul adminului montează ThemeSync și în cadrul normal, și în pagina «acces interzis»", () => {
+    const layout = readFileSync(
+      new URL("../app/(admin)/admin/layout.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(layout.split("<ThemeSync />").length - 1).toBe(2);
+    const component = readFileSync(
+      new URL("../components/admin/theme-sync.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(component).toContain("syncThemeFromStorage()");
+    expect(component).toContain("useLayoutEffect(");
   });
 });
 
