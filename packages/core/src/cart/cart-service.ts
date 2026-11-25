@@ -609,7 +609,9 @@ export class CartService {
   /** Blochează rândurile coșurilor (în ordinea id-urilor, fără blocaje încrucișate): operațiile pe același coș se serializează. */
   private async lock(tx: Db, ids: readonly string[]): Promise<void> {
     const sorted = [...new Set(ids)].sort();
-    await tx.$queryRaw`SELECT id FROM cart WHERE id IN (${Prisma.join(sorted)}) ORDER BY id FOR UPDATE`;
+    // Parametru de tip tablou, nu `Prisma.join` într-un șablon etichetat: în build-ul de producție al aplicației web un
+    // fragment SQL interpolat într-un `$queryRaw` etichetat nu e recunoscut (devine parametru), iar blocarea nu lua niciun rând.
+    await tx.$queryRaw`SELECT id FROM cart WHERE id = ANY(${sorted}::text[]) ORDER BY id FOR UPDATE`;
   }
 
   // ---------------------------------------------------------------- interne: proprietar
