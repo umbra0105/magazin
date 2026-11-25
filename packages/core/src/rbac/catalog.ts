@@ -27,6 +27,8 @@ export const PERMISSIONS = {
   "products.export": "Exportă produsele în CSV sau XLSX (fără prețul de achiziție, pentru nimeni)",
   "products.cost.view": "Vede prețul de achiziție (NIR) al produselor",
   "products.cost.edit": "Modifică prețul de achiziție (NIR) al produselor",
+  "products.cost.import":
+    "Importă prețurile de achiziție (NIR) din exportul SmartBill «mișcări produse»; cere și products.cost.view (previzualizarea și raportul conțin costuri); doar Owner și Admin",
   "catalog.legacy.edit":
     "Editează identificatorii și adresele din magazinul vechi (legacyId, legacyUrl) ale produselor, categoriilor și brandurilor",
   "inventory.read": "Vede stocul",

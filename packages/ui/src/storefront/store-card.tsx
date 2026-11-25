@@ -29,8 +29,10 @@ export interface ProductCardProps {
   /** Imaginea produsului (elementul `<img>`/`next/image`, cu `alt` și dimensiuni): componenta nu alege sursa. */
   media: ReactNode;
   /** Prețul gata formatat de apelant: cardul nu calculează și nu formatează bani (motorul de prețuri e în Faza 8). */
-  price: string;
+  price: ReactNode;
   oldPrice?: string | undefined;
+  /** După preț, pe același rând: de exemplu prețul standard tăiat și eticheta grupului de clienți (Faza 15), desenate de apelant. */
+  priceExtra?: ReactNode;
   status?: { label: string; detail?: string | undefined; tone: StorePillTone } | undefined;
   /** Marcajul din colțul imaginii (eticheta energetică), desenat de apelant. */
   badge?: ReactNode;
@@ -55,6 +57,7 @@ export function ProductCard({
   media,
   price,
   oldPrice,
+  priceExtra,
   status,
   badge,
   action,
@@ -102,6 +105,7 @@ export function ProductCard({
             {price}
           </span>
           {oldPrice ? <s className="text-sm text-ink-secondary">{oldPrice}</s> : null}
+          {priceExtra}
         </div>
         {status ? (
           // înălțime rezervată (4 rânduri de text pe telefon, 2 de la sm; plus umplutura de sus): prețul de deasupra rămâne pe aceeași linie la toate cardurile

@@ -399,24 +399,37 @@ Propunerea exactă (din 🛑 al Fazei 14b), cu fișierul și rândurile de azi (
 - [x] **Oferte (`offer-service.ts`):** verificare proprie care refuză liniile digitale înainte de calcul, ca ofertele să păstreze `OFFER_DIGITAL_NOT_SUPPORTED` (azi vine din `blockReason`)
 - [x] Ecranele: bifa legală, regula accesului la ramburs mixt explicată în checkout (texte din mesaje), pasul de livrare ascuns la coșul 100% digital, redirecționarea oaspetelui la autentificare cu coșul păstrat
 - [x] **Garanții (orice abatere = 🛑; dovedite: testul de paritate, 29 de coșuri identice; 14 mutanți uciși):** coșurile FĂRĂ produse digitale sunt identice (testele existente de checkout, de plată și de ofertă rămân NESCHIMBATE și verzi); suma, TVA-ul, rotunjirea și rezervările de stoc rămân neatinse; cele 6 scenarii sunt scrise ÎNTÂI și văzute picând: (1) comandă mixtă cu card, digitalul livrat instant și fizicul neatins; (2) ramburs mixt, accesul abia la livrare; (3) ramburs ascuns la 100% digital; (4) oaspete redirecționat, coșul păstrat; (5) prag de transport doar pe fizic (inclusiv la limită, ±1 ban); (6) bifa legală obligatorie pe server. Mutanți pe regulile critice
-- [ ] `verify:full` o singură dată pe codul final, PR draft, CI verde, `gate:merge --dry-run`; poarta reală abia după «am verificat, continuă» și aprobare
+- [x] `verify:full` o singură dată pe codul final, PR draft, CI verde, `gate:merge --dry-run`; poarta reală abia după «am verificat, continuă» și aprobare (dovedit: `verify:full` verde pe `0ec2e2a`: unitare 4690, integrare 2093 + 2093, E2E 628; PR #28 îmbinat PRIN POARTĂ la `884137b` pe 2026-11-24, după aprobarea din PR #29; etichetele `pre-faza-14c` / `faza-14c-completa`)
 
-## FAZA 15 — Grupuri de clienți, prețuri de partener și prețuri NIR
-- [ ] **Din Faza 5 (punctul 14): poza de stoc prin API** în locul fișierului «Stoc la zi»: când integrarea SmartBill cu API-ul există, sincronizarea periodică (ținta: câteva minute, minim zilnic) aplică aceeași `applySnapshot` ca importul din fișier; fișierul rămâne ca soluție de rezervă. Citește documentația API SmartBill (gestiune la factură, unități, zecimale) înainte
-- [ ] **Înainte de a începe:** primești de la utilizator un fișier exemplu de export SmartBill (`10` Partea II #10)
-- [ ] Schema: `CustomerGroup` cu `pricingType` (`none` | `discount` | `cost_plus`), `discountBps`, `markupBps` (întregi în puncte de bază) + `Customer.groupId` + `excludeFromGroupDiscount` pe produs și categorie (se aplică ambelor tipuri)
-- [ ] Snapshot pe comandă: `customerGroupId`, `groupPricingType`, `groupDiscountBps` / `groupMarkupBps`, `groupAdvantageAmount`
-- [ ] Extinderea motorului de prețuri cu cele trei tipuri (teste scrise întâi, `09` §7): `discount` = prețul public minus procentul; `cost_plus` = `costNet × (1 + adaos) × (1 + TVA)`, **plafonat la prețul public curent**; fără preț NIR → preț public
-- [ ] Regula de cumulare cu promoțiile pentru `discount`, controlată de `stacksWithSalePrice` (implicit nu se cumulează)
-- [ ] Afișare în storefront: prețul de grup + „Preț standard" tăiat + badge, identic pe PLP și PDP; prețul de partener se calculează dinamic, în afara cache-ului ISR
-- [ ] Coș și checkout: linie de reducere (Fidel/VIP) sau linie informativă „Avantaj partener"; pe factură doar prețul unitar încasat
-- [ ] Admin: CRUD grupuri (selector de tip + procent), grupul „Client standard" neștergibil, badge și filtru în lista de clienți
-- [ ] **Seed specific magazinului** (nu default de pachet): Client fidel 5%, Client VIP 7%, Partener 1/2/3 la 12% / 17% / 21%; Partenerii cu `earnsLoyaltyPoints = false`
-- [ ] Atribuire de grup în masă + audit log
-- [ ] **Import prețuri NIR din SmartBill** (`09` §4): upload, dry-run, potrivire pe SKU, cea mai recentă dată per produs, actualizare doar dacă data e mai nouă, istoric în `CostPriceHistory`, raport cu coduri necunoscute, repetabil fără dubluri, `auditLog()`
-- [ ] Indicator și filtru „produse fără preț NIR" în admin
-- [ ] Raport: vânzări per grup, total avantaj acordat
-- [ ] (opțional) Promovare automată în „Client fidel" după X lei sau N comenzi
+## FAZA 15 — Grupuri de clienți, prețuri de partener și prețuri NIR (mod B, ramura `faza-15`)
+**Decizii ale utilizatorului, 2026-11-24 (nu se rediscută; orice abatere = 🛑):**
+- Sincronizarea stocului prin API SmartBill se amână până există acces API: nu se implementează și nu se scheletizează în Faza 15; importul «Stoc la zi» din fișier rămâne neschimbat.
+- Fișierul exemplu `local-data/smartbill-miscari-produse.xls` e doar de referință (date de probă; catalogul din `ecom` nu are aceleași coduri): nu se importă, nu se comite, nu se copiază în teste.
+- **Formatul importului NIR** (parser pe antete, nu pe poziții fixe): export SmartBill «mișcări produse»; rânduri de antet deasupra datelor (rândul cu «Gestiune», «Produs», «Cod», «Data»), rânduri de date, un rând final «Total» ignorat; coloane Gestiune | Produs | Cod | Data | Tip document | Document | U.M. | Intrari | Iesiri | Cost unitar | Intrari (valoare) | Iesiri (valoare). Data e TEXT `zz/ll/aaaa`, parsare strictă. Cod = SKU-ul variantei (potrivire exactă după `trim`; altfel, fără diferență de majuscule, doar dacă duce la o singură variantă; altfel cod necunoscut; nu se ghicesc nume de produs).
+- Contează doar rândurile cu **Intrari > 0**; cantitățile negative sau zero se ignorează și se numără («ignorate: nu sunt intrări»); alte tipuri de document decât «receptie» pe rânduri cu Intrari > 0 se folosesc la fel și se listează ca informație.
+- «Cost unitar» = `costNet` (FĂRĂ TVA), din text zecimal, rotunjit O SINGURĂ DATĂ half-up la 2 zecimale prin `Money`/`roundHalfUp`; cost 0 sau negativ = rând invalid.
+- Mai multe intrări pe același cod: data cea mai recentă; la aceeași dată, ultimul rând din fișier; «intrări multiple în aceeași zi» se raportează ca informație.
+- `costPrice`/`costPriceDate` se scriu DOAR dacă data din fișier e STRICT mai nouă decât cea curentă (sau produsul n-are preț NIR); fiecare actualizare scrie în `CostPriceHistory`; repetarea aceluiași fișier nu schimbă nimic și nu adaugă istoric.
+- Unități: dacă varianta are `smartbillMode` ≠ «aceeași unitate» sau unitatea din fișier nu corespunde, rândul se SARE și apare la «unitate diferită, de verificat manual».
+- Permisiune dedicată pentru import (verificată pe server) + `auditLog()` pe fiecare import (fără date personale); raportul și șablonul se descarcă DOAR cu `products.cost.view`.
+- Seed specific magazinului: «Client standard» (de sistem, neștergibil, `none`), «Client fidel» 500 bps, «Client VIP» 700 bps, «Partener 1/2/3» cost_plus 1200/1700/2100 bps; Partenerii cu `earnsLoyaltyPoints = false`, restul `true`. Coloana `earnsLoyaltyPoints` se creează aici; loialitatea rămâne în 15b.
+- Cupoane: regula `notForDiscountedGroups` e în motor; se leagă de cupon DOAR dacă cuponul există în cod (azi există doar în motor): restul, S3 în `docs/FINISAJE.md`.
+- Atribuirea grupului rămâne MANUALĂ; promovarea automată NU se face.
+- [ ] **Din Faza 5 (punctul 14): poza de stoc prin API** în locul fișierului «Stoc la zi»: când integrarea SmartBill cu API-ul există, sincronizarea periodică (ținta: câteva minute, minim zilnic) aplică aceeași `applySnapshot` ca importul din fișier; fișierul rămâne ca soluție de rezervă. Citește documentația API SmartBill (gestiune la factură, unități, zecimale) înainte. _Amânat până la acces API SmartBill (decizia utilizatorului, 2026-11-24)_
+- [x] **Înainte de a începe:** primești de la utilizator un fișier exemplu de export SmartBill (`10` Partea II #10) _(primit 2026-11-24: `local-data/smartbill-miscari-produse.xls`, doar de referință)_
+- [x] Schema: `CustomerGroup` cu `pricingType` (`none` | `discount` | `cost_plus`), `discountBps`, `markupBps` (întregi în puncte de bază) + `Customer.groupId` + `excludeFromGroupDiscount` pe produs și categorie (se aplică ambelor tipuri) _(Faza 15: `User.customerGroupId` în loc de `Customer.groupId`; migrația `20261124160000_customer_groups`, aditivă, de aplicat de utilizator)_
+- [x] Snapshot pe comandă: `customerGroupId`, `groupPricingType`, `groupDiscountBps` / `groupMarkupBps`, `groupAdvantageAmount` _(`groupAdvantageMinor` = «groupAdvantageAmount» din docs/09)_
+- [x] Extinderea motorului de prețuri cu cele trei tipuri (teste scrise întâi, `09` §7): `discount` = prețul public minus procentul; `cost_plus` = `costNet × (1 + adaos) × (1 + TVA)`, **plafonat la prețul public curent**; fără preț NIR → preț public _(motorul avea deja cele trei tipuri ca funcții pure; Faza 15 le leagă de coș, checkout și vitrină; teste cu cifre de mână)_
+- [x] Regula de cumulare cu promoțiile pentru `discount`, controlată de `stacksWithSalePrice` (implicit nu se cumulează)
+- [x] Afișare în storefront: prețul de grup + „Preț standard" tăiat + badge, identic pe PLP și PDP; prețul de partener se calculează dinamic, în afara cache-ului ISR _(acțiune de server fără cache, peste pagina publică; verificat în E2E)_
+- [x] Coș și checkout: linie de reducere (Fidel/VIP) sau linie informativă „Avantaj partener"; pe factură doar prețul unitar încasat
+- [x] Admin: CRUD grupuri (selector de tip + procent), grupul „Client standard" neștergibil, badge și filtru în lista de clienți _(sub-elemente ale grupului de meniu «Clienți»)_
+- [x] **Seed specific magazinului** (nu default de pachet): Client fidel 5%, Client VIP 7%, Partener 1/2/3 la 12% / 17% / 21%; Partenerii cu `earnsLoyaltyPoints = false` _(`npm.cmd run db:seed:store`, de rulat de utilizator; «Client standard» vine din `db:seed`)_
+- [x] Atribuire de grup în masă + audit log
+- [x] **Import prețuri NIR din SmartBill** (`09` §4): upload, dry-run, potrivire pe SKU, cea mai recentă dată per produs, actualizare doar dacă data e mai nouă, istoric în `CostPriceHistory`, raport cu coduri necunoscute, repetabil fără dubluri, `auditLog()` _(testat pe fișiere sintetice; fișierul real SmartBill îl încearcă utilizatorul)_
+- [x] Indicator și filtru „produse fără preț NIR" în admin _(bannerul din editor și indicatorul din panou: S3 în FINISAJE)_
+- [x] Raport: vânzări per grup, total avantaj acordat
+- [ ] (opțional) Promovare automată în „Client fidel" după X lei sau N comenzi _(nu se face: atribuirea grupului rămâne manuală, decizia utilizatorului, 2026-11-24)_
 
 ## FAZA 15b — Puncte de loialitate și vouchere
 Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și retururile funcționează complet.**
@@ -657,7 +670,7 @@ Motiv (intrarea S3 «Facturare, storno total după storno parțial», `docs/FINI
 - [x] Returul din Faza 14 NU se modifică (refuzul rambursării care ar completa totalul rămâne); «de reevaluat după `storno-total`» în FINISAJE
 - [x] Mutanți (cel puțin 4), `verify:full` o singură dată pe codul final, PR draft, CI verde, `gate:merge --dry-run`; poarta reală abia după «am verificat, continuă» _(închisă: 13 mutanți rulați manual, 11 uciși, doi neutri documentați; `verify:full` pe `5527cd7` cu 4611 / 1850×2 / 614 și 0 picate; PR #24, CI 16/16; îmbinată prin poartă la `8aa1d22`, 2026-11-23, etichetele `pre-faza-storno-total` și `faza-storno-total-completa`)_
 
-### Mini-fază `storno la rambursare parțială` (modul A, NEÎNCEPUTĂ; răspunsul contabilului din 2026-11-23, întrebarea #14)
+### Mini-fază `storno la rambursare parțială` (modul A, NEÎNCEPUTĂ; **OBLIGATORIE înainte de SmartBill LIVE**; răspunsul contabilului din 2026-11-23, întrebarea #14)
 Motiv: contabilul a răspuns că o rambursare parțială fără retur se stornează parțial pe factură (`docs/INTREBARI-CONTABIL.md` #14). Azi o rambursare parțială de bani din ecranul plăților (Faza 10) NU stornează nimic (vezi FINISAJE, «Facturare, retur parțial și rambursare parțială»). **Nu face parte din Faza 14b.** Se face ÎNAINTE de activarea LIVE a SmartBill, în modul A, cu aceleași reguli de bani ca `storno-total` (teste scrise întâi, concurență pe Postgres real, brut exact, TVA din brutul fiecărui document, refuz la orice depășire a totalului facturii).
 - [ ] `storno-rambursare-partiala` → «A» în `PHASE_MODES` (în primul commit al ramurii, cu test), secțiunea aceasta și lista modului A din `docs/20` §3
 - [ ] Teste scrise ÎNTÂI: rambursare parțială de bani din ecranul plăților → storno parțial pe factură (cu liniile și suma rambursată), idempotent la apăsare repetată și la două cereri simultane; interacțiunea cu retururile din Faza 14 (nu se stornează de două ori aceeași sumă) și cu `storno-total`; suma stornourilor nu depășește niciodată totalul facturii

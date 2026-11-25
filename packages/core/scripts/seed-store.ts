@@ -5,13 +5,13 @@
  *
  * Ce intră aici: tot ce e doar al acestui magazin și nu un default de pachet.
  *
- * Deocamdată nu poate crea grupurile de clienți: tabela `CustomerGroup` vine în Faza 15, odată cu
- * grupul „Client standard" (default de pachet). Tot atunci se adaugă aici, ca date, cele cinci
- * grupuri ale magazinului: Client fidel 5% și Client VIP 7% (`discount`), Partener 1/2/3 cu adaos
- * 12% / 17% / 21% (`cost_plus`, `earnsLoyaltyPoints = false`).
+ * Grupurile de clienți ale magazinului (Faza 15): Client fidel 5% și Client VIP 7% (`discount`), Partener 1/2/3 cu
+ * adaos 12% / 17% / 21% (`cost_plus`, `earnsLoyaltyPoints = false`). «Client standard» e grupul de sistem, din seed-ul de
+ * bază (`db:seed`). Procentele se editează din admin; rularea repetată nu le suprascrie.
  */
 import { createPrismaFeatureFlagStore } from "../src/features/prisma-store";
 import { FeatureFlagService } from "../src/features/feature-flag-service";
+import { seedStoreGroups, STORE_GROUPS } from "../src/customers/store-groups";
 import type { FeatureKey } from "../src/features/registry";
 import { getDb, invalidateConfigCaches, loadRootEnv } from "./_runtime";
 
@@ -31,6 +31,8 @@ try {
   const flags = new FeatureFlagService(createPrismaFeatureFlagStore(db), noCache);
   for (const key of STORE_FEATURES) await flags.setEnabled(key, true);
 
+  const groupsCreated = await seedStoreGroups(db);
+
   const cacheCleared = await invalidateConfigCaches();
   console.log("Seed specific magazinului aplicat:");
   console.log(
@@ -38,7 +40,9 @@ try {
       ? `  funcționalități pornite: ${STORE_FEATURES.join(", ")}`
       : "  funcționalități pornite: niciuna (completează STORE_FEATURES în seed-store.ts)",
   );
-  console.log("  grupuri de clienți:      în așteptare (tabela vine în Faza 15)");
+  console.log(
+    `  grupuri de clienți:      ${groupsCreated} create, ${STORE_GROUPS.length - groupsCreated} existau deja`,
+  );
   console.log(
     `  cache Redis:             ${cacheCleared ? "golit" : "indisponibil (expiră singur)"}`,
   );

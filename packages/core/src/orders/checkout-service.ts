@@ -9,6 +9,12 @@ import {
 } from "@ecom/shared";
 import type { CartOwner, CartService, CartView, CartLineView } from "../cart/cart-service";
 import { inTx, type Db } from "../db-tx";
+import { orderGroupSnapshot } from "../customers/group-rules";
+import {
+  NO_GROUP_PRICING,
+  loadCustomerPricing,
+  type CustomerPricing,
+} from "../pricing/customer-pricing";
 import { consentSnapshot } from "../digital/digital-rules";
 import { readDigitalSettings } from "../digital/digital-settings";
 import { reservationExpiresAt } from "../inventory/workdays";
@@ -205,6 +211,8 @@ interface Context {
   digitalOnly: boolean;
   /** Contul cumpărătorului (doar când coșul are linii digitale și proprietarul e un utilizator autentificat). */
   account: { userId: string; emailVerified: boolean } | null;
+  /** Grupul de clienți al cumpărătorului (Faza 15): prețurile coșului îl includ deja; aici doar pentru regulile de plată. */
+  pricing: CustomerPricing;
 }
 
 /** Fără transport și fără taxă de ramburs: valorile coșului 100% digital (nu există ofertă de curier). */
@@ -259,6 +267,10 @@ export class CheckoutService {
     });
     const digitalFlags = view.lines.map((line) => sources.get(line.variantId)?.isDigital === true);
     const hasDigital = digitalFlags.some(Boolean);
+    const pricing =
+      owner.kind === "user"
+        ? await loadCustomerPricing(this.deps.db, owner.userId)
+        : NO_GROUP_PRICING;
     let account: Context["account"] = null;
     if (hasDigital && owner.kind === "user") {
       const user = await this.deps.db.user.findUnique({
@@ -276,6 +288,7 @@ export class CheckoutService {
       hasDigital,
       digitalOnly: hasDigital && digitalFlags.every(Boolean),
       account,
+      pricing,
     };
   }
 
@@ -418,7 +431,10 @@ export class CheckoutService {
 
     // coș 100% digital: nu există destinație, tarife de livrare sau ofertă; totalul e al produselor, fără transport și fără ramburs
     if (ctx.digitalOnly) {
-      const isCompany = isCompanyBuyer({ vatId: input.vatId ?? null, groupPricingType: "none" });
+      const isCompany = isCompanyBuyer({
+        vatId: input.vatId ?? null,
+        groupPricingType: ctx.pricing.record?.pricingType ?? "none",
+      });
       return {
         ...empty,
         methods: this.methodsFor(ctx, NO_SHIPPING, isCompany),
@@ -450,7 +466,10 @@ export class CheckoutService {
       ? (shipping.offers.find((offer) => offer.code === input.offerCode) ?? null)
       : null;
     const reference = selected ?? shipping.offers[0] ?? null;
-    const isCompany = isCompanyBuyer({ vatId: input.vatId ?? null, groupPricingType: "none" });
+    const isCompany = isCompanyBuyer({
+      vatId: input.vatId ?? null,
+      groupPricingType: ctx.pricing.record?.pricingType ?? "none",
+    });
     const methods = reference ? this.methodsFor(ctx, reference, isCompany) : null;
     const totals =
       selected && input.paymentMethod
@@ -671,7 +690,10 @@ export class CheckoutService {
     }
     const charged = offer ?? NO_SHIPPING;
 
-    const isCompany = isCompanyBuyer({ vatId: company?.vatId ?? null, groupPricingType: "none" });
+    const isCompany = isCompanyBuyer({
+      vatId: company?.vatId ?? null,
+      groupPricingType: ctx.pricing.record?.pricingType ?? "none",
+    });
     assertPaymentMethodAllowed(
       {
         lines: ctx.view.lines.map((line) => ({ stockState: this.stateOf(line) })),
@@ -796,10 +818,15 @@ export class CheckoutService {
         ? new Date(now.getTime() + settings.cardRetryHours * 3_600_000)
         : null;
 
+      // grupul clientului la plasare, ca snapshot (id, tip, procent) și avantajul calculat de motor; fără cost
+      const groupPricing =
+        owner.kind === "user" ? await loadCustomerPricing(tx, owner.userId) : NO_GROUP_PRICING;
       const order = await tx.order.create({
         select: { id: true },
         data: {
           number,
+          ...orderGroupSnapshot(groupPricing.record),
+          groupAdvantageMinor: view.totals.groupAdvantageMinor,
           channelId: channel.id,
           email: input.contact.email,
           phone: input.contact.phone,

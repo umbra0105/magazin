@@ -117,15 +117,18 @@ describe("breadcrumbsFor", () => {
     expect(breadcrumbsFor("/admin", label, "Panou")).toEqual([{ label: "Panou", href: null }]);
   });
   it("Panou › secțiune pentru o secțiune", () => {
+    // «Clienți» e grup: pe adresa lui se vede elementul implicit (lista clienților)
     expect(breadcrumbsFor("/admin/clienti", label, "Panou")).toEqual([
       { label: "Panou", href: "/admin" },
-      { label: "L:customers", href: null },
+      { label: "L:customers", href: "/admin/clienti" },
+      { label: "L:customerList", href: null },
     ]);
   });
   it("Panou › secțiune › id, cu segmentul decodat și linkuri intermediare", () => {
     expect(breadcrumbsFor("/admin/clienti/ABC%20123?x=1", label, "Panou")).toEqual([
       { label: "Panou", href: "/admin" },
       { label: "L:customers", href: "/admin/clienti" },
+      { label: "L:customerList", href: "/admin/clienti" },
       { label: "ABC 123", href: null },
     ]);
   });
@@ -166,7 +169,7 @@ describe("breadcrumbsFor", () => {
       href: null,
     });
     // alte secțiuni rămân neschimbate
-    expect(breadcrumbsFor("/admin/clienti/ABC", label, "Panou", undefined, labeler)[2]).toEqual({
+    expect(breadcrumbsFor("/admin/clienti/ABC", label, "Panou", undefined, labeler)[3]).toEqual({
       label: "ABC",
       href: null,
     });
@@ -209,6 +212,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
       "attributes",
       "measureUnits",
       "partsDiagrams",
+      "nirImport",
       "inventory",
       "warehouses",
     ]);
@@ -219,6 +223,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
       "/admin/produse/atribute",
       "/admin/produse/unitati-de-masura",
       "/admin/produse/fise-explodate",
+      "/admin/produse/import-nir",
       "/admin/produse/stoc",
       "/admin/produse/depozite",
     ]);
@@ -231,12 +236,15 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
 
   it("Owner, Admin, Manager și Depozit văd toate elementele (Fișele explodate doar cu flag-ul pornit)", () => {
     for (const role of ["owner", "admin", "manager", "warehouse"]) {
+      // importul prețurilor NIR cere `products.cost.import`: doar Owner și Admin îl văd (Faza 15)
+      const nir = role === "owner" || role === "admin" ? ["nirImport"] : [];
       expect(itemIdsFor(role), role).toEqual([
         "allProducts",
         "categories",
         "brands",
         "attributes",
         "measureUnits",
+        ...nir,
         "inventory",
       ]);
       expect(itemIdsFor(role, ["partsDiagrams"]), role).toEqual([
@@ -246,6 +254,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
         "attributes",
         "measureUnits",
         "partsDiagrams",
+        ...nir,
         "inventory",
       ]);
     }
@@ -309,6 +318,7 @@ describe("grupul «Catalog»: o singură intrare de meniu, ecranele ca sub-eleme
       "brands",
       "attributes",
       "measureUnits",
+      "nirImport",
       "inventory",
     ]);
     // un rol doar cu inventory.read: grupul apare, cu un singur element (Stoc)

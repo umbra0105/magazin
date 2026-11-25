@@ -20,6 +20,15 @@ import type { PriceBasis } from "../inventory/constants";
 import type { VisibleStockState } from "../inventory/availability";
 import { longestLeadTime } from "../inventory/availability";
 import { pickBestVariantImage } from "../media/urls";
+import { toPublicGroupView, type PublicGroupView } from "../customers/group-rules";
+import {
+  NO_GROUP_PRICING,
+  loadCustomerPricing,
+  loadPartnerInputs,
+  withPartnerInput,
+  type CustomerPricing,
+  type PartnerInputs,
+} from "../pricing/customer-pricing";
 import {
   activeSalePrice,
   excludedFromGroupPricing,
@@ -53,8 +62,9 @@ type Db = PrismaClient | Prisma.TransactionClient;
  * apare ca problemă a liniei. ⚠️ Datele de achiziție nu sunt selectate și nu sunt pomenite nicăieri aici (testul de arhitectură al costului).
  *
  * Un coș se atinge DOAR prin tokenul lui (amprenta e în bază, tokenul nu) sau de proprietarul logat; nicio operație nu primește
- * id de coș sau de linie. Grupul de clienți al coșului real e «none» până în Faza 15; excluderea din prețul de grup se
- * calculează de pe produs și de pe categoriile lui directe (propagarea pe ascendenți vine cu grupurile, Faza 15).
+ * id de coș sau de linie. Prețul ține cont de grupul de clienți al proprietarului logat (Faza 15: `pricing/customer-pricing.ts`,
+ * singurul loc care îl află); oaspetele și clientul fără grup primesc prețul public. Excluderea din prețul de grup se calculează
+ * de pe produs și de pe categoriile lui directe (propagarea pe ascendenți nu există: o categorie exclude doar produsele ei).
  */
 
 export type CartOwner = { kind: "user"; userId: string } | { kind: "guest"; token: string | null };
@@ -147,6 +157,11 @@ export interface CartView {
   freeShipping: FreeShippingProgress | null;
   /** Coșul poate trece la finalizare (Faza 9): are linii și nicio problemă care cere o decizie. */
   canCheckout: boolean;
+  /**
+   * Grupul cu preț special al clientului (Fidel, VIP, Partener), pentru etichete în coș; `null` la oaspete, la clientul fără grup și
+   * la «Client standard». Conține doar numele, tipul și reducerea; adaosul unui partener nu se trimite niciodată.
+   */
+  group: PublicGroupView | null;
 }
 
 export interface CartMutation {
@@ -170,7 +185,6 @@ const ZERO_TOTALS: PricingTotals = {
   netMinor: 0,
   vatMinor: 0,
 };
-const GROUP_NONE = { pricingType: "none" } as const;
 
 /** Coșul gol (fără linii, totaluri zero), pentru interfață când nu există încă niciun coș. */
 export const EMPTY_CART_VIEW: CartView = {
@@ -179,6 +193,7 @@ export const EMPTY_CART_VIEW: CartView = {
   leadTime: null,
   freeShipping: null,
   canCheckout: false,
+  group: null,
 };
 
 const MEDIA_SELECT = {
@@ -267,13 +282,14 @@ export class CartService {
   async view(owner: CartOwner): Promise<CartView> {
     const settings = await this.readSettings();
     const cart = await this.findLiveCart(owner);
-    if (!cart) return this.buildView([], settings);
+    const pricing = await this.pricingOf(owner);
+    if (!cart) return this.buildView([], settings, pricing);
     const items = await this.db.cartItem.findMany({
       where: { cartId: cart.id },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: { variantId: true, quantity: true, ackedUnitPriceMinor: true },
     });
-    return this.buildView(items, settings);
+    return this.buildView(items, settings, pricing);
   }
 
   /**
@@ -353,7 +369,7 @@ export class CartService {
     const cart = await this.findLiveCart(owner);
     if (cart) {
       const settings = await this.readSettings();
-      const resolved = await this.resolveVariant(variantId, settings);
+      const resolved = await this.resolveVariant(variantId, settings, await this.pricingOf(owner));
       if (resolved) {
         await this.db.cartItem.updateMany({
           where: { cartId: cart.id, variantId },
@@ -459,7 +475,11 @@ export class CartService {
     mode: "add" | "set",
   ): Promise<CartMutation> {
     const settings = await this.readSettings();
-    const variant = await this.resolveVariant(rawInput.variantId, settings);
+    const variant = await this.resolveVariant(
+      rawInput.variantId,
+      settings,
+      await this.pricingOf(owner),
+    );
     if (!variant?.sellable) throw new CartError({ reason: "not_sellable" });
     const input = {
       variantId: rawInput.variantId,
@@ -644,10 +664,18 @@ export class CartService {
 
   // ---------------------------------------------------------------- interne: variante și view
 
-  private pricingOptions(settings: CartRuntimeSettings): PricingOptions {
+  /** Grupul de clienți al proprietarului: doar un cont logat poate avea grup; oaspetele are prețul public. */
+  private async pricingOf(owner: CartOwner): Promise<CustomerPricing> {
+    return owner.kind === "user" ? loadCustomerPricing(this.db, owner.userId) : NO_GROUP_PRICING;
+  }
+
+  private pricingOptions(
+    settings: CartRuntimeSettings,
+    pricing: CustomerPricing = NO_GROUP_PRICING,
+  ): PricingOptions {
     return {
       applySale: settings.showSalePricing,
-      group: GROUP_NONE,
+      group: pricing.group,
       coupon: null,
       now: this.now(),
       maxLineMinor: MAX_MONEY,
@@ -668,27 +696,35 @@ export class CartService {
     quantity: Quantity,
     step: Quantity,
     settings: CartRuntimeSettings,
+    partner: PartnerInputs,
   ): PricingLineInput {
     const product = row.product;
-    return {
-      key: row.id,
-      productId: product.id,
-      categoryIds: product.categories.map((entry) => entry.categoryId),
-      basis: (row.priceBasis ?? product.priceBasis) as PriceBasis,
-      priceMinor: row.price,
-      salePriceMinor: activeSalePrice(row, this.now()),
-      quantity,
-      step,
-      taxRateBps: percentToBasisPoints(settings.taxStandardRate),
-      excludeFromGroupDiscount: excludedFromGroupPricing(
-        product.excludeFromGroupDiscount,
-        product.categories.map((entry) => entry.category.excludeFromGroupDiscount),
-      ),
-    };
+    return withPartnerInput(
+      {
+        key: row.id,
+        productId: product.id,
+        categoryIds: product.categories.map((entry) => entry.categoryId),
+        basis: (row.priceBasis ?? product.priceBasis) as PriceBasis,
+        priceMinor: row.price,
+        salePriceMinor: activeSalePrice(row, this.now()),
+        quantity,
+        step,
+        taxRateBps: percentToBasisPoints(settings.taxStandardRate),
+        excludeFromGroupDiscount: excludedFromGroupPricing(
+          product.excludeFromGroupDiscount,
+          product.categories.map((entry) => entry.category.excludeFromGroupDiscount),
+        ),
+      },
+      partner,
+    );
   }
 
   /** Datele de care are nevoie o operație pe o variantă: vandabilitate, disponibilitate, pas, minim și prețul unitar curent. */
-  private async resolveVariant(variantId: string, settings: CartRuntimeSettings) {
+  private async resolveVariant(
+    variantId: string,
+    settings: CartRuntimeSettings,
+    pricing: CustomerPricing,
+  ) {
     const rows = await this.loadRows([variantId]);
     const row = rows.get(variantId);
     const product = row ? orNull(row.product) : null;
@@ -701,8 +737,9 @@ export class CartService {
       defaultLowStockSteps: settings.lowStockSteps,
       defaultLeadTimeDays: settings.defaultLeadTimeDays,
     });
-    const lineInput = this.lineInputOf(row, step, step, settings);
-    const { unitPriceMinor } = resolveUnitPrice(lineInput, this.pricingOptions(settings));
+    const partner = await loadPartnerInputs(this.db, pricing, [variantId]);
+    const lineInput = this.lineInputOf(row, step, step, settings, partner);
+    const { unitPriceMinor } = resolveUnitPrice(lineInput, this.pricingOptions(settings, pricing));
     return {
       row,
       source,
@@ -733,10 +770,16 @@ export class CartService {
   private async buildView(
     items: readonly { variantId: string; quantity: bigint; ackedUnitPriceMinor: number | null }[],
     settings: CartRuntimeSettings,
+    pricing: CustomerPricing,
   ): Promise<CartView> {
     const rows = await this.loadRows(items.map((item) => item.variantId));
     const warehouse = await this.warehouse();
-    const options = this.pricingOptions(settings);
+    const options = this.pricingOptions(settings, pricing);
+    const partner = await loadPartnerInputs(
+      this.db,
+      pricing,
+      items.map((item) => item.variantId),
+    );
 
     interface Draft {
       view: Omit<CartLineView, "pricing">;
@@ -756,7 +799,7 @@ export class CartService {
         defaultLowStockSteps: settings.lowStockSteps,
         defaultLeadTimeDays: settings.defaultLeadTimeDays,
       });
-      const input = this.lineInputOf(row, quantity, step, settings);
+      const input = this.lineInputOf(row, quantity, step, settings, partner);
       const current = resolveUnitPrice(input, options);
       const issues = lineIssues({
         quantity,
@@ -833,6 +876,10 @@ export class CartService {
       // orice problemă a unei linii (inclusiv un preț nou nesesizat) cere o decizie înainte de finalizare
       canCheckout:
         lines.length > 0 && lines.every((line) => line.included && line.issues.length === 0),
+      group:
+        pricing.record && pricing.record.pricingType !== "none"
+          ? toPublicGroupView(pricing.record)
+          : null,
     };
   }
 

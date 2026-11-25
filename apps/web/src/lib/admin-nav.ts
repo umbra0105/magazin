@@ -59,7 +59,11 @@ export type AdminNavItemId =
   | "companyData"
   | "invoicingSettings"
   | "digitalAccess"
-  | "digitalDelivery";
+  | "digitalDelivery"
+  | "nirImport"
+  | "customerList"
+  | "customerGroups"
+  | "customerSales";
 
 /** Orice id cu etichetă în `admin.nav.<id>`. */
 export type AdminNavIcon = AdminNavSectionId | AdminNavItemId;
@@ -110,6 +114,8 @@ export const CATALOG_ITEMS: readonly AdminNavItem[] = [
     permission: "products.read",
     feature: "partsDiagrams",
   },
+  // importul prețurilor de achiziție (NIR) din SmartBill: conține costuri, deci cere `products.cost.import` (și `products.cost.view`)
+  { id: "nirImport", href: "/admin/produse/import-nir", permission: "products.cost.import" },
   { id: "inventory", href: "/admin/produse/stoc", permission: "inventory.read", keepParams: ["q"] },
   // doar cu steagul «Multi-depozit» pornit (oprit: nici elementul, nici ruta, nici acțiunile)
   {
@@ -143,6 +149,18 @@ export const ORDERS_ITEMS: readonly AdminNavItem[] = [
     permission: "orders.read",
     feature: "installationRequests",
   },
+];
+
+/**
+ * Ecranele grupului «Clienți» (Faza 15), în ordinea din meniu: lista clienților (cu grupul fiecăruia, filtru și atribuire în masă) și
+ * grupurile de clienți (CRUD). Lista cere `customers.read`; grupurile se văd cu `customers.read` și se modifică doar cu
+ * `customers.groups.manage` (verificat pe server la fiecare acțiune).
+ */
+export const CUSTOMERS_ITEMS: readonly AdminNavItem[] = [
+  { id: "customerList", href: "/admin/clienti", permission: "customers.read", keepParams: ["q"] },
+  { id: "customerGroups", href: "/admin/clienti/grupuri", permission: "customers.read" },
+  // raportul vânzărilor per grup și al avantajului acordat (fără costuri): cere `reports.read`
+  { id: "customerSales", href: "/admin/clienti/vanzari", permission: "reports.read" },
 ];
 
 /** Destinația unui element, cu parametrii păstrați din ecranul curent (vezi `keepParams`). */
@@ -186,7 +204,7 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "dashboard", href: "/admin" },
   { id: "orders", href: "/admin/comenzi", children: ORDERS_ITEMS },
   { id: "catalog", href: "/admin/produse", children: CATALOG_ITEMS },
-  { id: "customers", href: "/admin/clienti", permission: "customers.read" },
+  { id: "customers", href: "/admin/clienti", children: CUSTOMERS_ITEMS },
   { id: "discounts", href: "/admin/reduceri", permission: "discounts.read" },
   { id: "reviews", href: "/admin/recenzii", permission: "content.read", feature: "reviews" },
   { id: "blog", href: "/admin/blog", permission: "content.read", feature: "blog" },

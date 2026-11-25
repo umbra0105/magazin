@@ -43,6 +43,7 @@ const EMPTY_FILTERS: ListFilters = {
   status: null,
   shippingClass: null,
   stock: null,
+  missingNir: false,
   view: "active",
 };
 

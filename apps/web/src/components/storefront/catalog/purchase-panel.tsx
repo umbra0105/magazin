@@ -7,8 +7,10 @@ import { QUANTITY_FACTOR, formatQuantity, quantityFromTicks } from "@ecom/shared
 import { addToCart, openDrawer, useCartState } from "@/components/storefront/cart/cart-store";
 import { QuantityStepper } from "@/components/storefront/cart/steps-stepper";
 import { getMessages } from "@/messages";
+import { GroupBadge, useVariantGroupPrice } from "./group-price";
 
 const m = getMessages().storefront.catalog.product;
+const groupMessages = getMessages().storefront.catalog.groupPrice;
 
 export interface PanelVariant {
   id: string;
@@ -76,6 +78,8 @@ export function PurchasePanel({
   const selected = variants.find((v) => v.id === variantId) ?? initial;
   const [steps, setSteps] = useState(initial?.minSteps ?? 1);
   const { busy } = useCartState();
+  // prețul clientului cu grup (Faza 15), cerut după încărcare; fără grup, prețul public de pe server rămâne neschimbat
+  const groupPrice = useVariantGroupPrice(selected?.id ?? "");
   const emailId = useId();
   const [email, setEmail] = useState("");
   const [notify, setNotify] = useState<NotifyState>("idle");
@@ -165,13 +169,20 @@ export function PurchasePanel({
     <div className="flex flex-col gap-6" data-purchase-panel>
       <div className="flex flex-col gap-2">
         <p ref={priceRef} className="flex flex-wrap items-baseline gap-x-3 gap-y-1" data-price>
-          <span className="heading-display text-5xl">{selected.priceText}</span>
+          <span className="heading-display text-5xl">
+            {groupPrice ? groupPrice.amountText : selected.priceText}
+          </span>
           {selected.priceSuffix ? (
             <span className="text-lg text-ink-secondary">{selected.priceSuffix}</span>
           ) : null}
-          {selected.compareAtText ? (
+          {groupPrice ? (
+            <s className="text-lg text-ink-secondary" data-group-standard>
+              {groupMessages.standard(groupPrice.standardText)}
+            </s>
+          ) : selected.compareAtText ? (
             <s className="text-lg text-ink-secondary">{selected.compareAtText}</s>
           ) : null}
+          {groupPrice ? <GroupBadge group={groupPrice.group} /> : null}
         </p>
         <p className="text-sm text-ink-secondary">{m.priceVat}</p>
       </div>
@@ -375,7 +386,9 @@ export function PurchasePanel({
           className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-4 border-t border-line-subtle bg-surface-page px-gutter py-3 lg:hidden"
         >
           <p className="flex flex-col leading-tight">
-            <span className="text-xl font-semibold">{selected.priceText}</span>
+            <span className="text-xl font-semibold">
+              {groupPrice ? groupPrice.amountText : selected.priceText}
+            </span>
             <span className="text-sm text-ink-secondary">{selected.availabilityLabel}</span>
           </p>
           {selected.purchasable ? (

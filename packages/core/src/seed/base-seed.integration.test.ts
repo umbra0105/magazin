@@ -71,6 +71,7 @@ describe("seed de bază (Postgres real, în tranzacție anulată)", () => {
       salesChannels: 0,
       warehouses: 0,
       measureUnits: 0,
+      customerGroups: 0,
       brandingCreated: false,
     });
     expect(out.afterSecond).toEqual(out.afterFirst);
@@ -109,6 +110,34 @@ describe("seed de bază (Postgres real, în tranzacție anulată)", () => {
     expect(out.second.measureUnits).toBe(0);
     expect(out.defaultsAfter).toBe(1);
     expect(out.unitsAfter).toBe(out.units.length);
+  });
+
+  it("creează «Client standard» (de sistem, none, neștergibil), o singură dată; o redenumire nu se suprascrie", async () => {
+    const out = await inRolledBackTransaction(db, async (tx) => {
+      await emptyConfigTables(tx);
+      const first = await runBaseSeed(tx);
+      const system = await tx.customerGroup.findMany({ where: { isSystem: true } });
+      await tx.customerGroup.update({
+        where: { id: system[0]!.id },
+        data: { name: "Clienți obișnuiți" },
+      });
+      const second = await runBaseSeed(tx);
+      const after = await tx.customerGroup.findMany({ where: { isSystem: true } });
+      return { first, second, system, after };
+    });
+    expect(out.first.customerGroups).toBeLessThanOrEqual(1);
+    expect(out.system).toHaveLength(1);
+    expect(out.system[0]).toMatchObject({
+      slug: "client-standard",
+      pricingType: "none",
+      discountBps: null,
+      markupBps: null,
+      isSystem: true,
+      isActive: true,
+    });
+    expect(out.second.customerGroups).toBe(0);
+    expect(out.after).toHaveLength(1);
+    expect(out.after[0]?.name).toBe("Clienți obișnuiți");
   });
 
   it("depozitul implicit seed-uit se numește „Depozit principal”; o redenumire nu se suprascrie", async () => {

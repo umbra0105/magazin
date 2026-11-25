@@ -8,7 +8,7 @@ import { productsHref } from "./product-url";
  * și vederea (Produse / Coș de gunoi) nu sunt filtre. Eliminarea păstrează restul și duce la prima pagină.
  */
 export interface ActiveProductFilter {
-  key: "q" | "category" | "brand" | "status" | "shipping" | "stock";
+  key: "q" | "category" | "brand" | "status" | "shipping" | "stock" | "nir";
   /** «Categorie: Pompe» */
   label: string;
   /** «Elimină filtrul Categorie: Pompe» (nume accesibil) */
@@ -54,6 +54,7 @@ export function activeProductFilters(
   if (query.stock) {
     entries.push({ key: "stock", label: `${m.filters.stock}: ${stockText(query.stock)}` });
   }
+  if (query.missingNir) entries.push({ key: "nir", label: m.filters.missingNir });
   return entries.map(({ key, label }) => {
     const without: ProductListQuery = { ...query };
     if (key === "q") without.q = "";
@@ -61,6 +62,7 @@ export function activeProductFilters(
     else if (key === "brand") without.brandId = null;
     else if (key === "status") without.status = null;
     else if (key === "shipping") without.shippingClass = null;
+    else if (key === "nir") without.missingNir = false;
     else without.stock = null;
     return {
       key,

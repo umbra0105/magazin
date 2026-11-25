@@ -193,6 +193,7 @@ test.describe("vederea «Stoc mic» în pagina Stoc", () => {
       "Branduri",
       "Atribute",
       "Unități de măsură",
+      "Import prețuri NIR", // Owner are products.cost.import (Faza 15)
       "Stoc",
     ]);
     await expect(sidebar(page).getByRole("link", { name: /Stoc mic/ })).toHaveCount(0);

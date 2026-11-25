@@ -10,8 +10,10 @@ import {
   STOCK_STATUSES,
   can,
   childrenOf,
+  countProductsMissingNir,
   type CategoryNode,
 } from "@ecom/core";
+import { getDb } from "@ecom/db";
 import {
   Button,
   EmptyState,
@@ -90,6 +92,9 @@ export default async function ProductsPage({
   const canWrite = can(subject, "products.write");
   const canEditContent = can(subject, "products.content.write");
   const canExport = can(subject, "products.export");
+  // indicatorul «fără preț NIR»: doar cu dreptul de a vedea costul (arată ce are și ce nu are preț de achiziție)
+  const missingNir =
+    can(subject, "products.cost.view") && !trash ? await countProductsMissingNir(getDb()) : 0;
 
   // Coloana «Stoc»: starea cea mai bună dintre variante și cantitatea (doar cu `inventory.read`); o singură interogare pentru pagină.
   const stock: Record<string, SummaryView> = {};
@@ -209,6 +214,21 @@ export default async function ProductsPage({
         {trash && (
           <p role="note" className="rounded-lg bg-surface-subtle p-3 text-body">
             {m.views.deletedNote}
+          </p>
+        )}
+        {missingNir > 0 && !query.missingNir && (
+          <p
+            role="note"
+            data-nir-missing
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-surface-subtle p-3 text-body"
+          >
+            <span>{m.nirMissing.note(missingNir)}</span>
+            <Link
+              href={productsHref({ ...query, missingNir: true }, { page: 1 })}
+              className="underline"
+            >
+              {m.nirMissing.action}
+            </Link>
           </p>
         )}
 

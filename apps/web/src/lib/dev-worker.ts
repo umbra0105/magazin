@@ -4,6 +4,7 @@ import {
   startImportWorkerFromEnv,
   startInvoiceJobsFromEnv,
   startMediaWorkerFromEnv,
+  startNirImportWorkerFromEnv,
   startCartJobsFromEnv,
   startOfferJobsFromEnv,
   startOrderEmailJobsFromEnv,
@@ -27,6 +28,7 @@ export function startDevEmailWorker(): void {
     startEmailWorkerFromEnv();
     startMediaWorkerFromEnv();
     startImportWorkerFromEnv();
+    startNirImportWorkerFromEnv();
     startImageImportWorkerFromEnv();
     startStockJobsFromEnv();
     startCartJobsFromEnv();
@@ -37,7 +39,7 @@ export function startDevEmailWorker(): void {
     startInvoiceJobsFromEnv();
     getLogger().info(
       {
-        queues: ["emails", "media", "product-import", "product-import-images"],
+        queues: ["emails", "media", "product-import", "nir-import", "product-import-images"],
         jobs: [
           "stock-expire-reservations",
           "stock-snapshot-freshness",

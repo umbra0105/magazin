@@ -52,6 +52,14 @@ describe("catalogul RBAC", () => {
     }
   });
 
+  it("importul prețurilor de achiziție (products.cost.import) îl au doar Owner și Admin; Manager și Contabil doar văd costul", () => {
+    expect(rolesWith("products.cost.import")).toEqual(["admin", "owner"]);
+    for (const key of ["manager", "accountant", "editor", "support", "warehouse"]) {
+      const role = DEFAULT_ROLES.find((r) => r.key === key);
+      expect(role?.permissions, key).not.toContain("products.cost.import");
+    }
+  });
+
   it("modificarea prețului de achiziție (products.cost.edit) o au doar Owner și Admin", () => {
     expect(rolesWith("products.cost.edit")).toEqual(["admin", "owner"]);
   });

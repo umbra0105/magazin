@@ -411,6 +411,8 @@ function listFilters(raw: Record<string, string>): ListFilters {
     status: query.status,
     shippingClass: query.shippingClass,
     stock: query.stock,
+    // exportul nu aplică filtrul «fără preț NIR» (el arată ce are cost, iar exportul nu primește niciodată costuri)
+    missingNir: false,
     view: query.view,
   };
 }

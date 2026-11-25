@@ -456,3 +456,113 @@ export async function readStockReportFile(
     counters,
   };
 }
+
+// ───────────────────────── grila generală (importul prețurilor NIR, Faza 15) ─────────────────────────
+
+/** O celulă a grilei: textul exact, textul pentru coduri (păstrează zerourile din față) și data, dacă celula e o dată calendaristică. */
+export interface SpreadsheetCell {
+  /** Valoarea exactă a celulei ca text (numerele ca text zecimal, fără rotunjirea formatului); `null` = celulă goală. */
+  text: string | null;
+  /** Ca `text`, dar o celulă numerică de cod cu format de felul «00000» își păstrează zerourile din față. */
+  display: string | null;
+  /** Celulă numerică cu format de dată: ziua, luna, anul. Un text nu e niciodată interpretat ca dată aici. */
+  date: { year: number; month: number; day: number } | null;
+}
+
+export interface SpreadsheetRow {
+  /** Numărul rândului în foaie, ca în Excel (de la 1). */
+  rowNumber: number;
+  cells: SpreadsheetCell[];
+}
+
+export interface SpreadsheetGrid {
+  format: "xls" | "xlsx";
+  /** SHA-256 (hex) al octeților fișierului. */
+  fileHash: string;
+  byteLength: number;
+  rows: SpreadsheetRow[];
+}
+
+/**
+ * Prima foaie a unui registru .xls sau .xlsx ca grilă de celule, FĂRĂ să știe nimic despre structura raportului: aceleași
+ * verificări și aceleași restricții ca `readStockReportFile` (tipul real al fișierului, structura arhivei ZIP, fără formule și
+ * stiluri, doar prima foaie, cel mult 20.000 de rânduri, cel mult 5 MB). Folosit de importul prețurilor NIR; codurile de eroare
+ * sunt aceleași (`STOCK_REPORT_FILE_*`), iar apelantul își scrie propriile mesaje.
+ */
+export async function readSpreadsheetGrid(
+  input: Uint8Array | ArrayBuffer,
+): Promise<SpreadsheetGrid> {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  if (bytes.byteLength > STOCK_REPORT_MAX_BYTES) {
+    fail("STOCK_REPORT_FILE_TOO_LARGE", "Fișierul depășește mărimea maximă permisă.", {
+      maxBytes: STOCK_REPORT_MAX_BYTES,
+    });
+  }
+  let format: "xls" | "xlsx";
+  if (startsWith(bytes, OLE_MAGIC)) {
+    format = "xls";
+  } else if (startsWith(bytes, ZIP_MAGIC)) {
+    format = "xlsx";
+    inspectXlsxArchive(bytes);
+  } else {
+    fail("STOCK_REPORT_FILE_NOT_SPREADSHEET", NOT_SPREADSHEET);
+  }
+
+  const XLSX = await import("xlsx");
+  const formats = XLSX.SSF as FormatLibrary;
+  let workbook: WorkBook;
+  try {
+    workbook = XLSX.read(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength), {
+      type: "buffer",
+      cellFormula: false,
+      cellStyles: false,
+      cellHTML: false,
+      cellNF: true,
+      cellText: true,
+      cellDates: false,
+      dense: true,
+      sheets: 0,
+      sheetRows: STOCK_REPORT_MAX_SHEET_ROWS + 1,
+    });
+  } catch (error) {
+    if (error instanceof Error && /password/i.test(error.message)) {
+      fail("STOCK_REPORT_FILE_PASSWORD", "Fișierul este protejat cu parolă.");
+    }
+    return fail("STOCK_REPORT_FILE_UNREADABLE", "Fișierul nu a putut fi citit.");
+  }
+
+  const sheetName = workbook.SheetNames[0];
+  const sheet: WorkSheet | undefined =
+    sheetName === undefined ? undefined : workbook.Sheets[sheetName];
+  const cells: Array<Array<CellObject | undefined>> = sheet?.["!data"] ?? [];
+  if (cells.length > STOCK_REPORT_MAX_SHEET_ROWS) {
+    fail("STOCK_REPORT_FILE_TOO_MANY_ROWS", "Prima foaie are prea multe rânduri.", {
+      maxRows: STOCK_REPORT_MAX_SHEET_ROWS,
+    });
+  }
+  const rows: SpreadsheetRow[] = cells.map((row, index) => ({
+    rowNumber: index + 1,
+    cells: (row ?? []).map((cell): SpreadsheetCell => {
+      let date: SpreadsheetCell["date"] = null;
+      if (cell && typeof cell.v === "number" && isDateCell(cell, formats)) {
+        const code = formats.parse_date_code(cell.v);
+        if (code) date = { year: code.y, month: code.m, day: code.d };
+      }
+      // o dată nu se transformă în text aici: apelantul decide (data NIR are formatul ei strict)
+      return {
+        text: date ? null : cellText(cell, formats, false),
+        display: date ? null : cellText(cell, formats, true),
+        date,
+      };
+    }),
+  }));
+  if (!rows.some((row) => row.cells.some((cell) => cell.text !== null || cell.date !== null))) {
+    fail("STOCK_REPORT_FILE_EMPTY", "Prima foaie a fișierului este goală.");
+  }
+  return {
+    format,
+    fileHash: createHash("sha256").update(bytes).digest("hex"),
+    byteLength: bytes.byteLength,
+    rows,
+  };
+}
