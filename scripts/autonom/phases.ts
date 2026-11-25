@@ -22,6 +22,7 @@ export const PHASE_MODES: Readonly<Record<string, Mode>> = {
   "ci-e2e-paralel": "A",
   "e2e-curatare-comenzi": "A",
   "storno-total": "A",
+  "prisma-join-tema": "A",
   "8": "B",
   "9": "B",
   "10": "B",
