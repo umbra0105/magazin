@@ -25,6 +25,7 @@ const MODE_A = [
   "ci-e2e-paralel",
   "e2e-curatare-comenzi",
   "storno-total",
+  "prisma-join-tema",
 ];
 const MODE_B = ["8", "9", "10", "13", "14b", "14c", "15", "15b"];
 const MODE_C = ["6", "7", "18", "22"];

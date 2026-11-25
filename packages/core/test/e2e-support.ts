@@ -2362,6 +2362,46 @@ export async function seedE2eFilterCatalog(tag: string): Promise<{
   return { categoryPath, brandA, brandB, attributeCode, attributeName, products };
 }
 
+/**
+ * Un atribut de tip «listă» (select), filtrabil, cu două opțiuni, peste produsele create de `seedE2eFilterCatalog`: primele două
+ * produse au opțiunea «Alb», al treilea «Albastru». Se șterge cu `removeE2eAttributes`.
+ */
+export async function seedE2eOptionFilter(
+  tag: string,
+  productSlugs: readonly string[],
+): Promise<{ attributeCode: string; whiteId: string; blueId: string }> {
+  const attributeCode = `e2e_culoare_${tag}`;
+  trackedAttributes.add(attributeCode);
+  return withClient(async (db) => {
+    const attribute = await db.query(
+      `insert into attribute (id, code, name, type, unit, "isFilterable", "sortOrder", "updatedAt")
+       values (gen_random_uuid()::text, $1, $2, 'select', null, true, 1, now()) returning id`,
+      [attributeCode, `Culoare ${tag}`],
+    );
+    const attributeId = attribute.rows[0]?.id as string;
+    const option = async (value: string, position: number): Promise<string> => {
+      const row = await db.query(
+        `insert into attribute_option (id, "attributeId", value, position) values (gen_random_uuid()::text, $1, $2, $3) returning id`,
+        [attributeId, value, position],
+      );
+      return row.rows[0]?.id as string;
+    };
+    const whiteId = await option("Alb", 0);
+    const blueId = await option("Albastru", 1);
+    let index = 0;
+    for (const slug of productSlugs) {
+      const product = await db.query(`select id from product where slug = $1`, [slug]);
+      const productId = product.rows[0]?.id as string | undefined;
+      if (!productId) throw new Error(`Produsul de test ${slug} nu există`);
+      await db.query(
+        `insert into attribute_value (id, "productId", "attributeId", "optionId") values (gen_random_uuid()::text, $1, $2, $3)`,
+        [productId, attributeId, index++ < 2 ? whiteId : blueId],
+      );
+    }
+    return { attributeCode, whiteId, blueId };
+  });
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Coșul (Faza 8): produse de probă cu pas, preț și stare de stoc la alegere; relații cross-sell; curățarea coșurilor.
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2550,6 +2590,57 @@ export async function countE2eCartLines(email: string): Promise<number> {
     );
     return (result.rows[0]?.n as number | undefined) ?? 0;
   });
+}
+
+/** Identificatorul coșului care conține varianta de probă (un singur coș, sau `null`). */
+export async function e2eCartIdOfVariant(variantId: string): Promise<string | null> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select "cartId" from cart_item where "variantId" = $1 order by "createdAt" limit 1`,
+      [variantId],
+    );
+    return (result.rows[0]?.cartId as string | undefined) ?? null;
+  });
+}
+
+/** Identificatorul coșului contului cu acest email (sau `null`). */
+export async function e2eCartIdOfUser(email: string): Promise<string | null> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select c.id from cart c join "user" u on u.id = c."userId" where u.email = $1 limit 1`,
+      [email],
+    );
+    return (result.rows[0]?.id as string | undefined) ?? null;
+  });
+}
+
+/**
+ * Ține deschisă, pe o conexiune proprie, o tranzacție cu `FOR KEY SHARE` pe rândul coșului: nu se ciocnește cu
+ * scrierile obișnuite (`UPDATE` fără chei), dar blochează orice `SELECT … FOR UPDATE` pe același rând. Dovedește că
+ * serverul chiar ia blocarea coșului: o cerere care o ia așteaptă până la `release()`; una care n-o ia trece imediat.
+ */
+export async function holdE2eCartRowShare(
+  cartId: string,
+): Promise<{ release: () => Promise<void> }> {
+  const client = new Client({ connectionString: dbUrl() });
+  await client.connect();
+  try {
+    await client.query("begin");
+    const row = await client.query(`select id from cart where id = $1 for key share`, [cartId]);
+    if (row.rowCount !== 1) throw new Error(`Coșul ${cartId} nu există`);
+  } catch (error) {
+    await client.end();
+    throw error;
+  }
+  return {
+    release: async () => {
+      try {
+        await client.query("commit");
+      } finally {
+        await client.end();
+      }
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------------------------------------------- Faza 9

@@ -20,6 +20,7 @@ import {
 } from "@ecom/ui";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminSurface } from "@/components/admin/admin-surface";
+import { ThemeSync } from "@/components/admin/theme-sync";
 import type { SidebarNavItem } from "@/components/admin/sidebar-nav";
 import { ADMIN_NAV, visibleNav } from "@/lib/admin-nav";
 import { getAdminAccess } from "@/lib/admin-page";
@@ -60,6 +61,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (decision.kind === "denied") {
     return (
       <AdminSurface brandStyle={brandStyle}>
+        <ThemeSync />
         <div className="flex min-h-dvh items-center justify-center px-4 py-8">
           <main className="w-full max-w-md">
             <Card>
@@ -120,6 +122,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <AdminSurface brandStyle={brandStyle}>
       {/* Aplică tema și starea barei laterale salvate înainte de primul paint (fără flash); vezi lib/theme-choice.ts. */}
       <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      {/* Același lucru la navigarea pe client (după autentificare), când scriptul de mai sus nu rulează. */}
+      <ThemeSync />
       <AdminShell
         storeName={storeName}
         logoUrl={branding.logoUrl}

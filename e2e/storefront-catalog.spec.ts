@@ -5,6 +5,7 @@ import {
   removeE2eCatalogRefs,
   removeE2eProducts,
   seedE2eFilterCatalog,
+  seedE2eOptionFilter,
 } from "../packages/core/test/e2e-support";
 
 /**
@@ -15,11 +16,16 @@ import {
 const tag = randomBytes(3).toString("hex");
 type Seed = Awaited<ReturnType<typeof seedE2eFilterCatalog>>;
 let seed: Seed;
+let colors: Awaited<ReturnType<typeof seedE2eOptionFilter>>;
 
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
   seed = await seedE2eFilterCatalog(tag);
+  colors = await seedE2eOptionFilter(
+    tag,
+    seed.products.map((p) => p.slug),
+  );
 });
 
 test.afterAll(async () => {
@@ -74,6 +80,22 @@ test.describe("filtre: fără JavaScript", () => {
     await expect(page).toHaveURL(new RegExp(`f_${seed.attributeCode}=15-$`));
     await expect(page.locator("[data-total-label]")).toHaveText("2 produse");
     await context.close();
+  });
+
+  test("filtrul pe opțiuni de atribut (listă) îngustează lista în build-ul de producție", async ({
+    page,
+  }) => {
+    // `listing-sql`: `IN (${Prisma.join(ids)})` pe opțiuni, într-un `$queryRaw(Prisma.sql…)`: trebuie să găsească rândurile
+    await page.goto(list(seed.categoryPath, `?f_${colors.attributeCode}=${colors.whiteId}`));
+    await expect(page.locator("[data-total-label]")).toHaveText("2 produse");
+    await expect(page.locator("article")).toHaveCount(2);
+    await page.goto(list(seed.categoryPath, `?f_${colors.attributeCode}=${colors.blueId}`));
+    await expect(page.locator("[data-total-label]")).toHaveText("1 produs");
+    await expect(page.locator("article")).toContainText("Beta");
+    await page.goto(
+      list(seed.categoryPath, `?f_${colors.attributeCode}=${colors.whiteId},${colors.blueId}`),
+    );
+    await expect(page.locator("[data-total-label]")).toHaveText("3 produse");
   });
 
   test("un filtru necunoscut sau învechit se ignoră (redirecționare la adresa curată), o pagină peste capăt dă 404", async ({
