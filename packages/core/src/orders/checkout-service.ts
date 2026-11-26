@@ -21,6 +21,9 @@ import { reservationExpiresAt } from "../inventory/workdays";
 import { ORDER_REF_TYPE } from "../inventory/constants";
 import { StockService } from "../inventory/stock-service";
 import { GeoService } from "../geo/siruta-store";
+import { lockAccount, readBalance, redeemPoints, spendableBalance } from "../loyalty/ledger";
+import { readLoyaltySettings, type LoyaltySettings } from "../loyalty/loyalty-settings";
+import { earnedPoints, maxRedeemablePoints } from "../pricing/points";
 import { buildParcel } from "../shipping/parcels";
 import type { ShippingQuote, ShippingService } from "../shipping/shipping-service";
 import type { Parcel, RateOffer, ShippingClass } from "../shipping/types";
@@ -96,6 +99,21 @@ export interface CheckoutPreviewInput {
   paymentMethod?: PaymentMethod | null;
   /** Facturare pe firmă (CUI scris de client); doar pentru regula «persoană juridică» a limitei de ramburs. */
   vatId?: string | null;
+  /** Punctele pe care clientul vrea să le folosească; se taie la maximul permis. */
+  loyaltyPoints?: number;
+}
+
+/** Ce arată checkout-ul despre puncte (Faza 15b); prezent doar cu programul de loialitate activ. */
+export interface CheckoutLoyaltyPreview {
+  signedIn: boolean;
+  /** Grupul cumpărătorului acumulează puncte (Partenerii nu). */
+  earns: boolean;
+  balance: number;
+  /** Ce se poate folosi la comanda de față; `null` = punctele nu se pot folosi acum (oaspete, tratament TVA nesetat, sold mic). */
+  redeem: { maxPoints: number; minPoints: number; pointValueMinor: number } | null;
+  appliedPoints: number;
+  /** Punctele pe care le-ar aduce comanda, cu punctele folosite scăzute (la oaspete: ce ar primi cu un cont). */
+  earnEstimate: number;
 }
 
 export interface CheckoutPreview {
@@ -113,6 +131,8 @@ export interface CheckoutPreview {
    * livrare, fără ramburs). Interfața ascunde livrarea și cere bifa legală după aceste indicatoare.
    */
   digital?: { present: boolean; only: boolean };
+  /** Punctele de loialitate (Faza 15b); lipsește cât timp programul e oprit. */
+  loyalty?: CheckoutLoyaltyPreview;
 }
 
 export interface PlaceOrderResult {
@@ -213,6 +233,10 @@ interface Context {
   account: { userId: string; emailVerified: boolean } | null;
   /** Grupul de clienți al cumpărătorului (Faza 15): prețurile coșului îl includ deja; aici doar pentru regulile de plată. */
   pricing: CustomerPricing;
+  /** Punctele de loialitate (Faza 15b). */
+  loyalty: LoyaltySettings;
+  /** Soldul și punctele care se pot cheltui acum (0 la oaspete sau cu programul oprit). */
+  points: { balance: number; spendable: number };
 }
 
 /** Fără transport și fără taxă de ramburs: valorile coșului 100% digital (nu există ofertă de curier). */
@@ -279,7 +303,17 @@ export class CheckoutService {
       });
       account = user ? { userId: user.id, emailVerified: user.emailVerified } : null;
     }
+    const loyalty = await readLoyaltySettings(this.deps.db);
+    const points =
+      loyalty.active && owner.kind === "user"
+        ? {
+            balance: await readBalance(this.deps.db, owner.userId),
+            spendable: await spendableBalance(this.deps.db, owner.userId, this.now()),
+          }
+        : { balance: 0, spendable: 0 };
     return {
+      loyalty,
+      points,
       settings,
       view,
       sources,
@@ -393,12 +427,93 @@ export class CheckoutService {
         : line.state;
   }
 
+  // ------------------------------------------------------------------------------------------------------------ puncte
+
+  /** Câte puncte se pot folosi la comanda cu transportul dat (0 dacă nu se pot folosi deloc). */
+  private redeemLimit(ctx: Context, owner: CartOwner, shippingMinor: number): number {
+    if (!ctx.loyalty.redeemAvailable || owner.kind !== "user") return 0;
+    return maxRedeemablePoints({
+      productsMinor: ctx.view.totals.totalMinor,
+      shippingMinor,
+      balancePoints: ctx.points.spendable,
+      rules: {
+        pointValueMinor: ctx.loyalty.pointValue,
+        minCashMinor: ctx.loyalty.minCashAmount,
+        maxRedeemPercent: ctx.loyalty.maxRedeemPercent,
+        minRedeemPoints: ctx.loyalty.minRedeemPoints,
+      },
+    });
+  }
+
+  /** Coșul cu reducerea din puncte pusă de motorul de prețuri pe linii; fără puncte, coșul neschimbat. */
+  private async withPoints(ctx: Context, db: Db, owner: CartOwner, points: number) {
+    if (points === 0) return ctx.view;
+    return this.deps
+      .createCart(db)
+      .view(owner, { pointsDiscountMinor: points * ctx.loyalty.pointValue });
+  }
+
+  /** Linia contează la acumulare: produsele la promoție pot fi excluse din setări. */
+  private earnEligible(ctx: Context, line: CartLineView): boolean {
+    return ctx.loyalty.earnOnDiscountedItems || line.pricing?.onSale !== true;
+  }
+
+  /** Punctele aduse de banii plătiți pe liniile care contează, fără transport și fără partea plătită cu puncte. */
+  private earnOf(ctx: Context, view: CartView): number {
+    const cash = view.lines.reduce(
+      (sum, line) =>
+        line.pricing && this.earnEligible(ctx, line)
+          ? sum + line.pricing.totalMinor - (line.pricing.pointsDiscountMinor ?? 0)
+          : sum,
+      0,
+    );
+    return earnedPoints(cash, ctx.loyalty.earnRate);
+  }
+
+  private loyaltyPreview(
+    ctx: Context,
+    owner: CartOwner,
+    view: CartView,
+    maxPoints: number,
+    appliedPoints: number,
+  ): { loyalty?: CheckoutLoyaltyPreview } {
+    if (!ctx.loyalty.active) return {};
+    const earns = ctx.pricing.record?.earnsLoyaltyPoints ?? true;
+    return {
+      loyalty: {
+        signedIn: owner.kind === "user",
+        earns,
+        balance: ctx.points.balance,
+        redeem:
+          maxPoints > 0
+            ? {
+                maxPoints,
+                minPoints: ctx.loyalty.minRedeemPoints,
+                pointValueMinor: ctx.loyalty.pointValue,
+              }
+            : null,
+        appliedPoints,
+        earnEstimate: earns ? this.earnOf(ctx, view) : 0,
+      },
+    };
+  }
+
+  /** Punctele cerute, tăiate la ce se permite: peste maxim = maximul; sub minimul de folosit = niciunul. */
+  private clampPoints(ctx: Context, requested: number | undefined, maxPoints: number): number {
+    if (!requested || !Number.isSafeInteger(requested) || requested < 0) return 0;
+    const points = Math.min(requested, maxPoints);
+    return points < ctx.loyalty.minRedeemPoints ? 0 : points;
+  }
+
   private methodsFor(
     ctx: Context,
     offer: { priceMinor: number; codFeeMinor: number },
     isCompany: boolean,
+    pointsDiscountMinor = 0,
   ): PaymentMethodAvailability[] {
-    const payable = ctx.view.totals.totalMinor + offer.priceMinor + offer.codFeeMinor;
+    // limita de ramburs se compară cu ce încasează curierul: DUPĂ reducerea din puncte (decizia 2026-11-25)
+    const payable =
+      ctx.view.totals.totalMinor - pointsDiscountMinor + offer.priceMinor + offer.codFeeMinor;
     const methods = availablePaymentMethods({
       lines: ctx.view.lines.map((line) => ({ stockState: this.stateOf(line) })),
       payableOnDeliveryMinor: payable,
@@ -426,6 +541,7 @@ export class CheckoutService {
       totals: null,
       taxRateBps: ctx.taxRateBps,
       digital: { present: ctx.hasDigital, only: ctx.digitalOnly },
+      ...this.loyaltyPreview(ctx, input.owner, ctx.view, 0, 0),
     } satisfies CheckoutPreview;
     if (blocked) return empty;
 
@@ -435,12 +551,21 @@ export class CheckoutService {
         vatId: input.vatId ?? null,
         groupPricingType: ctx.pricing.record?.pricingType ?? "none",
       });
+      const maxPoints = this.redeemLimit(ctx, input.owner, NO_SHIPPING.priceMinor);
+      const applied = this.clampPoints(ctx, input.loyaltyPoints, maxPoints);
+      const priced = await this.withPoints(ctx, this.deps.db, input.owner, applied);
       return {
         ...empty,
-        methods: this.methodsFor(ctx, NO_SHIPPING, isCompany),
+        ...this.loyaltyPreview(ctx, input.owner, priced, maxPoints, applied),
+        methods: this.methodsFor(
+          ctx,
+          NO_SHIPPING,
+          isCompany,
+          priced.totals.pointsDiscountMinor ?? 0,
+        ),
         totals: input.paymentMethod
           ? computeOrderTotals({
-              cart: ctx.view.totals,
+              cart: priced.totals,
               shippingMinor: NO_SHIPPING.priceMinor,
               codFeeMinor: NO_SHIPPING.codFeeMinor,
               paymentMethod: input.paymentMethod,
@@ -470,11 +595,16 @@ export class CheckoutService {
       vatId: input.vatId ?? null,
       groupPricingType: ctx.pricing.record?.pricingType ?? "none",
     });
-    const methods = reference ? this.methodsFor(ctx, reference, isCompany) : null;
+    const maxPoints = reference ? this.redeemLimit(ctx, input.owner, reference.priceMinor) : 0;
+    const applied = this.clampPoints(ctx, input.loyaltyPoints, maxPoints);
+    const priced = await this.withPoints(ctx, this.deps.db, input.owner, applied);
+    const methods = reference
+      ? this.methodsFor(ctx, reference, isCompany, priced.totals.pointsDiscountMinor ?? 0)
+      : null;
     const totals =
       selected && input.paymentMethod
         ? computeOrderTotals({
-            cart: ctx.view.totals,
+            cart: priced.totals,
             shippingMinor: selected.priceMinor,
             codFeeMinor: selected.codFeeMinor,
             paymentMethod: input.paymentMethod,
@@ -483,6 +613,7 @@ export class CheckoutService {
         : null;
     return {
       ...empty,
+      ...this.loyaltyPreview(ctx, input.owner, priced, maxPoints, applied),
       destination: { countyName: destination.county.name, localityName: destination.locality.name },
       shipping,
       selectedOffer: selected,
@@ -690,6 +821,28 @@ export class CheckoutService {
     }
     const charged = offer ?? NO_SHIPPING;
 
+    // punctele: cerute de client, verificate AICI (nu se taie în tăcere), cu transportul ofertei alese
+    const loyaltyPoints = input.loyaltyPoints ?? 0;
+    if (loyaltyPoints > 0) {
+      if (!ctx.loyalty.redeemAvailable || owner.kind !== "user") {
+        throw new OrderError(
+          "ORDER_POINTS_UNAVAILABLE",
+          "Punctele de loialitate nu pot fi folosite la această comandă",
+          { field: "loyaltyPoints" },
+        );
+      }
+      const maxPoints = this.redeemLimit(ctx, owner, charged.priceMinor);
+      if (loyaltyPoints > maxPoints || loyaltyPoints < ctx.loyalty.minRedeemPoints) {
+        throw new OrderError(
+          "ORDER_POINTS_INVALID",
+          "Numărul de puncte ales nu mai poate fi folosit: verifică suma și confirmă din nou",
+          { field: "loyaltyPoints", maxPoints, minPoints: ctx.loyalty.minRedeemPoints },
+        );
+      }
+    }
+    const priced = await this.withPoints(ctx, this.deps.db, owner, loyaltyPoints);
+    const pointsDiscountMinor = priced.totals.pointsDiscountMinor ?? 0;
+
     const isCompany = isCompanyBuyer({
       vatId: company?.vatId ?? null,
       groupPricingType: ctx.pricing.record?.pricingType ?? "none",
@@ -698,7 +851,10 @@ export class CheckoutService {
       {
         lines: ctx.view.lines.map((line) => ({ stockState: this.stateOf(line) })),
         payableOnDeliveryMinor:
-          ctx.view.totals.totalMinor + charged.priceMinor + charged.codFeeMinor,
+          ctx.view.totals.totalMinor -
+          pointsDiscountMinor +
+          charged.priceMinor +
+          charged.codFeeMinor,
         isCompany,
         codMaxIndividualMinor: settings.codMaxIndividualMinor,
         codMaxCompanyMinor: settings.codMaxCompanyMinor,
@@ -715,7 +871,7 @@ export class CheckoutService {
     }
 
     const totals = computeOrderTotals({
-      cart: ctx.view.totals,
+      cart: priced.totals,
       shippingMinor: charged.priceMinor,
       codFeeMinor: charged.codFeeMinor,
       paymentMethod: input.paymentMethod,
@@ -732,6 +888,7 @@ export class CheckoutService {
       ctx,
       offer,
       totals,
+      loyaltyPoints,
       company,
       shippingInput,
       shippingNames,
@@ -782,6 +939,14 @@ export class CheckoutService {
         );
       }
 
+      // punctele: contul se blochează ÎNAINTEA stocului (aceeași ordine ca la anulare: comandă, cont, stoc), apoi reducerea se
+      // repartizează pe liniile coșului verificat mai sus
+      const { loyaltyPoints } = prepared;
+      const buyerId = owner.kind === "user" ? owner.userId : null;
+      if (loyaltyPoints > 0 && buyerId) await lockAccount(tx, buyerId);
+      const priced = await this.withPoints(ctx, tx, owner, loyaltyPoints);
+      const pricedLines = new Map(priced.lines.map((line) => [line.variantId, line.pricing]));
+
       const number = await allocateOrderNumber(tx, {
         prefix: settings.orderNumberPrefix,
         digits: settings.orderNumberDigits,
@@ -821,10 +986,34 @@ export class CheckoutService {
       // grupul clientului la plasare, ca snapshot (id, tip, procent) și avantajul calculat de motor; fără cost
       const groupPricing =
         owner.kind === "user" ? await loadCustomerPricing(tx, owner.userId) : NO_GROUP_PRICING;
+      // instantaneul punctelor: doar cu programul activ și un cumpărător autentificat; partenerii nu acumulează
+      const earns =
+        ctx.loyalty.active && buyerId !== null && (groupPricing.record?.earnsLoyaltyPoints ?? true);
+      const loyaltySnapshot =
+        buyerId !== null && (earns || loyaltyPoints > 0)
+          ? {
+              loyaltyCustomerId: buyerId,
+              ...(loyaltyPoints > 0
+                ? {
+                    discountMinor: totals.discountMinor ?? 0,
+                    loyaltyPointsUsed: loyaltyPoints,
+                    loyaltyPointValueMinor: ctx.loyalty.pointValue,
+                    loyaltyVatMode: ctx.loyalty.vatMode,
+                  }
+                : {}),
+              ...(earns
+                ? {
+                    loyaltyEarnRateMinor: ctx.loyalty.earnRate,
+                    loyaltyPointsToEarn: this.earnOf(ctx, priced),
+                  }
+                : {}),
+            }
+          : {};
       const order = await tx.order.create({
         select: { id: true },
         data: {
           number,
+          ...loyaltySnapshot,
           ...orderGroupSnapshot(groupPricing.record),
           groupAdvantageMinor: view.totals.groupAdvantageMinor,
           channelId: channel.id,
@@ -958,6 +1147,9 @@ export class CheckoutService {
             netMinor: pricing.netMinor,
             taxMinor: pricing.vatMinor,
             taxRateBps: pricing.taxRateBps,
+            loyaltyDiscountMinor: pricedLines.get(line.variantId)?.pointsDiscountMinor ?? 0,
+            loyaltyDiscountTaxMinor: pricedLines.get(line.variantId)?.pointsDiscountVatMinor ?? 0,
+            loyaltyEarnEligible: this.earnEligible(ctx, line),
             stockState: state,
             leadTimeDays: state === "on_order" ? (line.leadTimeDays ?? 0) : null,
             shippingClass: source.shippingClass,
@@ -991,6 +1183,21 @@ export class CheckoutService {
         if ((isTransfer || isCard) && reservationEnd) {
           await stock.reserve(ref, stockLines, reservationEnd);
         } else await stock.commitDirect(ref, stockLines);
+      }
+
+      // punctele se rezervă în ACEEAȘI tranzacție cu stocul; un sold insuficient (altă comandă simultană) anulează tot
+      if (loyaltyPoints > 0 && buyerId) {
+        await redeemPoints(tx, {
+          customerId: buyerId,
+          orderId: order.id,
+          points: loyaltyPoints,
+          now,
+        });
+        await addOrderEvent(tx, order.id, {
+          type: "loyalty.redeemed",
+          message: `Clientul a folosit ${loyaltyPoints} puncte de loialitate`,
+          data: { points: loyaltyPoints, discountMinor: totals.discountMinor ?? 0 },
+        });
       }
 
       const payment = await tx.payment.create({

@@ -25,6 +25,10 @@ export const ORDER_ERROR_CODES = [
   "ORDER_PAYMENT_NOT_PENDING",
   "ORDER_RESERVATION_EXPIRED",
   "ORDER_CARD_UNAVAILABLE",
+  /** Faza 15b: punctele nu se pot folosi (program oprit, tratament TVA nesetat, fără cont). */
+  "ORDER_POINTS_UNAVAILABLE",
+  /** Faza 15b: mai multe puncte decât permite comanda sau sub minimul de folosit. */
+  "ORDER_POINTS_INVALID",
   /** Marcajul «La furnizor»: comandă care nu mai e activă sau text prea lung. */
   "ORDER_SUPPLIER_MARK_INVALID",
   /** Anularea: motiv lipsă sau prea lung, comandă care nu mai poate fi anulată (încheiată, expediată). */

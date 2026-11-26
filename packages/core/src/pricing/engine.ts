@@ -110,6 +110,8 @@ export interface PricedLine {
   couponMinor: number;
   /** Totalul liniei, brut (cu TVA), dinaintea punctelor de loialitate: fără puncte, e ce plătește clientul. */
   totalMinor: number;
+  /** Produsul e la promoție acum (promoție activă și afișată); prezent DOAR când e adevărat. */
+  onSale?: true;
   /** Partea de reducere din puncte a liniei și TVA-ul ei; prezente DOAR când s-au folosit puncte (`points.ts`). */
   pointsDiscountMinor?: number;
   pointsDiscountVatMinor?: number;
@@ -161,6 +163,8 @@ interface ResolvedPrice {
   /** Prețul public curent (după promoție) pe bază, exact. */
   publicCurrent: ExactMoney;
   source: PriceSource;
+  /** Promoția produsului e activă și aplicabilă, oricare ar fi prețul care câștigă. */
+  onSale?: boolean;
 }
 
 export type UnitPriceInput = Pick<
@@ -196,6 +200,15 @@ export function activeSalePrice(
 }
 
 function resolvePrice(
+  input: UnitPriceInput,
+  options: Pick<PricingOptions, "applySale" | "group">,
+): ResolvedPrice {
+  const onSale =
+    options.applySale && input.salePriceMinor !== null && input.salePriceMinor < input.priceMinor;
+  return { ...resolveBase(input, options), onSale };
+}
+
+function resolveBase(
   input: UnitPriceInput,
   options: Pick<PricingOptions, "applySale" | "group">,
 ): ResolvedPrice {
@@ -348,6 +361,7 @@ export function priceLines(
       basis: w.input.basis,
       unitPriceMinor: minorToNumber(roundHalfUp(w.resolved.price)),
       priceSource: w.resolved.source,
+      ...(w.resolved.onSale ? { onSale: true as const } : {}),
       publicLineMinor: minorToNumber(w.publicLineMinor),
       afterGroupMinor: minorToNumber(w.afterGroupMinor),
       groupAdvantageMinor: minorToNumber(w.publicLineMinor - w.afterGroupMinor),
