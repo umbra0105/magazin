@@ -434,6 +434,18 @@ _Închisă: PR #30 îmbinat prin poartă la `ed762cb` (2026-11-25), aprobarea ut
 
 ## FAZA 15b — Puncte de loialitate (mod B, ramura `faza-15b`)
 Vezi `14-loializare-si-vouchere.md`, Partea A. **Se face după ce comenzile, plățile și retururile funcționează complet.** Voucherele cadou sunt în Faza 15c (decizia utilizatorului, 2026-11-25).
+**Deciziile utilizatorului, 2026-11-25 (nu se rediscută; orice abatere = 🛑).** Rămân în vigoare `CLAUDE.md`, `14` Partea A și `09`: 1 punct la 100 lei, `floor`, pe subtotalul după toate reducerile, fără transport; 1 punct = 1 leu; acordare automată la expirarea ferestrei de retur; expirare 12 luni cu email cu 30 de zile înainte; fără plafon procentual implicit; punctele intră ULTIMA în lanțul de reduceri, doar pe produse; transportul se plătește mereu în bani; acumulare doar pe suma plătită cu bani; suma în bani ≥ `max(cost transport, minCashAmount)`, fără ramura `loyalty_points`; Standard, Fidel și VIP acumulează, Partenerii nu (dar un client promovat la Partener își păstrează și folosește soldul); oaspetele nu are puncte («Creează cont și primești X puncte»); soldul se recalculează din registrul imuabil; ajustare doar cu motiv și audit; totul în spatele flag-ului `loyalty`.
+- **D1** 15b = doar puncte; în 15b nu se construiește nimic din vouchere.
+- **D2** TVA: ambele tratamente, din `loyalty.vatMode` (`base_reduced` | `base_full`, implicit gol; gol = fără răscumpărare în checkout; în admin: «Cere confirmarea contabilului înainte de a o seta»). Răspuns de la utilizator: «Punctele reprezintă o reducere de preț». Seed-ul magazinului setează `base_reduced`; seed-ul de pachet lasă gol.
+- **D3** Produsele la promoție acumulează puncte (`loyalty.earnOnDiscountedItems`, implicit `true`).
+- **D4** Pragul de transport gratuit se calculează pe valoarea produselor ÎNAINTE de reducerea din puncte.
+- **D5** Limita de ramburs se compară cu suma încasată de curier DUPĂ reducerea din puncte.
+- **D6** Din `14`: sold negativ doar după retur, cu răscumpărarea blocată; anulare: punctele acordate se revocă, cele folosite se întorc; retur parțial: revocare proporțională, rambursare în bani = brutul liniei minus partea de puncte, punctele se întorc ca puncte; expirarea nu atinge punctele rezervate într-o comandă activă.
+- **D7** Comenzi doar digitale: fereastra pentru acordare se numără de la acordarea accesului; la mixte, data cea mai târzie; aceeași setare `returns.windowDays`.
+- **D8** Nu se creează `returnWindowDays`; se folosește `returns.windowDays`.
+- **D9** Setări (grup `loyalty`): `enabled` (pachet `false`, seed magazin `true`), `earnRate` 10000, `pointValue` 100, `expiryMonths` 12, `expiryWarningDays` 30, `maxRedeemPercent` `null`, `minRedeemPoints` 10, `minCashAmount` 100, `earnOnDiscountedItems` `true`, `vatMode` `null`. Fără setări pentru transport sau «doar pe bani».
+- **D10** `db:seed:store` activează loialitatea și pune `vatMode = "base_reduced"`; `db:seed` o lasă oprită, cu `vatMode` gol.
+
 - [ ] Setări de loialitate: rată de acumulare, valoare punct, moment de acordare, expirare, plafon procentual de utilizare (implicit **fără plafon**, configurabil), minim în bani când nu există transport (`minCashAmount`, implicit 1 leu)
 - [ ] Schema: LoyaltyAccount, LoyaltyTransaction (registru imutabil — soldul se recalculează, nu se editează)
 - [ ] Acumulare: 1 punct la 100 lei, pe subtotalul după reduceri, fără transport, cu `floor`
