@@ -465,8 +465,8 @@ Vezi `14-loializare-si-vouchere.md`, Partea A. **Se face după ce comenzile, pl�
 - [ ] Client promovat la Partener: păstrează soldul, nu mai acumulează
 - [x] _(joburile `loyalty-grant`, `loyalty-expire`, `loyalty-expiry-warning`, cu teste cu ceas injectat)_ Expirare la 12 luni, cu email de avertizare cu 30 de zile înainte
 - [x] _(`a3bf310`, `2fd123e`: anulare, retur parțial, sold negativ, rambursare, oaspete; factura și stornoul `base_reduced` în `013e150`)_ **Toate cazurile din `14` §5**: anulare, retur parțial, sold negativ, rambursare, guest
-- [~] Afișare: sold în cont, „primești X puncte” pe PDP, utilizare în checkout
-- [ ] Admin: sold per client, ajustare cu motiv obligatoriu, raport de datorie în puncte
+- [ ] _(ecranele sunt scrise, `cb53d9d`; se bifează după E2E)_ Afișare: sold în cont, „primești X puncte” pe PDP, utilizare în checkout
+- [~] Admin: sold per client, ajustare cu motiv obligatoriu, raport de datorie în puncte
 
 ## FAZA 15c — Vouchere cadou (mod B, ramura `faza-15c`, după 15b; decizia utilizatorului, 2026-11-25)
 Vezi `14-loializare-si-vouchere.md`, Partea B. Faza 15c se înregistrează (`PHASE_MODES`, `test/autonom/phases.test.ts`, linia utilizatorului din `docs/AUTONOM-APROBARI.md`) la pregătirea ei, nu în Faza 15b.
