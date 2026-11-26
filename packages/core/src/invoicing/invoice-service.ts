@@ -519,6 +519,8 @@ export class InvoiceService {
             taxRateBps: l.taxRateBps,
             dischargeable: l.variantId !== null && dischargeable.has(l.variantId),
             digital: l.isDigital,
+            loyaltyDiscountMinor: l.loyaltyDiscountMinor,
+            loyaltyDiscountTaxMinor: l.loyaltyDiscountTaxMinor,
           })),
           discountMinor: order.discountMinor,
           shippingMinor: order.shippingMinor,
@@ -534,6 +536,7 @@ export class InvoiceService {
           labels: {
             shipping: settings.shippingLabel,
             codFee: settings.codFeeLabel,
+            pointsDiscount: settings.pointsDiscountLabel,
             serviceUnit: settings.serviceUnit,
           },
         },

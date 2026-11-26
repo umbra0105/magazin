@@ -49,8 +49,9 @@ export function toInvoiceDocDto(
       kind: line.kind,
       quantityText: formatQuantity(quantityFromTicks(line.quantityTicks), { maxDecimals: 2 }),
       unitName: line.unitName,
-      totalText: money(line.lineTotalMinor),
-      taxText: money(line.taxMinor),
+      // rândul de reducere din puncte se păstrează cu sume pozitive; semnul îl dă tipul
+      totalText: money(line.kind === "discount" ? -line.lineTotalMinor : line.lineTotalMinor),
+      taxText: money(line.kind === "discount" ? -line.taxMinor : line.taxMinor),
     })),
   };
 }

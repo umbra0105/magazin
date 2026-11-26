@@ -330,6 +330,13 @@ export const settingGroups = {
     /** Denumirea liniei de transport și a taxei de ramburs pe factură, și unitatea lor de măsură. */
     shippingLabel: z.string().trim().min(1).max(80).default("Transport"),
     codFeeLabel: z.string().trim().min(1).max(80).default("Taxă de ramburs"),
+    /** Denumirea rândului de reducere din puncte de loialitate (Faza 15b); urmează numele produsului. */
+    pointsDiscountLabel: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .default("Reducere din puncte de loialitate"),
     serviceUnit: z.string().trim().min(1).max(40).default("buc"),
     /** Furnizorul trimite factura clientului pe email (SmartBill: cere un server de email configurat în contul lor). */
     sendEmailByProvider: z.boolean().default(false),

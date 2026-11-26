@@ -1,3 +1,4 @@
+import { discountShareForReturn } from "../pricing/points";
 import {
   DomainError,
   INVOICE_QUANTITY_TICK_MULTIPLE,
@@ -54,6 +55,9 @@ export interface DraftOrderLine {
    * celorlalte linii (are un singur `useStock` pe factură, iar o linie digitală nu are stoc de descărcat).
    */
   digital?: boolean;
+  /** Partea de reducere din puncte a liniei și TVA-ul ei (Faza 15b); lipsesc sau 0 fără puncte. */
+  loyaltyDiscountMinor?: number;
+  loyaltyDiscountTaxMinor?: number;
 }
 
 export interface DraftOrder {
@@ -68,8 +72,11 @@ export interface DraftOrder {
   taxRateBps: number;
 }
 
+/** `discount`: sume POZITIVE aici și în `invoice_line`; în totaluri se SCAD (semnul îl dă tipul). */
+export type DraftLineKind = "product" | "shipping" | "cod_fee" | "discount";
+
 export interface DraftLine {
-  kind: "product" | "shipping" | "cod_fee";
+  kind: DraftLineKind;
   orderLineId: string | null;
   sku: string | null;
   title: string;
@@ -88,6 +95,8 @@ export interface DraftLabels {
   codFee: string;
   /** Unitatea pentru servicii (transport, taxă): numele din contul furnizorului. */
   serviceUnit: string;
+  /** Denumirea rândului de reducere din puncte (se completează cu numele produsului). */
+  pointsDiscount?: string;
 }
 
 export interface BuildDraftOptions {
@@ -109,6 +118,38 @@ export interface InvoiceDraft {
 const ONE_UNIT_TICKS = QUANTITY_FACTOR;
 
 const sum = (values: readonly number[]): number => values.reduce((acc, v) => acc + v, 0);
+
+/** Contribuția unei linii la total și la TVA: rândurile de reducere se scad. */
+const signOf = (line: { kind: string }): 1 | -1 => (line.kind === "discount" ? -1 : 1);
+const signedTotal = (lines: ReadonlyArray<{ kind: string; lineTotalMinor: number }>): number =>
+  sum(lines.map((l) => signOf(l) * l.lineTotalMinor));
+const signedTax = (lines: ReadonlyArray<{ kind: string; taxMinor: number }>): number =>
+  sum(lines.map((l) => signOf(l) * l.taxMinor));
+
+/** Rândul de reducere din puncte al unei linii de produs: o bucată de serviciu, cu valoarea reducerii și TVA-ul ei. */
+function discountLine(input: {
+  orderLineId: string;
+  title: string;
+  unitName: string;
+  amountMinor: number;
+  taxMinor: number;
+  taxRateBps: number;
+}): DraftLine {
+  return {
+    kind: "discount",
+    orderLineId: input.orderLineId,
+    sku: null,
+    title: input.title,
+    unitName: input.unitName,
+    quantityTicks: ONE_UNIT_TICKS,
+    unitPriceMinor: input.amountMinor,
+    lineTotalMinor: input.amountMinor,
+    netMinor: input.amountMinor - input.taxMinor,
+    taxMinor: input.taxMinor,
+    taxRateBps: input.taxRateBps,
+    dischargeStock: false,
+  };
+}
 
 /** Cantitatea are cel mult 2 zecimale (multiplu de 100 de zecimi de miime): altfel SmartBill ar rotunji în tăcere. */
 export function isInvoiceQuantity(ticks: bigint): boolean {
@@ -150,8 +191,9 @@ function serviceLine(
 }
 
 export function buildInvoiceDraft(order: DraftOrder, options: BuildDraftOptions): InvoiceDraft {
-  if (order.discountMinor !== 0) {
-    // reducerile la nivel de comandă (cupon, puncte) vin în Fazele 15 și 15b și vor avea linie proprie; până atunci nu se ghicesc
+  const pointsDiscount = sum(order.lines.map((l) => l.loyaltyDiscountMinor ?? 0));
+  if (order.discountMinor !== pointsDiscount) {
+    // singura reducere de comandă cunoscută e cea din puncte, repartizată pe linii; alta (cupon) nu se ghicește
     throw new InvoiceDraftError(
       "INVOICE_UNSUPPORTED_ORDER",
       "Comanda are o reducere la nivel de comandă, pe care factura nu o poate reprezenta încă",
@@ -204,6 +246,19 @@ export function buildInvoiceDraft(order: DraftOrder, options: BuildDraftOptions)
         dischargeStock: false,
       });
     }
+    if (line.loyaltyDiscountMinor) {
+      const name = line.variantTitle ? `${line.title} (${line.variantTitle})` : line.title;
+      lines.push(
+        discountLine({
+          orderLineId: line.id,
+          title: `${options.labels.pointsDiscount ?? "Reducere"}: ${name}`,
+          unitName: options.labels.serviceUnit,
+          amountMinor: line.loyaltyDiscountMinor,
+          taxMinor: line.loyaltyDiscountTaxMinor ?? 0,
+          taxRateBps: line.taxRateBps,
+        }),
+      );
+    }
   }
   if (order.shippingMinor > 0) {
     lines.push(
@@ -230,8 +285,8 @@ export function buildInvoiceDraft(order: DraftOrder, options: BuildDraftOptions)
     );
   }
 
-  const totalMinor = sum(lines.map((l) => l.lineTotalMinor));
-  const taxMinor = sum(lines.map((l) => l.taxMinor));
+  const totalMinor = signedTotal(lines);
+  const taxMinor = signedTax(lines);
   if (totalMinor !== order.totalMinor || taxMinor !== order.taxMinor) {
     throw new InvoiceDraftError(
       "INVOICE_TOTAL_MISMATCH",
@@ -273,6 +328,11 @@ export interface StornoSourceLine {
   lineTotalMinor: number;
   taxMinor: number;
   taxRateBps: number;
+  /** Valoarea rândului de reducere din puncte al liniei pe factură (Faza 15b). */
+  discountMinor?: number;
+  /** Denumirea rândului de reducere, ca pe factură. */
+  discountTitle?: string;
+  discountUnitName?: string;
 }
 
 /** Ce s-a stornat deja din linia originală (suma documentelor storno emise sau în coadă). */
@@ -360,11 +420,32 @@ export function buildPartialStorno(
       taxRateBps: original.taxRateBps,
       dischargeStock: false,
     });
+    if (original.discountMinor) {
+      // partea de reducere a bucăților stornate: aceeași regulă ca la rambursare (cumulat, ultima bucată ia restul)
+      const share = discountShareForReturn({
+        lineDiscountMinor: original.discountMinor,
+        lineGrossMinor: original.lineTotalMinor,
+        grossBeforeMinor: done.lineTotalMinor,
+        grossNowMinor: total,
+      });
+      if (share > 0) {
+        lines.push(
+          discountLine({
+            orderLineId: original.orderLineId,
+            title: original.discountTitle ?? original.title,
+            unitName: original.discountUnitName ?? original.unitName,
+            amountMinor: share,
+            taxMinor: vatFromGross(share, original.taxRateBps),
+            taxRateBps: original.taxRateBps,
+          }),
+        );
+      }
+    }
   }
   return {
     lines,
-    totalMinor: sum(lines.map((l) => l.lineTotalMinor)),
-    taxMinor: sum(lines.map((l) => l.taxMinor)),
+    totalMinor: signedTotal(lines),
+    taxMinor: signedTax(lines),
   };
 }
 
@@ -374,7 +455,7 @@ export function buildPartialStorno(
 
 /** O linie a facturii de stornat (produs, transport sau taxă de ramburs), așa cum e înghețată pe documentul emis. */
 export interface StornoParentLine {
-  kind: "product" | "shipping" | "cod_fee";
+  kind: DraftLineKind;
   orderLineId: string | null;
   sku: string | null;
   title: string;
@@ -409,8 +490,9 @@ export function buildRemainderStorno(
   parent: readonly StornoParentLine[],
   earlier: readonly StornoEarlierLine[],
 ): PartialStorno {
+  // rândul de reducere are aceeași linie de comandă ca produsul: cheia îi ține separați
   const keyOf = (l: { kind: string; orderLineId: string | null }): string =>
-    l.orderLineId ?? `kind:${l.kind}`;
+    l.kind === "discount" ? `discount:${l.orderLineId}` : (l.orderLineId ?? `kind:${l.kind}`);
   const done = new Map<string, { quantityTicks: bigint; lineTotalMinor: number }>();
   for (const e of earlier) {
     const prev = done.get(keyOf(e)) ?? { quantityTicks: 0n, lineTotalMinor: 0 };
@@ -431,8 +513,14 @@ export function buildRemainderStorno(
   const lines: DraftLine[] = [];
   for (const p of parent) {
     const d = done.get(keyOf(p)) ?? { quantityTicks: 0n, lineTotalMinor: 0 };
-    const remainingQty = p.quantityTicks - d.quantityTicks;
     const remainingTotal = p.lineTotalMinor - d.lineTotalMinor;
+    // rândul de reducere se stornează după VALOARE (fiecare storno are câte «o bucată» din el): rămâne o bucată cât e valoare
+    const remainingQty =
+      p.kind === "discount"
+        ? remainingTotal > 0
+          ? p.quantityTicks
+          : 0n
+        : p.quantityTicks - d.quantityTicks;
     if (remainingQty < 0n || remainingTotal < 0) {
       throw new InvoiceDraftError(
         "INVOICE_STORNO_EXCEEDS_TOTAL",
@@ -459,7 +547,7 @@ export function buildRemainderStorno(
       title: p.title,
       unitName: p.unitName,
       quantityTicks: remainingQty,
-      unitPriceMinor: p.unitPriceMinor,
+      unitPriceMinor: p.kind === "discount" ? remainingTotal : p.unitPriceMinor,
       lineTotalMinor: remainingTotal,
       netMinor: untouched ? p.netMinor : remainingTotal - tax,
       taxMinor: tax,
@@ -467,9 +555,9 @@ export function buildRemainderStorno(
       dischargeStock: false,
     });
   }
-  const totalMinor = sum(lines.map((l) => l.lineTotalMinor));
-  const earlierMinor = sum(earlier.map((e) => e.lineTotalMinor));
-  const invoiceMinor = sum(parent.map((l) => l.lineTotalMinor));
+  const totalMinor = signedTotal(lines);
+  const earlierMinor = signedTotal(earlier);
+  const invoiceMinor = signedTotal(parent);
   if (earlierMinor + totalMinor !== invoiceMinor) {
     throw new InvoiceDraftError(
       "INVOICE_TOTAL_MISMATCH",
@@ -477,7 +565,7 @@ export function buildRemainderStorno(
       { earlierMinor, remainderMinor: totalMinor, invoiceMinor },
     );
   }
-  return { lines, totalMinor, taxMinor: sum(lines.map((l) => l.taxMinor)) };
+  return { lines, totalMinor, taxMinor: signedTax(lines) };
 }
 
 /**
@@ -513,17 +601,20 @@ export function negateLines<
   }));
 }
 
-/** Linia așa cum o cere contractul furnizorului (`InvoiceDocLine`): denumirea și SKU-ul, fără câmpuri interne. */
+/**
+ * Linia așa cum o cere contractul furnizorului (`InvoiceDocLine`): denumirea și SKU-ul, fără câmpuri interne. Rândul de
+ * reducere pleacă cu cantitate și sume cu semn schimbat (preț unitar pozitiv), ca documentul să dea suma de plătit.
+ */
 export function toDocLines(lines: readonly DraftLine[]): InvoiceDocLine[] {
   return lines.map((l) => ({
     kind: l.kind,
     name: l.title,
     code: l.sku,
     unitName: l.unitName,
-    quantityTicks: l.quantityTicks,
+    quantityTicks: signOf(l) === 1 ? l.quantityTicks : -l.quantityTicks,
     unitPriceMinor: l.unitPriceMinor,
-    lineTotalMinor: l.lineTotalMinor,
-    taxMinor: l.taxMinor,
+    lineTotalMinor: signOf(l) * l.lineTotalMinor,
+    taxMinor: signOf(l) * l.taxMinor,
     taxRateBps: l.taxRateBps,
     dischargeStock: l.dischargeStock,
   }));

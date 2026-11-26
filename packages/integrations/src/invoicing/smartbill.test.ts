@@ -521,3 +521,59 @@ describe("descărcarea de gestiune raportată de adaptor", () => {
     ).toBe(false);
   });
 });
+
+describe("rândul de reducere din puncte (Faza 15b; reprezentare PRESUPUSĂ, nedocumentată: de verificat în sandbox)", () => {
+  const discount: InvoiceDocLine = {
+    kind: "discount",
+    name: "Reducere din puncte de loialitate: Mozaic piscină",
+    code: null,
+    unitName: "buc",
+    quantityTicks: -10_000n,
+    unitPriceMinor: 3_333,
+    lineTotalMinor: -3_333,
+    taxMinor: -578,
+    taxRateBps: 2100,
+    dischargeStock: false,
+  };
+
+  it("pleacă drept serviciu cu cantitate negativă, preț pozitiv și aceeași cotă, fără gestiune", () => {
+    const body = buildDocumentBody(
+      {
+        orderNumber: "T-1",
+        client: {
+          name: "Ion Popescu",
+          vatCode: null,
+          isTaxPayer: false,
+          regCom: null,
+          address: "Str. 1",
+          city: "Alba Iulia",
+          county: "Alba",
+          country: "Romania",
+          email: null,
+          phone: null,
+        },
+        lines: [product(), discount, shipping],
+        currency: "RON",
+        issueDate: new Date(),
+        useStock: true,
+        payment: null,
+        fromProforma: null,
+        sendEmail: false,
+      },
+      CREDS,
+      "invoice",
+    );
+    const products = body["products"] as Array<Record<string, unknown>>;
+    expect(products[1]).toMatchObject({
+      name: discount.name,
+      isService: true,
+      quantity: -1,
+      price: 33.33,
+      isTaxIncluded: true,
+      taxPercentage: 21,
+    });
+    expect(products[1]).not.toHaveProperty("warehouseName");
+    // reducerea nu strică descărcarea de gestiune a produselor
+    expect(body["useStock"]).toBe(true);
+  });
+});

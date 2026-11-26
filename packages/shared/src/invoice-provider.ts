@@ -42,7 +42,11 @@ export interface InvoiceClient {
   phone: string | null;
 }
 
-export type InvoiceLineKind = "product" | "shipping" | "cod_fee";
+/**
+ * `discount` = rândul de reducere din puncte de loialitate (Faza 15b): spre furnizor pleacă cu cantitate și sume NEGATIVE
+ * (preț unitar pozitiv), legat de linia de produs; la storno semnul se întoarce.
+ */
+export type InvoiceLineKind = "product" | "shipping" | "cod_fee" | "discount";
 
 export interface InvoiceDocLine {
   kind: InvoiceLineKind;
