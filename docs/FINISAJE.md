@@ -17,6 +17,7 @@ O intrare e o linie care începe cu căsuța de stare, apoi severitatea ca prim 
 - Exemplele din blocurile de cod (ca cele de mai sus) nu se numără.
 
 ## Deschise
+- [ ] S3 | Registrul de puncte, golirea tabelei (Faza 15b) | baza refuză UPDATE și DELETE pe `loyalty_transaction` și `loyalty_lot_entry`, dar NU golirea întregii tabele cu SQL de administrator (la `stock_movement` există și un trigger pentru golire). Triggerul n-a fost adăugat: garda de migrări cere o aprobare scrisă a utilizatorului pentru orice migrare care numește operația de golire, chiar dacă doar o interzice. Aplicația nu golește nicio tabelă; de adăugat cu aprobare sau după ce garda deosebește un trigger de o golire | -
 
 - [ ] S3 | Import WooCommerce, imagini din descrieri (15d) | cât o imagine din descriere e în așteptare sau a eșuat, în editorul de descriere se vede marcajul `{{img:…}}` ca text (cumpărătorii nu îl văd: se scoate la randare); de decis dacă editorul îl arată ca un chip «imagine în așteptare» | -
 - [ ] S3 | Import WooCommerce, istoric (15d) | nu există buton de renunțare pentru o imagine de descriere eșuată: marcajul rămâne până la reluare («Reia imaginile») sau până îl șterge editorul de mână | -
