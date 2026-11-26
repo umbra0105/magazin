@@ -226,6 +226,10 @@ export const accountRo = {
     tracking: "Urmărește coletul",
     rejectReason: "Motivul respingerii",
     refunded: (amount: string) => `Am rambursat ${amount}, în aceeași modalitate de plată.`,
+    /** Retur de produse plătite integral cu puncte: nu există bani de rambursat (Faza 15b). */
+    refundedPoints:
+      "Produsele returnate au fost plătite cu puncte, așa că nu sunt bani de rambursat. Punctele s-au întors în cont.",
+    closedWithoutMoney: "Returul s-a încheiat.",
     refundNote:
       "Rambursarea acoperă produsele acceptate la inspecție. Banii pot ajunge în cont în câteva zile lucrătoare.",
     accepted: "Acceptat",

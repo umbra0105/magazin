@@ -28,6 +28,11 @@ export default async function AccountReturnPage({ params }: { params: Promise<{ 
     }),
   ]);
   if (!ret) notFound();
+  // retur închis fără bani (produse plătite integral cu puncte): singurul retur rambursat cu 0 lei
+  const pointsOnly =
+    ret.status === "refunded" &&
+    ret.refundedProductsMinor === 0 &&
+    (ret.refundedShippingMinor ?? 0) === 0;
   const address =
     company.address.street.trim() !== "" || company.address.city.trim() !== ""
       ? formatCompanyAddress(company.address)
@@ -54,7 +59,9 @@ export default async function AccountReturnPage({ params }: { params: Promise<{ 
             {m.returnStatus[ret.status] ?? ret.status}
           </StorePill>
         </p>
-        <p className="max-w-prose">{m.returns.nextStep[ret.status]}</p>
+        <p className="max-w-prose">
+          {pointsOnly ? m.returns.closedWithoutMoney : m.returns.nextStep[ret.status]}
+        </p>
       </header>
 
       {ret.status === "rejected" && ret.rejectReason ? (
@@ -65,12 +72,20 @@ export default async function AccountReturnPage({ params }: { params: Promise<{ 
 
       {ret.status === "refunded" && ret.refundedProductsMinor !== null ? (
         <div role="note" className="rounded-card bg-tone-success-bg p-4 text-tone-success-fg">
-          <p className="font-medium">
-            {m.returns.refunded(
-              format.money(ret.refundedProductsMinor + (ret.refundedShippingMinor ?? 0)),
-            )}
-          </p>
-          <p className="text-sm">{m.returns.refundNote}</p>
+          {pointsOnly ? (
+            <p className="font-medium" data-return-points-only>
+              {m.returns.refundedPoints}
+            </p>
+          ) : (
+            <>
+              <p className="font-medium">
+                {m.returns.refunded(
+                  format.money(ret.refundedProductsMinor + (ret.refundedShippingMinor ?? 0)),
+                )}
+              </p>
+              <p className="text-sm">{m.returns.refundNote}</p>
+            </>
+          )}
         </div>
       ) : null}
 

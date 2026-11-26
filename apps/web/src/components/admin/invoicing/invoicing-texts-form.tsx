@@ -12,6 +12,7 @@ const m = getMessages().admin.invoicing.settings.texts;
 export interface InvoicingTextsValues {
   shippingLabel: string;
   codFeeLabel: string;
+  pointsDiscountLabel: string;
   serviceUnit: string;
   unitNames: string;
   sendEmailByProvider: boolean;
@@ -42,7 +43,12 @@ export function InvoicingTextsForm({
     event.preventDefault();
     if (!canWrite || pending) return;
     const found: Record<string, string> = {};
-    for (const key of ["shippingLabel", "codFeeLabel", "serviceUnit"] as const) {
+    for (const key of [
+      "shippingLabel",
+      "codFeeLabel",
+      "pointsDiscountLabel",
+      "serviceUnit",
+    ] as const) {
       const value = form[key].trim();
       if (value === "" || value.length > (key === "serviceUnit" ? 40 : 80))
         found[key] = m.invalidText;
@@ -75,7 +81,7 @@ export function InvoicingTextsForm({
   };
 
   const field = (
-    key: "shippingLabel" | "codFeeLabel" | "serviceUnit",
+    key: "shippingLabel" | "codFeeLabel" | "pointsDiscountLabel" | "serviceUnit",
     label: string,
     help?: string,
   ) => (
@@ -104,6 +110,7 @@ export function InvoicingTextsForm({
       <div className="grid gap-4 md:grid-cols-2">
         {field("shippingLabel", m.shippingLabel)}
         {field("codFeeLabel", m.codFeeLabel)}
+        {field("pointsDiscountLabel", m.pointsDiscountLabel, m.pointsDiscountHelp)}
         {field("serviceUnit", m.serviceUnit, m.serviceUnitHelp)}
       </div>
       <div className="flex flex-col gap-1.5">

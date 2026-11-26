@@ -112,6 +112,7 @@ export default async function InvoicingSettingsPage() {
           initial={{
             shippingLabel: invoicing.shippingLabel,
             codFeeLabel: invoicing.codFeeLabel,
+            pointsDiscountLabel: invoicing.pointsDiscountLabel,
             serviceUnit: invoicing.serviceUnit,
             unitNames: formatUnitNames(invoicing.unitNames),
             sendEmailByProvider: invoicing.sendEmailByProvider,
