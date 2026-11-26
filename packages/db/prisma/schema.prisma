@@ -1516,6 +1516,8 @@ model OrderLine {
   isDigital          Boolean             @default(false)
   /// Faza 15b: partea de reducere din puncte a liniei, în bani; `lineTotalMinor` rămâne valoarea dinaintea punctelor.
   loyaltyDiscountMinor Int                 @default(0)
+  /// TVA-ul reducerii de mai sus, extras din brutul ei (decizia 2026-11-26); comanda are TVA = TVA linii − acestea + transport.
+  loyaltyDiscountTaxMinor Int              @default(0)
   /// Linia contează la acumularea de puncte (la plasare: produsele la promoție pot fi excluse din setări).
   loyaltyEarnEligible  Boolean             @default(true)
   createdAt          DateTime            @default(now())

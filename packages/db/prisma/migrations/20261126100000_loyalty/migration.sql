@@ -10,6 +10,7 @@ ADD COLUMN     "loyaltyVatMode" TEXT;
 
 -- AlterTable
 ALTER TABLE "order_line" ADD COLUMN     "loyaltyDiscountMinor" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "loyaltyDiscountTaxMinor" INTEGER NOT NULL DEFAULT 0,
 ADD COLUMN     "loyaltyEarnEligible" BOOLEAN NOT NULL DEFAULT true;
 
 -- AlterTable
@@ -127,10 +128,11 @@ ALTER TABLE "loyalty_lot_entry" ADD CONSTRAINT "loyalty_lot_entry_lotId_fkey" FO
 
 
 -- ===========================================================================
--- Faza 15b: constrângeri și triggere. Aditiv: nicio tabelă sau coloană ștearsă și niciun rând atins. Singurele constrângeri
--- ÎNLOCUITE (autorizate de utilizator la 2026-11-26) sunt trei, toate EXTINDERI ale regulilor vechi:
--- `invoice_line_kind_check`, `invoice_line_source_check` și `return_request_refunded_ck`. Niciun rând nu se modifică; o
--- constrângere adăugată fără NOT VALID verifică toate rândurile existente. Orice CHECK compus compară explicit.
+-- Faza 15b: constrângeri și triggere. Aditiv: nicio tabelă sau coloană ștearsă și niciun rând atins. Singurele reguli
+-- ÎNLOCUITE (autorizate de utilizator la 2026-11-26), toate EXTINDERI ale celor vechi: `invoice_line_kind_check`,
+-- `invoice_line_source_check`, `return_request_refunded_ck` și verificarea TVA din `order_totals_integrity` (identică pentru
+-- comenzile fără puncte). Niciun rând nu se modifică; o constrângere adăugată fără NOT VALID verifică toate rândurile
+-- existente. Orice CHECK compus compară explicit.
 -- ===========================================================================
 
 -- Linia de reducere din puncte de pe factură: tip nou, legată de linia comenzii, fără SKU. Sumele rămân pozitive în bază
@@ -180,6 +182,50 @@ ALTER TABLE "customer_order" ADD CONSTRAINT "customer_order_loyalty_earn_check" 
 ALTER TABLE "order_line" ADD CONSTRAINT "order_line_loyalty_check"
   CHECK ("loyaltyDiscountMinor" >= 0 AND "loyaltyDiscountMinor" <= "lineTotalMinor");
 ALTER TABLE "return_item" ADD CONSTRAINT "return_item_loyalty_check" CHECK ("loyaltyDiscountMinor" >= 0);
+-- TVA-ul reducerii din puncte: între 0 și valoarea reducerii (deci 0 pe o linie fără reducere).
+ALTER TABLE "order_line" ADD CONSTRAINT "order_line_loyalty_tax_check"
+  CHECK ("loyaltyDiscountTaxMinor" >= 0 AND "loyaltyDiscountTaxMinor" <= "loyaltyDiscountMinor");
+
+-- Verificarea totalurilor (constrângere amânată la COMMIT): singura schimbare e că din TVA-ul liniilor se scade TVA-ul
+-- reducerilor din puncte (decizia utilizatorului, 2026-11-26). Fără puncte suma scăzută e 0, deci regula e identică. Restul
+-- funcției e textul din `20261118120000_checkout_orders`; triggerele amânate rămân cele existente.
+CREATE OR REPLACE FUNCTION "order_totals_integrity"() RETURNS trigger AS $$
+DECLARE
+  oid text;
+  ord record;
+  lines_count integer;
+  lines_total bigint;
+  lines_tax bigint;
+  lines_discount_tax bigint;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    oid := OLD."orderId";
+  ELSIF TG_TABLE_NAME = 'customer_order' THEN
+    oid := NEW."id";
+  ELSE
+    oid := NEW."orderId";
+  END IF;
+  SELECT * INTO ord FROM "customer_order" WHERE "id" = oid;
+  IF NOT FOUND THEN
+    RETURN NULL; -- comanda a fost ștearsă în aceeași tranzacție
+  END IF;
+  SELECT count(*), COALESCE(sum("lineTotalMinor"), 0), COALESCE(sum("taxMinor"), 0),
+      COALESCE(sum("loyaltyDiscountTaxMinor"), 0)
+    INTO lines_count, lines_total, lines_tax, lines_discount_tax
+    FROM "order_line" WHERE "orderId" = oid;
+  IF lines_count = 0 THEN
+    RAISE EXCEPTION 'Comanda % nu are nicio linie', ord."number";
+  END IF;
+  IF lines_total <> ord."subtotalMinor" THEN
+    RAISE EXCEPTION 'Comanda %: subtotalul (%) nu e suma liniilor (%)', ord."number", ord."subtotalMinor", lines_total;
+  END IF;
+  IF lines_tax - lines_discount_tax + ord."shippingTaxMinor" + ord."codFeeTaxMinor" <> ord."taxMinor" THEN
+    RAISE EXCEPTION 'Comanda %: TVA-ul (%) nu e suma TVA-urilor pe linii (%) minus TVA-ul reducerilor din puncte (%) plus transport (%) și taxa de ramburs (%)',
+      ord."number", ord."taxMinor", lines_tax, lines_discount_tax, ord."shippingTaxMinor", ord."codFeeTaxMinor";
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Instantaneul punctelor nu se schimbă după plasare (triggere separate: cele vechi nu se ating).
 CREATE FUNCTION "customer_order_loyalty_immutable"() RETURNS trigger AS $$
@@ -201,6 +247,7 @@ CREATE TRIGGER "customer_order_loyalty_immutable_trg" BEFORE UPDATE ON "customer
 CREATE FUNCTION "order_line_loyalty_immutable"() RETURNS trigger AS $$
 BEGIN
   IF NEW."loyaltyDiscountMinor" IS DISTINCT FROM OLD."loyaltyDiscountMinor"
+    OR NEW."loyaltyDiscountTaxMinor" IS DISTINCT FROM OLD."loyaltyDiscountTaxMinor"
     OR NEW."loyaltyEarnEligible" IS DISTINCT FROM OLD."loyaltyEarnEligible" THEN
     RAISE EXCEPTION 'Linia de comandă este un snapshot imuabil: instantaneul punctelor nu se modifică';
   END IF;
