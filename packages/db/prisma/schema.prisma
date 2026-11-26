@@ -34,6 +34,7 @@ model User {
   customerGroupId     String?
   customerGroup       CustomerGroup?          @relation(fields: [customerGroupId], references: [id], onDelete: Restrict)
   nirImports          NirImport[]
+  loyaltyAccount      LoyaltyAccount?
 
   @@unique([email])
   @@index([customerGroupId])
@@ -1402,6 +1403,17 @@ model Order {
   groupDiscountBps       Int?
   groupMarkupBps         Int?
   groupAdvantageMinor    Int                  @default(0)
+  /// Faza 15b: instantaneul punctelor de loialitate la plasare. `discountMinor` conține valoarea punctelor folosite.
+  loyaltyCustomerId      String?
+  loyaltyPointsUsed      Int                  @default(0)
+  loyaltyPointValueMinor Int?
+  loyaltyVatMode         String?
+  /// Rata de acumulare la plasare (bani pentru 1 punct); gol = comanda nu aduce puncte (oaspete, partener, program oprit).
+  loyaltyEarnRateMinor   Int?
+  loyaltyPointsToEarn    Int?
+  /// De când pot fi acordate punctele (sfârșitul ferestrei de retur); gol cât timp comanda nu e livrată.
+  loyaltyEarnDueAt       DateTime?
+  loyaltyGrantedAt       DateTime?
   /// Metoda de livrare aleasă: cod (courier | pickup | …) și snapshot-ul ofertei (curier, serviciu, preț, zile, sursa).
   shippingMethodCode     String
   shippingSnapshot       Json
@@ -1467,6 +1479,8 @@ model Order {
   @@index([placedAt])
   @@index([supplierMarkedAt])
   @@index([installationStatus])
+  @@index([loyaltyCustomerId])
+  @@index([loyaltyEarnDueAt])
   @@map("customer_order")
 }
 
@@ -1500,6 +1514,10 @@ model OrderLine {
   productSnapshot    Json
   /// Faza 14b: linia e un produs digital (fără transport, fără stoc, fără retur din cont); scris la plasare, imuabil în practică.
   isDigital          Boolean             @default(false)
+  /// Faza 15b: partea de reducere din puncte a liniei, în bani; `lineTotalMinor` rămâne valoarea dinaintea punctelor.
+  loyaltyDiscountMinor Int                 @default(0)
+  /// Linia contează la acumularea de puncte (la plasare: produsele la promoție pot fi excluse din setări).
+  loyaltyEarnEligible  Boolean             @default(true)
   createdAt          DateTime            @default(now())
   returnItems        ReturnItem[]
   digitalEntitlement DigitalEntitlement?
@@ -2208,6 +2226,8 @@ model ReturnItem {
   resellable      Boolean?
   /// Suma rambursată pentru linie (bani, cu TVA), calculată o singură dată la propunerea rambursării.
   refundLineMinor Int?
+  /// Faza 15b: partea de reducere din puncte a bucăților returnate, în bani (`refundLineMinor` = banii).
+  loyaltyDiscountMinor Int          @default(0)
   reasonCode      String
   reasonText      String?
   /// Repunerea pe stoc: o singură dată (`restockedAt` + cheia mișcării de stoc).
@@ -2344,4 +2364,86 @@ model DigitalAccessLog {
   @@index([entitlementId, createdAt])
   @@index([createdAt])
   @@map("digital_access_log")
+}
+
+// ---------------------------------------------------------------------------
+// Faza 15b: puncte de loialitate. Registrul e IMUABIL (triggere în migrare); soldul se schimbă doar prin tranzacții.
+// ---------------------------------------------------------------------------
+
+model LoyaltyAccount {
+  customerId   String               @id
+  customer     User                 @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  /// Ținut la zi de trigger din registru; nu se scrie niciodată direct. Poate fi negativ doar după un retur.
+  balance      Int                  @default(0)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @default(now()) @updatedAt
+  transactions LoyaltyTransaction[]
+  lots         LoyaltyLot[]
+
+  @@map("loyalty_account")
+}
+
+model LoyaltyTransaction {
+  id             String            @id @default(cuid())
+  seq            BigInt            @unique @default(autoincrement())
+  customerId     String
+  account        LoyaltyAccount    @relation(fields: [customerId], references: [customerId], onDelete: Cascade)
+  /// Fără cheie externă: registrul nu depinde de ștergerea datelor de probă.
+  orderId        String?
+  type           String
+  points         Int
+  /// Calculat de trigger la inserare.
+  balanceAfter   Int               @default(0)
+  reason         String?
+  /// Doar la ajustarea manuală: contul din admin care a făcut-o (fără email sau nume).
+  actorId        String?
+  idempotencyKey String            @unique
+  createdAt      DateTime          @default(now())
+  lots           LoyaltyLot[]
+  entries        LoyaltyLotEntry[]
+
+  @@index([customerId, seq])
+  @@index([orderId])
+  @@map("loyalty_transaction")
+}
+
+/// Un lot de puncte cu data lui de expirare: din acumulare, ajustare pozitivă sau puncte întoarse.
+model LoyaltyLot {
+  id            String             @id @default(cuid())
+  transactionId String
+  transaction   LoyaltyTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  customerId    String
+  account       LoyaltyAccount     @relation(fields: [customerId], references: [customerId], onDelete: Cascade)
+  /// La punctele întoarse: lotul din care plecaseră.
+  originLotId   String?
+  originLot     LoyaltyLot?        @relation("LoyaltyLotOrigin", fields: [originLotId], references: [id], onDelete: Cascade)
+  restoredLots  LoyaltyLot[]       @relation("LoyaltyLotOrigin")
+  points        Int
+  /// Scade doar prin `LoyaltyLotEntry` (trigger).
+  remaining     Int
+  expiresAt     DateTime
+  warnedAt      DateTime?
+  createdAt     DateTime           @default(now())
+  entries       LoyaltyLotEntry[]
+
+  @@index([customerId, expiresAt])
+  @@index([expiresAt])
+  @@index([transactionId])
+  @@index([originLotId])
+  @@map("loyalty_lot")
+}
+
+/// Ce a consumat o tranzacție dintr-un lot (mereu negativ).
+model LoyaltyLotEntry {
+  id            String             @id @default(cuid())
+  transactionId String
+  transaction   LoyaltyTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  lotId         String
+  lot           LoyaltyLot         @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  points        Int
+  createdAt     DateTime           @default(now())
+
+  @@unique([transactionId, lotId])
+  @@index([lotId])
+  @@map("loyalty_lot_entry")
 }
