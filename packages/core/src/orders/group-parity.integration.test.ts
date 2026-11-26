@@ -1,10 +1,12 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { getDb } from "@ecom/db";
 import type { CartOwner, CartRuntimeSettings } from "../cart/cart-service";
 import type { ShippingRuntimeSettings } from "../shipping/shipping-service";
 import { NOW, harness, orderOf, q, type Harness } from "../test-utils/checkout-fixtures";
+import { digitalOnlyInput, mixedInput } from "../test-utils/digital-checkout";
 import { createUser } from "../test-utils/digital-fixtures";
 import type { CheckoutSettings } from "./checkout-service";
 
@@ -21,6 +23,11 @@ import type { CheckoutSettings } from "./checkout-service";
  *   - `standard`: client cu cont în grupul «Client standard» (se adaugă după schema grupurilor; rezultatul trebuie să fie
  *     IDENTIC cu cel al variantei `user`).
  *
+ * Faza 15b (loialitate) a EXTINS testul ÎNAINTE de orice modificare în motor, pe codul identic cu `main` (`acf6ac7`): coșurile
+ * 36–48 (digitale, mixte, limite de ramburs, prag de transport cu prețuri de grup) și variantele `fidel`, `vip` și `partner`
+ * (grupuri create în tranzacția testului; la `partner`, variantele primesc un preț de intrare). Cele 35 de coșuri vechi ale
+ * variantelor `guest` și `user` au rămas în fixture exact cum erau (dovada: diff-ul fixture-ului conține doar adăugiri).
+ *
  * Înregistrare (doar pe cod neschimbat, de mână): `PARITY_RECORD=1`.
  */
 const db = getDb();
@@ -35,15 +42,26 @@ const DAY_MS = 86_400_000;
 
 type ProductOpts = NonNullable<Parameters<Harness["product"]>[0]>;
 type OfferWish = "cheapest" | "pickup" | "pallet" | "courier";
-type Variant = "guest" | "user" | "standard";
-const VARIANTS: readonly Variant[] = ["guest", "user", "standard"];
-/** Fixture-ul înregistrat pe `main` are doar «guest» și «user»; clientul din «Client standard» se compară cu «user». */
-const FIXTURE_OF: Record<Variant, "guest" | "user"> = {
+type Variant = "guest" | "user" | "standard" | "fidel" | "vip" | "partner";
+const VARIANTS: readonly Variant[] = ["guest", "user", "standard", "fidel", "vip", "partner"];
+type RecordedVariant = Exclude<Variant, "standard">;
+/** Clientul din «Client standard» se compară cu «user»; celelalte variante au înregistrarea lor. */
+const FIXTURE_OF: Record<Variant, RecordedVariant> = {
   guest: "guest",
   user: "user",
   standard: "user",
+  fidel: "fidel",
+  vip: "vip",
+  partner: "partner",
 };
-const RECORDED: readonly ("guest" | "user")[] = ["guest", "user"];
+const RECORDED: readonly RecordedVariant[] = ["guest", "user", "fidel", "vip", "partner"];
+
+/** Grupurile de probă ale variantelor cu preț de grup (procentele din seed-ul magazinului). */
+const TEST_GROUPS = {
+  fidel: { pricingType: "discount", discountBps: 500, earnsLoyaltyPoints: true },
+  vip: { pricingType: "discount", discountBps: 700, earnsLoyaltyPoints: true },
+  partner: { pricingType: "cost_plus", markupBps: 1200, earnsLoyaltyPoints: false },
+} as const;
 
 interface ScenarioProduct {
   opts?: ProductOpts;
@@ -51,6 +69,8 @@ interface ScenarioProduct {
   /** Preț promoțional; fereastra se calculează din ceasul injectat (`window`: activă implicit). */
   salePriceMinor?: number;
   window?: "active" | "expired" | "future";
+  /** Preț de intrare NET, folosit DOAR de varianta `partner`; implicit 60% din prețul public. */
+  costMinor?: number;
 }
 
 interface Scenario {
@@ -254,6 +274,98 @@ const SCENARIOS: Scenario[] = [
     payment: "bank_transfer",
     cart: { showSalePricing: true },
   },
+  {
+    name: "36 coș 100% digital, card",
+    products: [{ opts: { price: 30_000, type: "digital", manageStock: false } }],
+    payment: "card",
+    settings: { cardProvider: DEMO_CARD },
+  },
+  {
+    name: "37 coș 100% digital, două produse, transfer bancar",
+    products: [
+      { opts: { price: 30_000, type: "digital", manageStock: false } },
+      { opts: { price: 4_999, type: "digital", manageStock: false } },
+    ],
+    payment: "bank_transfer",
+  },
+  {
+    name: "38 coș mixt, card",
+    products: [
+      { opts: { price: 19_900 } },
+      { opts: { price: 30_000, type: "digital", manageStock: false } },
+    ],
+    payment: "card",
+    settings: { cardProvider: DEMO_CARD },
+  },
+  {
+    name: "39 coș mixt, ramburs",
+    products: [
+      { opts: { price: 19_900 }, quantity: "2" },
+      { opts: { price: 12_345, type: "digital", manageStock: false } },
+    ],
+  },
+  {
+    name: "40 coș mixt: digitalul nu duce peste pragul de transport gratuit",
+    products: [
+      { opts: { price: 40_000 } },
+      { opts: { price: 30_000, type: "digital", manageStock: false } },
+    ],
+    shipping: { freeShippingThresholdMinor: THRESHOLD },
+  },
+  {
+    name: "41 promoție mai bună decât reducerea de grup, plus o linie fără promoție, ramburs",
+    products: [
+      { opts: { price: 10_000 }, salePriceMinor: 9_000, quantity: "3" },
+      { opts: { price: 33_333 }, quantity: "2" },
+    ],
+    cart: { showSalePricing: true },
+  },
+  {
+    name: "42 limita de ramburs pentru firme, trecută de grupul cost_plus",
+    products: [{ opts: { price: 700_000 }, costMinor: 450_000 }],
+  },
+  {
+    name: "43 ramburs aproape de limita persoanelor fizice (transportul o depășește la unii)",
+    products: [{ opts: { price: 998_900 } }],
+  },
+  {
+    name: "44 cantitate zecimală cu promoție, ridicare personală, card",
+    products: [{ opts: { price: 12_345, step: "0,3" }, salePriceMinor: 11_999, quantity: "4,2" }],
+    offer: "pickup",
+    payment: "card",
+    settings: { cardProvider: DEMO_CARD },
+    cart: { showSalePricing: true },
+  },
+  {
+    name: "45 ridicare personală, ramburs, cu prag de transport gratuit atins",
+    products: [{ opts: { price: 60_000 } }],
+    offer: "pickup",
+    shipping: { freeShippingThresholdMinor: THRESHOLD },
+  },
+  {
+    name: "46 prag de transport gratuit: peste prag la prețul public, sub prag după reducerea de grup",
+    products: [{ opts: { price: 52_000 } }],
+    shipping: { freeShippingThresholdMinor: THRESHOLD },
+  },
+  {
+    name: "47 produs digital la promoție, card",
+    products: [
+      { opts: { price: 30_000, type: "digital", manageStock: false }, salePriceMinor: 19_999 },
+    ],
+    payment: "card",
+    settings: { cardProvider: DEMO_CARD },
+    cart: { showSalePricing: true },
+  },
+  {
+    name: "48 coș mixt cu cantitate zecimală și palet, transfer bancar",
+    products: [
+      { opts: { price: 129_900, shippingClass: "pallet", weightGrams: 120_000 } },
+      { opts: { price: 9_999, step: "0,05" }, quantity: "2,35" },
+      { opts: { price: 7_501, type: "digital", manageStock: false } },
+    ],
+    offer: "pallet",
+    payment: "bank_transfer",
+  },
 ];
 
 const jsonSafe = (value: unknown): unknown =>
@@ -290,6 +402,16 @@ async function fillFor(
     return { owner, userId: null };
   }
   const user = await createUser(h.tx, true);
+  if (variant === "fidel" || variant === "vip" || variant === "partner") {
+    const group = await h.tx.customerGroup.create({
+      data: {
+        name: `Paritate ${variant}`,
+        slug: `paritate-${variant}-${randomUUID()}`,
+        ...TEST_GROUPS[variant],
+      },
+    });
+    await h.tx.user.update({ where: { id: user.id }, data: { customerGroupId: group.id } });
+  }
   if (variant === "standard") {
     // grupul de sistem «Client standard» (nu presupun seed: îl creez dacă lipsește) atribuit clientului
     const system =
@@ -324,6 +446,17 @@ async function runScenario(scenario: Scenario, variant: Variant): Promise<unknow
           });
         }
       }
+      if (variant === "partner") {
+        for (const [index, entry] of scenario.products.entries()) {
+          const price = entry.opts?.price ?? 19_900;
+          await h.tx.productVariant.update({
+            where: { id: variants[index] as string },
+            data: { costPrice: entry.costMinor ?? Math.floor((price * 60) / 100) },
+          });
+        }
+      }
+      const digitalCount = scenario.products.filter((e) => e.opts?.type === "digital").length;
+      const digitalOnly = digitalCount === scenario.products.length;
       const { owner } = await fillFor(
         h,
         variant,
@@ -340,7 +473,14 @@ async function runScenario(scenario: Scenario, variant: Variant): Promise<unknow
       const payment = scenario.payment ?? "cod";
       const vatId = scenario.company ? COMPANY.vatId : null;
 
-      const first = await h.checkout.preview({ owner, destination, paymentMethod: payment, vatId });
+      // coșul 100% digital nu are destinație și nici oferte de livrare
+      const where = digitalOnly ? null : destination;
+      const first = await h.checkout.preview({
+        owner,
+        destination: where,
+        paymentMethod: payment,
+        vatId,
+      });
       const offers = first.shipping?.offers ?? [];
       const wish = scenario.offer ?? "cheapest";
       const chosen =
@@ -351,7 +491,7 @@ async function runScenario(scenario: Scenario, variant: Variant): Promise<unknow
 
       const preview = await h.checkout.preview({
         owner,
-        destination,
+        destination: where,
         offerCode,
         paymentMethod: payment,
         vatId,
@@ -405,11 +545,16 @@ async function runScenario(scenario: Scenario, variant: Variant): Promise<unknow
         totals: preview.totals,
       };
 
-      const input = await h.input(owner, {
-        shippingOfferCode: offerCode,
+      const extra = {
         paymentMethod: payment,
         ...(scenario.company ? { company: COMPANY } : {}),
-      });
+      };
+      const world = { h, userId: "", owner };
+      const input = digitalOnly
+        ? await digitalOnlyInput(world, extra)
+        : digitalCount > 0
+          ? await mixedInput(world, { ...extra, shippingOfferCode: offerCode })
+          : await h.input(owner, { ...extra, shippingOfferCode: offerCode });
       let placed: unknown;
       try {
         const result = await h.checkout.place(owner, input);
@@ -535,8 +680,8 @@ const readFixture = (): Fixture =>
   JSON.parse(readFileSync(fileURLToPath(FIXTURE_URL), "utf8")) as Fixture;
 
 describe("paritatea cu `main` pentru coșuri fără grup (Faza 15)", () => {
-  it("are cel puțin 30 de coșuri, cu nume unice", () => {
-    expect(SCENARIOS.length).toBeGreaterThanOrEqual(30);
+  it("are cel puțin 40 de coșuri, cu nume unice", () => {
+    expect(SCENARIOS.length).toBeGreaterThanOrEqual(40);
     expect(new Set(SCENARIOS.map((scenario) => scenario.name)).size).toBe(SCENARIOS.length);
   });
 
