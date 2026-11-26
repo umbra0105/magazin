@@ -164,3 +164,28 @@ describe("suita E2E reală", () => {
     );
   });
 });
+
+describe("proiectul comenzilor rulează un singur fișier odată", () => {
+  /**
+   * `orders-offers.spec.ts` și `loyalty.spec.ts` scriu și șterg aceleași setări de checkout (datele bancare, adresa magazinului, care
+   * face să apară ridicarea ca primă variantă de livrare). În paralel, unul schimbă ce vede celălalt: la `verify:full` din
+   * 2026-11-26 oferta de plată a ieșit 199,00 în loc de 224,00. Cu `workers: 1` pe proiect, fișierele rulează pe rând și local, și în CI.
+   */
+  const ordersProject = (config: string): string => {
+    const from = config.indexOf('name: "chromium-orders"');
+    return from < 0 ? "" : config.slice(from, config.indexOf("},", from));
+  };
+  const oneAtATime = (config: string): boolean => /^\s*workers: 1,/m.test(ordersProject(config));
+
+  it("configurația reală limitează proiectul la un worker", () => {
+    expect(oneAtATime(readFileSync(join(root, "playwright.config.ts"), "utf8"))).toBe(true);
+  });
+
+  it("mutant: fără limită (sau cu limita pe alt proiect) e prins", () => {
+    expect(oneAtATime('{\n  name: "chromium-orders",\n  testMatch: x,\n},')).toBe(false);
+    expect(
+      oneAtATime('{\n  name: "chromium",\n  workers: 1,\n},\n{\n  name: "chromium-orders",\n},'),
+    ).toBe(false);
+    expect(oneAtATime('{\n  name: "chromium-orders",\n  workers: 1,\n},')).toBe(true);
+  });
+});

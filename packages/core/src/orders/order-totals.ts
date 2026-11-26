@@ -9,8 +9,16 @@ import type { PaymentMethod } from "./payment-rules";
  */
 
 export interface OrderTotalsInput {
-  /** Totalul produselor (cu TVA) și TVA-ul lor (suma pe linii), din motorul de prețuri. */
-  cart: { totalMinor: number; vatMinor: number };
+  /**
+   * Totalul produselor (cu TVA) și TVA-ul lor (suma pe linii), din motorul de prețuri. Cu puncte de loialitate, motorul adaugă
+   * reducerea și TVA-ul ei (Faza 15b): totalul comenzii devine banii de plată, iar TVA-ul = TVA linii − TVA reducere.
+   */
+  cart: {
+    totalMinor: number;
+    vatMinor: number;
+    pointsDiscountMinor?: number;
+    pointsDiscountVatMinor?: number;
+  };
   shippingMinor: number;
   /** Taxa de ramburs a ofertei; se ignoră dacă plata nu e rambursul. */
   codFeeMinor: number;
@@ -20,6 +28,8 @@ export interface OrderTotalsInput {
 
 export interface OrderTotals {
   subtotalMinor: number;
+  /** Reducerea din puncte; prezentă DOAR când s-au folosit puncte. */
+  discountMinor?: number;
   shippingMinor: number;
   codFeeMinor: number;
   shippingTaxMinor: number;
@@ -48,7 +58,18 @@ export function computeOrderTotals(input: OrderTotalsInput): OrderTotals {
   const codFeeMinor = input.paymentMethod === "cod" ? input.codFeeMinor : 0;
   const shippingTaxMinor = vatFromGross(input.shippingMinor, input.taxRateBps);
   const codFeeTaxMinor = vatFromGross(codFeeMinor, input.taxRateBps);
-  const totalMinor = input.cart.totalMinor + input.shippingMinor + codFeeMinor;
+  const discountMinor = input.cart.pointsDiscountMinor ?? 0;
+  const discountVatMinor = input.cart.pointsDiscountVatMinor ?? 0;
+  assertMinor(discountMinor, "reducere din puncte");
+  assertMinor(discountVatMinor, "TVA reducere din puncte");
+  const totalMinor = input.cart.totalMinor - discountMinor + input.shippingMinor + codFeeMinor;
+  // regula dură a punctelor: reducerea atinge doar produsele, iar comanda de 0 lei nu poate apărea
+  if (discountMinor > 0 && (discountMinor > input.cart.totalMinor || totalMinor <= 0)) {
+    throw new DomainError(
+      "ORDER_AMOUNT_INVALID",
+      "Reducerea din puncte depășește suma pe care o poate acoperi",
+    );
+  }
   if (!Number.isSafeInteger(totalMinor)) {
     throw new DomainError(
       "ORDER_AMOUNT_INVALID",
@@ -57,11 +78,12 @@ export function computeOrderTotals(input: OrderTotalsInput): OrderTotals {
   }
   return {
     subtotalMinor: input.cart.totalMinor,
+    ...(discountMinor > 0 ? { discountMinor } : {}),
     shippingMinor: input.shippingMinor,
     codFeeMinor,
     shippingTaxMinor,
     codFeeTaxMinor,
-    taxMinor: input.cart.vatMinor + shippingTaxMinor + codFeeTaxMinor,
+    taxMinor: input.cart.vatMinor - discountVatMinor + shippingTaxMinor + codFeeTaxMinor,
     totalMinor,
   };
 }

@@ -179,3 +179,72 @@ describe("rambursul la transportul paletizat", () => {
     expect(one?.daysText).toBe("Estimare: 1 palet.");
   });
 });
+
+describe("punctele de loialitate în previzualizare (Faza 15b)", () => {
+  const withLoyalty = (loyalty: CheckoutPreview["loyalty"], discountMinor?: number) =>
+    ({
+      ...preview([offer()], offer()),
+      ...(loyalty ? { loyalty } : {}),
+      totals: {
+        subtotalMinor: 20_000,
+        ...(discountMinor ? { discountMinor } : {}),
+        shippingMinor: 2_500,
+        codFeeMinor: 0,
+        shippingTaxMinor: 434,
+        codFeeTaxMinor: 0,
+        taxMinor: 3_037,
+        totalMinor: 22_500 - (discountMinor ?? 0),
+      },
+    }) as CheckoutPreview;
+  const dto = (loyalty: CheckoutPreview["loyalty"], discountMinor?: number) =>
+    toCheckoutPreviewDto(withLoyalty(loyalty, discountMinor), FORMAT, LIMITS, { isCompany: false });
+  const member = {
+    signedIn: true,
+    earns: true,
+    balance: 120,
+    redeem: { maxPoints: 50, minPoints: 10, pointValueMinor: 100 },
+    appliedPoints: 50,
+    earnEstimate: 1,
+  };
+  const spaces = (text: string | null | undefined) => (text ?? "").replace(/\s/g, " ");
+
+  it("fără program (sau program oprit): niciun bloc și nicio linie de reducere", () => {
+    const result = dto(undefined);
+    expect(result.loyalty).toBeNull();
+    expect(result.totals?.discountText).toBeNull();
+  });
+
+  it("clientul cu sold: întrebarea cu punctele și leii, maximul, reducerea ca linie separată și ce primește", () => {
+    const result = dto(member, 5_000);
+    expect(spaces(result.loyalty?.redeem?.balanceText)).toBe(
+      "Ai 120 de puncte (120,00 RON). Folosește-le?",
+    );
+    expect(spaces(result.loyalty?.redeem?.maxText)).toContain("cel mult 50 de puncte (50,00 RON)");
+    expect(result.loyalty?.redeem).toMatchObject({ maxPoints: 50, minPoints: 10 });
+    expect(spaces(result.loyalty?.appliedText)).toBe("Folosești 50 de puncte: −50,00 RON");
+    expect(spaces(result.totals?.discountText)).toBe("−50,00 RON");
+    expect(spaces(result.totals?.productsText)).toBe("200,00 RON");
+    expect(result.totals?.totalMinor).toBe(17_500);
+    expect(result.loyalty?.note).toBe("Primești 1 punct la această comandă.");
+  });
+
+  it("oaspetele vede «Creează cont și primești X puncte», fără slider", () => {
+    const result = dto({
+      signedIn: false,
+      earns: true,
+      balance: 0,
+      redeem: null,
+      appliedPoints: 0,
+      earnEstimate: 2,
+    });
+    expect(result.loyalty).toMatchObject({ redeem: null, appliedText: null });
+    expect(result.loyalty?.note).toBe("Creează cont și primești 2 puncte la o comandă ca aceasta.");
+  });
+
+  it("Partenerul nu vede nimic despre acumulare; sub un punct nu se promite nimic", () => {
+    expect(
+      dto({ ...member, earns: false, earnEstimate: 0, redeem: null, appliedPoints: 0 }).loyalty,
+    ).toEqual({ redeem: null, appliedPoints: 0, appliedText: null, note: null });
+    expect(dto({ ...member, earnEstimate: 0 }).loyalty?.note).toBeNull();
+  });
+});

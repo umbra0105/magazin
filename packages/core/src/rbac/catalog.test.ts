@@ -173,3 +173,33 @@ describe("permisiunile comenzilor și emailurilor (Faza 11)", () => {
     }
   });
 });
+
+describe("permisiunile punctelor de loialitate (Faza 15b)", () => {
+  const rolesWith = (permission: (typeof PERMISSION_KEYS)[number]) =>
+    DEFAULT_ROLES.filter((r) => r.permissions.includes(permission)).map((r) => r.key);
+
+  it("vederea punctelor și a datoriei: Owner, Admin, Manager, Suport, Contabil", () => {
+    expect(rolesWith("loyalty.view")).toEqual([
+      "owner",
+      "admin",
+      "manager",
+      "support",
+      "accountant",
+    ]);
+  });
+
+  it("ajustarea manuală: doar Owner, Admin, Manager; setările programului: doar Owner și Admin", () => {
+    expect(rolesWith("loyalty.adjust")).toEqual(["owner", "admin", "manager"]);
+    expect(rolesWith("loyalty.configure")).toEqual(["owner", "admin"]);
+  });
+
+  it("ajustarea și setările cer și vederea", () => {
+    for (const role of DEFAULT_ROLES) {
+      if (
+        role.permissions.includes("loyalty.adjust") ||
+        role.permissions.includes("loyalty.configure")
+      )
+        expect(role.permissions, role.key).toContain("loyalty.view");
+    }
+  });
+});

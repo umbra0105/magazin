@@ -58,6 +58,7 @@ const previewInput = z.object({
   offerCode: z.string().min(1).max(100).nullable().optional(),
   paymentMethod: z.enum(PAYMENT_METHODS).nullable().optional(),
   vatId: z.string().trim().max(20).nullable().optional(),
+  loyaltyPoints: z.number().int().min(0).max(1_000_000_000).optional(),
 });
 
 export async function previewCheckoutAction(input: unknown): Promise<PreviewActionResult> {
@@ -73,6 +74,7 @@ export async function previewCheckoutAction(input: unknown): Promise<PreviewActi
       offerCode: parsed.data.offerCode ?? null,
       paymentMethod: parsed.data.paymentMethod ?? null,
       vatId,
+      ...(parsed.data.loyaltyPoints ? { loyaltyPoints: parsed.data.loyaltyPoints } : {}),
     });
     const [format, settings, pickupHours] = await Promise.all([
       getStorefrontFormat(),
@@ -175,12 +177,15 @@ export async function placeOrderAction(input: unknown): Promise<PlaceActionResul
     if (error instanceof DomainError) {
       const issues = (error.details as { issues?: Array<{ path: string }> } | undefined)?.issues;
       const refresh =
-        error instanceof OrderError &&
+        (error instanceof OrderError || error.code === "LOYALTY_INSUFFICIENT_POINTS") &&
         [
           "ORDER_TOTAL_CHANGED",
           "ORDER_CART_CHANGED",
           "ORDER_OFFER_UNAVAILABLE",
           "ORDER_PAYMENT_METHOD_UNAVAILABLE",
+          "ORDER_POINTS_UNAVAILABLE",
+          "ORDER_POINTS_INVALID",
+          "LOYALTY_INSUFFICIENT_POINTS",
         ].includes(error.code);
       return fail(error.code, { fields: issues?.map((issue) => issue.path) ?? [], refresh });
     }

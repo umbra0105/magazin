@@ -111,6 +111,8 @@ export const adminReturnsRo = {
         ? "Nimic de repus pe stoc: liniile sunt deja repuse sau nu sunt revandabile."
         : `${n} ${n === 1 ? "linie repusă" : "linii repuse"} pe stoc${unmanaged > 0 ? `; ${unmanaged} fără stoc gestionat (nicio acțiune)` : ""}.`,
     refundDone: (amount: string) => `Rambursarea de ${amount} a fost pornită.`,
+    refundPointsOnly:
+      "Returul a fost închis fără rambursare de bani: punctele folosite s-au întors în cont.",
   },
   conditions: {
     as_new: "Ca nou",

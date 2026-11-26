@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import { redeemHint } from "@ecom/core";
+import { getDb } from "@ecom/db";
+import { pluralRo } from "@ecom/shared";
 import { Container, SectionHeading } from "@ecom/ui";
 import { CartPanel } from "@/components/storefront/cart/cart-panel";
 import { ProductGrid } from "@/components/storefront/catalog/product-grid";
 import { getCartService, resolveCartOwner } from "@/lib/cart";
+import { formatMoney } from "@/lib/money-input";
 import {
   getCatalogReader,
   getStorefrontFormat,
@@ -37,6 +41,8 @@ export default async function CartPage() {
   ]);
   const cart = getCartService();
   const hasLines = (await cart.lineCount(owner)) > 0;
+  const points =
+    hasLines && owner.kind === "user" ? await redeemHint(getDb(), owner.userId, new Date()) : null;
   const suggested = hasLines
     ? await getCatalogReader().listedByIds(
         await cart.crossSellProductIds(owner, SUGGESTIONS),
@@ -47,6 +53,14 @@ export default async function CartPage() {
   return (
     <Container className="flex flex-col gap-10 py-8 sm:py-12">
       <h1 className="heading-display text-4xl sm:text-5xl">{m.title}</h1>
+      {points ? (
+        <p className="rounded-card bg-card p-4 font-medium" data-cart-points>
+          {getMessages().storefront.checkout.loyalty.cartHint(
+            pluralRo(points.points, "punct", "puncte", "de puncte"),
+            formatMoney(points.valueMinor, format.currency, format.locale),
+          )}
+        </p>
+      ) : null}
       <CartPanel variant="page" />
       {suggested.length > 0 ? (
         <section className="flex flex-col gap-6">

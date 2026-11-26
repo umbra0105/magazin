@@ -3851,3 +3851,53 @@ export async function readE2eNirImportRow(fileNamePrefix: string): Promise<{
     );
   });
 }
+
+// ------------------------------------------------------------------------------------------- puncte de loialitate (Faza 15b)
+
+/** Setările pe care le scriu specurile de puncte; `disableE2eLoyalty` le șterge pe toate (revin la implicit). */
+export const E2E_LOYALTY_SETTINGS = [
+  "loyalty.enabled",
+  "loyalty.vatMode",
+  "loyalty.releasedGraceDays",
+] as const;
+
+/** Pornește programul (flag, activ, tratament `base_reduced`). Stare comună: doar din specul care rulează singur. */
+export async function enableE2eLoyalty(): Promise<void> {
+  await setE2eSettings({ "loyalty.enabled": true, "loyalty.vatMode": "base_reduced" });
+  await setE2eFeatureFlag("loyalty", true);
+}
+
+export async function disableE2eLoyalty(): Promise<void> {
+  await clearE2eSettings(E2E_LOYALTY_SETTINGS);
+  await setE2eFeatureFlag("loyalty", false);
+}
+
+/** Soldul contului de puncte al unui client de test (0 fără cont). */
+export async function readE2eLoyaltyBalance(email: string): Promise<number> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select a.balance from loyalty_account a join "user" u on u.id = a."customerId" where u.email = $1`,
+      [email],
+    );
+    return (result.rows[0]?.balance as number | undefined) ?? 0;
+  });
+}
+
+/** Rândurile de audit ale ajustărilor de puncte, ca text (pentru verificarea «fără date personale»). */
+export async function readE2eLoyaltyAudit(action: string): Promise<string[]> {
+  return withClient(async (db) => {
+    const result = await db.query(
+      `select concat(coalesce(before::text, ''), coalesce(after::text, '')) as dump from audit_log where action = $1`,
+      [action],
+    );
+    return result.rows.map((row: { dump: string }) => row.dump);
+  });
+}
+
+/** Identificatorul unui cont de test (pentru adresa fișei de puncte). */
+export async function readE2eUserId(email: string): Promise<string> {
+  return withClient(async (db) => {
+    const result = await db.query(`select id from "user" where email = $1`, [email]);
+    return result.rows[0]?.id as string;
+  });
+}

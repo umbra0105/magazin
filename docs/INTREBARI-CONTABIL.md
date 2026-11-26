@@ -125,11 +125,11 @@ Răspuns:
 **9. Vouchere cadou.** Un voucher **cumpărat** (plată anticipată) apare pe factura finală ca **metodă de plată**, nu reduce baza de TVA. E
 corect? Ce termen minim de valabilitate se aplică și ce se întâmplă cu soldul neutilizat la expirare? (răspunsul anterior: „reducere din comandă”)
 
-Răspuns:
+Răspuns: (2026-11-25, de la utilizator) «Voucherele cadou au termen de valabilitate 365 de zile. Voucherele expirate își pierd valoarea.» (Pentru Faza 15c; celelalte părți ale întrebării rămân deschise.)
 
 **10. Puncte de loialitate.** Produse de 100 lei, 10 lei plătiți cu puncte: TVA se calculează pe 100 sau pe 90 lei? Reducerea apare ca linie separată?
 
-Răspuns:
+Răspuns: «Punctele reprezintă o reducere de preț». (Primit de la utilizator, 2026-11-25, după ce a întrebat contabilul.)
 
 **12. TVA la transport și la taxa de ramburs (adăugată în Faza 9).** Transportul și taxa de ramburs sunt sume cu TVA inclus, ca prețurile produselor: TVA-ul se extrage din ele cu aceeași cotă (`tax.standardRate`, 21%), ca la linii. Provizoriu, așa le tratăm. E corect? Taxa de ramburs apare pe factură ca linie separată (serviciu) sau e inclusă în transport? Cota TVA a transportului urmează cota produselor sau e mereu cea standard?
 
@@ -160,3 +160,7 @@ Răspuns:
 **16. TVA la un storno total după stornouri parțiale în bucăți (adăugată în mini-faza `storno-total`, legată de #14).** Când o factură e stornată în mai multe documente (retururi parțiale, apoi stornoul restului), fiecare document storno are TVA-ul extras din brutul LUI (cum îl calculează și SmartBill), iar brutul tuturor stornourilor este totalul facturii, exact. Din cauza rotunjirii, suma TVA a stornourilor poate diferi cu 1 ban pe linie de TVA-ul liniei originale (exemplu: linie de 4 × 123,45 = 493,80 lei, TVA 85,70; retur de o bucată, TVA 21,43, apoi restul de 3 bucăți, 370,35 lei, TVA 64,28; suma TVA a stornourilor 85,71). Este acceptabilă o diferență de cel mult 1 ban pe linie, sau SmartBill / contabilul cer altă regulă (de exemplu TVA-ul ultimului storno «prin diferență», ceea ce SmartBill nu permite prin API, fiindcă își calculează singur TVA-ul din brut)? Același lucru la o linie cu cantitate zecimală, unde restul se trimite «1 × brutul rămas» ca documentul să nu difere cu 1 ban de ce a încasat magazinul.
 
 Răspuns (2026-11-23, contabil): acceptat. Diferența de 1 ban de TVA pe linie se reglează manual în contabilitate; facturile nu trebuie să aibă diferențe de brut.
+
+**17. TVA pe reducerea din puncte de loialitate, pe rând de factură (adăugată în Faza 15b).** Factura unui produs plătit parțial cu puncte are două rânduri: produsul la prețul întreg și reducerea, cu minus. TVA-ul se extrage din brutul fiecărui rând, ca la orice rând de factură și ca la storno. Exemplu: produs 100,00 lei (TVA 17,36 lei), reducere 33,33 lei (TVA 5,78 lei) → TVA pe factură **11,58 lei**, cu 66,67 lei de plată. Calculat direct pe 66,67 lei, TVA-ul ar fi 11,57 lei. Este acceptabilă varianta pe rânduri (11,58 lei)?
+
+Răspuns:

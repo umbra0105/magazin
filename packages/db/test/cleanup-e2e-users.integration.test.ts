@@ -41,6 +41,31 @@ describe("cleanupE2eUsers", () => {
     expect(left.rows.map((r: { email: string }) => r.email)).toEqual([realEmail]);
   });
 
+  it("șterge și conturile cu puncte de loialitate (contul de puncte ține clientul cu RESTRICT)", async () => {
+    const id = `u-${suffix}-p`;
+    await insertUser(id, `e2e-puncte-${suffix}@example.test`);
+    await client.query(
+      `insert into loyalty_account ("customerId", "updatedAt") values ($1, now())`,
+      [id],
+    );
+    await client.query(
+      `insert into loyalty_transaction (id, "customerId", type, points, reason, "actorId", "idempotencyKey")
+       values ($1, $2, 'adjust', 5, 'probă', 'e2e', $1)`,
+      [`lt-${suffix}`, id],
+    );
+
+    await cleanupE2eUsers(url);
+
+    for (const [table, column] of [
+      ["user", "id"],
+      ["loyalty_account", "customerId"],
+      ["loyalty_transaction", "customerId"],
+    ]) {
+      const left = await client.query(`select 1 from "${table}" where "${column}" = $1`, [id]);
+      expect(left.rowCount, table).toBe(0);
+    }
+  });
+
   it("refuză o bază fără „test” în nume", async () => {
     await expect(cleanupE2eUsers("postgres://u:p@localhost:5432/ecom")).rejects.toThrow();
   });

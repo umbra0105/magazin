@@ -127,7 +127,13 @@ export function ReturnActions(props: ReturnActionsProps) {
             returnId: id,
             ...(shipping.trim() ? { shipping, shippingReason } : {}),
           }),
-        (r) => setMessage(a.refundDone(String(Number(r["amountMinor"]) / 100))),
+        // 0 lei = produse plătite integral cu puncte: returul se închide fără rambursare de bani
+        (r) =>
+          setMessage(
+            Number(r["amountMinor"]) === 0
+              ? a.refundPointsOnly
+              : a.refundDone(String(Number(r["amountMinor"]) / 100)),
+          ),
       );
     }
     if (pending.kind === "restock") {

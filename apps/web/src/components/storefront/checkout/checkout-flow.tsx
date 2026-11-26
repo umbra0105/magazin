@@ -20,6 +20,7 @@ import {
 } from "@/lib/checkout-validation";
 import { getMessages } from "@/messages";
 import { FIELD, Field, TEXTAREA } from "./fields";
+import { PointsChoice } from "./points-choice";
 
 const m = getMessages().storefront.checkout;
 const md = getMessages().digital.checkout;
@@ -69,6 +70,8 @@ interface Values {
   consent: boolean;
   /** Bifa de renunțare la dreptul de retragere (doar cu produse digitale în coș); separată de Termeni, nepre-bifată. */
   digitalConsent: boolean;
+  /** Punctele de loialitate alese; nu se păstrează în ciornă (se aleg la fiecare finalizare). */
+  loyaltyPoints: number;
 }
 
 const EMPTY: Values = {
@@ -92,6 +95,7 @@ const EMPTY: Values = {
   installNote: "",
   consent: false,
   digitalConsent: false,
+  loyaltyPoints: 0,
 };
 
 const DRAFT_KEY = "ecom.checkout.v1";
@@ -133,6 +137,7 @@ function readDraft(): Values | null {
       digitalConsent: false,
       paymentMethod: "",
       offerCode: "",
+      loyaltyPoints: 0,
     };
   } catch {
     return null;
@@ -184,6 +189,10 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
   const keyRef = useRef<string>("");
   const valuesRef = useRef(values);
   valuesRef.current = values;
+  /** Numărul cererii de previzualizare: un răspuns depășit nu mai schimbă nimic. */
+  const previewSeq = useRef(0);
+  const pointsTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(pointsTimer.current), []);
 
   // ciorna din browser (doar câmpurile de contact și adresă) și cheia de idempotență a acestei încercări
   useEffect(() => {
@@ -216,6 +225,7 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
 
   const refresh = useCallback(
     async (override: Partial<Values> = {}): Promise<CheckoutPreviewDto | null> => {
+      const sequence = ++previewSeq.current;
       setPreviewing(true);
       setPreviewProblem(null);
       try {
@@ -235,7 +245,9 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
             offerCode: current.offerCode || null,
             paymentMethod: current.paymentMethod || null,
             vatId: current.isCompany ? current.vatId.trim() || null : null,
+            ...(current.loyaltyPoints > 0 ? { loyaltyPoints: current.loyaltyPoints } : {}),
           });
+          if (sequence !== previewSeq.current) return null;
           if (!result.ok) {
             setPreviewProblem(
               result.code === "rate_limited" ? m.errors.rateLimited : m.errors.failed,
@@ -249,6 +261,9 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
           if (data.selectedOfferCode && current.offerCode !== data.selectedOfferCode) {
             patch.offerCode = data.selectedOfferCode;
           }
+          // serverul taie punctele la ce se poate folosi acum (transport, sold, tratament)
+          const points = data.loyalty?.appliedPoints ?? 0;
+          if (current.loyaltyPoints !== points) patch.loyaltyPoints = points;
           const chosen = data.methods?.find((method) => method.method === current.paymentMethod);
           if ((!chosen || !chosen.available) && data.methods) {
             const first = data.methods.find((method) => method.available);
@@ -267,11 +282,21 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
         }
         return null;
       } finally {
-        setPreviewing(false);
+        if (sequence === previewSeq.current) setPreviewing(false);
       }
     },
     [],
   );
+
+  /** Punctele se recalculează pe server la scurt timp după ultima mișcare a câmpului. */
+  const choosePoints = (loyaltyPoints: number) => {
+    set({ loyaltyPoints });
+    previewSeq.current++;
+    setPreviewing(true);
+    clearTimeout(pointsTimer.current);
+    pointsTimer.current = setTimeout(() => void refresh({ loyaltyPoints }), 250);
+  };
+  const pointsPending = values.loyaltyPoints !== (preview?.loyalty?.appliedPoints ?? 0);
 
   const stepIndex = (id: StepId) => STEPS.indexOf(id);
   const errorsFor = (id: StepId): FieldErrors => {
@@ -410,6 +435,7 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
             }
           : null,
         paymentMethod: values.paymentMethod,
+        ...(values.loyaltyPoints > 0 ? { loyaltyPoints: values.loyaltyPoints } : {}),
         ...(values.note.trim() ? { customerNote: values.note.trim() } : {}),
         installation: {
           requested: values.installRequested,
@@ -1011,6 +1037,16 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
           "payment",
           <>
             <p className="text-ink-secondary">{m.paymentLede}</p>
+            {preview?.loyalty?.redeem ? (
+              <PointsChoice
+                id={`${base}-loyaltyPoints`}
+                redeem={preview.loyalty.redeem}
+                value={values.loyaltyPoints}
+                appliedText={preview.loyalty.appliedText}
+                pending={pointsPending}
+                onChange={choosePoints}
+              />
+            ) : null}
             <fieldset className="flex min-w-0 flex-col gap-3">
               <legend className="sr-only">{m.steps.payment}</legend>
               {preview?.methods?.map((entry, index) => (
@@ -1102,6 +1138,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
           "review",
           <>
             <p className="text-ink-secondary">{m.reviewLede}</p>
+            {preview?.loyalty?.appliedText ? (
+              <p className="font-medium" data-review-points>
+                {preview.loyalty.appliedText}
+              </p>
+            ) : null}
             {pickupFrom ? (
               <p className="font-medium" data-review-pickup>
                 {pickupFrom}
@@ -1235,7 +1276,7 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
             <StoreButton
               type="submit"
               size="lg"
-              disabled={placing || previewing}
+              disabled={placing || previewing || pointsPending}
               data-checkout-submit
               className="w-full sm:w-auto"
             >
@@ -1277,6 +1318,12 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
               {props.cart.groupLineText}
             </p>
           ) : null}
+          {totals?.discountText ? (
+            <div className="flex justify-between gap-4" data-summary-points>
+              <dt className="text-ink-secondary">{m.loyalty.discount}</dt>
+              <dd className="tabular-nums">{totals.discountText}</dd>
+            </div>
+          ) : null}
           {props.digital.only ? null : (
             <div className="flex justify-between gap-4">
               <dt className="text-ink-secondary">{m.shipping}</dt>
@@ -1303,6 +1350,11 @@ export function CheckoutFlow(props: CheckoutFlowProps) {
             </div>
           ) : null}
         </dl>
+        {preview?.loyalty?.note ? (
+          <p className="text-sm text-ink-secondary" data-summary-points-note>
+            {preview.loyalty.note}
+          </p>
+        ) : null}
         {pickupFrom ? (
           <p className="text-sm" data-summary-pickup>
             {pickupFrom}

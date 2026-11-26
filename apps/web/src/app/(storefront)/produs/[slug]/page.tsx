@@ -89,6 +89,8 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
   const [format, chrome] = await Promise.all([getStorefrontFormat(), getStorefrontChrome()]);
   const includeDiagram = await getFeatureFlags().isEnabled("partsDiagrams");
+  // punctele de loialitate (Faza 15b): pagina doar știe dacă să le ceară; cifra vine pe cerere, în afara cache-ului
+  const loyaltyOn = await getFeatureFlags().isEnabled("loyalty");
   const product = await getProductCached(resolved.canonical, format, includeDiagram);
   if (!product) notFound();
 
@@ -231,6 +233,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
             <PurchasePanel
               productTitle={product.title}
               wishlist={chrome.slots.wishlist === "active"}
+              loyalty={loyaltyOn}
               options={product.options}
               defaultVariantId={defaultVariant.id}
               contact={{

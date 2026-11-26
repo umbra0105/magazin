@@ -361,6 +361,8 @@ Vânzări azi/7z/30z cu comparație · comenzi noi de procesat · valoare medie 
 ### 5.3 Clienți
 Listă cu LTV, nr. comenzi, ultima comandă, etichete · fișă client cu istoric, adrese, note, activitate · grupuri și segmente (reguli: „au comandat de peste 2x în ultimele 90 zile") · export GDPR · anonimizare/ștergere · impersonare (cu audit) · conturi B2B.
 
+**Implementat în Faza 15b (puncte de loialitate).** Sub «Clienți», cu flag-ul `loyalty` pornit: «Puncte» (`/admin/clienti/puncte`: căutare, fișa clientului cu sold, puncte în așteptare, istoric cu motivul ajustărilor și ajustarea manuală cu motiv obligatoriu) și «Datorie în puncte» (disponibile pe luna expirării, în așteptare, solduri negative, CSV pentru Excel, fără date personale). Sub «Setări»: «Puncte de loialitate» (`/admin/setari/puncte`). Denumirea rândului de reducere de pe factură e în Setări → Facturare. Permisiuni, verificate pe server: `loyalty.view`, `loyalty.adjust`, `loyalty.configure`; emailul întreg se vede doar cu `customers.read_pii`. Fișa generală de client (LTV, adrese, note, GDPR) nu face parte din 15b.
+
 ### 5.4 Produse
 - Listă cu preview imagine, stoc, preț, status, categorie; filtre și editare inline
 - Editor produs: informații generale, descriere rich, media (drag&drop, reordonare, alt), prețuri, variante (generator de combinații), stoc per depozit, atribute, categorii/colecții, SEO, produse asociate, livrare (greutate/dimensiuni), GPSR, produs digital
@@ -632,6 +634,7 @@ Vezi `09-preturi-si-parteneri.md` §5.
 Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul de mai jos diferă de catalog (`pnpm test`). Pentru a-l regenera după o modificare în catalog, copiază rezultatul din testul `rbac/matrix.test.ts`.
 
 <!-- rbac-matrix:start -->
+
 | Permisiune | Owner | Admin | Manager | Editor conținut | Suport clienți | Depozit | Contabil |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | `admin.access` — Intră în zona de administrare (/admin) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -661,6 +664,9 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `customers.groups.manage` — Gestionează grupurile de clienți | ✓ | ✓ |  |  |  |  |  |
 | `discounts.read` — Vede reducerile și cupoanele | ✓ | ✓ | ✓ |  |  |  |  |
 | `discounts.write` — Creează și modifică reduceri și cupoane | ✓ | ✓ | ✓ |  |  |  |  |
+| `loyalty.view` — Vede punctele de loialitate ale clienților și raportul «datorie în puncte» | ✓ | ✓ | ✓ |  | ✓ |  | ✓ |
+| `loyalty.adjust` — Ajustează manual punctele unui client (cu motiv obligatoriu) | ✓ | ✓ | ✓ |  |  |  |  |
+| `loyalty.configure` — Modifică setările programului «Puncte de loialitate» (doar Owner și Admin) | ✓ | ✓ |  |  |  |  |  |
 | `content.read` — Vede conținutul (CMS, blog, SEO) | ✓ | ✓ |  | ✓ |  |  |  |
 | `content.write` — Editează conținutul (CMS, blog, SEO) | ✓ | ✓ |  | ✓ |  |  |  |
 | `media.read` — Vede biblioteca media și poate alege fișiere în formulare | ✓ | ✓ | ✓ | ✓ |  | ✓ |  |
@@ -685,6 +691,7 @@ Generată din `packages/core/src/rbac/catalog.ts`; un test pică dacă tabelul d
 | `users.manage` — Gestionează utilizatorii și rolurile | ✓ | ✓ |  |  |  |  |  |
 | `audit.read` — Vede jurnalul de audit | ✓ | ✓ |  |  |  |  |  |
 | `system.update` — Actualizează sistemul și rulează mentenanță | ✓ |  |  |  |  |  |  |
+
 <!-- rbac-matrix:end -->
 
 **`products.export` (punctul 14b): cine o are și de ce.** Owner, Admin și Manager (rolurile care pot modifica și importa catalogul). Nu o au Depozit și Editor, deși văd lista (`products.read`): exportul scoate tot catalogul într-un click, cu ciorne, date interne și identificatori, deci cere o poartă proprie, nu `products.read`; `products.write` ar fi cuplat exportul de dreptul de a modifica. Exportul nu conține niciodată prețul de achiziție, nici pentru cine are `products.cost.view`. O instalare veche primește permisiunea la rularea seed-ului (`db:seed`).

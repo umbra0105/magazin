@@ -72,6 +72,8 @@ export const placeOrderInputSchema = z.object({
   /** Oferta de livrare aleasă: obligatorie la comenzile cu linii fizice; absentă la coșul 100% digital. */
   shippingOfferCode: z.string().min(1).max(100).optional(),
   paymentMethod: z.enum(PAYMENT_METHODS),
+  /** Punctele de loialitate pe care clientul vrea să le folosească (Faza 15b); maximul se verifică pe server. */
+  loyaltyPoints: z.number().int().min(0).max(1_000_000_000).optional(),
   customerNote: z.string().trim().max(1000).optional(),
   installation: z
     .object({ requested: z.boolean(), note: z.string().trim().max(1000).optional() })

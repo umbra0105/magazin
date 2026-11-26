@@ -4,6 +4,7 @@ import { scheduleDigitalAccess, type DigitalPorts } from "../digital/digital-gra
 import { scheduleOrderEmails } from "../email/order-email-triggers";
 import { scheduleOrderInvoices } from "../invoicing/invoice-schedule";
 import { settleReturnOnRefund } from "../returns/return-settle";
+import { scheduleOrderLoyalty, type LoyaltyPorts } from "../loyalty/order-loyalty";
 import { OrderError } from "./order-errors";
 import {
   assertTransition,
@@ -136,6 +137,17 @@ export const DIGITAL_PORTS: DigitalPorts = {
   },
 };
 
+/**
+ * Ce primește modulul punctelor de loialitate de la comandă: evenimentele și cele două date ale punctelor (de când pot fi
+ * acordate și când au fost acordate). Restul instantaneului de puncte e imuabil în bază.
+ */
+export const LOYALTY_PORTS: LoyaltyPorts = {
+  emit: (tx, orderId, event) => addOrderEvent(tx, orderId, event),
+  setEarnDates: async (tx, orderId, dates) => {
+    await tx.order.update({ where: { id: orderId }, data: dates });
+  },
+};
+
 /** Adaugă o intrare în jurnalul comenzii (timeline); intrările nu se modifică și nu se șterg. */
 export async function addOrderEvent(
   tx: Db,
@@ -164,4 +176,6 @@ export async function addOrderEvent(
     { id: created.id, type: event.type, data: event.data },
     DIGITAL_PORTS,
   );
+  // punctele de loialitate (Faza 15b): întoarcere, revocare și data acordării, după retur și accesul digital de mai sus
+  await scheduleOrderLoyalty(tx, orderId, { type: event.type }, LOYALTY_PORTS);
 }

@@ -12,6 +12,7 @@ export const accountRo = {
     addresses: "Adrese",
     returns: "Retururi",
     favorites: "Favorite",
+    points: "Puncte",
     profile: "Date personale",
     signOut: "Deconectare",
   },
@@ -225,6 +226,10 @@ export const accountRo = {
     tracking: "Urmărește coletul",
     rejectReason: "Motivul respingerii",
     refunded: (amount: string) => `Am rambursat ${amount}, în aceeași modalitate de plată.`,
+    /** Retur de produse plătite integral cu puncte: nu există bani de rambursat (Faza 15b). */
+    refundedPoints:
+      "Produsele returnate au fost plătite cu puncte, așa că nu sunt bani de rambursat. Punctele s-au întors în cont.",
+    closedWithoutMoney: "Returul s-a încheiat.",
     refundNote:
       "Rambursarea acoperă produsele acceptate la inspecție. Banii pot ajunge în cont în câteva zile lucrătoare.",
     accepted: "Acceptat",
@@ -288,6 +293,47 @@ export const accountRo = {
     defective: "Defect",
     wrong_item: "Alt produs",
   } as Record<string, string>,
+  /** Punctele de loialitate (Faza 15b): pagina din cont și mențiunile de pe comandă. */
+  points: {
+    title: "Puncte de loialitate",
+    lede: "Primești puncte pentru banii plătiți pe produse. Le poți folosi la finalizarea unei comenzi, doar pentru produse; transportul se plătește mereu în bani.",
+    balance: "Puncte disponibile",
+    value: "Valoarea lor",
+    partner: "Contul tău nu acumulează puncte.",
+    partnerKeeps: "Punctele deja strânse le poți folosi în continuare.",
+    negative:
+      "Soldul este negativ după un retur. Punctele primite de acum acoperă mai întâi diferența.",
+    nextExpiry: (points: string, date: string) =>
+      `Următoarele puncte expiră pe ${date}: ${points}.`,
+    noExpiry: "Nu ai puncte care să expire.",
+    pendingTitle: "În așteptare",
+    pendingNone: "Nu ai puncte în așteptare.",
+    pendingRow: (points: string, order: string, date: string) =>
+      `Comanda ${order}: ${points}, disponibile din ${date}.`,
+    historyTitle: "Istoric",
+    historyEmpty: "Nu ai încă nicio mișcare de puncte.",
+    columns: {
+      date: "Data",
+      what: "Ce s-a întâmplat",
+      order: "Comanda",
+      points: "Puncte",
+      balance: "Sold",
+    },
+    types: {
+      earn: "Puncte primite",
+      redeem: "Puncte folosite",
+      release: "Puncte întoarse în cont",
+      revoke: "Puncte retrase",
+      expire: "Puncte expirate",
+      adjust: "Ajustare făcută de magazin",
+    } as Record<string, string>,
+    orderUsed: (points: string) => `Ai folosit ${points} la această comandă.`,
+    orderEarned: (points: string) => `Ai primit ${points} pentru această comandă.`,
+    orderToEarn: (points: string) =>
+      `Primești ${points} după livrare, când se încheie termenul de retur.`,
+    orderToEarnAt: (points: string, date: string) => `Primești ${points} din ${date}.`,
+    discount: "Reducere din puncte",
+  },
   favorites: {
     title: "Produsele favorite",
     lede: "Produsele pe care le-ai salvat pentru mai târziu.",

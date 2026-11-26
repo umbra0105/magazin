@@ -1,3 +1,4 @@
+import { pluralRo } from "@ecom/shared/plural";
 import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared/quantity";
 import type { OrderSummary } from "@ecom/core";
 import Link from "next/link";
@@ -26,6 +27,12 @@ export function OrderSummaryView({
   const payLabel = m.paymentStatuses[order.paymentStatus] ?? order.paymentStatus;
   const fulfilLabel = m.fulfillmentStatuses[order.fulfillmentStatus] ?? order.fulfillmentStatus;
   const digitalOnly = order.shipping.kind === "digital";
+  const points = (count: number) => pluralRo(count, "punct", "puncte", "de puncte");
+  // după livrare, estimarea de la plasare nu se mai arată: cifra exactă, cu data, e în cont
+  const earnAhead =
+    order.status !== "cancelled" &&
+    order.fulfillmentStatus !== "delivered" &&
+    order.fulfillmentStatus !== "returned";
   // accesul digital e activ după plată (card, transfer) sau după livrarea confirmată (ramburs mixt)
   const digitalActive =
     order.digital !== null &&
@@ -173,6 +180,14 @@ export function OrderSummaryView({
             <dt className="text-ink-secondary">{getMessages().storefront.checkout.products}</dt>
             <dd className="tabular-nums">{money(order.totals.subtotalMinor)}</dd>
           </div>
+          {order.totals.discountMinor ? (
+            <div className="flex justify-between gap-4" data-order-points-discount>
+              <dt className="text-ink-secondary">
+                {getMessages().storefront.checkout.loyalty.discount}
+              </dt>
+              <dd className="tabular-nums">−{money(order.totals.discountMinor)}</dd>
+            </div>
+          ) : null}
           {digitalOnly ? null : (
             <div className="flex justify-between gap-4">
               <dt className="text-ink-secondary">{getMessages().storefront.checkout.shipping}</dt>
@@ -200,6 +215,16 @@ export function OrderSummaryView({
           </div>
         </dl>
       </section>
+      {order.loyalty ? (
+        <div className="flex flex-col gap-1 text-sm" data-order-points>
+          {order.loyalty.pointsUsed > 0 ? (
+            <p>{m.pointsUsed(points(order.loyalty.pointsUsed))}</p>
+          ) : null}
+          {earnAhead && order.loyalty.pointsToEarn > 0 ? (
+            <p>{m.pointsToEarn(points(order.loyalty.pointsToEarn))}</p>
+          ) : null}
+        </div>
+      ) : null}
       <p className="text-sm text-ink-secondary">
         {m.placedOn(formatDateTime(order.placedAt, format.locale, timeZone))}
       </p>

@@ -181,6 +181,41 @@ export const settingGroups = {
      */
     windowDays: z.number().int().min(1).max(365).default(14),
   },
+  loyalty: {
+    /**
+     * Punctele de loialitate (Faza 15b). Programul merge doar cu flag-ul `loyalty` pornit ȘI cu `enabled`. Transportul plătit
+     * în bani și acumularea doar pe banii plătiți sunt reguli FIXE, nu setări.
+     */
+    enabled: z.boolean().default(false),
+    /** Câți bani plătiți pe produse aduc 1 punct (10000 = 100,00 lei). */
+    earnRate: z.number().int().min(1).max(1_000_000_000).default(10_000),
+    /** Cât valorează 1 punct la folosire, în bani (100 = 1,00 leu). */
+    pointValue: z.number().int().min(1).max(1_000_000).default(100),
+    /** Câte luni sunt valabile punctele de la acordare. */
+    expiryMonths: z.number().int().min(1).max(120).default(12),
+    /** Cu câte zile înainte de expirare pleacă emailul de avertizare. */
+    expiryWarningDays: z.number().int().min(1).max(365).default(30),
+    /** Plafon din valoarea produselor care se poate plăti cu puncte, în procente; gol = fără plafon. */
+    maxRedeemPercent: z.number().int().min(1).max(100).nullable().default(null),
+    /** Sub acest număr de puncte nu se pot folosi. */
+    minRedeemPoints: z.number().int().min(1).max(1_000_000).default(10),
+    /** Suma minimă de plătit în bani când transportul e mai mic (regula dură: comanda de 0 lei nu poate apărea). */
+    minCashAmount: z.number().int().min(1).max(1_000_000_000).default(100),
+    /** Produsele la promoție aduc și ele puncte. */
+    earnOnDiscountedItems: z.boolean().default(true),
+    /**
+     * Tratamentul TVA al reducerii din puncte. GOL = punctele nu se pot folosi (cere confirmarea contabilului).
+     * `base_reduced` = reducerea scade baza de TVA. `base_full` e amânat (decizia 2026-11-26) și e respins.
+     */
+    vatMode: z.enum(["base_reduced"]).nullable().default(null),
+    /** Punctele întoarse (anulare, retur) nu expiră mai devreme de atâtea zile de la întoarcere. */
+    releasedGraceDays: z.number().int().min(0).max(365).default(30),
+    /**
+     * Marcaj intern: `db:seed:store` a pornit deja programul acestei instalări, deci nu mai suprascrie nimic. Nu apare în admin.
+     * Existența rândului nu spune nimic: `db:seed` scrie câte un rând pentru fiecare setare.
+     */
+    storeSeeded: z.boolean().default(false),
+  },
   account: {
     /**
      * Cât se păstrează comenzile și facturile unui cont șters (anonimizat), în ani. Anonimizarea NU șterge comenzile (obligație
@@ -300,6 +335,13 @@ export const settingGroups = {
     /** Denumirea liniei de transport și a taxei de ramburs pe factură, și unitatea lor de măsură. */
     shippingLabel: z.string().trim().min(1).max(80).default("Transport"),
     codFeeLabel: z.string().trim().min(1).max(80).default("Taxă de ramburs"),
+    /** Denumirea rândului de reducere din puncte de loialitate (Faza 15b); urmează numele produsului. */
+    pointsDiscountLabel: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .default("Reducere din puncte de loialitate"),
     serviceUnit: z.string().trim().min(1).max(40).default("buc"),
     /** Furnizorul trimite factura clientului pe email (SmartBill: cere un server de email configurat în contul lor). */
     sendEmailByProvider: z.boolean().default(false),

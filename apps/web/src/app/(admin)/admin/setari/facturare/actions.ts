@@ -161,6 +161,7 @@ export const saveInvoicingChoice = withPermission(
 const textsForm = z.strictObject({
   shippingLabel: z.string().max(200),
   codFeeLabel: z.string().max(200),
+  pointsDiscountLabel: z.string().max(200),
   serviceUnit: z.string().max(200),
   unitNames: z.string().max(4000),
   sendEmailByProvider: z.boolean(),
@@ -180,6 +181,7 @@ export const saveInvoicingTexts = withPermission(
     const next: Array<[SettingKey, unknown, string]> = [
       ["invoicing.shippingLabel", data.shippingLabel.trim(), "shippingLabel"],
       ["invoicing.codFeeLabel", data.codFeeLabel.trim(), "codFeeLabel"],
+      ["invoicing.pointsDiscountLabel", data.pointsDiscountLabel.trim(), "pointsDiscountLabel"],
       ["invoicing.serviceUnit", data.serviceUnit.trim(), "serviceUnit"],
       ["invoicing.unitNames", unitNames ?? {}, "unitNames"],
       ["invoicing.sendEmailByProvider", data.sendEmailByProvider, "sendEmailByProvider"],

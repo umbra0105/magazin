@@ -7,6 +7,7 @@ export interface InvoicingSettings {
   unitNames: Record<string, string>;
   shippingLabel: string;
   codFeeLabel: string;
+  pointsDiscountLabel: string;
   serviceUnit: string;
   sendEmailByProvider: boolean;
   maxAttempts: number;

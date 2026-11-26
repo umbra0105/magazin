@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared";
+import { formatQuantityWithUnit, pluralRo, quantityFromTicks } from "@ecom/shared";
 import { AccountError, getAccountOrder, type AccountAddressView } from "@ecom/core";
 import { StoreCard, StorePill, storeButtonVariants } from "@ecom/ui";
 import { getDb } from "@ecom/db";
 import { ReorderButton } from "@/components/storefront/account/reorder-button";
 import { getAccountFormat } from "@/lib/account-format";
-import { requireCustomer } from "@/lib/account";
+import { isFlagOn, requireCustomer } from "@/lib/account";
 import { getMessages } from "@/messages";
 
 const m = getMessages().account;
@@ -51,6 +51,8 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
     }),
   ]);
   if (!order) notFound();
+  const loyalty = (await isFlagOn("loyalty")) ? order.loyalty : null;
+  const points = (count: number) => pluralRo(count, "punct", "puncte", "de puncte");
   const w = order.returnWindow;
   const hasEnded = !w.open && w.deliveredAt !== null;
   return (
@@ -122,7 +124,7 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
             ) : null}
             {order.discountMinor > 0 ? (
               <div className="flex justify-between">
-                <dt>{m.detail.discount}</dt>
+                <dt>{order.loyalty?.pointsUsed ? m.points.discount : m.detail.discount}</dt>
                 <dd>−{format.money(order.discountMinor)}</dd>
               </div>
             ) : null}
@@ -136,6 +138,24 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
             </div>
           </dl>
         </StoreCard>
+        {loyalty ? (
+          <div className="flex flex-col gap-1 text-sm" data-order-points>
+            {loyalty.pointsUsed > 0 ? (
+              <p>{m.points.orderUsed(points(loyalty.pointsUsed))}</p>
+            ) : null}
+            {loyalty.earned ? <p>{m.points.orderEarned(points(loyalty.earned))}</p> : null}
+            {loyalty.toEarn ? (
+              <p>
+                {loyalty.toEarn.availableAt
+                  ? m.points.orderToEarnAt(
+                      points(loyalty.toEarn.points),
+                      format.date(loyalty.toEarn.availableAt),
+                    )
+                  : m.points.orderToEarn(points(loyalty.toEarn.points))}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <p className="text-sm text-ink-secondary">
           {m.detail.payment}:{" "}
           {m.paymentMethod[order.paymentMethod as keyof typeof m.paymentMethod] ??

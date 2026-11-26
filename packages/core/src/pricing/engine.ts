@@ -21,7 +21,8 @@ import type { PriceBasis } from "../inventory/constants";
  * nicio citire de date, ceasul e injectat (`now`), cotele de TVA vin ca intrare (din setări, niciodată hardcodate).
  *
  * Lanțul (docs/09 §3): preț brut → promoție (`salePrice`) → preț de grup (`none` / `discount` / `cost_plus`) → cupon → puncte
- * de loialitate (pas cu valoare 0 până în Faza 15b) → total de linie (rotunjit O SINGURĂ DATĂ) → extragerea TVA din brut.
+ * de loialitate (Faza 15b, `points.ts`, ca rând de reducere separat, peste liniile calculate) → total de linie (rotunjit O
+ * SINGURĂ DATĂ) → extragerea TVA din brut.
  *
  * Rotunjirea (decisă 2026-11-17): o singură rotunjire pe linie, half-up la bani, în `@ecom/shared/money`. Reducerile
  * procentuale se aplică pe valoarea EXACTĂ; cupoanele cu sumă fixă se repartizează în bani întregi pe liniile eligibile. Totalul
@@ -107,8 +108,13 @@ export interface PricedLine {
   /** Avantajul de grup față de prețul public curent (informativ, ≥ 0). */
   groupAdvantageMinor: number;
   couponMinor: number;
-  /** Totalul liniei, brut (cu TVA): ce plătește clientul. */
+  /** Totalul liniei, brut (cu TVA), dinaintea punctelor de loialitate: fără puncte, e ce plătește clientul. */
   totalMinor: number;
+  /** Produsul e la promoție acum (promoție activă și afișată); prezent DOAR când e adevărat. */
+  onSale?: true;
+  /** Partea de reducere din puncte a liniei și TVA-ul ei; prezente DOAR când s-au folosit puncte (`points.ts`). */
+  pointsDiscountMinor?: number;
+  pointsDiscountVatMinor?: number;
   netMinor: number;
   vatMinor: number;
   taxRateBps: number;
@@ -122,13 +128,16 @@ export interface PricingTotals {
   totalMinor: number;
   netMinor: number;
   vatMinor: number;
+  /** Reducerea din puncte și TVA-ul ei, peste liniile de mai sus; prezente DOAR când s-au folosit puncte. */
+  pointsDiscountMinor?: number;
+  pointsDiscountVatMinor?: number;
 }
 
 export interface PricingResult {
   lines: readonly PricedLine[];
   totals: PricingTotals;
   coupon: CouponOutcome | null;
-  /** Pasul «puncte de loialitate»: valoare zero până în Faza 15b (nu există registru de puncte în Faza 8). */
+  /** Pasul «puncte de loialitate» (Faza 15b): 0 aici; reducerea se pune peste rezultat prin `applyPointsDiscount`. */
   pointsDiscountMinor: number;
 }
 
@@ -154,6 +163,8 @@ interface ResolvedPrice {
   /** Prețul public curent (după promoție) pe bază, exact. */
   publicCurrent: ExactMoney;
   source: PriceSource;
+  /** Promoția produsului e activă și aplicabilă, oricare ar fi prețul care câștigă. */
+  onSale?: boolean;
 }
 
 export type UnitPriceInput = Pick<
@@ -189,6 +200,15 @@ export function activeSalePrice(
 }
 
 function resolvePrice(
+  input: UnitPriceInput,
+  options: Pick<PricingOptions, "applySale" | "group">,
+): ResolvedPrice {
+  const onSale =
+    options.applySale && input.salePriceMinor !== null && input.salePriceMinor < input.priceMinor;
+  return { ...resolveBase(input, options), onSale };
+}
+
+function resolveBase(
   input: UnitPriceInput,
   options: Pick<PricingOptions, "applySale" | "group">,
 ): ResolvedPrice {
@@ -341,6 +361,7 @@ export function priceLines(
       basis: w.input.basis,
       unitPriceMinor: minorToNumber(roundHalfUp(w.resolved.price)),
       priceSource: w.resolved.source,
+      ...(w.resolved.onSale ? { onSale: true as const } : {}),
       publicLineMinor: minorToNumber(w.publicLineMinor),
       afterGroupMinor: minorToNumber(w.afterGroupMinor),
       groupAdvantageMinor: minorToNumber(w.publicLineMinor - w.afterGroupMinor),

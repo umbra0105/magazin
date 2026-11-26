@@ -58,7 +58,7 @@ test.describe("zona de admin", () => {
     await expect(sidebar(page).getByRole("button", { name: "Comenzi", exact: true })).toBeVisible();
     await expect(sidebar(page).getByRole("link", { name: "Utilizatori și roluri" })).toBeVisible();
     // Implicit toate funcțiile opționale sunt oprite și nu apar în meniu.
-    for (const hidden of ["Recenzii", "Loialitate", "Vouchere"]) {
+    for (const hidden of ["Recenzii", "Puncte de loialitate", "Vouchere"]) {
       await expect(sidebar(page).getByRole("link", { name: hidden })).toHaveCount(0);
     }
     await expect(sidebar(page).getByRole("link", { name: "Panou" })).toHaveAttribute(

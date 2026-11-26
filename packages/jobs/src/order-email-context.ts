@@ -5,12 +5,14 @@ import {
   isInvoiceAlertRecipient,
   isStockAlertRecipient,
   INVOICE_ALERT_TEMPLATE,
+  LOYALTY_WARNING_TEMPLATE,
+  readLoyaltySettings,
   issueRetryTokenFor,
   type DispatchRow,
   type Db,
   type OrderSummary,
 } from "@ecom/core";
-import { formatQuantityWithUnit, quantityFromTicks } from "@ecom/shared";
+import { formatQuantityWithUnit, pluralRo, quantityFromTicks } from "@ecom/shared";
 import type {
   MerchantModel,
   OrderEmailModel,
@@ -85,6 +87,8 @@ export function formatDateTime(date: Date, locale: string, timeZone: string): st
   }).format(date);
 }
 
+const points = (count: number): string => pluralRo(count, "punct", "puncte", "de puncte");
+
 function daysText(days: number): string {
   return days === 1 ? "1 zi" : days < 20 ? `${days} zile` : `${days} de zile`;
 }
@@ -121,6 +125,15 @@ function orderModelOf(summary: OrderSummary, store: StoreEmailSettings): OrderEm
   const estimated = summary.shipping.estimatedDays;
   return {
     number: summary.number,
+    ...(summary.loyalty
+      ? {
+          loyalty: {
+            pointsUsed: summary.loyalty.pointsUsed > 0 ? points(summary.loyalty.pointsUsed) : null,
+            pointsToEarn:
+              summary.loyalty.pointsToEarn > 0 ? points(summary.loyalty.pointsToEarn) : null,
+          },
+        }
+      : {}),
     placedAt: formatDateTime(summary.placedAt, store.locale, store.timeZone),
     lines: summary.lines.map((line) => ({
       title: line.title,
@@ -136,6 +149,9 @@ function orderModelOf(summary: OrderSummary, store: StoreEmailSettings): OrderEm
       shipping:
         summary.totals.shippingMinor === 0 ? "Gratuit" : money(summary.totals.shippingMinor),
       codFee: summary.totals.codFeeMinor > 0 ? money(summary.totals.codFeeMinor) : null,
+      ...(summary.totals.discountMinor
+        ? { pointsDiscount: money(-summary.totals.discountMinor) }
+        : {}),
       vat: money(summary.totals.taxMinor),
       total: money(summary.totals.totalMinor),
     },
@@ -209,6 +225,53 @@ export async function buildOrderEmailContext(
   const money = (minor: number) => formatMoney(minor, store.currency, store.locale);
   const merchant = merchantOf(store);
   const legal = store.legal;
+
+  // avertizarea de expirare a punctelor (Faza 15b): fără comandă; se reverifică lotul și destinatarul la trimitere
+  if (dispatch.template === LOYALTY_WARNING_TEMPLATE) {
+    const lotId = typeof data["lotId"] === "string" ? data["lotId"] : "";
+    const lot = lotId
+      ? await env.db.loyaltyLot.findUnique({
+          where: { id: lotId },
+          select: {
+            remaining: true,
+            expiresAt: true,
+            account: { select: { customer: { select: { email: true, anonymizedAt: true } } } },
+          },
+        })
+      : null;
+    const customer = lot?.account.customer;
+    if (!lot || lot.remaining <= 0 || lot.expiresAt.getTime() <= env.now().getTime()) {
+      return { kind: "skip", reason: "punctele nu mai sunt de expirat" };
+    }
+    if (
+      !customer ||
+      customer.anonymizedAt !== null ||
+      customer.email.trim().toLowerCase() !== dispatch.recipient
+    ) {
+      return { kind: "skip", reason: "destinatarul nu mai e titularul punctelor" };
+    }
+    const { pointValue } = await readLoyaltySettings(env.db);
+    return {
+      kind: "ready",
+      definition,
+      to: dispatch.recipient,
+      context: {
+        vars: {
+          magazin: store.storeName,
+          puncte: points(lot.remaining),
+          valoare: money(lot.remaining * pointValue),
+          dataExpirare: new Intl.DateTimeFormat(store.locale, {
+            dateStyle: "long",
+            timeZone: store.timeZone,
+          }).format(lot.expiresAt),
+          link: `${base}/cont/puncte`,
+        },
+        merchant,
+        legal,
+        order: null,
+      },
+    };
+  }
 
   // --- notificări interne fără comandă (nu se citește nicio comandă) ---
   if (!dispatch.orderId) {
@@ -339,6 +402,7 @@ export async function buildOrderEmailContext(
     case "return.parcel_received":
     case "return.inspected":
     case "return.refunded":
+    case "return.refunded_points":
     case "return.cancelled": {
       // doar câmpurile destinate clientului: motivul respingerii, AWB-ul de retur, suma rambursată; NICIODATĂ nota internă
       const returnId = typeof data["returnId"] === "string" ? data["returnId"] : "";
@@ -354,6 +418,7 @@ export async function buildOrderEmailContext(
               returnTrackingUrl: true,
               refundProductsMinor: true,
               refundShippingMinor: true,
+              items: { select: { loyaltyDiscountMinor: true } },
             },
           })
         : null;
@@ -368,6 +433,7 @@ export async function buildOrderEmailContext(
           ? ""
           : money(ret.refundProductsMinor + ret.refundShippingMinor);
       vars["adresaRetur"] = merchant.address;
+      vars["puncteIntoarse"] = ret.items.some((item) => item.loyaltyDiscountMinor > 0) ? "da" : "";
       vars["link"] = `${base}/cont/retururi/${ret.id}`;
       break;
     }

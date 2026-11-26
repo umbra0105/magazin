@@ -182,7 +182,7 @@ async function refundAndConfirm(
     ...extra,
   });
   await confirmManualRefund(refundDeps(h), {
-    refundId: result.refundId,
+    refundId: result.refundId!,
     reference: "ext-1",
     actorLabel: ADMIN.label,
   });
@@ -385,7 +385,7 @@ describe("rambursarea returului: doar produsele, prin serviciul din Faza 10", ()
       expect(ret.refundId).toBe(result.refundId);
       expect(ret.refundProductsMinor).toBe(p.unitMinor);
       expect(ret.items[0]?.refundLineMinor).toBe(p.unitMinor);
-      const refund = await h.tx.refund.findUniqueOrThrow({ where: { id: result.refundId } });
+      const refund = await h.tx.refund.findUniqueOrThrow({ where: { id: result.refundId! } });
       expect(refund.amountMinor).toBe(p.unitMinor);
       expect(refund.idempotencyKey).toBe(`return:${r.returnId}`);
       expect(ret.stornoState).toBe("not_needed");
@@ -476,7 +476,7 @@ describe("rambursarea returului: doar produsele, prin serviciul din Faza 10", ()
       const input = { returnId: b.returnId, actorLabel: ADMIN.label, actorUnlimited: true };
       expect(await codeOf(refundReturn(refundDeps(h), input))).toBe("RETURN_REFUND_PENDING_OTHER");
       await confirmManualRefund(refundDeps(h), {
-        refundId: first.refundId,
+        refundId: first.refundId!,
         reference: "x",
         actorLabel: ADMIN.label,
       });
@@ -698,7 +698,7 @@ describe("stornoul parțial la rambursare: aceleași sume, la ban", () => {
         data: { refundProductsMinor: result.productsMinor + 1 },
       });
       await confirmManualRefund(refundDeps(h), {
-        refundId: result.refundId,
+        refundId: result.refundId!,
         reference: "x",
         actorLabel: ADMIN.label,
       });

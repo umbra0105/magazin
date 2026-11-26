@@ -131,6 +131,34 @@ Dacă adminul setează un plafon procentual, se aplică și acela (cel mai restr
 **Pagina de produs**: „Primești 12 puncte la această achiziție" — crește conversia.
 **Admin**: sold per client, ajustare manuală cu motiv obligatoriu, istoric, raport de datorie totală în puncte (cât „datorezi" clienților).
 
+## 7. Deciziile din 2026-11-25 (Faza 15b; au prioritate față de textul de mai sus unde diferă)
+
+- **Structura:** Faza 15b = doar punctele (Partea A). Voucherele (Partea B) sunt Faza 15c.
+- **TVA pe reducerea din puncte (2026-11-26):** în Faza 15b se construiește DOAR `base_reduced`: reducerea scade baza de TVA; factura are o linie separată de reducere, TVA pe suma după reducere. `loyalty.vatMode` acceptă doar gol și `base_reduced`; valoarea implicită e goală, iar cât timp e goală punctele nu se pot folosi în checkout (acumularea și soldul funcționează). În admin setarea spune «Cere confirmarea contabilului înainte de a o seta». Răspuns primit de la utilizator, 2026-11-25 (după ce a întrebat contabilul): «Punctele reprezintă o reducere de preț». Seed-ul magazinului folosește `base_reduced`; seed-ul de pachet o lasă goală. **`base_full` e AMÂNAT** (mini-fază separată, doar dacă contabilul confirmă TVA pe suma înainte de puncte; cere schimbări în stornoul returului și în totalul facturii).
+- **Câte puncte se pot folosi (2026-11-26):** `min(valoarea produselor după reduceri, totalul comenzii − max(transport, minCashAmount))`; totalul comenzii include transportul; taxa de ramburs nu intră în calcul; punctele acoperă doar produsele; plafonul procentual, dacă e setat, câștigă când e mai restrictiv. Exemplu: produse 100 lei, transport 20 lei, 200 de puncte → maximum 100 de puncte, 20 lei în bani.
+- **Retur cu 0 lei de rambursat (2026-11-26):** o linie returnată plătită integral cu puncte se închide fără rambursare de plată: punctele se întorc ca puncte, iar stornoul se pune în coadă. Returul ajunge în aceeași stare «rambursat» (nu există un al doilea fel de retur închis).
+- **Reguli de bani (2026-11-26):** (a) TVA pe reducere pe fiecare rând de factură: TVA(rândul produsului) − TVA(rândul reducerii); (b) reducerea se împarte exact, la ban, pe produse, iar la retur parțial punctele întoarse = reducerea cumulată pe liniile returnate / valoarea punctului, rotunjită în jos (la retur integral toate); (c) punctele întoarse își păstrează data inițială de expirare, dar nu expiră mai devreme de `loyalty.releasedGraceDays` zile (implicit 30) de la întoarcere; (d) punctele de primit = `floor(banii rămași plătiți pentru produse / rată)`: scad la orice rambursare de bani pentru produse și la o rambursare fără retur, nu și la transportul rambursat într-un retur.
+- **Produsele la promoție acumulează puncte** (`loyalty.earnOnDiscountedItems`, implicit da; baza rămâne suma plătită după reduceri).
+- **Pragul de transport gratuit** se calculează pe valoarea produselor înainte de reducerea din puncte; costul transportului nu se schimbă.
+- **Limita de ramburs** se compară cu suma încasată de la curier după reducerea din puncte.
+- **Se aplică așa cum sunt scrise:** sold negativ permis doar după un retur făcut după ce punctele au fost cheltuite, cu răscumpărarea blocată până se acoperă; la anulare, punctele acordate se revocă și cele folosite se întorc; la retur parțial se revocă proporțional punctele de pe liniile returnate, iar rambursarea în bani = brutul liniei minus partea ei de reducere din puncte, partea de puncte întorcându-se ca puncte; expirarea nu atinge punctele rezervate într-o comandă activă.
+- **Comenzi doar digitale:** fereastra de retur pentru acordare se numără de la acordarea accesului (confirmarea plății), cu aceeași setare `returns.windowDays`; la comenzi mixte, data acordării e cea mai târzie dintre fereastra de la livrare și cea de la acordarea accesului.
+- **Fereastra de retur** e setarea existentă `returns.windowDays`; `returnWindowDays` din modelul de la §3 nu se creează.
+- **Setări (`Setting`, grup `loyalty`):** `enabled` (pachet: nu; seed magazin: da), `earnRate` (10000 bani = 1 punct la 100 lei), `pointValue` (100 bani), `expiryMonths` (12), `expiryWarningDays` (30), `maxRedeemPercent` (gol), `minRedeemPoints` (10), `minCashAmount` (100 bani), `earnOnDiscountedItems` (da), `vatMode` (gol). Transportul în bani și acumularea doar pe suma plătită în bani sunt reguli fixe, nu setări; momentul acordării e mereu expirarea ferestrei de retur.
+
+## 8. Implementare (Faza 15b)
+
+- **Unde stau regulile:** motorul (`pricing/points.ts`: maximul de folosit, repartizarea reducerii, partea returnată, punctele întoarse, punctele de primit), registrul (`loyalty/ledger.ts`: singurul cod care scrie în registru și loturi), comenzile (`loyalty/order-loyalty.ts`, apelat din `addOrderEvent`, deci din orice cale care schimbă o comandă).
+- **Repartizarea reducerii pe produse:** în bani, proporțional cu totalul fiecărei linii, cu metoda restului cel mai mare (`allocateMinor`, ca la cupoanele cu sumă fixă); egalitățile le decide ordinea liniilor. Totalul și TVA-ul liniei rămân cele dinaintea punctelor; reducerea are TVA-ul extras din brutul ei (`order_line.loyaltyDiscountMinor` și `loyaltyDiscountTaxMinor`).
+- **Loturi:** se cheltuie întâi lotul care expiră primul; un lot expirat, dar nescăzut încă de job, nu se poate cheltui. La întoarcere se refac întâi cele cu valabilitatea cea mai lungă. Revocarea ia întâi din lotul comenzii. Un lot nou acoperă întâi un sold negativ.
+- **Acordarea** așteaptă: livrarea (la digital, accesul), expirarea ferestrei de retur, banii încasați (la ramburs, după «Marchează încasat») și închiderea oricărui retur deschis. Conturile anonimizate nu primesc puncte. Cu programul oprit joburile nu fac nimic.
+- **Rambursări fără retur** (pe plata principală) scad baza de acumulare; rambursarea integrală fără retur întoarce toate punctele folosite.
+- **«La promoție»** pentru `earnOnDiscountedItems` = linia cu preț promoțional aplicat.
+- **Cumpărătorul comenzii** pentru puncte e `Order.loyaltyCustomerId`, pus la plasare doar pentru cumpărătorul autentificat; o comandă de oaspete legată ulterior de un cont nu aduce puncte. Valoarea punctului, rata și tratamentul TVA se păstrează pe comandă.
+- **Interfață:** cursorul de puncte e la pasul de plată din checkout (maximul depinde de transport); coșul arată doar câte puncte se pot folosi. Pagina de produs cere textul pe loc, în afara cache-ului. Motivul ajustărilor manuale nu se arată clientului.
+- **Factura SmartBill:** rândul de reducere se trimite ca serviciu cu cantitate negativă. Formatul NU e documentat de furnizor și e probat doar pe răspunsuri simulate; se verifică în contul SmartBill înainte de lansare.
+- **De confirmat cu contabilul:** TVA pe reducere calculat pe fiecare rând (exemplu: produs 100,00 lei cu reducere 33,33 lei → TVA 11,58 lei).
+
 ---
 
 # PARTEA B — Vouchere cadou

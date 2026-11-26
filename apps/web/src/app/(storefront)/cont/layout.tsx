@@ -24,9 +24,10 @@ export const dynamic = "force-dynamic";
  */
 export default async function AccountLayout({ children }: { children: ReactNode }) {
   const { user } = await requireCustomer("/cont");
-  const [wishlist, digital] = await Promise.all([
+  const [wishlist, digital, loyalty] = await Promise.all([
     isFlagOn("wishlist"),
     hasDigitalProducts(getDb(), user.id),
+    isFlagOn("loyalty"),
   ]);
   const items: AccountNavItem[] = [
     { href: "/cont", label: m.nav.dashboard },
@@ -37,6 +38,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
     { href: "/cont/retururi", label: m.nav.returns },
     { href: "/cont/adrese", label: m.nav.addresses },
     ...(wishlist ? [{ href: "/cont/favorite", label: m.nav.favorites }] : []),
+    ...(loyalty ? [{ href: "/cont/puncte", label: m.nav.points }] : []),
     { href: "/cont/date-personale", label: m.nav.profile },
   ];
   return (

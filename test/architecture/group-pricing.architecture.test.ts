@@ -28,7 +28,7 @@ const strip = (content: string): string =>
   content.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 const GROUP_PRICE_CALLS =
-  /\b(loadGroupDisplayPrices|loadCustomerPricing|getGroupPrices|loadPartnerInputs|withPartnerInput)\b|group-prices["']/;
+  /\b(loadGroupDisplayPrices|loadCustomerPricing|getGroupPrices|loadPartnerInputs|withPartnerInput|estimatePurchasePoints|getPurchasePointsNote)\b|group-prices["']/;
 const CACHE_USE =
   /\b(unstable_cache|revalidate|revalidateTag|cache\s*\(|use cache)\b|["']use cache["']/;
 const MARKUP_OR_COST = /markup|cost(Net|Price)|cost_price|costNet/i;
@@ -43,13 +43,23 @@ const GROUP_PRICE_ALLOWED = [
   "packages/core/src/index.ts",
 ];
 
+/**
+ * Singurele module ale vitrinei care au voie să atingă prețul de grup: calculează pe cerere, pentru cumpărătorul curent, și nu
+ * folosesc niciun cache (prețul de grup și, din Faza 15b, estimarea «primești X puncte»).
+ */
+const DYNAMIC_MODULES = [
+  "apps/web/src/lib/group-prices.ts",
+  "apps/web/src/app/(storefront)/pret-grup/actions.ts",
+  "apps/web/src/lib/purchase-points.ts",
+  "apps/web/src/app/(storefront)/puncte-produs/actions.ts",
+];
+
 export function findGroupPriceCacheViolations(files: readonly SourceFile[]): string[] {
   const problems: string[] = [];
   for (const file of files) {
     const code = strip(file.content);
-    const isPublicPage =
-      file.path.startsWith("apps/web/src/app/(storefront)/") &&
-      !file.path.startsWith("apps/web/src/app/(storefront)/pret-grup/");
+    const isDynamic = DYNAMIC_MODULES.includes(file.path);
+    const isPublicPage = file.path.startsWith("apps/web/src/app/(storefront)/") && !isDynamic;
     const isCatalogReader =
       file.path.startsWith("packages/core/src/storefront/") ||
       file.path === "apps/web/src/lib/storefront-catalog.ts";
@@ -58,10 +68,7 @@ export function findGroupPriceCacheViolations(files: readonly SourceFile[]): str
         `${file.path}: pagină publică sau cititor de catalog care atinge prețul de grup (ar intra în cache)`,
       );
     }
-    const isGroupPriceModule =
-      file.path === "apps/web/src/lib/group-prices.ts" ||
-      file.path === "apps/web/src/app/(storefront)/pret-grup/actions.ts";
-    if (isGroupPriceModule && CACHE_USE.test(code)) {
+    if (isDynamic && CACHE_USE.test(code)) {
       problems.push(`${file.path}: prețul de grup nu se pune în niciun cache`);
     }
     if (
@@ -82,6 +89,12 @@ const CLIENT_SIDE = [
   "apps/web/src/components/storefront/catalog/group-price.tsx",
   "apps/web/src/components/storefront/catalog/group-price-store.ts",
   "apps/web/src/lib/cart-dto.ts",
+  // punctele de loialitate (Faza 15b)
+  "apps/web/src/lib/checkout-dto.ts",
+  "apps/web/src/lib/purchase-points.ts",
+  "apps/web/src/app/(storefront)/puncte-produs/actions.ts",
+  "apps/web/src/components/storefront/checkout/points-choice.tsx",
+  "apps/web/src/components/storefront/catalog/purchase-points.tsx",
 ];
 
 export function findMarkupLeaks(files: readonly SourceFile[]): string[] {
@@ -124,7 +137,9 @@ export function findCostInCartViolations(files: readonly SourceFile[]): string[]
   const problems: string[] = [];
   for (const file of files) {
     if (/\.(test|spec)\.tsx?$/.test(file.path)) continue;
-    const inCustomers = file.path.startsWith("packages/core/src/customers/");
+    const inCustomers =
+      file.path.startsWith("packages/core/src/customers/") ||
+      file.path.startsWith("packages/core/src/loyalty/");
     if (!COST_FREE.includes(file.path) && !inCustomers) continue;
     if (/cost_?price|cost_?net|cost_?history/i.test(strip(file.content))) {
       problems.push(`${file.path}: pomenește prețul de achiziție`);
@@ -284,5 +299,45 @@ describe("gărzile pe fișiere sintetice (testul pică când trebuie)", () => {
         [],
       );
     }
+  });
+});
+
+describe("gărzile punctelor de loialitate (Faza 15b), pe fișiere sintetice", () => {
+  const f = (path: string, content: string): SourceFile => ({ path, content });
+
+  it("estimarea «primești X puncte» nu intră în paginile publice și nu se pune în cache", () => {
+    for (const call of ["await estimatePurchasePoints(db)", "await getPurchasePointsNote(r)"]) {
+      expect(
+        findGroupPriceCacheViolations([
+          f("apps/web/src/app/(storefront)/produs/[slug]/page.tsx", call),
+        ]),
+        call,
+      ).not.toEqual([]);
+    }
+    for (const path of [
+      "apps/web/src/lib/purchase-points.ts",
+      "apps/web/src/app/(storefront)/puncte-produs/actions.ts",
+    ]) {
+      expect(
+        findGroupPriceCacheViolations([f(path, 'import { unstable_cache } from "next/cache";')]),
+        path,
+      ).not.toEqual([]);
+    }
+  });
+
+  it("suprafețele punctelor trimise clientului nu pomenesc adaosul sau costul", () => {
+    for (const path of [
+      "apps/web/src/lib/purchase-points.ts",
+      "apps/web/src/lib/checkout-dto.ts",
+      "apps/web/src/components/storefront/checkout/points-choice.tsx",
+      "apps/web/src/components/storefront/catalog/purchase-points.tsx",
+    ]) {
+      expect(findMarkupLeaks([f(path, "const c = group.markupBps;")]), path).not.toEqual([]);
+    }
+    expect(
+      findCostInCartViolations([
+        f("packages/core/src/loyalty/loyalty-read.ts", "select: { costPrice: true }"),
+      ]),
+    ).not.toEqual([]);
   });
 });

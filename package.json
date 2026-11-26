@@ -30,6 +30,7 @@
     "db:studio": "node scripts/in.mjs packages/db node_modules/prisma/build/index.js studio",
     "db:seed:store": "node --import tsx packages/core/scripts/seed-store.ts",
     "dev:digital-demo": "node --import tsx packages/core/scripts/dev-digital-demo.ts",
+    "dev:loyalty": "node --import tsx packages/core/scripts/dev-loyalty.ts",
     "dev:seed-products": "node --import tsx packages/core/scripts/dev-seed-products.ts",
     "dev:availability": "node --import tsx packages/core/scripts/dev-availability.ts",
     "dev:stock-race": "node --import tsx packages/core/scripts/dev-stock-race.ts",

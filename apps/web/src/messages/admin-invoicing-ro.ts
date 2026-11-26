@@ -128,6 +128,8 @@ export const adminInvoicingRo = {
         "Cum apar transportul și taxa de ramburs pe factură (linii separate) și ce nume au unitățile de măsură în contul SmartBill.",
       shippingLabel: "Denumirea liniei de transport",
       codFeeLabel: "Denumirea taxei de ramburs",
+      pointsDiscountLabel: "Denumirea reducerii din puncte",
+      pointsDiscountHelp: "Urmează numele produsului pe rândul de reducere de pe factură.",
       serviceUnit: "Unitatea pentru transport și taxă",
       serviceUnitHelp:
         "Numele unității din contul SmartBill (de exemplu «buc»), exact cu litere mici și mari.",

@@ -56,7 +56,8 @@ export async function queuePartialStorno(
     const returned = new Map<string, StornoReturned>();
     for (const s of earlier) {
       for (const l of s.lines) {
-        if (!l.orderLineId) continue;
+        // cantitatea și brutul stornate se numără din rândurile de PRODUS; rândul de reducere se deduce din ele
+        if (!l.orderLineId || l.kind !== "product") continue;
         const prev = returned.get(l.orderLineId) ?? {
           quantityTicks: 0n,
           lineTotalMinor: 0,
@@ -71,17 +72,29 @@ export async function queuePartialStorno(
     }
     const source: StornoSourceLine[] = parent.lines
       .filter((l) => l.kind === "product" && l.orderLineId !== null)
-      .map((l) => ({
-        orderLineId: l.orderLineId as string,
-        sku: l.sku as string,
-        title: l.title,
-        unitName: l.unitName,
-        quantityTicks: l.quantityTicks,
-        unitPriceMinor: l.unitPriceMinor,
-        lineTotalMinor: l.lineTotalMinor,
-        taxMinor: l.taxMinor,
-        taxRateBps: l.taxRateBps,
-      }));
+      .map((l) => {
+        const discount = parent.lines.find(
+          (d) => d.kind === "discount" && d.orderLineId === l.orderLineId,
+        );
+        return {
+          orderLineId: l.orderLineId as string,
+          sku: l.sku as string,
+          title: l.title,
+          unitName: l.unitName,
+          quantityTicks: l.quantityTicks,
+          unitPriceMinor: l.unitPriceMinor,
+          lineTotalMinor: l.lineTotalMinor,
+          taxMinor: l.taxMinor,
+          taxRateBps: l.taxRateBps,
+          ...(discount
+            ? {
+                discountMinor: discount.lineTotalMinor,
+                discountTitle: discount.title,
+                discountUnitName: discount.unitName,
+              }
+            : {}),
+        };
+      });
     const storno = buildPartialStorno(source, returned, returns);
     // apărare în plus: suma stornourilor (brut) nu depășește niciodată totalul facturii
     const earlierMinor = earlier.reduce((acc, s) => acc + s.totalMinor, 0);

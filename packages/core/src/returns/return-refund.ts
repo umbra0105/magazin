@@ -8,7 +8,8 @@ import {
   type StornoSourceLine,
 } from "../invoicing/invoice-draft";
 import { selectedInvoiceProvider } from "../invoicing/invoice-schedule";
-import { lockOrder } from "../orders/order-service";
+import { syncOrderLoyalty } from "../loyalty/order-loyalty";
+import { LOYALTY_PORTS, lockOrder } from "../orders/order-service";
 import { requestOrderRefund, type OrderRefundDeps } from "../payments/order-refund";
 import {
   RETURN_SHIPPING_REASON_MAX,
@@ -16,6 +17,7 @@ import {
   RETURN_REFUND_KEY_PREFIX,
 } from "./return-constants";
 import { ReturnError } from "./return-errors";
+import { closeReturnWithoutRefund } from "./return-settle";
 import { lockReturn } from "./return-transition";
 
 /**
@@ -34,12 +36,18 @@ export interface RefundLineProposal {
   sku: string;
   title: string;
   acceptedTicks: bigint;
+  /** BANII de rambursat pe linie: brutul bucăților returnate minus partea lor de reducere din puncte. */
   refundLineMinor: number;
+  /** Partea de reducere din puncte a bucăților returnate (se întoarce ca puncte); 0 fără puncte. */
+  loyaltyDiscountMinor: number;
 }
 
 export interface RefundProposal {
   lines: RefundLineProposal[];
+  /** Banii de rambursat pe produse (= totalul stornoului parțial). */
   productsMinor: number;
+  /** Reducerea din puncte a bucăților returnate. */
+  loyaltyDiscountMinor: number;
   /** Cererea de storno corespunzătoare (aceleași linii). */
   stornoRequest: StornoRequestLine[];
 }
@@ -76,6 +84,7 @@ export async function buildRefundProposal(tx: Db, returnId: string): Promise<Ref
       lineTotalMinor: true,
       taxMinor: true,
       taxRateBps: true,
+      loyaltyDiscountMinor: true,
     },
   });
   const source: StornoSourceLine[] = orderLines.map((l) => ({
@@ -88,6 +97,7 @@ export async function buildRefundProposal(tx: Db, returnId: string): Promise<Ref
     lineTotalMinor: l.lineTotalMinor,
     taxMinor: l.taxMinor,
     taxRateBps: l.taxRateBps,
+    ...(l.loyaltyDiscountMinor > 0 ? { discountMinor: l.loyaltyDiscountMinor } : {}),
   }));
   // ce s-a rambursat deja din aceleași linii, prin ALTE retururi încheiate ale comenzii
   const earlier = await tx.returnItem.findMany({
@@ -96,7 +106,12 @@ export async function buildRefundProposal(tx: Db, returnId: string): Promise<Ref
       refundLineMinor: { not: null },
       acceptedQty: { gt: 0n },
     },
-    select: { orderLineId: true, acceptedQty: true, refundLineMinor: true },
+    select: {
+      orderLineId: true,
+      acceptedQty: true,
+      refundLineMinor: true,
+      loyaltyDiscountMinor: true,
+    },
   });
   const returned = new Map<string, StornoReturned>();
   for (const e of earlier) {
@@ -112,8 +127,10 @@ export async function buildRefundProposal(tx: Db, returnId: string): Promise<Ref
         quantityFromTicks(prev.quantityTicks),
         quantityFromTicks(e.acceptedQty),
       ),
-      lineTotalMinor: prev.lineTotalMinor + e.refundLineMinor,
-      taxMinor: prev.taxMinor + vatFromGross(e.refundLineMinor, line.taxRateBps),
+      // brutul deja returnat = banii rambursați + partea întoarsă ca puncte
+      lineTotalMinor: prev.lineTotalMinor + e.refundLineMinor + e.loyaltyDiscountMinor,
+      taxMinor:
+        prev.taxMinor + vatFromGross(e.refundLineMinor + e.loyaltyDiscountMinor, line.taxRateBps),
     });
   }
   const stornoRequest: StornoRequestLine[] = ret.items.map((i) => ({
@@ -130,18 +147,29 @@ export async function buildRefundProposal(tx: Db, returnId: string): Promise<Ref
     throw error;
   }
   const lines: RefundLineProposal[] = ret.items.map((item) => {
-    const doc = storno.lines.find((l) => l.orderLineId === item.orderLineId);
+    const doc = storno.lines.find(
+      (l) => l.kind === "product" && l.orderLineId === item.orderLineId,
+    );
     if (!doc) throw new ReturnError("RETURN_REFUND_INVALID", "Linia nu apare în propunere");
+    const discount =
+      storno.lines.find((l) => l.kind === "discount" && l.orderLineId === item.orderLineId)
+        ?.lineTotalMinor ?? 0;
     return {
       returnItemId: item.id,
       orderLineId: item.orderLineId,
       sku: doc.sku ?? "",
       title: doc.title,
       acceptedTicks: item.acceptedQty ?? 0n,
-      refundLineMinor: doc.lineTotalMinor,
+      refundLineMinor: doc.lineTotalMinor - discount,
+      loyaltyDiscountMinor: discount,
     };
   });
-  return { lines, productsMinor: storno.totalMinor, stornoRequest };
+  return {
+    lines,
+    productsMinor: storno.totalMinor,
+    loyaltyDiscountMinor: lines.reduce((sum, l) => sum + l.loyaltyDiscountMinor, 0),
+    stornoRequest,
+  };
 }
 
 export interface RefundReturnInput {
@@ -155,7 +183,8 @@ export interface RefundReturnInput {
 }
 
 export interface RefundReturnResult {
-  refundId: string;
+  /** Rambursarea de plată; `null` când returul s-a închis fără bani de rambursat (plătit integral cu puncte). */
+  refundId: string | null;
   created: boolean;
   amountMinor: number;
   productsMinor: number;
@@ -208,6 +237,14 @@ export async function refundReturn(
     await lockOrder(tx, head.orderId);
     const locked = await lockReturn(tx, input.returnId);
     if (!locked) throw new ReturnError("RETURN_NOT_FOUND", "Returul nu există");
+    if (locked.status === "refunded") {
+      // dublu clic pe un retur închis fără rambursare: același rezultat, fără alte efecte
+      const closed = await tx.returnRequest.findUniqueOrThrow({
+        where: { id: input.returnId },
+        select: { refundId: true, refundProductsMinor: true, refundShippingMinor: true },
+      });
+      if (closed.refundId === null) return null;
+    }
     if (locked.status !== "inspected") {
       throw new ReturnError("RETURN_STATE_INVALID", "Rambursarea se face după inspecție", {
         status: locked.status,
@@ -258,7 +295,9 @@ export async function refundReturn(
       );
     }
     const amountMinor = proposal.productsMinor + shippingMinor;
-    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
+    // 0 lei de rambursat se acceptă DOAR când bucățile au fost plătite integral cu puncte (decizia 2026-11-26)
+    const pointsOnly = amountMinor === 0 && proposal.loyaltyDiscountMinor > 0;
+    if (!Number.isSafeInteger(amountMinor) || (amountMinor <= 0 && !pointsOnly)) {
       throw new ReturnError("RETURN_REFUND_INVALID", "Suma de rambursat trebuie să fie pozitivă");
     }
     // facturare activă: stornoul se poate emite doar peste o factură emisă (altfel nu există linii de verificat la ban)
@@ -280,7 +319,11 @@ export async function refundReturn(
         orderBy: [{ capturedAt: "asc" }, { attemptNo: "asc" }],
         select: { amountMinor: true, refundCommittedMinor: true },
       });
-      if (payment && payment.refundCommittedMinor + amountMinor >= payment.amountMinor) {
+      if (
+        !pointsOnly &&
+        payment &&
+        payment.refundCommittedMinor + amountMinor >= payment.amountMinor
+      ) {
         const partials = await tx.invoice.count({
           where: {
             orderId: head.orderId,
@@ -300,7 +343,10 @@ export async function refundReturn(
     for (const line of proposal.lines) {
       await tx.returnItem.update({
         where: { id: line.returnItemId },
-        data: { refundLineMinor: line.refundLineMinor },
+        data: {
+          refundLineMinor: line.refundLineMinor,
+          loyaltyDiscountMinor: line.loyaltyDiscountMinor,
+        },
       });
     }
     await tx.returnRequest.update({
@@ -311,8 +357,24 @@ export async function refundReturn(
         refundShippingReason: shippingMinor > 0 ? shippingReason : null,
       },
     });
+    if (pointsOnly) {
+      const now = deps.now();
+      await closeReturnWithoutRefund(tx, head.orderId, input.returnId, now);
+      // punctele liniilor returnate se întorc, iar cele acordate peste banii rămași se revocă (fără eveniment de plată)
+      await syncOrderLoyalty(tx, head.orderId, now, LOYALTY_PORTS);
+      return null;
+    }
     return { key, amountMinor, productsMinor: proposal.productsMinor, shippingMinor };
   });
+  if (prepared === null) {
+    return {
+      refundId: null,
+      created: false,
+      amountMinor: 0,
+      productsMinor: 0,
+      shippingMinor: 0,
+    };
+  }
 
   const result = await requestOrderRefund(deps, {
     orderId: head.orderId,
