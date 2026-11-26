@@ -99,3 +99,18 @@ describe("purgeStaleAuthRecords (Postgres real)", () => {
     expect(left).toEqual(["expirat-recent", "valabil"]);
   });
 });
+
+describe("conturile cu puncte de loialitate (Faza 15b)", () => {
+  it("un cont neverificat vechi cu puncte NU se șterge și nu blochează ștergerea celorlalte", async () => {
+    const withPoints = await user("loial-neverificat");
+    await user("loial-vecin");
+    await db.loyaltyAccount.create({ data: { customerId: withPoints.id } });
+    try {
+      await purgeStaleAuthRecords(db, defaults);
+      expect(await exists("loial-neverificat")).toBe(true);
+      expect(await exists("loial-vecin")).toBe(false);
+    } finally {
+      await db.loyaltyAccount.delete({ where: { customerId: withPoints.id } });
+    }
+  });
+});

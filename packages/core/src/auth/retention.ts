@@ -4,6 +4,8 @@ import type { PrismaClient } from "@ecom/db";
  * Retenția înregistrărilor de autentificare (Blocul C, C-02). Fără ea, înregistrările în masă cu emailuri inventate lasă
  * în baza de date conturi neverificate și rânduri `verification` expirate, fără sfârșit.
  *
+ *  - Conturile cu puncte de loialitate (Faza 15b) nu se șterg: registrul de puncte le păstrează (și cheia externă ar opri
+ *    tot lotul).
  *  - Conturi: se șterg DOAR cele neverificate, fără niciun rol, mai vechi decât termenul, și DOAR dacă verificarea emailului
  *    e cerută (`auth.requireEmailVerification`): altfel un cont neverificat este un cont obișnuit și nu se atinge. Termenul
  *    efectiv nu e niciodată mai scurt decât valabilitatea linkului de verificare plus 24 de ore.
@@ -43,13 +45,23 @@ export async function purgeStaleAuthRecords(
     const cutoff = new Date(now.getTime() - hours * HOUR);
     for (;;) {
       const stale = await db.user.findMany({
-        where: { emailVerified: false, createdAt: { lt: cutoff }, roles: { none: {} } },
+        where: {
+          emailVerified: false,
+          createdAt: { lt: cutoff },
+          roles: { none: {} },
+          loyaltyAccount: { is: null },
+        },
         select: { id: true },
         take: BATCH,
       });
       if (stale.length === 0) break;
       const { count } = await db.user.deleteMany({
-        where: { id: { in: stale.map((u) => u.id) }, emailVerified: false, roles: { none: {} } },
+        where: {
+          id: { in: stale.map((u) => u.id) },
+          emailVerified: false,
+          roles: { none: {} },
+          loyaltyAccount: { is: null },
+        },
       });
       users += count;
       if (stale.length < BATCH) break;
