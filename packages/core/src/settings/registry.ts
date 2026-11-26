@@ -210,6 +210,11 @@ export const settingGroups = {
     vatMode: z.enum(["base_reduced"]).nullable().default(null),
     /** Punctele întoarse (anulare, retur) nu expiră mai devreme de atâtea zile de la întoarcere. */
     releasedGraceDays: z.number().int().min(0).max(365).default(30),
+    /**
+     * Marcaj intern: `db:seed:store` a pornit deja programul acestei instalări, deci nu mai suprascrie nimic. Nu apare în admin.
+     * Existența rândului nu spune nimic: `db:seed` scrie câte un rând pentru fiecare setare.
+     */
+    storeSeeded: z.boolean().default(false),
   },
   account: {
     /**
