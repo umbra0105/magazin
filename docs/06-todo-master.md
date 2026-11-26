@@ -452,7 +452,7 @@ Vezi `14-loializare-si-vouchere.md`, Partea A. **Se face după ce comenzile, pl�
 - [ ] `CustomerGroup.earnsLoyaltyPoints` — **fals pentru Partener 1/2/3**; Standard, Fidel și VIP acumulează, iar discountul Fidel/VIP se cumulează cu punctele
 - [ ] Acordare la expirarea ferestrei de retur, cu status „în așteptare” vizibil în cont
 - [ ] Răscumpărare ca ultimă reducere, **fără plafon procentual**, dar **punctele nu acoperă transportul**
-- [ ] ⚠️ **Regula dură a sumei în bani**: suma de plătit în bani ≥ `max(cost transport, minCashAmount)`; punctele aplicabile ≤ total − acel minim (`14` §2.A). **Comanda de 0 lei nu poate apărea; nu există ramura `loyalty_points`.** Sliderul din checkout se oprește la maximul permis
+- [!] _(🛑 2026-11-26: formula punctelor aplicabile și stornoul în `base_full`; vezi `docs/PROGRESS.md`)_ ⚠️ **Regula dură a sumei în bani**: suma de plătit în bani ≥ `max(cost transport, minCashAmount)`; punctele aplicabile ≤ total − acel minim (`14` §2.A). **Comanda de 0 lei nu poate apărea; nu există ramura `loyalty_points`.** Sliderul din checkout se oprește la maximul permis
 - [ ] 🟡 Înainte de reducerea din puncte pe factură: răspunsul contabilului la „TVA pe 100 sau pe 90?" (`10`, Partea I)
 - [ ] Acumulare doar pe suma plătită efectiv cu bani (fără buclă de puncte pe puncte)
 - [ ] Client promovat la Partener: păstrează soldul, nu mai acumulează
