@@ -20,7 +20,6 @@ export type AdminNavSectionId =
   | "discounts"
   | "reviews"
   | "blog"
-  | "loyalty"
   | "vouchers"
   | "content"
   | "media"
@@ -45,6 +44,9 @@ export type AdminNavItemId =
   | "shippingZones"
   | "paymentSettings"
   | "emailSettings"
+  | "loyaltyPoints"
+  | "loyaltyDebt"
+  | "loyaltySettings"
   | "allOrders"
   | "offers"
   | "emailTemplates"
@@ -161,6 +163,19 @@ export const CUSTOMERS_ITEMS: readonly AdminNavItem[] = [
   { id: "customerGroups", href: "/admin/clienti/grupuri", permission: "customers.read" },
   // raportul vânzărilor per grup și al avantajului acordat (fără costuri): cere `reports.read`
   { id: "customerSales", href: "/admin/clienti/vanzari", permission: "reports.read" },
+  // punctele de loialitate (Faza 15b), doar cu flag-ul `loyalty`: clienții cu puncte (fișa, ajustarea) și raportul de datorie
+  {
+    id: "loyaltyPoints",
+    href: "/admin/clienti/puncte",
+    permission: "loyalty.view",
+    feature: "loyalty",
+  },
+  {
+    id: "loyaltyDebt",
+    href: "/admin/clienti/puncte/datorie",
+    permission: "loyalty.view",
+    feature: "loyalty",
+  },
 ];
 
 /** Destinația unui element, cu parametrii păstrați din ecranul curent (vezi `keepParams`). */
@@ -186,6 +201,13 @@ export const SETTINGS_ITEMS: readonly AdminNavItem[] = [
   // datele firmei (facturare, subsol, JSON-LD, ridicare): citire cu `settings.read`, salvare cu `settings.write`
   { id: "companyData", href: "/admin/setari/firma", permission: "settings.read" },
   { id: "cartSettings", href: "/admin/setari/cos", permission: "settings.read" },
+  // programul «Puncte de loialitate» (Faza 15b): reguli de bani și tratamentul TVA, doar cu `loyalty.configure`
+  {
+    id: "loyaltySettings",
+    href: "/admin/setari/puncte",
+    permission: "loyalty.configure",
+    feature: "loyalty",
+  },
   { id: "shippingZones", href: "/admin/setari/livrare", permission: "settings.read" },
   { id: "palletSettings", href: "/admin/setari/paleti", permission: "settings.read" },
   // cheile curierilor (criptate): doar cu `integrations.write` (Owner), ca la plăți
@@ -208,7 +230,6 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
   { id: "discounts", href: "/admin/reduceri", permission: "discounts.read" },
   { id: "reviews", href: "/admin/recenzii", permission: "content.read", feature: "reviews" },
   { id: "blog", href: "/admin/blog", permission: "content.read", feature: "blog" },
-  { id: "loyalty", href: "/admin/loialitate", permission: "discounts.read", feature: "loyalty" },
   { id: "vouchers", href: "/admin/vouchere", permission: "discounts.read", feature: "vouchers" },
   { id: "content", href: "/admin/continut", permission: "content.read" },
   { id: "media", href: "/admin/media", permission: "media.read" },

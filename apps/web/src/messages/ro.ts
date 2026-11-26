@@ -10,6 +10,7 @@ import { digitalAdminRo } from "./digital-admin-ro";
 import { digitalRo } from "./digital-ro";
 import { adminInvoicingRo } from "./admin-invoicing-ro";
 import { adminReturnsRo } from "./admin-returns-ro";
+import { adminLoyaltyRo } from "./admin-loyalty-ro";
 import { adminShippingRo } from "./admin-shipping-ro";
 
 /** Acord cu numărul în română (1 = singular, 0 și 2–19 = plural, 20+ cu «de»); funcția comună și testată din `@ecom/shared`. */
@@ -156,6 +157,8 @@ export const ro = {
     invoicing: adminInvoicingRo,
     /** Retururile (Faza 14): textele stau în `admin-returns-ro.ts`. */
     returns: adminReturnsRo,
+    /** Punctele de loialitate (Faza 15b): textele stau în `admin-loyalty-ro.ts`. */
+    loyalty: adminLoyaltyRo,
     email: adminEmailRo,
     notifications: {
       title: "Notificări",
@@ -221,7 +224,9 @@ export const ro = {
       discounts: "Reduceri",
       reviews: "Recenzii",
       blog: "Blog",
-      loyalty: "Loialitate",
+      loyaltyPoints: "Puncte",
+      loyaltyDebt: "Datorie în puncte",
+      loyaltySettings: "Puncte de loialitate",
       vouchers: "Vouchere",
       content: "Conținut",
       reports: "Rapoarte",
@@ -1377,7 +1382,7 @@ export const ro = {
         stacksHelp:
           "Dacă e bifat, reducerea se aplică peste prețul promoțional. Altfel clientul plătește cel mai mic dintre prețul de grup și cel promoțional.",
         loyalty: "Clienții din grup acumulează puncte de loialitate",
-        loyaltyHelp: "Partenerii nu acumulează. Punctele de loialitate vin într-o fază următoare.",
+        loyaltyHelp: "Partenerii nu acumulează; punctele deja strânse le pot folosi.",
         tone: "Culoarea etichetei",
         tones: {
           neutral: "Gri",

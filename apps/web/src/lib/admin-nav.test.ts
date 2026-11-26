@@ -38,7 +38,7 @@ const idsFor = (roleKey: string, enabled: FeatureKey[] = []) =>
 describe("visibleNav", () => {
   it("cu toate flag-urile oprite, funcțiile opționale lipsesc din meniu (Owner)", () => {
     const ids = idsFor("owner");
-    for (const hidden of ["blog", "reviews", "loyalty", "vouchers"]) {
+    for (const hidden of ["blog", "reviews", "vouchers"]) {
       expect(ids, hidden).not.toContain(hidden);
     }
     expect(ids).toContain("orders");
@@ -561,5 +561,46 @@ describe("itemHref: filtrele din adresă se păstrează doar între ecrane care 
     expect(itemHref(byId("inventory"), byId("allProducts"), params("q=a%26b+c"))).toBe(
       "/admin/produse/stoc?q=a%26b+c",
     );
+  });
+});
+
+describe("punctele de loialitate în meniu (Faza 15b)", () => {
+  const children = (role: string, group: string, flags: FeatureKey[]) =>
+    visibleNav(ADMIN_NAV, visibilityFor(role, flags))
+      .find((entry) => entry.id === group)
+      ?.children?.map((item) => item.id) ?? [];
+  const points = ["loyaltyPoints", "loyaltyDebt"];
+
+  it("sunt sub «Clienți» și «Setări», nu o intrare separată de meniu", () => {
+    expect(ADMIN_NAV.map((entry) => entry.id as string)).not.toContain("loyalty");
+    expect(children("owner", "customers", ["loyalty"])).toEqual(expect.arrayContaining(points));
+    expect(children("owner", "settings", ["loyalty"])).toContain("loyaltySettings");
+  });
+
+  it("cu flag-ul oprit dispar toate", () => {
+    for (const id of [...points, "loyaltySettings"]) {
+      expect(children("owner", "customers", []), id).not.toContain(id);
+      expect(children("owner", "settings", []), id).not.toContain(id);
+    }
+  });
+
+  it("permisiunile: Suport și Contabil văd punctele, dar nu setările; Depozit și Editor nu văd nimic", () => {
+    for (const role of ["support", "accountant", "manager"]) {
+      expect(children(role, "customers", ["loyalty"]), role).toEqual(
+        expect.arrayContaining(points),
+      );
+      expect(children(role, "settings", ["loyalty"]), role).not.toContain("loyaltySettings");
+    }
+    for (const role of ["warehouse", "editor"]) {
+      for (const id of points)
+        expect(children(role, "customers", ["loyalty"]), role).not.toContain(id);
+    }
+    expect(children("admin", "settings", ["loyalty"])).toContain("loyaltySettings");
+  });
+
+  it("fișa unui client ține evidențiat «Puncte», iar raportul pe el însuși", () => {
+    const items = ADMIN_NAV.find((entry) => entry.id === "customers")?.children ?? [];
+    expect(activeItemId("/admin/clienti/puncte/abc", items)).toBe("loyaltyPoints");
+    expect(activeItemId("/admin/clienti/puncte/datorie", items)).toBe("loyaltyDebt");
   });
 });

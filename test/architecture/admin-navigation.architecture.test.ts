@@ -159,6 +159,8 @@ describe("grupul «Clienți» din meniu (Faza 15, același model ca «Catalog»)
       customerList: "customers.read",
       customerGroups: "customers.read",
       customerSales: "reports.read",
+      loyaltyPoints: "loyalty.view",
+      loyaltyDebt: "loyalty.view",
     });
   });
 });
