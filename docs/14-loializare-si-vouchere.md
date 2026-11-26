@@ -131,6 +131,18 @@ Dacă adminul setează un plafon procentual, se aplică și acela (cel mai restr
 **Pagina de produs**: „Primești 12 puncte la această achiziție" — crește conversia.
 **Admin**: sold per client, ajustare manuală cu motiv obligatoriu, istoric, raport de datorie totală în puncte (cât „datorezi" clienților).
 
+## 7. Deciziile din 2026-11-25 (Faza 15b; au prioritate față de textul de mai sus unde diferă)
+
+- **Structura:** Faza 15b = doar punctele (Partea A). Voucherele (Partea B) sunt Faza 15c.
+- **TVA pe reducerea din puncte:** ambele tratamente se construiesc, alese din setarea `loyalty.vatMode`: `base_reduced` (reducerea scade baza de TVA; factura are o linie separată de reducere, TVA pe suma după reducere) și `base_full` (TVA pe suma dinainte de puncte; factura are produsele la prețul întreg, iar partea plătită cu puncte apare ca mențiune sau plată separată, fără să scadă baza de TVA). Valoarea implicită e goală; cât timp e goală, punctele nu se pot folosi în checkout (acumularea și soldul funcționează), iar în admin setarea spune «Cere confirmarea contabilului înainte de a o seta». Răspuns primit de la utilizator, 2026-11-25 (după ce a întrebat contabilul): «Punctele reprezintă o reducere de preț». Seed-ul magazinului folosește `base_reduced`; seed-ul de pachet o lasă goală.
+- **Produsele la promoție acumulează puncte** (`loyalty.earnOnDiscountedItems`, implicit da; baza rămâne suma plătită după reduceri).
+- **Pragul de transport gratuit** se calculează pe valoarea produselor înainte de reducerea din puncte; costul transportului nu se schimbă.
+- **Limita de ramburs** se compară cu suma încasată de la curier după reducerea din puncte.
+- **Se aplică așa cum sunt scrise:** sold negativ permis doar după un retur făcut după ce punctele au fost cheltuite, cu răscumpărarea blocată până se acoperă; la anulare, punctele acordate se revocă și cele folosite se întorc; la retur parțial se revocă proporțional punctele de pe liniile returnate, iar rambursarea în bani = brutul liniei minus partea ei de reducere din puncte, partea de puncte întorcându-se ca puncte; expirarea nu atinge punctele rezervate într-o comandă activă.
+- **Comenzi doar digitale:** fereastra de retur pentru acordare se numără de la acordarea accesului (confirmarea plății), cu aceeași setare `returns.windowDays`; la comenzi mixte, data acordării e cea mai târzie dintre fereastra de la livrare și cea de la acordarea accesului.
+- **Fereastra de retur** e setarea existentă `returns.windowDays`; `returnWindowDays` din modelul de la §3 nu se creează.
+- **Setări (`Setting`, grup `loyalty`):** `enabled` (pachet: nu; seed magazin: da), `earnRate` (10000 bani = 1 punct la 100 lei), `pointValue` (100 bani), `expiryMonths` (12), `expiryWarningDays` (30), `maxRedeemPercent` (gol), `minRedeemPoints` (10), `minCashAmount` (100 bani), `earnOnDiscountedItems` (da), `vatMode` (gol). Transportul în bani și acumularea doar pe suma plătită în bani sunt reguli fixe, nu setări; momentul acordării e mereu expirarea ferestrei de retur.
+
 ---
 
 # PARTEA B — Vouchere cadou

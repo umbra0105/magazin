@@ -96,12 +96,26 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | ✅ | Facturare: **SmartBill** furnizor principal (cu e-Factura). *Propusă de Claude, confirmată de utilizator.* Oblio rămâne posibil mai târziu, prin aceeași interfață `InvoiceProvider`. Înainte de Faza 13 se citește documentația API curentă și se verifică (de utilizator, cu SmartBill) că abonamentul include acces API |
 | ✅ | **eMAG Marketplace**: DA, dar după lansarea magazinului propriu. Modelul de date se pregătește însă din Faza 4 |
 
+## Loialitate și vouchere: decizii din 2026-11-25
+| | Decizie |
+|---|---|
+| ✅ | **Structura:** Faza 15b = DOAR punctele de loialitate; voucherele cadou sunt Faza 15c, separată |
+| ✅ | **TVA pe reducerea din puncte:** setarea `loyalty.vatMode` = `base_reduced` sau `base_full`, implicit gol. Cât timp e gol, răscumpărarea nu e disponibilă în checkout (acumularea și soldul funcționează). Răspunsul utilizatorului: «Punctele reprezintă o reducere de preț». Seed-ul magazinului: `base_reduced`; seed-ul de pachet: gol |
+| ✅ | **Produsele la promoție acumulează puncte** (`loyalty.earnOnDiscountedItems`, implicit da; baza rămâne suma plătită după reduceri) |
+| ✅ | **Pragul de transport gratuit** se calculează pe valoarea produselor ÎNAINTE de reducerea din puncte; costul transportului nu se schimbă |
+| ✅ | **Limita de ramburs** se compară cu suma încasată de la curier DUPĂ reducerea din puncte (setările existente) |
+| ✅ | **Recomandările din `14` rămase** se aplică așa cum sunt scrise: sold negativ doar după un retur, cu răscumpărarea blocată; la anulare, punctele acordate se revocă și cele folosite se întorc; la retur parțial se revocă proporțional punctele de pe liniile returnate, rambursarea în bani = brutul liniei minus partea ei de reducere din puncte, iar partea de puncte se întoarce ca puncte; expirarea nu atinge punctele rezervate într-o comandă activă |
+| ✅ | **Comenzi doar digitale:** fereastra de retur pentru acordarea punctelor se numără de la acordarea accesului (`returns.windowDays`); la comenzi mixte se ia data cea mai târzie dintre cele două |
+| ✅ | **Fără setare dublă** pentru fereastra de retur: se folosește `returns.windowDays` |
+| ✅ | **Setări `loyalty`:** `enabled` (pachet: nu; seed magazin: da), `earnRate` 10000, `pointValue` 100, `expiryMonths` 12, `expiryWarningDays` 30, `maxRedeemPercent` gol, `minRedeemPoints` 10, `minCashAmount` 100, `earnOnDiscountedItems` da, `vatMode` gol. Fără setări pentru transport sau «doar pe bani»: sunt reguli fixe |
+| ✅ | **Vouchere (Faza 15c):** «Voucherele cadou au termen de valabilitate 365 de zile. Voucherele expirate își pierd valoarea.» (răspunsul utilizatorului) |
+
 ## 🟡 Deschise (nedecise)
 | | Subiect | Situația | De decis până la |
 |---|---|---|---|
-| 🟡 | **Voucher cadou: metodă de plată sau reducere?** | Contabilul a spus „reducere din comandă", dar proiectul îl tratează ca **metodă de plată** (nu reduce baza de TVA). Rămâne metodă de plată până lămurește contabilul diferența dintre **voucher cumpărat** (plată anticipată) și **cod de reducere gratuit**. *Consecință colaterală:* un voucher poate acoperi integral o comandă (regula „în bani ≥ transport" privește punctele, nu voucherele); de stabilit cum se tratează plata fără gateway | Faza 15b |
-| 🟡 | **Termenul legal minim de valabilitate al voucherelor** | Contabilul se interesează | Faza 15b |
-| 🟡 | **Puncte de loialitate: TVA pe 100 sau pe 90?** | Contabilul a spus „linie de discount, nu afectează baza de TVA", ambiguu. Întrebare trimisă: la 100 lei cu 10 lei plătiți în puncte, TVA se calculează pe 100 sau pe 90? | Faza 15b |
+| 🟡 | **Voucher cadou: metodă de plată sau reducere?** | Contabilul a spus „reducere din comandă”, dar proiectul îl tratează ca **metodă de plată** (nu reduce baza de TVA). Rămâne metodă de plată până lămurește contabilul diferența dintre **voucher cumpărat** (plată anticipată) și **cod de reducere gratuit**. *Consecință colaterală:* un voucher poate acoperi integral o comandă (regula „în bani ≥ transport” privește punctele, nu voucherele); de stabilit cum se tratează plata fără gateway | Faza 15c |
+| 🟡 | **Termenul legal minim de valabilitate al voucherelor** | **Răspunsul utilizatorului, 2026-11-25:** «Voucherele cadou au termen de valabilitate 365 de zile. Voucherele expirate își pierd valoarea.» Termenul LEGAL minim: contabilul se interesează | Faza 15c |
+| 🟡 | **Puncte de loialitate: TVA pe 100 sau pe 90?** | **Răspuns primit de la utilizator, 2026-11-25 (după ce a întrebat contabilul): «Punctele reprezintă o reducere de preț».** Ambele tratamente se construiesc, alese din setarea `loyalty.vatMode` (implicit gol; gol = fără răscumpărare); seed-ul magazinului folosește `base_reduced` după răspunsul utilizatorului. **De confirmat de utilizator cu contabilul, în scris, că «reducere de preț» înseamnă TVA calculat pe suma după reducere** | Înainte de lansare |
 | 🟡 | **Storage-ul de producție** | Codul vorbește S3 generic (`STORAGE_DRIVER`, `S3_*` din `.env`); furnizorul se schimbă fără modificări de cod. Candidați: Cloudflare R2, alt S3 gestionat, MinIO self-hosted. *Mutat din Faza 3 (decizie utilizator, 2026-10-12): nu blochează implementarea media* | Faza 18 |
 
 ---

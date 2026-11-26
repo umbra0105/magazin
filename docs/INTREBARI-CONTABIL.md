@@ -125,11 +125,11 @@ Răspuns:
 **9. Vouchere cadou.** Un voucher **cumpărat** (plată anticipată) apare pe factura finală ca **metodă de plată**, nu reduce baza de TVA. E
 corect? Ce termen minim de valabilitate se aplică și ce se întâmplă cu soldul neutilizat la expirare? (răspunsul anterior: „reducere din comandă”)
 
-Răspuns:
+Răspuns: (2026-11-25, de la utilizator) «Voucherele cadou au termen de valabilitate 365 de zile. Voucherele expirate își pierd valoarea.» (Pentru Faza 15c; celelalte părți ale întrebării rămân deschise.)
 
 **10. Puncte de loialitate.** Produse de 100 lei, 10 lei plătiți cu puncte: TVA se calculează pe 100 sau pe 90 lei? Reducerea apare ca linie separată?
 
-Răspuns:
+Răspuns: «Punctele reprezintă o reducere de preț». (Primit de la utilizator, 2026-11-25, după ce a întrebat contabilul.)
 
 **12. TVA la transport și la taxa de ramburs (adăugată în Faza 9).** Transportul și taxa de ramburs sunt sume cu TVA inclus, ca prețurile produselor: TVA-ul se extrage din ele cu aceeași cotă (`tax.standardRate`, 21%), ca la linii. Provizoriu, așa le tratăm. E corect? Taxa de ramburs apare pe factură ca linie separată (serviciu) sau e inclusă în transport? Cota TVA a transportului urmează cota produselor sau e mereu cea standard?
 

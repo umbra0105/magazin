@@ -432,8 +432,8 @@ _Închisă: PR #30 îmbinat prin poartă la `ed762cb` (2026-11-25), aprobarea ut
 - [x] Raport: vânzări per grup, total avantaj acordat
 - [ ] (opțional) Promovare automată în „Client fidel" după X lei sau N comenzi _(nu se face: atribuirea grupului rămâne manuală, decizia utilizatorului, 2026-11-24)_
 
-## FAZA 15b — Puncte de loialitate și vouchere
-Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și retururile funcționează complet.**
+## FAZA 15b — Puncte de loialitate (mod B, ramura `faza-15b`)
+Vezi `14-loializare-si-vouchere.md`, Partea A. **Se face după ce comenzile, plățile și retururile funcționează complet.** Voucherele cadou sunt în Faza 15c (decizia utilizatorului, 2026-11-25).
 - [ ] Setări de loialitate: rată de acumulare, valoare punct, moment de acordare, expirare, plafon procentual de utilizare (implicit **fără plafon**, configurabil), minim în bani când nu există transport (`minCashAmount`, implicit 1 leu)
 - [ ] Schema: LoyaltyAccount, LoyaltyTransaction (registru imutabil — soldul se recalculează, nu se editează)
 - [ ] Acumulare: 1 punct la 100 lei, pe subtotalul după reduceri, fără transport, cu `floor`
@@ -448,6 +448,10 @@ Vezi `14-loializare-si-vouchere.md`. **Se face după ce comenzile, plățile și
 - [ ] **Toate cazurile din `14` §5**: anulare, retur parțial, sold negativ, rambursare, guest
 - [ ] Afișare: sold în cont, „primești X puncte” pe PDP, utilizare în checkout
 - [ ] Admin: sold per client, ajustare cu motiv obligatoriu, raport de datorie în puncte
+
+## FAZA 15c — Vouchere cadou (mod B, ramura `faza-15c`, după 15b; decizia utilizatorului, 2026-11-25)
+Vezi `14-loializare-si-vouchere.md`, Partea B. Faza 15c se înregistrează (`PHASE_MODES`, `test/autonom/phases.test.ts`, linia utilizatorului din `docs/AUTONOM-APROBARI.md`) la pregătirea ei, nu în Faza 15b.
+**Răspunsul utilizatorului, 2026-11-25:** «Voucherele cadou au termen de valabilitate 365 de zile. Voucherele expirate își pierd valoarea.»
 - [ ] Schema: Voucher, VoucherTransaction, **cu sold rămas** (nu cod cu o singură utilizare)
 - [ ] ⚠️ Voucherul intră la **PLATĂ**, nu în lanțul de reduceri. Nu reduce baza de TVA
 - [ ] 🟡 Rămâne deschis cu contabilul: voucher cumpărat (plată anticipată) vs cod de reducere gratuit; termenul legal minim de valabilitate; tratamentul voucherului care acoperă integral o comandă (`10`, Partea I)
