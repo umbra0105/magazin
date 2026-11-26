@@ -361,6 +361,8 @@ Vânzări azi/7z/30z cu comparație · comenzi noi de procesat · valoare medie 
 ### 5.3 Clienți
 Listă cu LTV, nr. comenzi, ultima comandă, etichete · fișă client cu istoric, adrese, note, activitate · grupuri și segmente (reguli: „au comandat de peste 2x în ultimele 90 zile") · export GDPR · anonimizare/ștergere · impersonare (cu audit) · conturi B2B.
 
+**Implementat în Faza 15b (puncte de loialitate).** Sub «Clienți», cu flag-ul `loyalty` pornit: «Puncte» (`/admin/clienti/puncte`: căutare, fișa clientului cu sold, puncte în așteptare, istoric cu motivul ajustărilor și ajustarea manuală cu motiv obligatoriu) și «Datorie în puncte» (disponibile pe luna expirării, în așteptare, solduri negative, CSV pentru Excel, fără date personale). Sub «Setări»: «Puncte de loialitate» (`/admin/setari/puncte`). Denumirea rândului de reducere de pe factură e în Setări → Facturare. Permisiuni, verificate pe server: `loyalty.view`, `loyalty.adjust`, `loyalty.configure`; emailul întreg se vede doar cu `customers.read_pii`. Fișa generală de client (LTV, adrese, note, GDPR) nu face parte din 15b.
+
 ### 5.4 Produse
 - Listă cu preview imagine, stoc, preț, status, categorie; filtre și editare inline
 - Editor produs: informații generale, descriere rich, media (drag&drop, reordonare, alt), prețuri, variante (generator de combinații), stoc per depozit, atribute, categorii/colecții, SEO, produse asociate, livrare (greutate/dimensiuni), GPSR, produs digital

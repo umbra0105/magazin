@@ -454,19 +454,19 @@ Vezi `14-loializare-si-vouchere.md`, Partea A. **Se face după ce comenzile, pl�
 
 - [x] _(`643bf02`: grupul `loyalty` în registru, `vatMode` doar gol sau `base_reduced`, citire directă din bază, cu teste; ecranul de admin vine la pasul de interfață)_ Setări de loialitate: rată de acumulare, valoare punct, moment de acordare, expirare, plafon procentual de utilizare (implicit **fără plafon**, configurabil), minim în bani când nu există transport (`minCashAmount`, implicit 1 leu)
 - [x] _(🛑 rezolvat 2026-11-26, D13 și D14)_ Schema: LoyaltyAccount, LoyaltyTransaction (registru imutabil — soldul se recalculează, nu se editează) _(`2145bb1`, migrarea `20261126100000_loyalty`, neaplicată pe `ecom`; 89 de teste de schemă, 75 roșii fără constrângeri)_
-- [ ] Acumulare: 1 punct la 100 lei, pe subtotalul după reduceri, fără transport, cu `floor`
-- [ ] `CustomerGroup.earnsLoyaltyPoints` — **fals pentru Partener 1/2/3**; Standard, Fidel și VIP acumulează, iar discountul Fidel/VIP se cumulează cu punctele
-- [ ] Acordare la expirarea ferestrei de retur, cu status „în așteptare” vizibil în cont
+- [x] _(motor, plasare și acordare; mutanții «rotunjire în sus» și «acumulare pe partea plătită cu puncte» uciși)_ Acumulare: 1 punct la 100 lei, pe subtotalul după reduceri, fără transport, cu `floor`
+- [x] _(plasare, pagina produsului, E2E; mutanții «partenerul acumulează» și «estimare pentru partener» uciși)_ `CustomerGroup.earnsLoyaltyPoints` — **fals pentru Partener 1/2/3**; Standard, Fidel și VIP acumulează, iar discountul Fidel/VIP se cumulează cu punctele
+- [x] _(job cu ceas injectat; E2E: comandă ridicată → «în așteptare» cu data în cont)_ Acordare la expirarea ferestrei de retur, cu status „în așteptare” vizibil în cont
 - [x] _(🛑 rezolvat 2026-11-26, D15; `a3bf310`, concurență pe date comise)_ Răscumpărare ca ultimă reducere, **fără plafon procentual**, dar **punctele nu acoperă transportul**
 - [x] _(🛑 rezolvat 2026-11-26, D11 și D12 de mai sus; `643bf02`, `a3bf310`: motor, server, `totalMinor > 0` în bază; cursorul din interfață la pasul de ecrane)_ ⚠️ **Regula dură a sumei în bani**: suma de plătit în bani ≥ `max(cost transport, minCashAmount)`; punctele aplicabile ≤ total − acel minim (`14` §2.A). **Comanda de 0 lei nu poate apărea; nu există ramura `loyalty_points`.** Sliderul din checkout se oprește la maximul permis
 - [x] Înainte de reducerea din puncte pe factură: răspunsul la „TVA pe 100 sau pe 90?” (`10`, Partea I) _(primit de la utilizator, 2026-11-25: «Punctele reprezintă o reducere de preț»; confirmarea scrisă a contabilului rămâne în sarcina utilizatorului)_
 - [ ] **AMÂNAT: `base_full`** (TVA pe suma dinainte de puncte): se face într-o mini-fază separată DOAR dacă contabilul confirmă TVA pe suma înainte de puncte. Motiv: cere schimbări în `return-settle.ts` și în totalul facturii (decizia utilizatorului, 2026-11-26). Nu face parte din Faza 15b
-- [ ] Acumulare doar pe suma plătită efectiv cu bani (fără buclă de puncte pe puncte)
-- [ ] Client promovat la Partener: păstrează soldul, nu mai acumulează
+- [x] _(integrare; mutant ucis)_ Acumulare doar pe suma plătită efectiv cu bani (fără buclă de puncte pe puncte)
+- [x] _(integrare: Partenerul își folosește soldul și nu acumulează)_ Client promovat la Partener: păstrează soldul, nu mai acumulează
 - [x] _(joburile `loyalty-grant`, `loyalty-expire`, `loyalty-expiry-warning`, cu teste cu ceas injectat)_ Expirare la 12 luni, cu email de avertizare cu 30 de zile înainte
 - [x] _(`a3bf310`, `2fd123e`: anulare, retur parțial, sold negativ, rambursare, oaspete; factura și stornoul `base_reduced` în `013e150`)_ **Toate cazurile din `14` §5**: anulare, retur parțial, sold negativ, rambursare, guest
-- [ ] _(ecranele sunt scrise, `cb53d9d`; se bifează după E2E)_ Afișare: sold în cont, „primești X puncte” pe PDP, utilizare în checkout
-- [~] Admin: sold per client, ajustare cu motiv obligatoriu, raport de datorie în puncte
+- [x] _(`cb53d9d`; `e2e/loyalty.spec.ts`, 10 teste verzi)_ Afișare: sold în cont, „primești X puncte” pe PDP, utilizare în checkout
+- [x] _(`167a5e8`; E2E: ajustare, permisiuni, CSV, flag oprit)_ Admin: sold per client, ajustare cu motiv obligatoriu, raport de datorie în puncte
 
 ## FAZA 15c — Vouchere cadou (mod B, ramura `faza-15c`, după 15b; decizia utilizatorului, 2026-11-25)
 Vezi `14-loializare-si-vouchere.md`, Partea B. Faza 15c se înregistrează (`PHASE_MODES`, `test/autonom/phases.test.ts`, linia utilizatorului din `docs/AUTONOM-APROBARI.md`) la pregătirea ei, nu în Faza 15b.
