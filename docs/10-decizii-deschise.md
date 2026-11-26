@@ -110,6 +110,8 @@ Toate deciziile proiectului, într-un singur loc. ✅ = decis · 🔴 = blocheaz
 | ✅ | **Comenzi doar digitale:** fereastra de retur pentru acordarea punctelor se numără de la acordarea accesului (`returns.windowDays`); la comenzi mixte se ia data cea mai târzie dintre cele două |
 | ✅ | **Fără setare dublă** pentru fereastra de retur: se folosește `returns.windowDays` |
 | ✅ | **Setări `loyalty`:** `enabled` (pachet: nu; seed magazin: da), `earnRate` 10000, `pointValue` 100, `expiryMonths` 12, `expiryWarningDays` 30, `maxRedeemPercent` gol, `minRedeemPoints` 10, `minCashAmount` 100, `earnOnDiscountedItems` da, `vatMode` gol. Fără setări pentru transport sau «doar pe bani»: sunt reguli fixe |
+| ✅ | **Reguli de bani ale punctelor (2026-11-26):** reducerea se împarte exact, la ban, pe produse; la retur parțial punctele întoarse se rotunjesc în jos pe totalul returnat până atunci (la retur integral toate); punctele întoarse își păstrează data de expirare, dar nu expiră mai devreme de `loyalty.releasedGraceDays` zile (implicit 30) de la întoarcere; punctele de primit se calculează pe banii rămași plătiți pentru produse (scad la o rambursare fără retur, nu la transportul rambursat într-un retur) |
+| 🟡 | **TVA pe reducerea din puncte, pe rând de factură** (aplicat: TVA produs − TVA reducere). **De confirmat cu contabilul pe exemplul:** produs 100,00 lei, reducere 33,33 lei → TVA 17,36 − 5,78 = **11,58 lei** (calculat direct pe cei 66,67 lei rămași ar fi 11,57 lei). Confirmarea se cere contabilului, nu se caută în SmartBill real. Întrebarea #17 din `INTREBARI-CONTABIL` |
 | ✅ | **Vouchere (Faza 15c):** «Voucherele cadou au termen de valabilitate 365 de zile. Voucherele expirate își pierd valoarea.» (răspunsul utilizatorului) |
 
 ## 🟡 Deschise (nedecise)
