@@ -6,7 +6,15 @@ import { CartService, type CartOwner, type CartRuntimeSettings } from "../cart/c
 import { cancelOrder } from "../orders/order-actions";
 import { confirmBankTransferPayment, expireDueTransferOrders } from "../orders/order-payments";
 import { markOrderPickedUp } from "../orders/order-pickup";
-import { LOYALTY_PORTS } from "../orders/order-service";
+import { LOYALTY_PORTS, transitionOrder } from "../orders/order-service";
+import {
+  approveReturn,
+  inspectReturn,
+  markReturnReceived,
+  setReturnAwb,
+} from "../returns/return-admin";
+import { initiateReturn } from "../returns/return-customer";
+import { refundReturn } from "../returns/return-refund";
 import { CheckoutService } from "../orders/checkout-service";
 import { CHECKOUT_TERMS_CONSENT } from "../orders/consent";
 import { DemoShippingRateProvider } from "../shipping/demo-rates";
@@ -181,6 +189,8 @@ afterAll(async () => {
     select: { id: true },
   });
   await db.cart.deleteMany({ where: { userId: { in: users } } });
+  // retururile referă liniile comenzii (cheie străină): ele și jurnalele lor dispar înaintea comenzilor
+  await db.returnRequest.deleteMany({ where: { orderId: { in: orders.map((o) => o.id) } } });
   await purgeStockContext(db, ctx);
   await db.order.deleteMany({ where: { id: { in: orders.map((o) => o.id) } } });
   await db.loyaltyAccount.deleteMany({ where: { customerId: { in: users } } });
@@ -222,12 +232,18 @@ async function buyer(points: number) {
   return { id, owner };
 }
 
-/** Intrarea de plasare cu ridicare personală și transfer bancar, cu `points` puncte folosite. */
-async function inputFor(owner: CartOwner, points: number) {
+/** Intrarea de plasare cu transfer bancar (implicit ridicare personală), cu `points` puncte folosite. */
+async function inputFor(
+  owner: CartOwner,
+  points: number,
+  options: { kind?: "pickup" | "courier"; email?: string } = {},
+) {
   const checkout = checkoutService();
   const destination = { countyCode: COUNTY, localityCode, postalCode: "123456" };
   const first = await checkout.preview({ owner, destination, paymentMethod: "bank_transfer" });
-  const offer = first.shipping!.offers.find((o) => o.kind === "pickup")!;
+  const offer = first.shipping!.offers.find((o) =>
+    options.kind === "courier" ? o.kind !== "pickup" : o.kind === "pickup",
+  )!;
   const preview = await checkout.preview({
     owner,
     destination,
@@ -238,7 +254,7 @@ async function inputFor(owner: CartOwner, points: number) {
   return {
     idempotencyKey: randomUUID(),
     expectedTotalMinor: preview.totals!.totalMinor,
-    contact: { email: `p-${tag}@exemplu.test`, phone: "0722123456" },
+    contact: { email: options.email ?? `p-${tag}@exemplu.test`, phone: "0722123456" },
     shipping: {
       fullName: "Ion Popescu",
       phone: "0722123456",
@@ -351,6 +367,82 @@ describe("punctele se întorc o singură dată", () => {
       ]);
       expect(await rowsOf(orderId, "release")).toBe(1);
       expect(await invariant(customerId)).toBe(100);
+    }
+  });
+});
+
+/** O comandă plătită integral cu puncte la produse, livrată, cu returul ei inspectat (0 lei de rambursat). */
+async function inspectedPointsOnlyReturn() {
+  // 1.000,00 lei de produse, 1.000 de puncte, curier: în bani rămâne transportul
+  const { id, owner } = await buyer(1_000);
+  const email = `${id}@exemplu.test`;
+  const input = await inputFor(owner, 1_000, { kind: "courier", email });
+  const { orderId } = await checkoutService().place(owner, input);
+  await confirmBankTransferPayment(db, orderId, { now: new Date() });
+  await db.$transaction(async (tx) => {
+    for (const [fulfillmentStatus, type] of [
+      ["fulfilled", "fulfillment.step"],
+      ["in_transit", "order.shipped"],
+      ["delivered", "order.delivered"],
+    ] as const) {
+      await transitionOrder(
+        tx,
+        orderId,
+        { fulfillmentStatus },
+        { type, message: "livrare de test" },
+        new Date(),
+      );
+    }
+  });
+  const line = await db.orderLine.findFirstOrThrow({ where: { orderId } });
+  const customer = { id, email, emailVerified: true };
+  const admin = { label: "admin" };
+  const { returnId } = await initiateReturn(
+    db,
+    customer,
+    {
+      orderId,
+      clientKey: randomUUID(),
+      items: [{ orderLineId: line.id, quantity: "1", reasonCode: "changed_mind" }],
+    },
+    new Date(),
+  );
+  await approveReturn(db, returnId, admin, new Date());
+  await setReturnAwb(db, returnId, admin, { carrier: "Curier", awb: "AWB1" }, new Date());
+  await markReturnReceived(db, returnId, admin, new Date());
+  const item = await db.returnItem.findFirstOrThrow({ where: { returnId } });
+  await inspectReturn(
+    db,
+    returnId,
+    admin,
+    [{ returnItemId: item.id, acceptedQuantity: "1", condition: "as_new", resellable: true }],
+    new Date(),
+  );
+  return { customerId: id, orderId, returnId };
+}
+
+describe("returul de 0 lei cerut de mai multe ori deodată", () => {
+  it("se închide o singură dată: puncte întoarse o dată, niciun rând de rambursare", async () => {
+    for (let round = 0; round < 4; round += 1) {
+      const { customerId, orderId, returnId } = await inspectedPointsOnlyReturn();
+      const close = () =>
+        refundReturn(
+          {
+            db,
+            getProvider: async () => null,
+            now: () => new Date(),
+            readLimitMinor: async () => null,
+          },
+          { returnId, actorLabel: "admin", actorUnlimited: true },
+        );
+      const results = await Promise.all([close(), close(), close()]);
+      expect(results.map((r) => r.refundId)).toEqual([null, null, null]);
+      const row = await db.returnRequest.findUniqueOrThrow({ where: { id: returnId } });
+      expect(row).toMatchObject({ status: "refunded", refundId: null, refundProductsMinor: 0 });
+      expect(await db.refund.count({ where: { orderId } })).toBe(0);
+      expect(await rowsOf(orderId, "release")).toBe(1);
+      expect(await db.returnEvent.count({ where: { returnId, type: "return.refunded" } })).toBe(1);
+      expect(await invariant(customerId)).toBe(1_000);
     }
   });
 });

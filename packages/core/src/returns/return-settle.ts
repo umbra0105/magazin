@@ -56,20 +56,7 @@ export async function settleReturnOnRefund(
   const locked = await lockReturn(tx, returnId);
   if (!locked || locked.orderId !== orderId || locked.status !== "inspected") return;
 
-  const ret = await tx.returnRequest.findUniqueOrThrow({
-    where: { id: returnId },
-    select: {
-      number: true,
-      refundProductsMinor: true,
-      refundShippingMinor: true,
-      items: {
-        where: { acceptedQty: { gt: 0n } },
-        select: { orderLineId: true, acceptedQty: true },
-        orderBy: { createdAt: "asc" },
-      },
-      order: { select: { number: true } },
-    },
-  });
+  const ret = await readSettledReturn(tx, returnId);
   const productsMinor = ret.refundProductsMinor ?? 0;
   await transitionReturn(
     tx,
@@ -83,7 +70,65 @@ export async function settleReturnOnRefund(
     },
     now,
   );
+  await queueReturnStorno(tx, orderId, returnId, ret, productsMinor);
+}
 
+/**
+ * Închide un retur cu 0 lei de rambursat (bucățile au fost plătite integral cu puncte, decizia 2026-11-26): fără rând `Refund`,
+ * aceeași stare «rambursat», cu același storno parțial pus în coadă și verificat la ban. Apelantul ține comanda și returul
+ * blocate, a scris deja sumele pe linii (0 lei) și cheamă apoi reașezarea punctelor.
+ */
+export async function closeReturnWithoutRefund(
+  tx: Db,
+  orderId: string,
+  returnId: string,
+  now: Date,
+): Promise<void> {
+  await tx.returnRequest.update({
+    where: { id: returnId },
+    data: { refundProductsMinor: 0, refundShippingMinor: 0, refundShippingReason: null },
+  });
+  await transitionReturn(
+    tx,
+    returnId,
+    "refunded",
+    { refundProductsMinor: 0 },
+    {
+      type: "return.refunded",
+      message:
+        "Returul a fost închis fără rambursare de bani: produsele fuseseră plătite cu puncte",
+      data: { amountMinor: 0 },
+    },
+    now,
+  );
+  await queueReturnStorno(tx, orderId, returnId, await readSettledReturn(tx, returnId), 0);
+}
+
+function readSettledReturn(tx: Db, returnId: string) {
+  return tx.returnRequest.findUniqueOrThrow({
+    where: { id: returnId },
+    select: {
+      number: true,
+      refundProductsMinor: true,
+      refundShippingMinor: true,
+      items: {
+        where: { acceptedQty: { gt: 0n } },
+        select: { orderLineId: true, acceptedQty: true },
+        orderBy: { createdAt: "asc" },
+      },
+      order: { select: { number: true } },
+    },
+  });
+}
+
+/** Pune în coadă stornoul parțial al returului încheiat și verifică la ban că e egal cu banii pe produse. */
+async function queueReturnStorno(
+  tx: Db,
+  orderId: string,
+  returnId: string,
+  ret: Awaited<ReturnType<typeof readSettledReturn>>,
+  productsMinor: number,
+): Promise<void> {
   let state: ReturnStornoState;
   let note: string | null = null;
   if (!(await selectedInvoiceProvider(tx))) {
