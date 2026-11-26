@@ -153,8 +153,9 @@ export default defineConfig({
           use: { ...devices["Desktop Chrome"] },
         },
         {
-          // Comenzi și oferte din admin: după toate celelalte, într-un singur fișier (vezi test/support/e2e-projects.ts).
+          // Comenzi, oferte și puncte: după toate celelalte, un fișier pe rând (setări comune; vezi test/support/e2e-projects.ts).
           name: "chromium-orders",
+          workers: 1,
           testMatch: orderFlowSpecPattern,
           dependencies: ["chromium-global-state"],
           use: { ...devices["Desktop Chrome"] },

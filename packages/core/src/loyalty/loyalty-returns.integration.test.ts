@@ -45,6 +45,19 @@ interface Scene {
   h: Harness;
   world: World;
   service: InvoiceService;
+  /** Trece timpul pentru coada de facturi. */
+  advance: (milliseconds: number) => void;
+}
+
+/**
+ * Procesează coada de facturi până se golește, cu ceasul injectat care avansează. Un lot ia proforma și factura împreună, iar
+ * baza nu garantează ordinea în care le întoarce: luată prima, factura se reprogramează peste un minut (ca în producție).
+ */
+async function issueDue(s: Scene) {
+  for (let round = 0; round < 3; round++) {
+    await s.service.processDue();
+    s.advance(2 * 60_000);
+  }
 }
 
 async function scene(fn: (s: Scene) => Promise<void>, options: { invoicing?: boolean } = {}) {
@@ -56,12 +69,16 @@ async function scene(fn: (s: Scene) => Promise<void>, options: { invoicing?: boo
       active: async () => "demo",
       provider: async () => demo,
     };
+    let clock = NOW.getTime() + 60_000;
     const service = new InvoiceService({
       db: h.tx as unknown as PrismaClient,
       source,
-      now: () => new Date(NOW.getTime() + 60_000),
+      now: () => new Date(clock),
     });
-    await fn({ h, world, service });
+    const advance = (milliseconds: number) => {
+      clock += milliseconds;
+    };
+    await fn({ h, world, service, advance });
     await force(h);
   });
 }
@@ -135,8 +152,7 @@ async function delivered(
   const placed = await h.checkout.place(world.owner, input);
   await force(h);
   await confirmBankTransferPayment(h.tx, placed.orderId, { now: NOW });
-  await s.service.processDue();
-  await s.service.processDue();
+  await issueDue(s);
   await deliver(h, placed.orderId);
   const order = await orderOf(h.tx, placed.orderId);
   // retururile se fac de proprietarul comenzii: emailul comenzii, verificat
@@ -251,7 +267,7 @@ async function invoiceDocs(h: Harness, orderId: string) {
 /** Stornoul restului (anulare/refuz din admin): după el, suma stornourilor trebuie să fie factura. */
 async function reverseRest(s: Scene, p: Placed) {
   await s.service.requestReverse(p.orderId, "admin");
-  await s.service.processDue();
+  await issueDue(s);
   const { invoice, stornos } = await invoiceDocs(s.h, p.orderId);
   expect(stornos.map((d) => d.status)).toEqual(stornos.map(() => "issued"));
   expect(stornos.reduce((sum, d) => sum + d.totalMinor, 0)).toBe(invoice.totalMinor);
@@ -289,7 +305,7 @@ describe("retur parțial cu puncte", () => {
       expect(await readBalance(h.tx, world.userId)).toBe(500);
       expect(await pointsRows(h, p.orderId)).toEqual(["redeem:-90", "release:30", "release:60"]);
 
-      await s.service.processDue();
+      await issueDue(s);
       const { stornos } = await invoiceDocs(h, p.orderId);
       expect(stornos.map((d) => d.totalMinor)).toEqual([2_000, 4_000]);
       await reverseRest(s, p);
@@ -341,14 +357,14 @@ describe("retur cu 0 lei de rambursat (linia plătită integral cu puncte)", () 
       expect((await refund(h, id)).refundId).toBeNull();
       expect(await pointsRows(h, p.orderId)).toEqual(["redeem:-150", "release:50"]);
 
-      await s.service.processDue();
+      await issueDue(s);
       const { stornos } = await invoiceDocs(h, p.orderId);
       expect(stornos.map((d) => [d.status, d.totalMinor, d.taxMinor])).toEqual([["issued", 0, 0]]);
 
       const rest = await inspected(s, p, [[p.a, "2"]]);
       expect((await refundAndConfirm(h, rest)).refundId).toBeNull();
       expect(await readBalance(h.tx, world.userId)).toBe(500);
-      await s.service.processDue();
+      await issueDue(s);
       await reverseRest(s, p);
     });
   });
