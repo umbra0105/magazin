@@ -31,7 +31,7 @@ Modul B:
 - Faza 14b: aprobat, 2026-11-24, produse digitale verificate
 - Faza 14c: aprobat, 2026-11-24, checkout digital verificat
 - Faza 15: aprobat
-- Faza 15b: în așteptare
+- Faza 15b: aprobat
 
 Modul C:
 
