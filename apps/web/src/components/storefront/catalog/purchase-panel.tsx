@@ -8,6 +8,7 @@ import { addToCart, openDrawer, useCartState } from "@/components/storefront/car
 import { QuantityStepper } from "@/components/storefront/cart/steps-stepper";
 import { getMessages } from "@/messages";
 import { GroupBadge, useVariantGroupPrice } from "./group-price";
+import { PurchasePointsNote } from "./purchase-points";
 
 const m = getMessages().storefront.catalog.product;
 const groupMessages = getMessages().storefront.catalog.groupPrice;
@@ -64,8 +65,11 @@ export function PurchasePanel({
   contact,
   productTitle,
   wishlist = false,
+  loyalty = false,
 }: {
   productTitle: string;
+  /** Programul de puncte e pornit din flag: se cere și se arată «Primești X puncte». */
+  loyalty?: boolean;
   /** Arată butonul «Favorite» (flag-ul `wishlist` pornit). */
   wishlist?: boolean;
   options: readonly PanelOption[];
@@ -266,6 +270,15 @@ export function PurchasePanel({
               )}
             </div>
           )}
+          {loyalty ? (
+            <PurchasePointsNote
+              variantId={selected.id}
+              quantityTicks={(selected.digital
+                ? BigInt(selected.stepTicks)
+                : totalTicks
+              ).toString()}
+            />
+          ) : null}
           <StoreButton size="lg" disabled={busy} onClick={() => void add()} data-add-button>
             {busy ? m.adding : m.addToCart}
           </StoreButton>

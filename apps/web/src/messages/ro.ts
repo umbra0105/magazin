@@ -4130,6 +4130,27 @@ export const ro = {
       placeOrder: "Plasează comanda",
       placing: "Se plasează comanda…",
       draftNotice: "Textele juridice sunt în curs de redactare.",
+      /** Punctele de loialitate (Faza 15b). */
+      loyalty: {
+        title: "Puncte de loialitate",
+        balance: (points: string, value: string) => `Ai ${points} (${value}). Folosește-le?`,
+        max: (points: string, value: string) =>
+          `La comanda aceasta poți folosi cel mult ${points} (${value}). Transportul se plătește mereu în bani.`,
+        min: (points: string) => `Poți folosi cel puțin ${points} odată.`,
+        slider: "Câte puncte folosești",
+        useMax: "Folosește maximum",
+        useNone: "Nu folosi puncte",
+        applied: (points: string, value: string) => `Folosești ${points}: −${value}`,
+        none: "Nu folosești puncte la comanda aceasta.",
+        discount: "Reducere din puncte",
+        pdpMember: (points: string) => `Primești ${points} la această achiziție.`,
+        pdpGuest: (points: string) => `Creează cont și primești ${points} la această achiziție.`,
+        cartHint: (points: string, value: string) =>
+          `Ai ${points} (${value}). Le poți folosi la finalizarea comenzii.`,
+        earnMember: (points: string) => `Primești ${points} la această comandă.`,
+        earnGuest: (points: string) =>
+          `Creează cont și primești ${points} la o comandă ca aceasta.`,
+      },
       errors: {
         invalid: "Verifică câmpurile marcate.",
         email: "Scrie o adresă de email validă.",
@@ -4166,6 +4187,12 @@ export const ro = {
         ORDER_DIGITAL_QUANTITY:
           "Un produs digital se cumpără o singură dată. Revino în coș și păstrează o bucată.",
         ORDER_GUEST_CHECKOUT_DISABLED: "Comenzile fără cont nu sunt activate în acest magazin.",
+        ORDER_POINTS_UNAVAILABLE:
+          "Punctele nu se pot folosi acum. Am actualizat totalul; verifică-l și plasează din nou.",
+        ORDER_POINTS_INVALID:
+          "Numărul de puncte ales nu mai este valabil. Alege din nou câte folosești.",
+        LOYALTY_INSUFFICIENT_POINTS:
+          "Nu mai ai destule puncte. Am actualizat soldul; alege din nou câte folosești.",
         ORDER_QUANTITY_INVALID: "Cantitatea unui produs nu este valabilă. Revino în coș.",
         STOCK_INSUFFICIENT:
           "Unul dintre produse nu mai este disponibil în cantitatea cerută. Revino în coș.",
@@ -4389,6 +4416,10 @@ export const ro = {
       lines: "Produse",
       total: "Total",
       placedOn: (date: string) => `Plasată pe ${date}`,
+      /** Punctele de loialitate ale comenzii (Faza 15b). */
+      pointsUsed: (points: string) => `Ai folosit ${points} la această comandă.`,
+      pointsToEarn: (points: string) =>
+        `Primești ${points} după livrare, când se încheie termenul de retur.`,
       trackTitle: "Urmărește comanda",
       trackLede: "Introdu numărul comenzii și emailul folosit la plasare.",
       trackNumber: "Numărul comenzii",

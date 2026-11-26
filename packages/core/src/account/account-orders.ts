@@ -1,5 +1,6 @@
 import { compareQuantity, quantityFromTicks } from "@ecom/shared";
 import type { Db } from "../db-tx";
+import { orderLoyaltyView, type OrderLoyaltyView } from "../loyalty/loyalty-read";
 import { loadReturnableLines, type ReturnableLine } from "../returns/return-lines";
 import { resolveReturnWindow, type ReturnWindow } from "../returns/return-delivery";
 import { ownedOrderWhere, ownedOrdersWhere, type AccountUser } from "./order-ownership";
@@ -164,6 +165,8 @@ export interface AccountOrderDetail {
   shippingMinor: number;
   codFeeMinor: number;
   discountMinor: number;
+  /** Punctele comenzii (folosite, primite, de primit); `null` = nimic de arătat. */
+  loyalty: OrderLoyaltyView | null;
   taxMinor: number;
   totalMinor: number;
   lines: AccountOrderLine[];
@@ -305,7 +308,9 @@ export async function getAccountOrder(
         }
       : null;
   };
+  const loyalty = await orderLoyaltyView(db, order.id, user.id);
   return {
+    loyalty,
     id: order.id,
     number: order.number,
     placedAt: order.placedAt,

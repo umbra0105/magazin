@@ -1,4 +1,5 @@
 import type { CheckoutPreview, PaymentMethodAvailability, RateOffer } from "@ecom/core";
+import { pluralRo } from "@ecom/shared";
 import { getMessages } from "@/messages";
 import { formatMoney } from "./money-input";
 
@@ -42,7 +43,18 @@ export interface CheckoutMethodDto {
   reasonText: string | null;
 }
 
+/** Punctele de loialitate la finalizarea comenzii (Faza 15b); toate textele gata formatate. */
+export interface CheckoutLoyaltyDto {
+  /** Câmpul «Folosește punctele»; `null` = nu se pot folosi acum. */
+  redeem: { maxPoints: number; minPoints: number; balanceText: string; maxText: string } | null;
+  appliedPoints: number;
+  appliedText: string | null;
+  /** «Primești X puncte…» sau, la oaspete, «Creează cont și primești X puncte…». */
+  note: string | null;
+}
+
 export interface CheckoutPreviewDto {
+  loyalty: CheckoutLoyaltyDto | null;
   blocked: { code: string; message: string } | null;
   /** Faza 14c: coșul are produse digitale / doar produse digitale (fără pas de livrare, fără ramburs). */
   digital: { present: boolean; only: boolean };
@@ -58,6 +70,8 @@ export interface CheckoutPreviewDto {
     shippingText: string;
     shippingFree: boolean;
     codFeeText: string | null;
+    /** Reducerea din puncte, ca linie separată («−50,00 lei»), doar când s-au ales puncte. */
+    discountText: string | null;
     vatText: string;
     totalText: string;
     totalMinor: number;
@@ -164,6 +178,39 @@ function methodDto(
   };
 }
 
+export const pointsText = (points: number): string =>
+  pluralRo(points, "punct", "puncte", "de puncte");
+
+function loyaltyDto(
+  preview: CheckoutPreview,
+  money: (minor: number) => string,
+): CheckoutLoyaltyDto | null {
+  const loyalty = preview.loyalty;
+  if (!loyalty) return null;
+  const text = m().loyalty;
+  const redeem = loyalty.redeem;
+  const value = (points: number) => money(points * (redeem?.pointValueMinor ?? 0));
+  return {
+    redeem: redeem
+      ? {
+          maxPoints: redeem.maxPoints,
+          minPoints: redeem.minPoints,
+          balanceText: text.balance(pointsText(loyalty.balance), value(loyalty.balance)),
+          maxText: text.max(pointsText(redeem.maxPoints), value(redeem.maxPoints)),
+        }
+      : null,
+    appliedPoints: loyalty.appliedPoints,
+    appliedText:
+      redeem && loyalty.appliedPoints > 0
+        ? text.applied(pointsText(loyalty.appliedPoints), value(loyalty.appliedPoints))
+        : null,
+    note:
+      loyalty.earns && loyalty.earnEstimate > 0
+        ? (loyalty.signedIn ? text.earnMember : text.earnGuest)(pointsText(loyalty.earnEstimate))
+        : null,
+  };
+}
+
 export function toCheckoutPreviewDto(
   preview: CheckoutPreview,
   format: CheckoutFormat,
@@ -175,6 +222,7 @@ export function toCheckoutPreviewDto(
   const offers = preview.shipping?.offers.map((offer) => offerDto(offer, format)) ?? [];
   const reference = preview.selectedOffer ?? preview.shipping?.offers[0] ?? null;
   return {
+    loyalty: loyaltyDto(preview, money),
     blocked: preview.blocked,
     digital: preview.digital ?? { present: false, only: false },
     destination: preview.destination,
@@ -195,6 +243,9 @@ export function toCheckoutPreviewDto(
             preview.totals.shippingMinor === 0 ? text.free : money(preview.totals.shippingMinor),
           shippingFree: preview.totals.shippingMinor === 0,
           codFeeText: preview.totals.codFeeMinor > 0 ? money(preview.totals.codFeeMinor) : null,
+          discountText: preview.totals.discountMinor
+            ? `−${money(preview.totals.discountMinor)}`
+            : null,
           vatText: money(preview.totals.taxMinor),
           totalText: money(preview.totals.totalMinor),
           totalMinor: preview.totals.totalMinor,

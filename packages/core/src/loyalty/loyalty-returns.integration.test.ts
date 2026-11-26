@@ -20,6 +20,7 @@ import { NOW, codeOf, harness, orderOf, type Harness } from "../test-utils/check
 import { addTo, destination, type World } from "../test-utils/digital-checkout";
 import { loyaltyWorld, setSetting } from "../test-utils/loyalty-fixtures";
 import { adjustPoints, readBalance } from "./ledger";
+import { orderLoyaltyView } from "./loyalty-read";
 import { grantDuePoints, pendingPoints, syncOrderLoyalty } from "./order-loyalty";
 
 /**
@@ -550,6 +551,32 @@ describe("factura emisă a unei comenzi cu puncte (simulată)", () => {
         invoice.lines.reduce((sum, l) => sum + (l.kind === "discount" ? -pick(l) : pick(l)), 0);
       expect(signed((l) => l.lineTotalMinor)).toBe(order.totalMinor);
       expect(signed((l) => l.taxMinor)).toBe(order.taxMinor);
+    });
+  });
+});
+
+describe("punctele unei comenzi, în contul clientului", () => {
+  it("folosite și de primit cu data, apoi primite; alt cont nu vede nimic", async () => {
+    await scene(async (s) => {
+      const p = await delivered(s, { points: 90, unit: 100_000 });
+      const buyer = s.world.userId;
+      const waiting = await orderLoyaltyView(s.h.tx, p.orderId, buyer);
+      const [row] = await pendingPoints(s.h.tx, buyer);
+      expect(waiting).toEqual({
+        pointsUsed: 90,
+        earned: null,
+        toEarn: { points: 29, availableAt: row!.availableAt },
+      });
+      expect(await orderLoyaltyView(s.h.tx, p.orderId, p.user.id)).toBeNull();
+      await grantDuePoints(s.h.tx, {
+        now: new Date(row!.availableAt.getTime() + 1_000),
+        ports: LOYALTY_PORTS,
+      });
+      expect(await orderLoyaltyView(s.h.tx, p.orderId, buyer)).toEqual({
+        pointsUsed: 90,
+        earned: 29,
+        toEarn: null,
+      });
     });
   });
 });

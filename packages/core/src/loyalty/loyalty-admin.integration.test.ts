@@ -12,7 +12,7 @@ import { harness } from "../test-utils/checkout-fixtures";
 import { inRolledBackTransaction, type TestTx } from "../test-utils/rollback";
 import { earnPoints, readBalance, redeemPoints } from "./ledger";
 import { LoyaltyAdminService } from "./loyalty-admin";
-import { customerLoyaltyOverview } from "./loyalty-read";
+import { customerLoyaltyOverview, redeemHint } from "./loyalty-read";
 
 /**
  * Ecranele punctelor (Faza 15b), pe Postgres real (tranzacție anulată, deci și rândurile de audit dispar): permisiunile
@@ -205,6 +205,23 @@ describe("fișa clientului și contul", () => {
         earns: false,
         nextExpiry: null,
       });
+    });
+  });
+});
+
+describe("nota din coș", () => {
+  it("doar cu sold folosibil de cel puțin minimul și cu tratamentul TVA stabilit", async () => {
+    await run(async (tx) => {
+      const customer = await createUser(tx);
+      await give(tx, customer.id, 9, at(100));
+      expect(await redeemHint(tx, customer.id, NOW)).toBeNull();
+      await give(tx, customer.id, 6, at(100));
+      expect(await redeemHint(tx, customer.id, NOW)).toEqual({ points: 15, valueMinor: 1_500 });
+      expect(await redeemHint(tx, customer.id, at(101))).toBeNull();
+      await enableLoyalty(tx, { vatMode: null });
+      expect(await redeemHint(tx, customer.id, NOW)).toBeNull();
+      await enableLoyalty(tx, { enabled: false });
+      expect(await redeemHint(tx, customer.id, NOW)).toBeNull();
     });
   });
 });
