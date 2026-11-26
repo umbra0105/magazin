@@ -445,6 +445,9 @@ Vezi `14-loializare-si-vouchere.md`, Partea A. **Se face după ce comenzile, pl�
 - **D8** Nu se creează `returnWindowDays`; se folosește `returns.windowDays`.
 - **D9** Setări (grup `loyalty`): `enabled` (pachet `false`, seed magazin `true`), `earnRate` 10000, `pointValue` 100, `expiryMonths` 12, `expiryWarningDays` 30, `maxRedeemPercent` `null`, `minRedeemPoints` 10, `minCashAmount` 100, `earnOnDiscountedItems` `true`, `vatMode` `null`. Fără setări pentru transport sau «doar pe bani».
 - **D10** `db:seed:store` activează loialitatea și pune `vatMode = "base_reduced"`; `db:seed` o lasă oprită, cu `vatMode` gol.
+- **D11 (2026-11-26, formula corectată)** Punctele aplicabile = `min(valoarea produselor după reduceri, totalul comenzii − max(transport, minCashAmount))`; totalul comenzii include transportul; taxa de ramburs nu intră în calcul; plus plafonul procentual dacă e setat (cel mai restrictiv câștigă). Exemplu: produse 100 lei, transport 20 lei, 200 de puncte → maximum 100 de puncte, 20 lei în bani.
+- **D12 (2026-11-26)** DOAR `base_reduced` în această fază: `loyalty.vatMode` acceptă doar `null` și `"base_reduced"` (D2 se citește așa). Autorizate explicit: (a) returul cu 0 lei de rambursat se închide fără rambursare de plată, cu punctele întoarse și stornoul în coadă, cu teste pe ambele baze și în concurență; (b) linia de reducere pe factură: două CHECK-uri din `invoice_line` înlocuite prin `DROP CONSTRAINT` + `ADD CONSTRAINT` în aceeași migrare, doar ca extindere, fără rânduri atinse, cu test pe ambele baze și cu comparații explicite `IS NULL` / `IS NOT NULL`. Orice altă modificare în `return-settle.ts`, în storno sau în totalul facturii = 🛑. Stornourile unei facturi cu puncte = totalul ei, la ban.
+- [~] Testul de paritate cu `main` (cel puțin 40 de coșuri), înghețat pe codul neschimbat, înaintea oricărei modificări în motor
 
 - [ ] Setări de loialitate: rată de acumulare, valoare punct, moment de acordare, expirare, plafon procentual de utilizare (implicit **fără plafon**, configurabil), minim în bani când nu există transport (`minCashAmount`, implicit 1 leu)
 - [ ] Schema: LoyaltyAccount, LoyaltyTransaction (registru imutabil — soldul se recalculează, nu se editează)
@@ -452,8 +455,9 @@ Vezi `14-loializare-si-vouchere.md`, Partea A. **Se face după ce comenzile, pl�
 - [ ] `CustomerGroup.earnsLoyaltyPoints` — **fals pentru Partener 1/2/3**; Standard, Fidel și VIP acumulează, iar discountul Fidel/VIP se cumulează cu punctele
 - [ ] Acordare la expirarea ferestrei de retur, cu status „în așteptare” vizibil în cont
 - [ ] Răscumpărare ca ultimă reducere, **fără plafon procentual**, dar **punctele nu acoperă transportul**
-- [!] _(🛑 2026-11-26: formula punctelor aplicabile și stornoul în `base_full`; vezi `docs/PROGRESS.md`)_ ⚠️ **Regula dură a sumei în bani**: suma de plătit în bani ≥ `max(cost transport, minCashAmount)`; punctele aplicabile ≤ total − acel minim (`14` §2.A). **Comanda de 0 lei nu poate apărea; nu există ramura `loyalty_points`.** Sliderul din checkout se oprește la maximul permis
-- [ ] 🟡 Înainte de reducerea din puncte pe factură: răspunsul contabilului la „TVA pe 100 sau pe 90?" (`10`, Partea I)
+- [ ] _(🛑 rezolvat 2026-11-26, D11 și D12 de mai sus)_ ⚠️ **Regula dură a sumei în bani**: suma de plătit în bani ≥ `max(cost transport, minCashAmount)`; punctele aplicabile ≤ total − acel minim (`14` §2.A). **Comanda de 0 lei nu poate apărea; nu există ramura `loyalty_points`.** Sliderul din checkout se oprește la maximul permis
+- [x] Înainte de reducerea din puncte pe factură: răspunsul la „TVA pe 100 sau pe 90?” (`10`, Partea I) _(primit de la utilizator, 2026-11-25: «Punctele reprezintă o reducere de preț»; confirmarea scrisă a contabilului rămâne în sarcina utilizatorului)_
+- [ ] **AMÂNAT: `base_full`** (TVA pe suma dinainte de puncte): se face într-o mini-fază separată DOAR dacă contabilul confirmă TVA pe suma înainte de puncte. Motiv: cere schimbări în `return-settle.ts` și în totalul facturii (decizia utilizatorului, 2026-11-26). Nu face parte din Faza 15b
 - [ ] Acumulare doar pe suma plătită efectiv cu bani (fără buclă de puncte pe puncte)
 - [ ] Client promovat la Partener: păstrează soldul, nu mai acumulează
 - [ ] Expirare la 12 luni, cu email de avertizare cu 30 de zile înainte
