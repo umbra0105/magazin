@@ -463,9 +463,9 @@ Vezi `14-loializare-si-vouchere.md`, Partea A. **Se face după ce comenzile, pl�
 - [ ] **AMÂNAT: `base_full`** (TVA pe suma dinainte de puncte): se face într-o mini-fază separată DOAR dacă contabilul confirmă TVA pe suma înainte de puncte. Motiv: cere schimbări în `return-settle.ts` și în totalul facturii (decizia utilizatorului, 2026-11-26). Nu face parte din Faza 15b
 - [ ] Acumulare doar pe suma plătită efectiv cu bani (fără buclă de puncte pe puncte)
 - [ ] Client promovat la Partener: păstrează soldul, nu mai acumulează
-- [~] Expirare la 12 luni, cu email de avertizare cu 30 de zile înainte
+- [x] _(joburile `loyalty-grant`, `loyalty-expire`, `loyalty-expiry-warning`, cu teste cu ceas injectat)_ Expirare la 12 luni, cu email de avertizare cu 30 de zile înainte
 - [x] _(`a3bf310`, `2fd123e`: anulare, retur parțial, sold negativ, rambursare, oaspete; factura și stornoul `base_reduced` în `013e150`)_ **Toate cazurile din `14` §5**: anulare, retur parțial, sold negativ, rambursare, guest
-- [ ] Afișare: sold în cont, „primești X puncte” pe PDP, utilizare în checkout
+- [~] Afișare: sold în cont, „primești X puncte” pe PDP, utilizare în checkout
 - [ ] Admin: sold per client, ajustare cu motiv obligatoriu, raport de datorie în puncte
 
 ## FAZA 15c — Vouchere cadou (mod B, ramura `faza-15c`, după 15b; decizia utilizatorului, 2026-11-25)
