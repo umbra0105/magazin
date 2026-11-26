@@ -457,14 +457,14 @@ Vezi `14-loializare-si-vouchere.md`, Partea A. **Se face după ce comenzile, pl�
 - [ ] Acumulare: 1 punct la 100 lei, pe subtotalul după reduceri, fără transport, cu `floor`
 - [ ] `CustomerGroup.earnsLoyaltyPoints` — **fals pentru Partener 1/2/3**; Standard, Fidel și VIP acumulează, iar discountul Fidel/VIP se cumulează cu punctele
 - [ ] Acordare la expirarea ferestrei de retur, cu status „în așteptare” vizibil în cont
-- [~] _(🛑 rezolvat 2026-11-26, D15)_ Răscumpărare ca ultimă reducere, **fără plafon procentual**, dar **punctele nu acoperă transportul**
-- [ ] _(🛑 rezolvat 2026-11-26, D11 și D12 de mai sus)_ ⚠️ **Regula dură a sumei în bani**: suma de plătit în bani ≥ `max(cost transport, minCashAmount)`; punctele aplicabile ≤ total − acel minim (`14` §2.A). **Comanda de 0 lei nu poate apărea; nu există ramura `loyalty_points`.** Sliderul din checkout se oprește la maximul permis
+- [x] _(🛑 rezolvat 2026-11-26, D15; `a3bf310`, concurență pe date comise)_ Răscumpărare ca ultimă reducere, **fără plafon procentual**, dar **punctele nu acoperă transportul**
+- [x] _(🛑 rezolvat 2026-11-26, D11 și D12 de mai sus; `643bf02`, `a3bf310`: motor, server, `totalMinor > 0` în bază; cursorul din interfață la pasul de ecrane)_ ⚠️ **Regula dură a sumei în bani**: suma de plătit în bani ≥ `max(cost transport, minCashAmount)`; punctele aplicabile ≤ total − acel minim (`14` §2.A). **Comanda de 0 lei nu poate apărea; nu există ramura `loyalty_points`.** Sliderul din checkout se oprește la maximul permis
 - [x] Înainte de reducerea din puncte pe factură: răspunsul la „TVA pe 100 sau pe 90?” (`10`, Partea I) _(primit de la utilizator, 2026-11-25: «Punctele reprezintă o reducere de preț»; confirmarea scrisă a contabilului rămâne în sarcina utilizatorului)_
 - [ ] **AMÂNAT: `base_full`** (TVA pe suma dinainte de puncte): se face într-o mini-fază separată DOAR dacă contabilul confirmă TVA pe suma înainte de puncte. Motiv: cere schimbări în `return-settle.ts` și în totalul facturii (decizia utilizatorului, 2026-11-26). Nu face parte din Faza 15b
 - [ ] Acumulare doar pe suma plătită efectiv cu bani (fără buclă de puncte pe puncte)
 - [ ] Client promovat la Partener: păstrează soldul, nu mai acumulează
 - [ ] Expirare la 12 luni, cu email de avertizare cu 30 de zile înainte
-- [ ] **Toate cazurile din `14` §5**: anulare, retur parțial, sold negativ, rambursare, guest
+- [~] **Toate cazurile din `14` §5**: anulare, retur parțial, sold negativ, rambursare, guest
 - [ ] Afișare: sold în cont, „primești X puncte” pe PDP, utilizare în checkout
 - [ ] Admin: sold per client, ajustare cu motiv obligatoriu, raport de datorie în puncte
 
