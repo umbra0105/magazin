@@ -33,6 +33,11 @@ export async function cleanupE2eUsers(databaseUrl: string | undefined): Promise<
     await client.query(
       `delete from return_request where "userId" in (select id from "user" where email like 'e2e-%@example.test')`,
     );
+    // punctele de loialitate (Faza 15b): contul de puncte ține clientul cu RESTRICT; ștergerea contului ia în cascadă
+    // registrul și loturile lui (rândurile registrului nu se pot șterge direct)
+    await client.query(
+      `delete from loyalty_account where "customerId" in (select id from "user" where email like 'e2e-%@example.test')`,
+    );
     const result = await client.query(`delete from "user" where email like 'e2e-%@example.test'`);
     return result.rowCount ?? 0;
   } finally {

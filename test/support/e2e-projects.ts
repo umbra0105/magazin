@@ -23,8 +23,15 @@ export const globalStateSpecPattern = new RegExp(
  * a comenzilor E2E (`removeE2eOrders`), deci rulează într-un proiect propriu, după toate celelalte, într-un singur fișier (serial):
  * în paralel cu alte specuri, o comandă în lucru ar putea fi ștearsă de curățarea altui fișier, iar specurile cu plan pe tot
  * catalogul mută stocul tuturor variantelor.
+ *
+ * Tot aici `loyalty.spec.ts` (Faza 15b): pornește flag-ul `loyalty` și setările programului, comune întregii aplicații (elemente
+ * noi în meniul de admin, pe pagina produsului și în checkout), deci nu poate sta în proiectul principal (de exemplu `admin.spec.ts`
+ * afirmă că meniul nu are punctele cu flag-ul oprit). Își șterge și el doar comenzile lui, pe tag.
  */
-export const ORDER_FLOW_SPEC_FILES: readonly string[] = ["orders-offers.spec.ts"];
+export const ORDER_FLOW_SPEC_FILES: readonly string[] = [
+  "orders-offers.spec.ts",
+  "loyalty.spec.ts",
+];
 
 export const orderFlowSpecPattern = new RegExp(
   `[\\\\/](?:${ORDER_FLOW_SPEC_FILES.map(escape).join("|")})$`,
