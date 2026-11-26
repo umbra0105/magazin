@@ -50,12 +50,28 @@ function linesBlock(order: OrderEmailModel): EmailBlock {
     })),
     totals: [
       { label: "Produse", value: order.totals.products },
+      ...(order.totals.pointsDiscount
+        ? [{ label: "Reducere din puncte de loialitate", value: order.totals.pointsDiscount }]
+        : []),
       { label: "Livrare", value: order.totals.shipping },
       ...(order.totals.codFee ? [{ label: "Taxă de ramburs", value: order.totals.codFee }] : []),
       { label: "din care TVA", value: order.totals.vat },
       { label: "Total de plată (TVA inclus)", value: order.totals.total, strong: true },
     ],
   };
+}
+
+/** Punctele folosite și cele de primit, în confirmarea comenzii (Faza 15b). */
+function loyaltyBlocks(order: OrderEmailModel | null): EmailBlock[] {
+  const loyalty = order?.loyalty;
+  if (!loyalty) return [];
+  const sentences = [
+    loyalty.pointsUsed ? `La această comandă ai folosit ${loyalty.pointsUsed} de loialitate.` : "",
+    loyalty.pointsToEarn
+      ? `Pentru această comandă vei primi ${loyalty.pointsToEarn}, după încheierea perioadei de retur.`
+      : "",
+  ].filter((sentence) => sentence !== "");
+  return sentences.length > 0 ? [para(sentences.join(" "))] : [];
 }
 
 function paymentDeliveryBlock(order: OrderEmailModel): EmailBlock {
@@ -223,6 +239,7 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
       "Mulțumim pentru comandă! Am înregistrat comanda {{numar}}, în valoare de {{total}}. Mai jos găsești tot ce trebuie să știi despre ea.",
     build: (context) => [
       ...orderBody(context),
+      ...loyaltyBlocks(context.order),
       ...trackButton(context),
       ...(context.order ? confirmationLegalBlocks(context, context.order) : []),
     ],
@@ -679,6 +696,12 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
         "Am rambursat {{suma}} pentru returul {{retur}} (comanda {{numar}}), în aceeași modalitate de plată. Banii pot apărea în cont în câteva zile lucrătoare.",
       ],
       [
+        "return.refunded_points",
+        "Retur: încheiat, punctele s-au întors",
+        "Returul s-a încheiat",
+        "Returul {{retur}} pentru comanda {{numar}} s-a încheiat. Produsele returnate fuseseră plătite cu puncte de loialitate, așa că nu există bani de rambursat: punctele s-au întors în contul tău.",
+      ],
+      [
         "return.cancelled",
         "Retur: anulat",
         "Returul a fost anulat",
@@ -729,6 +752,14 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
         ...(rows.length > 0
           ? [{ type: "keyvalue", title: "Detalii pentru retur", rows } as EmailBlock]
           : []),
+        // rambursare cu bani pentru produse plătite parțial cu puncte: partea de puncte nu se transformă în bani
+        ...(key === "return.refunded" && vars["puncteIntoarse"]
+          ? [
+              para(
+                "Partea plătită cu puncte de loialitate pentru produsele returnate s-a întors în contul tău ca puncte.",
+              ),
+            ]
+          : []),
         ...(key === "return.approved"
           ? [
               para(
@@ -743,6 +774,28 @@ const DEFINITIONS: readonly TemplateDefinition[] = [
       ];
     },
   })),
+  {
+    key: "loyalty.expiry_warning",
+    label: "Puncte de loialitate care expiră",
+    description:
+      "Trimis o singură dată pentru fiecare lot de puncte, cu atâtea zile înainte de expirare câte spune setarea de loialitate.",
+    audience: "customer",
+    wired: true,
+    phaseNote: null,
+    variables: [
+      COMMON.magazin,
+      v("puncte", "Punctele care expiră, cu cuvântul («47 de puncte»)", "47 de puncte"),
+      v("valoare", "Valoarea lor", "47,00 RON"),
+      v("dataExpirare", "Data expirării", "24 noiembrie 2026"),
+      v("link", "Linkul către punctele din cont", "https://magazin.exemplu/cont/puncte"),
+    ],
+    defaultSubject: "Punctele tale expiră pe {{dataExpirare}} – {{magazin}}",
+    heading: "Ai puncte care expiră",
+    preview: "{{puncte}} expiră pe {{dataExpirare}}.",
+    defaultIntro:
+      "La {{magazin}} ai {{puncte}} de loialitate, în valoare de {{valoare}}, cu expirare pe {{dataExpirare}}. Le poți folosi la o comandă până atunci.",
+    build: (context) => [...trackButton(context, "Vezi punctele tale")],
+  },
   {
     key: "account.welcome",
     label: "Bun venit",

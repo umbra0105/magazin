@@ -5,6 +5,7 @@ import {
   assertOrderQuantity,
   localDateTime,
   percentToBasisPoints,
+  pluralRo,
   quantityFromTicks,
 } from "@ecom/shared";
 import type { CartOwner, CartService, CartView, CartLineView } from "../cart/cart-service";
@@ -1195,7 +1196,7 @@ export class CheckoutService {
         });
         await addOrderEvent(tx, order.id, {
           type: "loyalty.redeemed",
-          message: `Clientul a folosit ${loyaltyPoints} puncte de loialitate`,
+          message: `Clientul a folosit ${pluralRo(loyaltyPoints, "punct", "puncte", "de puncte")} de loialitate`,
           data: { points: loyaltyPoints, discountMinor: totals.discountMinor ?? 0 },
         });
       }

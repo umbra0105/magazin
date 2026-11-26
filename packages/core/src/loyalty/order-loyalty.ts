@@ -1,7 +1,8 @@
 import type { Prisma } from "@ecom/db";
+import { pluralRo } from "@ecom/shared";
 import { inTx, type Db } from "../db-tx";
 import { earnedPoints, returnedPoints } from "../pricing/points";
-import { RETURN_REFUND_KEY_PREFIX } from "../returns/return-constants";
+import { OPEN_RETURN_STATUSES, RETURN_REFUND_KEY_PREFIX } from "../returns/return-constants";
 import { readReturnWindowDays, resolveDeliveredAt } from "../returns/return-delivery";
 import { returnWindowEnd } from "../returns/return-eligibility";
 import { earnPoints, releasePoints, revokePoints } from "./ledger";
@@ -48,15 +49,6 @@ export const LOYALTY_EVENT_TYPES: readonly string[] = [
   "digital.fulfilled",
   "digital.granted",
 ];
-
-/** Retururile care încă pot schimba ce se cuvine: cât sunt deschise, acordarea așteaptă. */
-export const OPEN_RETURN_STATUSES = [
-  "requested",
-  "approved",
-  "awaiting_shipment",
-  "received",
-  "inspected",
-] as const;
 
 const ORDER_SELECT = {
   id: true,
@@ -178,7 +170,7 @@ const ledgerSum = async (db: Db, orderId: string, type: string): Promise<number>
   return Math.abs(sum._sum.points ?? 0);
 };
 
-const pointsText = (points: number): string => (points === 1 ? "1 punct" : `${points} puncte`);
+const pointsText = (count: number): string => pluralRo(count, "punct", "puncte", "de puncte");
 
 /** Blochează comanda (același lacăt ca `lockOrder`) și citește instantaneul punctelor. */
 async function lockLoyaltyOrder(tx: Db, orderId: string): Promise<LoyaltyOrder | null> {
@@ -286,6 +278,7 @@ const dueWhere = (now: Date): Prisma.OrderWhereInput => ({
   fulfillmentStatus: { not: "returned" },
   // doar pe banii chiar încasați (la ramburs: după «Marchează încasat»)
   paymentStatus: { in: ["paid", "partially_refunded", "refunded"] },
+  // cât un retur e deschis (poate schimba ce se cuvine), acordarea așteaptă
   returns: { none: { status: { in: [...OPEN_RETURN_STATUSES] } } },
 });
 

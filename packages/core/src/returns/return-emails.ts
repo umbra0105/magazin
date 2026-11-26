@@ -19,8 +19,13 @@ const RULES: Readonly<Record<string, string>> = {
   "return.cancelled": "return.cancelled",
 };
 
+/** Returul închis fără bani de rambursat (plătit integral cu puncte) are textul lui, nu «am rambursat 0 lei». */
+const POINTS_ONLY_TEMPLATE = "return.refunded_points";
+
 export const RETURN_EMAIL_EVENT_TYPES: readonly string[] = Object.keys(RULES);
-export const RETURN_EMAIL_TEMPLATES: readonly string[] = [...new Set(Object.values(RULES))];
+export const RETURN_EMAIL_TEMPLATES: readonly string[] = [
+  ...new Set([...Object.values(RULES), POINTS_ONLY_TEMPLATE]),
+];
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -29,12 +34,13 @@ export async function scheduleReturnEmails(
   returnId: string,
   event: { id: string; type: string },
 ): Promise<void> {
-  const template = RULES[event.type];
-  if (!template) return;
+  const rule = RULES[event.type];
+  if (!rule) return;
   const ret = await tx.returnRequest.findUnique({
     where: { id: returnId },
     select: {
       orderId: true,
+      refundId: true,
       user: { select: { email: true, anonymizedAt: true } },
       order: { select: { externalId: true } },
     },
@@ -42,6 +48,8 @@ export async function scheduleReturnEmails(
   if (!ret || ret.user.anonymizedAt || ret.order.externalId !== null) return;
   const recipient = ret.user.email.trim().toLowerCase();
   if (!EMAIL_SHAPE.test(recipient)) return;
+  const template =
+    event.type === "return.refunded" && ret.refundId === null ? POINTS_ONLY_TEMPLATE : rule;
   const data: Prisma.InputJsonValue = { eventType: event.type, returnId };
   await enqueueDispatches(tx, [
     {

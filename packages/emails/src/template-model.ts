@@ -44,6 +44,8 @@ export interface OrderEmailModel {
     shipping: string;
     /** `null` fără taxă de ramburs. */
     codFee: string | null;
+    /** Reducerea din puncte de loialitate, cu minus; lipsește fără puncte folosite. */
+    pointsDiscount?: string;
     /** TVA-ul inclus în total (informativ). */
     vat: string;
     total: string;
@@ -65,6 +67,8 @@ export interface OrderEmailModel {
     /** Doar ridicarea personală: programul de ridicare (setarea `company.pickupHours`), doar când e completat. */
     pickupHoursText?: string | null;
   };
+  /** Punctele comenzii (Faza 15b), deja scrise («20 de puncte»): folosite și de primit; `null` = niciunul. */
+  loyalty?: { pointsUsed: string | null; pointsToEarn: string | null };
   /** Cel puțin o linie «La comandă»: se adaugă nota despre retragere. */
   hasOnOrderLines: boolean;
   /**
@@ -118,6 +122,8 @@ export const TEMPLATE_KEYS = [
   "return.inspected",
   "return.refunded",
   "return.cancelled",
+  "return.refunded_points",
+  "loyalty.expiry_warning",
   "account.welcome",
   "marketing.abandoned_cart_1",
   "marketing.abandoned_cart_2",

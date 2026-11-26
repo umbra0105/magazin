@@ -29,3 +29,4 @@ export * from "./account";
 export * from "./returns";
 export * from "./digital";
 export * from "./customers";
+export * from "./loyalty";

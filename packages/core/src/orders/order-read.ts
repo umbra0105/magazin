@@ -62,9 +62,13 @@ export interface OrderSummary {
     subtotalMinor: number;
     shippingMinor: number;
     codFeeMinor: number;
+    /** Reducerea din puncte de loialitate (Faza 15b); prezentă doar când s-au folosit puncte. */
+    discountMinor?: number;
     taxMinor: number;
     totalMinor: number;
   };
+  /** Punctele de loialitate ale comenzii: folosite și de primit; lipsește când comanda nu are puncte. */
+  loyalty?: { pointsUsed: number; pointsToEarn: number };
   installationRequested: boolean;
   /**
    * Mesaje pentru client legate de plată: `stock_lost` = plata a ajuns după expirarea rezervării, produsele nu mai erau în stoc,
@@ -85,6 +89,9 @@ const SELECT = {
   subtotalMinor: true,
   shippingMinor: true,
   codFeeMinor: true,
+  discountMinor: true,
+  loyaltyPointsUsed: true,
+  loyaltyPointsToEarn: true,
   taxMinor: true,
   totalMinor: true,
   installationRequested: true,
@@ -169,9 +176,18 @@ function toSummary(row: Row): OrderSummary {
       subtotalMinor: row.subtotalMinor,
       shippingMinor: row.shippingMinor,
       codFeeMinor: row.codFeeMinor,
+      ...(row.discountMinor > 0 ? { discountMinor: row.discountMinor } : {}),
       taxMinor: row.taxMinor,
       totalMinor: row.totalMinor,
     },
+    ...(row.loyaltyPointsUsed > 0 || (row.loyaltyPointsToEarn ?? 0) > 0
+      ? {
+          loyalty: {
+            pointsUsed: row.loyaltyPointsUsed,
+            pointsToEarn: row.loyaltyPointsToEarn ?? 0,
+          },
+        }
+      : {}),
     installationRequested: row.installationRequested,
     paymentNotice: row.events.length > 0 ? "stock_lost" : null,
   };
