@@ -118,3 +118,62 @@ describe("totalul comenzii: produse + transport + taxă de ramburs, TVA extras d
     }
   });
 });
+
+describe("totalul comenzii cu puncte de loialitate (Faza 15b)", () => {
+  // linie 100,00 lei (TVA 17,36), reducere din puncte 33,33 lei (TVA 5,78) → D14a: TVA pe produse 11,58
+  const discounted = {
+    totalMinor: 10_000,
+    vatMinor: 1_736,
+    pointsDiscountMinor: 3_333,
+    pointsDiscountVatMinor: 578,
+  };
+
+  it("subtotalul rămâne dinaintea punctelor, reducerea e separată, totalul e banii; TVA = TVA linii − TVA reducere", () => {
+    const totals = computeOrderTotals({
+      cart: discounted,
+      shippingMinor: 2_000,
+      codFeeMinor: 500,
+      paymentMethod: "cod",
+      taxRateBps: 2100,
+    });
+    // 2000 → TVA 347; 500 → TVA 87
+    expect(totals).toEqual({
+      subtotalMinor: 10_000,
+      discountMinor: 3_333,
+      shippingMinor: 2_000,
+      codFeeMinor: 500,
+      shippingTaxMinor: 347,
+      codFeeTaxMinor: 87,
+      taxMinor: 1_158 + 347 + 87,
+      totalMinor: 10_000 - 3_333 + 2_000 + 500,
+    });
+  });
+
+  it("fără puncte nu apare niciun câmp nou (paritate)", () => {
+    const totals = computeOrderTotals({
+      cart,
+      shippingMinor: 0,
+      codFeeMinor: 0,
+      paymentMethod: "bank_transfer",
+      taxRateBps: 2100,
+    });
+    expect(Object.keys(totals)).not.toContain("discountMinor");
+  });
+
+  it("o comandă de 0 lei e refuzată", () => {
+    expect(() =>
+      computeOrderTotals({
+        cart: {
+          totalMinor: 10_000,
+          vatMinor: 1_736,
+          pointsDiscountMinor: 10_000,
+          pointsDiscountVatMinor: 1_736,
+        },
+        shippingMinor: 0,
+        codFeeMinor: 0,
+        paymentMethod: "card",
+        taxRateBps: 2100,
+      }),
+    ).toThrow();
+  });
+});

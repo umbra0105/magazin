@@ -39,6 +39,7 @@ import {
   type PricingOptions,
   type PricingTotals,
 } from "../pricing/engine";
+import { applyPointsDiscount } from "../pricing/points";
 import {
   cartExpiry,
   checkCartQuantity,
@@ -279,7 +280,11 @@ export class CartService {
 
   // ---------------------------------------------------------------- citire
 
-  async view(owner: CartOwner): Promise<CartView> {
+  /**
+   * `pointsDiscountMinor` (Faza 15b, doar checkout-ul): reducerea din puncte, pusă de motorul de prețuri peste linii, ca ultim
+   * pas. Totalurile liniilor, TVA-ul lor și pragul de transport gratuit rămân cele DINAINTEA punctelor.
+   */
+  async view(owner: CartOwner, options: { pointsDiscountMinor?: number } = {}): Promise<CartView> {
     const settings = await this.readSettings();
     const cart = await this.findLiveCart(owner);
     const pricing = await this.pricingOf(owner);
@@ -289,7 +294,7 @@ export class CartService {
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: { variantId: true, quantity: true, ackedUnitPriceMinor: true },
     });
-    return this.buildView(items, settings, pricing);
+    return this.buildView(items, settings, pricing, options.pointsDiscountMinor ?? 0);
   }
 
   /**
@@ -773,6 +778,7 @@ export class CartService {
     items: readonly { variantId: string; quantity: bigint; ackedUnitPriceMinor: number | null }[],
     settings: CartRuntimeSettings,
     pricing: CustomerPricing,
+    pointsDiscountMinor = 0,
   ): Promise<CartView> {
     const rows = await this.loadRows(items.map((item) => item.variantId));
     const warehouse = await this.warehouse();
@@ -846,6 +852,7 @@ export class CartService {
     const priced = this.priceIncluded(
       drafts.flatMap((draft) => (draft.input ? [draft.input] : [])),
       options,
+      pointsDiscountMinor,
     );
     const lines: CartLineView[] = drafts.map((draft) => {
       const pricing = priced.lines.get(draft.view.variantId) ?? null;
@@ -889,10 +896,11 @@ export class CartService {
   private priceIncluded(
     inputs: readonly PricingLineInput[],
     options: PricingOptions,
+    pointsDiscountMinor: number,
   ): { lines: Map<string, PricedLine>; totals: PricingTotals } {
     if (inputs.length === 0) return { lines: new Map(), totals: ZERO_TOTALS };
     const attempt = (list: readonly PricingLineInput[]) => {
-      const result = priceLines(list, options);
+      const result = applyPointsDiscount(priceLines(list, options), pointsDiscountMinor);
       return {
         lines: new Map(result.lines.map((line) => [line.key, line])),
         totals: result.totals,
