@@ -5,3 +5,4 @@ export * from "./loyalty-jobs";
 export * from "./loyalty-read";
 export * from "./loyalty-settings";
 export * from "./order-loyalty";
+export * from "./store-loyalty";

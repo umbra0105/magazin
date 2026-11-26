@@ -8,10 +8,14 @@
  * Grupurile de clienți ale magazinului (Faza 15): Client fidel 5% și Client VIP 7% (`discount`), Partener 1/2/3 cu
  * adaos 12% / 17% / 21% (`cost_plus`, `earnsLoyaltyPoints = false`). «Client standard» e grupul de sistem, din seed-ul de
  * bază (`db:seed`). Procentele se editează din admin; rularea repetată nu le suprascrie.
+ *
+ * Punctele de loialitate (Faza 15b): flag-ul `loyalty` pornit, programul activ și tratamentul TVA `base_reduced`, doar la
+ * prima rulare (ce schimbă apoi adminul rămâne).
  */
 import { createPrismaFeatureFlagStore } from "../src/features/prisma-store";
 import { FeatureFlagService } from "../src/features/feature-flag-service";
 import { seedStoreGroups, STORE_GROUPS } from "../src/customers/store-groups";
+import { seedStoreLoyalty } from "../src/loyalty/store-loyalty";
 import type { FeatureKey } from "../src/features/registry";
 import { getDb, invalidateConfigCaches, loadRootEnv } from "./_runtime";
 
@@ -32,6 +36,7 @@ try {
   for (const key of STORE_FEATURES) await flags.setEnabled(key, true);
 
   const groupsCreated = await seedStoreGroups(db);
+  const loyaltyStarted = await seedStoreLoyalty(db);
 
   const cacheCleared = await invalidateConfigCaches();
   console.log("Seed specific magazinului aplicat:");
@@ -42,6 +47,11 @@ try {
   );
   console.log(
     `  grupuri de clienți:      ${groupsCreated} create, ${STORE_GROUPS.length - groupsCreated} existau deja`,
+  );
+  console.log(
+    loyaltyStarted
+      ? "  puncte de loialitate:    pornite, tratament TVA «base_reduced»"
+      : "  puncte de loialitate:    neschimbate (programul a fost deja configurat)",
   );
   console.log(
     `  cache Redis:             ${cacheCleared ? "golit" : "indisponibil (expiră singur)"}`,
